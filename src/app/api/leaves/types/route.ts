@@ -1,0 +1,9 @@
+import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { leaveTypes } from "@/db/schema";
+import { requireAuth } from "@/lib/api/auth-guard";
+
+export const GET = requireAuth(async () => {
+  const types = await db.select().from(leaveTypes).all();
+  return NextResponse.json({ leaveTypes: types });
+});

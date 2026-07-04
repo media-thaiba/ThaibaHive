@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 type StaffDetail = {
@@ -23,14 +23,14 @@ export default function StaffProfilePage() {
   const [staff, setStaff] = useState<StaffDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  useState(() => {
     fetch(`/api/staff/${id}`)
       .then((r) => r.json())
       .then((data) => {
         setStaff(data.staff);
         setLoading(false);
       });
-  }, [id]);
+  });
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
   if (!staff) return <div className="p-6 text-sm text-destructive">Staff not found</div>;
