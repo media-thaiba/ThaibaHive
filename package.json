@@ -13,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:seed": "ts-node -r tsconfig-paths/register --transpile-only src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -92,6 +92,7 @@
     "tailwindcss": "^3.4.19",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.23.0",
     "typescript": "^5"
   }
 }

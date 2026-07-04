@@ -7,7 +7,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 
 type StaffUser = {
   id: string;
@@ -42,7 +41,6 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [staff, setStaff] = useState<StaffUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   // fetch initial auth state - runs once on mount
   useState(() => {
@@ -66,11 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "Login failed");
       }
 
-      const data = await res.json();
-      setStaff(data.staff);
-      router.push("/");
+      window.location.href = "/";
     },
-    [router]
+    []
   );
 
   const signup = useCallback(
@@ -86,18 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.error || "Signup failed");
       }
 
-      const result = await res.json();
-      setStaff(result.staff);
-      router.push("/");
+      window.location.href = "/";
     },
-    [router]
+    []
   );
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    setStaff(null);
-    router.push("/auth/login");
-  }, [router]);
+    window.location.href = "/auth/login";
+  }, []);
 
   return (
     <AuthContext.Provider
