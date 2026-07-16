@@ -81,11 +81,8 @@ export const primaryNav: NavItem[] = [
 
 export const allNavItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
-const PHASE_ONE_PREFIXES = ["/", "/attendance", "/tasks", "/leaves", "/settings"];
-
-export function isPhaseOnePath(path: string): boolean {
-  if (path === "/" || path === "") return true;
-  return PHASE_ONE_PREFIXES.some((p) => p !== "/" && path.startsWith(p));
+export function isPhaseOnePath(): boolean {
+  return true;
 }
 
 export function searchNav(query: string): NavItem[] {

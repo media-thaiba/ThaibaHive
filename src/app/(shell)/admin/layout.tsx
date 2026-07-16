@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Settings, Building2, Layers, Clock, MapPin, Calendar, ClipboardCheck } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -7,76 +8,66 @@ export default function AdminLayout({
 }) {
   return (
     <div className="flex flex-1">
-      <aside className="w-56 border-r bg-muted/30 p-4">
-        <h2 className="mb-4 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Administration
-        </h2>
-        <nav className="space-y-1">
-          <Link
-            href="/admin/institutions"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+      <aside className="w-56 border-r bg-card/50 p-4 hidden md:block">
+        <div className="flex items-center gap-2 mb-5 px-2">
+          <Settings className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Administration
+          </h2>
+        </div>
+        <nav className="space-y-0.5">
+          <AdminLink href="/admin/institutions" icon={<Building2 className="h-4 w-4" />}>
             Institutions
-          </Link>
-          <Link
-            href="/admin/departments"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          </AdminLink>
+          <AdminLink href="/admin/departments" icon={<Layers className="h-4 w-4" />}>
             Departments
-          </Link>
-          <Link
-            href="/admin/sub-departments"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          </AdminLink>
+          <AdminLink href="/admin/sub-departments" icon={<Layers className="h-4 w-4" />}>
             Sub-departments
-          </Link>
-          <Link
-            href="/admin/shifts"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          </AdminLink>
+          <AdminLink href="/admin/shifts" icon={<Clock className="h-4 w-4" />}>
             Shifts
-          </Link>
-          <Link
-            href="/admin/attendance-locations"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          </AdminLink>
+          <AdminLink href="/admin/attendance-locations" icon={<MapPin className="h-4 w-4" />}>
             Attendance Locations
-          </Link>
+          </AdminLink>
+
           <div className="my-3 border-t" />
-          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
             Leaves
           </p>
-          <Link
-            href="/admin/leave-types"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          <AdminLink href="/admin/leave-types" icon={<Calendar className="h-4 w-4" />}>
             Leave Types
-          </Link>
-          <Link
-            href="/admin/leave-approvals"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          </AdminLink>
+          <AdminLink href="/admin/leave-approvals" icon={<ClipboardCheck className="h-4 w-4" />}>
             Leave Approvals
-          </Link>
+          </AdminLink>
+
           <div className="my-3 border-t" />
-          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
             Checklists
           </p>
-          <Link
-            href="/admin/checklists"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          <AdminLink href="/admin/checklists" icon={<ClipboardCheck className="h-4 w-4" />}>
             Templates
-          </Link>
-          <Link
-            href="/admin/checklists/assignments"
-            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
-          >
+          </AdminLink>
+          <AdminLink href="/admin/checklists/assignments" icon={<ClipboardCheck className="h-4 w-4" />}>
             Assignments
-          </Link>
+          </AdminLink>
         </nav>
       </aside>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-6 lg:p-8">{children}</main>
     </div>
+  );
+}
+
+function AdminLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-150"
+    >
+      {icon}
+      {children}
+    </Link>
   );
 }

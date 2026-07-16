@@ -31,7 +31,7 @@ const quickLinks = [
 
 export function ShellNav({ onSearchOpen }: ShellNavProps) {
   const pathname = usePathname();
-  const { staff, logout } = useAuth();
+  const { staff } = useAuth();
   const { theme, setTheme } = useTheme();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -85,21 +85,24 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
   return (
     <>
       {/* Brand */}
-      <Link href="/" className="font-semibold text-base tracking-tight shrink-0">
-        ThaibaHive
+      <Link href="/" className="flex items-center gap-2.5 font-semibold text-base tracking-tight shrink-0 group">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold transition-transform duration-200 group-hover:scale-105">
+          TH
+        </div>
+        <span className="hidden sm:inline">ThaibaHive</span>
       </Link>
 
       {/* Quick links - hidden on mobile */}
-      <nav className="hidden md:flex items-center gap-1 flex-1">
+      <nav className="hidden md:flex items-center gap-0.5 flex-1 ml-4">
         {quickLinks.map((link) => (
           <Link
             key={link.href}
             href={link.href}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-sm transition-colors",
+              "rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-150",
               isActive(link.href)
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
             )}
           >
             {link.label}
@@ -112,7 +115,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         {/* Search - visible on mobile only (desktop has sidebar search) */}
         <button
           onClick={onSearchOpen}
-          className="lg:hidden flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors"
+          className="lg:hidden flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
         >
           <Search className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Search...</span>
@@ -125,11 +128,11 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
               setNotifOpen(!notifOpen);
               if (!notifOpen) markRead();
             }}
-            className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
           >
-            <Bell className="h-4.5 w-4.5" />
+            <Bell className="h-[18px] w-[18px]" />
             {unread > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              <span className="absolute top-1.5 right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground animate-scale-in">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
@@ -137,25 +140,28 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
           {notifOpen && (
             <>
               <div
-                className="fixed inset-0 z-10"
+                className="fixed inset-0 z-[var(--z-dropdown)]"
                 onClick={() => setNotifOpen(false)}
               />
-              <div className="absolute right-0 top-full z-20 mt-1 w-80 rounded-xl border bg-popover shadow-lg animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center justify-between border-b px-4 py-2.5">
-                  <span className="text-xs font-medium text-muted-foreground">
+              <div className="absolute right-0 top-full z-[var(--z-dropdown)] mt-2 w-80 rounded-xl border bg-popover shadow-lg animate-in fade-in-0 zoom-in-95 duration-200">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <span className="text-sm font-semibold">
                     Notifications
                   </span>
                   {unread > 0 && (
-                    <span className="text-xs text-primary font-medium">
+                    <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">
                       {unread} new
                     </span>
                   )}
                 </div>
-                <div className="max-h-72 overflow-auto divide-y">
+                <div className="max-h-80 overflow-auto divide-y">
                   {notifications.length === 0 ? (
-                    <p className="p-4 text-xs text-muted-foreground text-center">
-                      No notifications yet
-                    </p>
+                    <div className="p-8 text-center">
+                      <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">
+                        No notifications yet
+                      </p>
+                    </div>
                   ) : (
                     notifications.slice(0, 10).map((n) => {
                       const hrefMap: Record<string, string> = {
@@ -178,16 +184,23 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
                             !n.isRead && "bg-primary/[0.03]"
                           )}
                         >
-                          <p className="font-semibold text-foreground">{n.title}</p>
-                          <p className="text-muted-foreground mt-0.5">
-                            {n.message}
-                          </p>
-                          <p className="mt-1 text-[10px] text-muted-foreground">
-                            {new Date(n.createdAt).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </p>
+                          <div className="flex items-start gap-2">
+                            {!n.isRead && (
+                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-foreground">{n.title}</p>
+                              <p className="text-muted-foreground mt-0.5 line-clamp-2">
+                                {n.message}
+                              </p>
+                              <p className="mt-1 text-[10px] text-muted-foreground">
+                                {new Date(n.createdAt).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          </div>
                         </Link>
                       );
                     })
@@ -196,9 +209,9 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
                 <Link
                   href="/settings"
                   onClick={() => setNotifOpen(false)}
-                  className="block border-t p-2.5 text-center text-xs text-primary font-medium hover:bg-secondary transition-colors rounded-b-xl"
+                  className="block border-t px-4 py-2.5 text-center text-xs text-primary font-medium hover:bg-muted/50 transition-colors rounded-b-xl"
                 >
-                  View all
+                  View all notifications
                 </Link>
               </div>
             </>
@@ -213,20 +226,20 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
             const nextTheme = themes[(currentIndex + 1) % themes.length];
             setTheme(nextTheme);
           }}
-          className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
           title={`Theme: ${theme}`}
         >
-          {theme === "light" && <Sun className="h-4.5 w-4.5" />}
-          {theme === "dark" && <Moon className="h-4.5 w-4.5" />}
-          {theme === "system" && <Monitor className="h-4.5 w-4.5" />}
+          {theme === "light" && <Sun className="h-[18px] w-[18px]" />}
+          {theme === "dark" && <Moon className="h-[18px] w-[18px]" />}
+          {theme === "system" && <Monitor className="h-[18px] w-[18px]" />}
         </button>
 
         {/* Settings - hidden on mobile, bottom nav has it */}
         <Link
           href="/settings"
-          className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors min-w-[44px] min-h-[44px] items-center justify-center"
+          className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center"
         >
-          <Settings className="h-4.5 w-4.5" />
+          <Settings className="h-[18px] w-[18px]" />
         </Link>
 
         {/* User menu */}

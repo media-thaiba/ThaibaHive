@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,8 @@ import {
   Circle,
   X,
   ChevronLeft,
+  TrendingUp,
+  Calendar,
 } from "lucide-react";
 
 type DashboardData = {
@@ -306,52 +307,52 @@ export default function DashboardPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   if (loading) return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6 p-6 lg:p-8">
       <Skeleton className="h-8 w-72" />
-      <SkeletonCard className="h-32" />
+      <SkeletonCard className="h-28" />
       <div className="grid gap-4 sm:grid-cols-3">
         {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[...Array(4)].map((_, i) => <SkeletonCard key={i} className="h-24" />)}
       </div>
     </div>
   );
 
   return (
-    <div className="flex-1 space-y-6 p-6">
-      <PageHeader
-        title={`${greeting}, ${staff?.firstName}`}
-        description={
-          <>
-            {staff?.designation || staff?.role}
-            {data?.checkedInToday ? (
-              <span className="ml-2 text-success font-medium">&middot; Checked in</span>
-            ) : (
-              <span className="ml-2 text-warning font-medium">&middot; Not checked in</span>
-            )}
-          </>
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { setTourActive(true); setTourStep(0); }}>
-              <HelpCircle className="h-4 w-4 mr-1" />
-              Tour
-            </Button>
-            <Link href="/timeline">
-              <Button variant="ghost" size="sm">My Activity</Button>
-            </Link>
-          </div>
-        }
-      />
+    <div className="flex-1 space-y-6 p-6 lg:p-8">
+      {/* Greeting Header */}
+      <div className="space-y-1 animate-slide-up">
+        <h1 className="text-2xl font-bold tracking-tight">
+          {greeting}, {staff?.firstName}
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          {staff?.designation || staff?.role}
+          {data?.checkedInToday ? (
+            <span className="ml-2 inline-flex items-center gap-1 text-success font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse-subtle" />
+              Checked in
+            </span>
+          ) : (
+            <span className="ml-2 inline-flex items-center gap-1 text-warning font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+              Not checked in
+            </span>
+          )}
+        </p>
+      </div>
 
+      {/* Welcome Banner */}
       {data?.showWelcome && (
-        <Card className="border-primary/20 bg-primary/[0.03] animate-slide-up">
+        <Card className="border-primary/15 bg-gradient-to-r from-primary/[0.04] via-primary/[0.02] to-transparent animate-slide-up">
           <CardContent className="p-5">
             <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary animate-pulse-subtle">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-label">Welcome to ThaibaHive!</p>
-                <p className="text-caption mt-1">Start by marking your attendance or checking your tasks.</p>
+                <p className="text-sm font-semibold">Welcome to ThaibaHive!</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Start by marking your attendance or checking your tasks.</p>
                 <div className="flex gap-2 mt-3">
                   <Link href="/attendance"><Button size="sm">Mark Attendance</Button></Link>
                   <Link href="/staff"><Button variant="outline" size="sm">Complete Profile</Button></Link>
@@ -362,15 +363,15 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Quick Actions Panel */}
-      <section className="space-y-2">
-        <h2 className="text-label text-muted-foreground">Quick Actions</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
+      {/* Quick Actions */}
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Quick Actions</h2>
+        <div className="grid gap-3 sm:grid-cols-3 stagger-children">
           {data?.checkedInToday && (
             <button
               onClick={handleClockOut}
               disabled={clockingOut}
-              className="group flex items-center gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-left transition-all duration-200 hover:border-destructive/40 hover:bg-destructive/10 hover:-translate-y-0.5 disabled:opacity-50"
+              className="group flex items-center gap-3 rounded-xl border border-destructive/15 bg-destructive/[0.03] p-4 text-left transition-all duration-200 hover:border-destructive/30 hover:bg-destructive/[0.06] hover:-translate-y-0.5 hover:shadow-sm disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive group-hover:bg-destructive group-hover:text-destructive-foreground transition-all duration-200">
                 <LogOut className="h-5 w-5" />
@@ -383,7 +384,7 @@ export default function DashboardPage() {
           )}
           <button
             onClick={openLeaveDialog}
-            className="group flex items-center gap-3 rounded-xl border border-warning/20 bg-warning/5 p-4 text-left transition-all duration-200 hover:border-warning/40 hover:bg-warning/10 hover:-translate-y-0.5"
+            className="group flex items-center gap-3 rounded-xl border border-warning/15 bg-warning/[0.03] p-4 text-left transition-all duration-200 hover:border-warning/30 hover:bg-warning/[0.06] hover:-translate-y-0.5 hover:shadow-sm"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning group-hover:bg-warning group-hover:text-warning-foreground transition-all duration-200">
               <CalendarPlus className="h-5 w-5" />
@@ -395,7 +396,7 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={openTaskDialog}
-            className="group flex items-center gap-3 rounded-xl border border-info/20 bg-info/5 p-4 text-left transition-all duration-200 hover:border-info/40 hover:bg-info/10 hover:-translate-y-0.5"
+            className="group flex items-center gap-3 rounded-xl border border-info/15 bg-info/[0.03] p-4 text-left transition-all duration-200 hover:border-info/30 hover:bg-info/[0.06] hover:-translate-y-0.5 hover:shadow-sm"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-info/10 text-info group-hover:bg-info group-hover:text-info-foreground transition-all duration-200">
               <ClipboardPlus className="h-5 w-5" />
@@ -408,9 +409,10 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="stagger-children" id="tour-tasks">
-        <h2 className="text-label text-muted-foreground mb-3">Today</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+      {/* Today's Focus */}
+      <section className="space-y-3" id="tour-tasks">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Today&apos;s Focus</h2>
+        <div className="grid gap-3 sm:grid-cols-3 stagger-children">
           <PrimaryAction
             href="/attendance"
             icon={<Clock className="h-5 w-5" />}
@@ -434,49 +436,74 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Stats Grid */}
       <section className="stagger-children" id="tour-attendance">
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {staff && ["super_admin", "admin", "principal", "hod"].includes(staff.role) ? (
             <div id="tour-profile">
-              <MiniStat
-                label="Staff Present Today"
-                value={`${data?.todayPresent ?? 0}/${data?.staffCount ?? 0}`}
+              <StatCard
+                label="Staff Present"
+                value={data?.todayPresent ?? 0}
+                suffix={` / ${data?.staffCount ?? 0}`}
                 progress={data && data.staffCount > 0 ? data.todayPresent / data.staffCount : 0}
                 href="/admin/attendance-locations"
+                icon={<TrendingUp className="h-4 w-4" />}
               />
             </div>
           ) : (
             <div id="tour-profile">
-              <MiniStat
-                label="Profile Completion"
-                value={`${data?.profileFields.filled ?? 0}/${data?.profileFields.total ?? 7}`}
+              <StatCard
+                label="Profile"
+                value={data?.profileFields.filled ?? 0}
+                suffix={` / ${data?.profileFields.total ?? 7}`}
                 progress={data ? data.profileFields.filled / data.profileFields.total : 0}
                 href={staff ? `/staff/${staff.id}/edit` : "/staff"}
+                icon={<CheckSquare className="h-4 w-4" />}
               />
             </div>
           )}
-          <MiniStat label="My Tasks Done" value={`${data?.completedTasks ?? 0}/${data?.totalTasks ?? 0}`} progress={data && data.totalTasks > 0 ? data.completedTasks / data.totalTasks : 0} href="/tasks" />
-          <MiniStat label="Leave Left" value={`${data?.leaveRemaining ?? 0}`} progress={data && data.leaveTotal > 0 ? (data.leaveTotal - data.leaveRemaining) / data.leaveTotal : 0} href="/leaves" />
-          <MiniStat label="Approvals" value={String(data?.pendingApprovals ?? 0)} href={staff && ["super_admin", "admin", "principal", "hod"].includes(staff.role) ? "/admin/leave-approvals" : "/approvals"} />
+          <StatCard
+            label="Tasks Done"
+            value={data?.completedTasks ?? 0}
+            suffix={` / ${data?.totalTasks ?? 0}`}
+            progress={data && data.totalTasks > 0 ? data.completedTasks / data.totalTasks : 0}
+            href="/tasks"
+            icon={<CheckSquare className="h-4 w-4" />}
+          />
+          <StatCard
+            label="Leave Left"
+            value={data?.leaveRemaining ?? 0}
+            suffix=" days"
+            progress={data && data.leaveTotal > 0 ? (data.leaveTotal - data.leaveRemaining) / data.leaveTotal : 0}
+            href="/leaves"
+            icon={<Calendar className="h-4 w-4" />}
+          />
+          <StatCard
+            label="Approvals"
+            value={data?.pendingApprovals ?? 0}
+            href={staff && ["super_admin", "admin", "principal", "hod"].includes(staff.role) ? "/admin/leave-approvals" : "/approvals"}
+            icon={<HelpCircle className="h-4 w-4" />}
+          />
         </div>
       </section>
 
-      <section className="space-y-2" id="tour-shortcuts">
-        <h2 className="text-label text-muted-foreground">Shortcuts</h2>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Shortcuts */}
+      <section className="space-y-3" id="tour-shortcuts">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Quick Links</h2>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
           {primaryNav.filter((item) => item.href !== "/").slice(0, 6).map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href}
-                className="interactive-row flex items-center gap-3 group">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                className="group interactive-row flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{item.label}</p>
                   <p className="text-caption truncate">{item.desc}</p>
                 </div>
-                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
               </Link>
             );
           })}
@@ -576,15 +603,15 @@ export default function DashboardPage() {
       {/* ─── Guided Tour Overlay ─── */}
       {tourActive && (
         <>
-          <div className="fixed inset-0 z-[60] bg-black/20" onClick={() => setTourActive(false)} />
+          <div className="fixed inset-0 z-[var(--z-overlay)] bg-black/30 backdrop-blur-sm" onClick={() => setTourActive(false)} />
           <div
             ref={tooltipRef}
-            className="fixed z-[70] w-72 rounded-xl border bg-popover p-4 shadow-lg animate-in fade-in-0 zoom-in-95"
+            className="fixed z-[var(--z-tooltip)] w-72 rounded-xl border bg-popover p-4 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200"
             style={{ top: tooltipPos.top, left: tooltipPos.left }}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="text-sm font-semibold">{TOUR_STEPS[tourStep]?.title}</p>
-              <button onClick={() => setTourActive(false)} className="shrink-0 text-muted-foreground hover:text-foreground">
+              <button onClick={() => setTourActive(false)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -592,7 +619,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 {TOUR_STEPS.map((_, i) => (
-                  <Circle key={i} className={`h-2 w-2 ${i === tourStep ? "fill-primary text-primary" : "fill-muted text-muted-foreground"}`} />
+                  <Circle key={i} className={`h-2 w-2 transition-colors ${i === tourStep ? "fill-primary text-primary" : "fill-muted text-muted-foreground"}`} />
                 ))}
               </div>
               <div className="flex gap-1.5">
@@ -624,19 +651,19 @@ function PrimaryAction({ href, icon, label, desc, active, badge }: {
 }) {
   return (
     <Link href={href}
-      className={`group relative flex items-center gap-4 rounded-xl border p-5 transition-all duration-200 hover:shadow-md ${
-        active ? "border-success/20 bg-success/10" : "bg-card hover:border-primary/20 hover:-translate-y-0.5"
+      className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm ${
+        active ? "border-success/20 bg-success/[0.04]" : "bg-card hover:border-primary/15"
       }`}>
-      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
-        active ? "bg-success/20 text-success" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-105"
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
+        active ? "bg-success/15 text-success" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-105"
       }`}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-base font-semibold">{label}</p>
+          <p className="text-sm font-semibold">{label}</p>
           {badge && (
-            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground animate-pulse-subtle">
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
               {badge}
             </span>
           )}
@@ -648,16 +675,24 @@ function PrimaryAction({ href, icon, label, desc, active, badge }: {
   );
 }
 
-function MiniStat({ label, value, progress, href }: {
-  label: string; value: string; progress?: number; href: string;
+function StatCard({ label, value, suffix, progress, href, icon }: {
+  label: string; value: number; suffix?: string; progress?: number; href: string; icon: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="interactive-row block">
-      <p className="text-caption">{label}</p>
-      <p className="text-xl font-bold tracking-tight mt-0.5">{value}</p>
+    <Link href={href} className="interactive-row block group">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-caption">{label}</p>
+        <span className="text-muted-foreground/50 group-hover:text-primary transition-colors">{icon}</span>
+      </div>
+      <p className="text-xl font-bold tracking-tight">
+        {value}{suffix && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}
+      </p>
       {progress !== undefined && (
-        <div className="mt-2 h-1 w-full rounded-full bg-secondary overflow-hidden">
-          <div className="h-full rounded-full bg-primary transition-all duration-500 ease-out" style={{ width: `${Math.min(progress * 100, 100)}%` }} />
+        <div className="mt-2 h-1 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${Math.min(progress * 100, 100)}%` }}
+          />
         </div>
       )}
     </Link>

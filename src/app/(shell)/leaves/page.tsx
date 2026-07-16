@@ -115,10 +115,10 @@ export default function LeavesPage() {
 
   const leaveToCancel = confirmDeleteId ? leaves.find((l) => l.id === confirmDeleteId) : null;
 
-  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
+  if (loading) return <div className="flex-1 p-6 lg:p-8"><Skeleton className="h-8 w-48" /></div>;
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6 p-6 lg:p-8">
       <PageHeader
         title="Leave Requests"
         actions={
@@ -128,33 +128,40 @@ export default function LeavesPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
-        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
+          <span className="text-muted-foreground text-xs">to</span>
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+        </div>
         <ExportButton type="leaves" params={{ dateFrom, dateTo }} />
       </div>
 
+      {/* Leave Balances */}
       {balances.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Leave Balances ({new Date().getFullYear()})</CardTitle></CardHeader>
+        <Card className="animate-slide-up">
+          <CardHeader>
+            <CardTitle className="text-base">Leave Balances ({new Date().getFullYear()})</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {balances.map((b) => {
                 const remaining = b.totalDays - b.usedDays;
                 const pct = b.totalDays > 0 ? (b.usedDays / b.totalDays) * 100 : 0;
                 return (
-                  <div key={b.id} className="rounded-md border p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-medium">{b.leaveTypeCode || b.leaveTypeName}</span>
-                      <span className="text-[10px] text-muted-foreground">{b.usedDays}/{b.totalDays} used</span>
+                  <div key={b.id} className="rounded-xl border p-3.5 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold">{b.leaveTypeCode || b.leaveTypeName}</span>
+                      <span className="text-[10px] text-muted-foreground">{b.usedDays}/{b.totalDays}</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-warning" : "bg-primary"}`}
+                        className={`h-full rounded-full transition-all duration-500 ${pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-warning" : "bg-primary"}`}
                         style={{ width: `${Math.min(pct, 100)}%` }}
                       />
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{remaining} remaining</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">{remaining} remaining</p>
                   </div>
                 );
               })}
@@ -163,9 +170,12 @@ export default function LeavesPage() {
         </Card>
       )}
 
+      {/* Leave Form */}
       {showForm && (
-        <Card>
-          <CardHeader><CardTitle>New Leave Application</CardTitle></CardHeader>
+        <Card className="animate-slide-up">
+          <CardHeader>
+            <CardTitle className="text-base">New Leave Application</CardTitle>
+          </CardHeader>
           <CardContent>
             <form onSubmit={applyLeave} className="space-y-3">
               <Select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
@@ -173,12 +183,12 @@ export default function LeavesPage() {
                 {leaveTypes.map((lt) => <option key={lt.id} value={lt.id}>{lt.name} ({lt.daysAllowed} days)</option>)}
               </Select>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm text-muted-foreground">Start</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Start Date</label>
                   <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: e.target.value > form.endDate ? e.target.value : form.endDate })} required />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm text-muted-foreground">End</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">End Date</label>
                   <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
                 </div>
               </div>
@@ -188,7 +198,10 @@ export default function LeavesPage() {
                   {selectedType && remaining > 0 && remaining < totalAllowed && ` \u00b7 ${remaining} of ${totalAllowed} days remaining`}
                 </p>
               )}
-              <Textarea placeholder="Reason (optional)" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Reason (optional)</label>
+                <Textarea placeholder="Reason for leave" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} />
+              </div>
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Submitting..." : `Apply for ${days} day${days > 1 ? "s" : ""}`}
               </Button>
@@ -198,8 +211,11 @@ export default function LeavesPage() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader><CardTitle>My Leave History</CardTitle></CardHeader>
+      {/* Leave History */}
+      <Card className="animate-slide-up">
+        <CardHeader>
+          <CardTitle className="text-base">My Leave History</CardTitle>
+        </CardHeader>
         <CardContent>
           {leaves.length === 0 ? (
             <EmptyState
@@ -211,10 +227,10 @@ export default function LeavesPage() {
           ) : (
             <div className="space-y-2">
               {leaves.map((l) => (
-                <div key={l.id} className="flex items-center justify-between rounded-md border p-3">
+                <div key={l.id} className="flex items-center justify-between rounded-xl border p-3.5 hover:bg-muted/30 transition-colors">
                   <div>
                     <p className="text-sm font-medium">{formatDateRange(l.startDate, l.endDate)} ({l.daysCount} day{l.daysCount > 1 ? "s" : ""})</p>
-                    {l.reason && <p className="text-xs text-muted-foreground">{l.reason}</p>}
+                    {l.reason && <p className="text-xs text-muted-foreground mt-0.5">{l.reason}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={statusVariant[l.status] || "secondary"} className="capitalize">{l.status}</Badge>
@@ -232,7 +248,7 @@ export default function LeavesPage() {
         </CardContent>
       </Card>
 
-      {/* Shared cancel dialog */}
+      {/* Cancel Dialog */}
       <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

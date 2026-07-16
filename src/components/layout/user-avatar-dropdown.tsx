@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, Shield, User } from "lucide-react";
 import Link from "next/link";
 
 export function UserAvatarDropdown() {
@@ -62,6 +62,20 @@ export function UserAvatarDropdown() {
             <span>My Profile</span>
           </Link>
         </DropdownMenuItem>
+        {(staff.role === "super_admin" || staff.role === "admin") && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild inset>
+              <Link
+                href="/admin/institutions"
+                className="flex items-center gap-2 w-full"
+              >
+                <Shield className="h-4 w-4 text-primary" />
+                <span className="font-medium">Admin Panel</span>
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           inset

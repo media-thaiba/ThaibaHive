@@ -55,11 +55,18 @@ const columnLabels: Record<string, string> = {
   completed: "Completed",
 };
 
+const columnColors: Record<string, string> = {
+  todo: "bg-muted",
+  in_progress: "bg-info/10",
+  review: "bg-warning/10",
+  completed: "bg-success/10",
+};
+
 const priorityStyles: Record<string, { badge: "secondary" | "info" | "warning" | "destructive"; bg: string }> = {
   low: { badge: "secondary", bg: "" },
-  medium: { badge: "info", bg: "bg-info/10" },
-  high: { badge: "warning", bg: "bg-warning/10" },
-  urgent: { badge: "destructive", bg: "bg-destructive/10" },
+  medium: { badge: "info", bg: "bg-info/[0.03]" },
+  high: { badge: "warning", bg: "bg-warning/[0.03]" },
+  urgent: { badge: "destructive", bg: "bg-destructive/[0.03]" },
 };
 
 function getDueDateStatus(dueDate: string | null): "overdue" | "today" | "upcoming" | "none" {
@@ -100,7 +107,7 @@ function SortableTaskCard({ task }: { task: Task }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-lg border bg-background p-3 ${pStyle.bg} space-y-2 shadow-sm hover:shadow-md transition-shadow`}
+      className={`rounded-xl border bg-card p-3.5 ${pStyle.bg} space-y-2.5 shadow-xs hover:shadow-sm transition-all duration-200`}
     >
       <div className="flex items-start gap-2">
         <Button
@@ -125,7 +132,7 @@ function SortableTaskCard({ task }: { task: Task }) {
       <div className="flex items-center gap-2 pl-6 flex-wrap">
         <Badge variant={pStyle.badge}>{task.priority}</Badge>
         {task.dueDate && (
-          <span className={`text-xs px-1.5 py-0.5 rounded ${dueDateColor(dueStatus)}`}>
+          <span className={`text-xs px-1.5 py-0.5 rounded-md ${dueDateColor(dueStatus)}`}>
             <Calendar className="h-3 w-3 inline mr-0.5" />
             {dueStatus === "overdue" && "Overdue: "}
             {dueStatus === "today" && "Today: "}
@@ -153,7 +160,7 @@ function SortableTaskCard({ task }: { task: Task }) {
 function TaskCardOverlay({ task }: { task: Task }) {
   const pStyle = priorityStyles[task.priority] || priorityStyles.medium;
   return (
-    <div className={`rounded-lg border bg-background p-3 ${pStyle.bg} shadow-lg w-[280px]`}>
+    <div className={`rounded-xl border bg-card p-3.5 ${pStyle.bg} shadow-lg w-[280px]`}>
       <div className="flex items-start gap-2">
         <GripVertical className="h-4 w-4 mt-0.5 text-muted-foreground" />
         <span className="text-sm font-medium line-clamp-2">{task.title}</span>
@@ -316,7 +323,7 @@ export default function TasksPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-6 lg:p-8">
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           {[...Array(4)].map((_, i) => (
@@ -328,7 +335,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex-1 p-6">
+    <div className="flex-1 p-6 lg:p-8">
       <PageHeader
         title="Tasks"
         actions={
@@ -395,8 +402,8 @@ export default function TasksPage() {
               const colTasks = tasks.filter((t) => t.status === col);
               const isVisible = mobileColumn === col;
               return (
-                <div key={col} className={`rounded-lg border bg-muted/10 ${!isVisible ? "hidden sm:block" : ""}`}>
-                  <div className="border-b px-3 py-2.5 flex items-center justify-between">
+                <div key={col} className={`rounded-xl border bg-muted/20 ${!isVisible ? "hidden sm:block" : ""}`}>
+                  <div className={`border-b px-3.5 py-2.5 flex items-center justify-between rounded-t-xl ${columnColors[col]}`}>
                     <span className="text-sm font-medium">{columnLabels[col]}</span>
                     <Badge variant="secondary" className="text-xs">
                       {colTasks.length}
@@ -406,7 +413,7 @@ export default function TasksPage() {
                     items={colTasks.map((t) => t.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="p-2 space-y-2 min-h-[300px]">
+                    <div className="p-2.5 space-y-2.5 min-h-[300px]">
                       {colTasks.map((task) => (
                         <SortableTaskCard key={task.id} task={task} />
                       ))}

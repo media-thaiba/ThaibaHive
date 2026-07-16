@@ -234,46 +234,55 @@ export default function AttendancePage() {
 
   const filteredTeamLogs = teamLogs;
 
-  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
+  if (loading) return <div className="flex-1 p-6 lg:p-8"><Skeleton className="h-8 w-48" /></div>;
 
   const tabs: { key: Tab; label: string }[] = [{ key: "my", label: "My Attendance" }];
   if (canViewTeam) tabs.push({ key: "team", label: "Team Overview" });
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6 p-6 lg:p-8">
       <PageHeader title="Attendance" />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
-        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
+          <span className="text-muted-foreground text-xs">to</span>
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+        </div>
         <ExportButton type="attendance" params={{ dateFrom, dateTo }} />
       </div>
 
+      {/* Tabs */}
       {tabs.length > 1 && (
-        <div className="flex gap-1 border-b">
+        <div className="flex gap-0.5 border-b">
           {tabs.map((tab) => (
-            <Button
+            <button
               key={tab.key}
-              variant="ghost"
               onClick={() => setActiveTab(tab.key)}
-              className={`rounded-none border-b-2 px-4 py-2 text-sm font-medium transition-colors -mb-px ${
+              className={`relative px-4 py-2.5 text-sm font-medium transition-colors -mb-px ${
                 activeTab === tab.key
-                  ? "border-primary text-primary hover:text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.label}
-            </Button>
+              {activeTab === tab.key && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
+            </button>
           ))}
         </div>
       )}
 
+      {/* My Attendance */}
       {activeTab === "my" && (
         <>
-          <Card>
+          {/* Today's Status */}
+          <Card className="animate-slide-up">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Today</CardTitle>
+                <CardTitle className="text-base">Today</CardTitle>
                 {todayLog?.checkIn && <Badge variant="success">Active today</Badge>}
               </div>
             </CardHeader>
@@ -281,17 +290,33 @@ export default function AttendancePage() {
               <div className="flex flex-wrap items-center gap-4">
                 {todayLog ? (
                   <>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Check-in: <span className="font-medium text-foreground">{todayLog.checkIn ? formatTime(todayLog.checkIn) : "\u2014"}</span></p>
-                      <p className="text-sm text-muted-foreground">Check-out: <span className="font-medium text-foreground">{todayLog.checkOut ? formatTime(todayLog.checkOut) : "\u2014"}</span></p>
-                      {todayLog.lateMinutes ? <p className="text-sm text-muted-foreground">Late by: <span className="font-medium text-warning">{todayLog.lateMinutes} min</span></p> : null}
-                      {todayLog.workedMinutes ? <p className="text-sm text-muted-foreground">Worked: <span className="font-medium">{Math.floor(todayLog.workedMinutes / 60)}h {todayLog.workedMinutes % 60}m</span></p> : null}
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Check-in</p>
+                        <p className="text-sm font-semibold">{todayLog.checkIn ? formatTime(todayLog.checkIn) : "\u2014"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Check-out</p>
+                        <p className="text-sm font-semibold">{todayLog.checkOut ? formatTime(todayLog.checkOut) : "\u2014"}</p>
+                      </div>
+                      {todayLog.lateMinutes ? (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Late by</p>
+                          <p className="text-sm font-semibold text-warning">{todayLog.lateMinutes} min</p>
+                        </div>
+                      ) : null}
+                      {todayLog.workedMinutes ? (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Worked</p>
+                          <p className="text-sm font-semibold">{Math.floor(todayLog.workedMinutes / 60)}h {todayLog.workedMinutes % 60}m</p>
+                        </div>
+                      ) : null}
                     </div>
                     <Badge variant={statusVariant[todayLog.status] || "secondary"} className="capitalize">{todayLog.status}</Badge>
                   </>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10 text-warning">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10 text-warning">
                       <Smartphone className="h-5 w-5" />
                     </div>
                     <div>
@@ -301,7 +326,7 @@ export default function AttendancePage() {
                   </div>
                 )}
               </div>
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4">
                 {todayLog && !todayLog.checkOut && (
                   <Button variant="outline" onClick={checkOut} disabled={checkingOut}>
                     <LogOut className="h-4 w-4 mr-1.5" />
@@ -312,8 +337,11 @@ export default function AttendancePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader><CardTitle>History</CardTitle></CardHeader>
+          {/* History */}
+          <Card className="animate-slide-up">
+            <CardHeader>
+              <CardTitle className="text-base">History</CardTitle>
+            </CardHeader>
             <CardContent>
               {logs.length === 0 ? (
                 <EmptyState
@@ -324,7 +352,7 @@ export default function AttendancePage() {
               ) : (
                 <div className="space-y-2">
                   {logs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between rounded-md border p-3">
+                    <div key={log.id} className="flex items-center justify-between rounded-xl border p-3.5 hover:bg-muted/30 transition-colors">
                       <div>
                         <p className="text-sm font-medium">{formatDate(log.date)}</p>
                         <p className="text-xs text-muted-foreground">In: {log.checkIn ? formatTime(log.checkIn) : "\u2014"} &middot; Out: {log.checkOut ? formatTime(log.checkOut) : "\u2014"}</p>
@@ -353,24 +381,25 @@ export default function AttendancePage() {
         </>
       )}
 
+      {/* Team Attendance */}
       {activeTab === "team" && (
-        <Card>
+        <Card className="animate-slide-up">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Team Attendance</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <CardTitle className="text-base">Team Attendance</CardTitle>
               <Input
                 type="text"
                 placeholder="Search by name or ID..."
                 value={teamSearch}
                 onChange={(e) => setTeamSearch(e.target.value)}
-                className="w-64"
+                className="w-full sm:w-64"
               />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-muted-foreground">Department:</label>
+                <label className="text-xs font-medium text-muted-foreground">Department:</label>
                 <Select
                   value={selectedDepartmentId}
                   onChange={(e) => setSelectedDepartmentId(e.target.value)}
@@ -384,7 +413,7 @@ export default function AttendancePage() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-muted-foreground">Institution:</label>
+                <label className="text-xs font-medium text-muted-foreground">Institution:</label>
                 <Select
                   value={selectedInstitutionId}
                   onChange={(e) => setSelectedInstitutionId(e.target.value)}
@@ -408,24 +437,24 @@ export default function AttendancePage() {
               />
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left font-medium">Employee ID</th>
-                        <th className="px-4 py-3 text-left font-medium">Name</th>
-                        <th className="px-4 py-3 text-left font-medium">Date</th>
-                        <th className="px-4 py-3 text-left font-medium">Check-in</th>
-                        <th className="px-4 py-3 text-left font-medium">Check-out</th>
-                        <th className="px-4 py-3 text-left font-medium">Status</th>
-                        <th className="px-4 py-3 text-left font-medium">Late (min)</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Check-in</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Check-out</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Late (min)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredTeamLogs.map((log) => (
-                        <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="px-4 py-3 text-muted-foreground">{log.employeeId || "\u2014"}</td>
-                          <td className="px-4 py-3">{[log.staffName, log.staffLastName].filter(Boolean).join(" ") || "\u2014"}</td>
+                          <td className="px-4 py-3 font-medium">{[log.staffName, log.staffLastName].filter(Boolean).join(" ") || "\u2014"}</td>
                           <td className="px-4 py-3 text-muted-foreground">{formatDate(log.date)}</td>
                           <td className="px-4 py-3 text-muted-foreground">{log.checkIn ? formatTime(log.checkIn) : "\u2014"}</td>
                           <td className="px-4 py-3 text-muted-foreground">{log.checkOut ? formatTime(log.checkOut) : "\u2014"}</td>
