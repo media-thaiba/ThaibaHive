@@ -23,13 +23,13 @@ class ApprovalsListNotifier extends AsyncNotifier<List<ApprovalItemModel>> {
 
   Future<void> approve(String type, String id, {String? notes}) async {
     final repo = ref.watch(approvalsRepositoryProvider);
-    await repo.updateApproval(type, id, status: 'approved', notes: notes);
+    await repo.updateApproval(type, id, action: 'approve', notes: notes);
     await refresh();
   }
 
   Future<void> reject(String type, String id, {String? notes}) async {
     final repo = ref.watch(approvalsRepositoryProvider);
-    await repo.updateApproval(type, id, status: 'rejected', notes: notes);
+    await repo.updateApproval(type, id, action: 'reject', notes: notes);
     await refresh();
   }
 }

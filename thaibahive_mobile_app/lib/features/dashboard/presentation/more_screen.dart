@@ -14,9 +14,15 @@ class MoreScreen extends StatelessWidget {
   static const Set<String> _unlockedRoutes = {
     '/notifications', // Phase 1 — always available
     '/settings',      // Phase 1 — always available
-    // Add future routes below as they go live:
-    // '/announcements',
-    // '/events',
+    // Phase 2+ features — live:
+    '/announcements',
+    '/circulars',
+    '/polls',
+    '/recognition',
+    '/help-desk',
+    '/staff',
+    '/reports',
+    '/approvals',
   };
 
   static const _communicationFeatures = [

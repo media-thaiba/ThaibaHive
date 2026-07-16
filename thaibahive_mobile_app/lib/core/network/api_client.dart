@@ -139,6 +139,19 @@ class ApiClient {
     }
   }
 
+  Future<T> patch<T>(
+    String path, {
+    dynamic data,
+    T Function(dynamic json)? fromJson,
+  }) async {
+    try {
+      final response = await _dio.patch(path, data: data);
+      return _handleResponse(response, fromJson);
+    } on DioException catch (e) {
+      throw AppException.fromDioException(e);
+    }
+  }
+
   Future<T> upload<T>(
     String path, {
     required FormData formData,

@@ -35,7 +35,8 @@ class PollsRepository {
   }
 
   Future<void> respondToPoll(String pollId, String optionId) async {
-    await _apiClient.post('/polls/$pollId/respond', data: {
+    // API route is /polls/[id]/vote (not /respond)
+    await _apiClient.post('/polls/$pollId/vote', data: {
       'option_id': optionId,
     });
   }

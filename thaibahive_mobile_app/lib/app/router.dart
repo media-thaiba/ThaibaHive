@@ -171,10 +171,7 @@ GoRouter buildRouter() {
         name: 'staff',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Staff Directory',
-            icon: Icons.people_alt_rounded,
-          ),
+          child: const StaffDirectoryScreen(),
         ),
       ),
       GoRoute(
@@ -182,9 +179,8 @@ GoRouter buildRouter() {
         name: 'staffProfile',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Staff Directory',
-            icon: Icons.people_alt_rounded,
+          child: StaffProfileScreen(
+            id: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -193,10 +189,7 @@ GoRouter buildRouter() {
         name: 'announcements',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Announcements',
-            icon: Icons.campaign_rounded,
-          ),
+          child: const AnnouncementsScreen(),
         ),
       ),
       GoRoute(
@@ -237,10 +230,7 @@ GoRouter buildRouter() {
         name: 'circulars',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Circulars',
-            icon: Icons.description_rounded,
-          ),
+          child: const CircularsScreen(),
         ),
       ),
       GoRoute(
@@ -248,10 +238,7 @@ GoRouter buildRouter() {
         name: 'polls',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Polls',
-            icon: Icons.poll_rounded,
-          ),
+          child: const PollsScreen(),
         ),
       ),
       GoRoute(
@@ -259,9 +246,8 @@ GoRouter buildRouter() {
         name: 'pollDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Polls',
-            icon: Icons.poll_rounded,
+          child: PollDetailScreen(
+            pollId: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -292,10 +278,7 @@ GoRouter buildRouter() {
         name: 'helpDesk',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Help Desk',
-            icon: Icons.support_agent_rounded,
-          ),
+          child: const HelpDeskScreen(),
         ),
       ),
       GoRoute(
@@ -303,9 +286,8 @@ GoRouter buildRouter() {
         name: 'helpDeskTicket',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Help Desk',
-            icon: Icons.support_agent_rounded,
+          child: HelpDeskTicketDetailScreen(
+            ticketId: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -322,10 +304,7 @@ GoRouter buildRouter() {
         name: 'recognition',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Recognition',
-            icon: Icons.emoji_events_rounded,
-          ),
+          child: const RecognitionScreen(),
         ),
       ),
       GoRoute(
@@ -410,10 +389,7 @@ GoRouter buildRouter() {
         name: 'reports',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Reports',
-            icon: Icons.assignment_rounded,
-          ),
+          child: const DailyReportsScreen(),
         ),
       ),
       GoRoute(
@@ -421,10 +397,7 @@ GoRouter buildRouter() {
         name: 'reportCreate',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Reports',
-            icon: Icons.assignment_rounded,
-          ),
+          child: const ReportCreateScreen(),
         ),
       ),
       GoRoute(
@@ -432,10 +405,7 @@ GoRouter buildRouter() {
         name: 'approvals',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Approvals',
-            icon: Icons.approval_rounded,
-          ),
+          child: const ApprovalsScreen(),
         ),
       ),
       GoRoute(

@@ -12,42 +12,58 @@ class HelpDeskRepository {
 
   HelpDeskRepository(this._apiClient);
 
+  // API is at /help-desk (no /tickets segment)
   Future<List<HelpDeskTicketModel>> getTickets({int page = 1}) async {
     final response =
-        await _apiClient.get('/help-desk/tickets', queryParameters: {'page': page});
+        await _apiClient.get('/help-desk', queryParameters: {'page': page});
     final data = response;
     if (data is List) {
       return data
           .map((e) => HelpDeskTicketModel.fromJson(e as Map<String, dynamic>))
           .toList();
     }
-    if (data is Map && data['data'] is List) {
-      return (data['data'] as List)
-          .map((e) => HelpDeskTicketModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+    if (data is Map) {
+      // API returns { tickets: [...] }
+      final list = data['tickets'] ?? data['data'];
+      if (list is List) {
+        return list
+            .map((e) =>
+                HelpDeskTicketModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
     }
     return [];
   }
 
   Future<HelpDeskTicketModel> getTicket(String id) async {
-    final response = await _apiClient.get('/help-desk/tickets/$id');
-    return HelpDeskTicketModel.fromJson(response as Map<String, dynamic>);
+    final response = await _apiClient.get('/help-desk/$id');
+    // API returns { ticket: {...}, comments: [...] }
+    final map = response as Map<String, dynamic>;
+    return HelpDeskTicketModel.fromJson(
+      (map['ticket'] ?? map) as Map<String, dynamic>,
+    );
   }
 
   Future<HelpDeskTicketModel> createTicket(Map<String, dynamic> data) async {
-    final response = await _apiClient.post('/help-desk/tickets', data: data);
-    return HelpDeskTicketModel.fromJson(response as Map<String, dynamic>);
+    final response = await _apiClient.post('/help-desk', data: data);
+    final map = response as Map<String, dynamic>;
+    return HelpDeskTicketModel.fromJson(
+      (map['ticket'] ?? map) as Map<String, dynamic>,
+    );
   }
 
   Future<HelpDeskTicketModel> updateTicket(
       String id, Map<String, dynamic> data) async {
-    final response = await _apiClient.put('/help-desk/tickets/$id', data: data);
-    return HelpDeskTicketModel.fromJson(response as Map<String, dynamic>);
+    final response = await _apiClient.patch('/help-desk/$id', data: data);
+    final map = response as Map<String, dynamic>;
+    return HelpDeskTicketModel.fromJson(
+      (map['ticket'] ?? map) as Map<String, dynamic>,
+    );
   }
 
   Future<void> addComment(String ticketId, String comment) async {
-    await _apiClient.post('/help-desk/tickets/$ticketId/comments', data: {
-      'comment': comment,
+    await _apiClient.post('/help-desk/$ticketId/comments', data: {
+      'content': comment,
     });
   }
 }

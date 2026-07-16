@@ -18,7 +18,9 @@ class ApprovalsRepository {
       '/approvals',
       queryParameters: {'page': page},
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        // API returns { approvals: [...] }
+        final list = (json is Map ? (json['approvals'] ?? json['data']) : json)
+            as List<dynamic>? ?? [];
         return list
             .map((e) =>
                 ApprovalItemModel.fromJson(e as Map<String, dynamic>))
@@ -28,15 +30,21 @@ class ApprovalsRepository {
     return data;
   }
 
+  /// API: PATCH /approvals with body { type, id, action: "approve"|"reject", notes? }
   Future<void> updateApproval(
     String type,
     String id, {
-    required String status,
+    required String action, // "approve" or "reject"
     String? notes,
   }) async {
-    await _api.put(
-      '/approvals/$type/$id',
-      data: {'status': status, 'notes': notes},
+    await _api.patch(
+      '/approvals',
+      data: {
+        'type': type,
+        'id': id,
+        'action': action,
+        if (notes != null) 'notes': notes,
+      },
     );
   }
 }
