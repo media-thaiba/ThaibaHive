@@ -7,12 +7,11 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { DiagnosticsButton } from "@/components/diagnostics-button";
-import { telemetry } from "@/lib/diagnostics/logger";
 import { isPhaseOnePath } from "@/config/navigation";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Toaster } from "sonner";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Clock,
   CheckSquare,
@@ -64,10 +63,6 @@ export default function ShellLayout({
 }) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    telemetry.patchConsole();
-  }, []);
 
   return (
     <QueryProvider>

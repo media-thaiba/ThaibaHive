@@ -61,12 +61,16 @@ function addEntry(level: LogEntry["level"], message: string, data?: unknown) {
     logs.push(entry);
     saveLogs(logs);
     return entry;
-  } catch (err) {
+  } catch {
     // Suppress console writes during error to prevent loop
   } finally {
     isAddingEntry = false;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Console patching
+// ---------------------------------------------------------------------------
 
 // Bind original console methods directly (since console is not enumerable)
 const origConsole = {
@@ -76,6 +80,14 @@ const origConsole = {
   debug: typeof console !== "undefined" ? console.debug.bind(console) : () => {},
 };
 
+function serializeArg(arg: unknown): string {
+  if (arg instanceof Error) return `${arg.name}: ${arg.message}`;
+  if (typeof arg === "object" && arg !== null) {
+    try { return JSON.stringify(arg); } catch { return String(arg); }
+  }
+  return String(arg);
+}
+
 function patchConsole() {
   if (typeof window === "undefined") return;
   if ((window as any).__telemetryPatched) return;
@@ -83,19 +95,19 @@ function patchConsole() {
 
   console.log = (...args) => {
     origConsole.log(...args);
-    addEntry("info", args.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg))).join(" "));
+    addEntry("info", args.map(serializeArg).join(" "));
   };
   console.warn = (...args) => {
     origConsole.warn(...args);
-    addEntry("warn", args.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg))).join(" "));
+    addEntry("warn", args.map(serializeArg).join(" "));
   };
   console.error = (...args) => {
     origConsole.error(...args);
-    addEntry("error", args.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg))).join(" "));
+    addEntry("error", args.map(serializeArg).join(" "));
   };
   console.debug = (...args) => {
     origConsole.debug(...args);
-    addEntry("debug", args.map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg))).join(" "));
+    addEntry("debug", args.map(serializeArg).join(" "));
   };
 
   window.onerror = (_msg, _url, _line, _col, error) => {
@@ -106,7 +118,100 @@ function patchConsole() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Fetch interception — log every API call with method, status, and duration
+// ---------------------------------------------------------------------------
+
+function patchFetch() {
+  if (typeof window === "undefined") return;
+  if ((window as any).__telemetryFetchPatched) return;
+  (window as any).__telemetryFetchPatched = true;
+
+  const origFetch = window.fetch.bind(window);
+
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    const url = typeof input === "string"
+      ? input
+      : input instanceof URL
+      ? input.toString()
+      : (input as Request).url;
+
+    // Only instrument relative paths and same-origin requests (i.e. our own API)
+    const isInternal = url.startsWith("/") || url.startsWith(window.location.origin);
+    const t0 = performance.now();
+
+    try {
+      const response = await origFetch(input, init);
+      const duration = Math.round(performance.now() - t0);
+      const level = response.ok ? "info" : response.status >= 500 ? "error" : "warn";
+
+      if (isInternal) {
+        addEntry(level, `${method} ${url} → ${response.status} (${duration}ms)`, {
+          status: response.status,
+          duration,
+          ...(response.ok ? {} : { slow: duration > 3000 }),
+        });
+      }
+
+      return response;
+    } catch (err: unknown) {
+      const duration = Math.round(performance.now() - t0);
+      if (isInternal) {
+        addEntry("error", `${method} ${url} → NETWORK ERROR (${duration}ms)`, {
+          error: err instanceof Error ? err.message : String(err),
+          duration,
+        });
+      }
+      throw err;
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Navigation tracking — log every page visit (Next.js router + browser nav)
+// ---------------------------------------------------------------------------
+
+function patchNavigation() {
+  if (typeof window === "undefined") return;
+  if ((window as any).__telemetryNavPatched) return;
+  (window as any).__telemetryNavPatched = true;
+
+  function recordNav(path: string) {
+    addEntry("info", `NAV → ${path}`);
+  }
+
+  // SPA navigations via History API (Next.js App Router uses these)
+  const origPushState = history.pushState.bind(history);
+  const origReplaceState = history.replaceState.bind(history);
+
+  history.pushState = (...args) => {
+    origPushState(...args);
+    recordNav(window.location.pathname);
+  };
+  history.replaceState = (...args) => {
+    origReplaceState(...args);
+    recordNav(window.location.pathname);
+  };
+
+  // Browser back/forward
+  window.addEventListener("popstate", () => recordNav(window.location.pathname));
+}
+
+// ---------------------------------------------------------------------------
+// Initialise everything at module-load time (client only)
+// ---------------------------------------------------------------------------
+
+if (typeof window !== "undefined") {
+  patchConsole();
+  patchFetch();
+  patchNavigation();
+  // Record a session start marker so we know when the logger activated
+  addEntry("info", `[telemetry] Session started — ThaibaHive v${process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"}`);
+}
+
 export const telemetry = {
+  /** @deprecated Patching is now automatic at module load. Kept for backward compat. */
   patchConsole,
   info: (message: string, data?: unknown) => addEntry("info", message, data),
   warn: (message: string, data?: unknown) => addEntry("warn", message, data),
