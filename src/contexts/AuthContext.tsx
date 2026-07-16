@@ -5,8 +5,11 @@ import {
   useContext,
   useCallback,
   useState,
+  useEffect,
   type ReactNode,
 } from "react";
+import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
+import { useRevocationListener } from "@/hooks/use-revocation-listener";
 
 type StaffUser = {
   id: string;
@@ -18,6 +21,7 @@ type StaffUser = {
   phone: string | null;
   designation: string | null;
   avatarUrl: string | null;
+  isFirstLogin: boolean;
 };
 
 type AuthContextType = {
@@ -42,14 +46,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [staff, setStaff] = useState<StaffUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Listen for revocation events (auto-logout when session invalidated)
+  useRevocationListener(staff?.id ?? null, () => {
+    window.location.href = "/auth/login";
+  });
+
   // fetch initial auth state - runs once on mount
-  useState(() => {
+  useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setStaff(data?.staff ?? null))
       .catch(() => setStaff(null))
       .finally(() => setIsLoading(false));
-  });
+  }, []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    setStaff((prev) => prev ? { ...prev, isFirstLogin: false } : null);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -97,6 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{ staff, isLoading, login, signup, logout }}
     >
       {children}
+      {staff?.isFirstLogin && (
+        <OnboardingModal open={true} onComplete={handleOnboardingComplete} />
+      )}
     </AuthContext.Provider>
   );
 }

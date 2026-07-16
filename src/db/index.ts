@@ -1,9 +1,3 @@
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client";
-import * as schema from "./schema";
-
-const client = createClient({
-  url: process.env.DATABASE_URL || "file:./dev.db",
-});
-
-export const db = drizzle(client, { schema });
+// Re-export from @thaiba/db package for backward compatibility
+export { db } from "@thaiba/db";
+export * from "@thaiba/db/schema";

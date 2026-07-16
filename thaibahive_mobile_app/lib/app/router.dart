@@ -1,0 +1,560 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+
+import '../core/constants.dart';
+import '../features/approvals/presentation/approvals_screen.dart';
+import '../features/announcements/presentation/announcements_screen.dart';
+import '../features/attendance/presentation/attendance_screen.dart';
+import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/signup_screen.dart';
+import '../features/dashboard/presentation/dashboard_screen.dart';
+import '../features/dashboard/presentation/more_screen.dart';
+import '../features/events/presentation/events_screen.dart';
+import '../features/leaves/presentation/leave_apply_screen.dart';
+import '../features/leaves/presentation/leave_balance_screen.dart';
+import '../features/leaves/presentation/leave_detail_screen.dart';
+import '../features/leaves/presentation/leaves_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
+import '../features/recognition/presentation/recognition_screen.dart';
+import '../features/reports/presentation/daily_reports_screen.dart';
+import '../features/reports/presentation/report_create_screen.dart';
+import '../features/settings/presentation/password_change_screen.dart';
+import '../features/settings/presentation/profile_edit_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
+import '../features/staff/presentation/staff_directory_screen.dart';
+import '../features/staff/presentation/staff_profile_screen.dart';
+import '../features/tasks/presentation/task_create_screen.dart';
+import '../features/tasks/presentation/task_detail_screen.dart';
+import '../features/tasks/presentation/tasks_screen.dart';
+import '../features/help_desk/presentation/help_desk_screen.dart';
+import '../features/help_desk/presentation/help_desk_ticket_detail_screen.dart';
+import '../features/polls/presentation/polls_screen.dart';
+import '../features/polls/presentation/poll_detail_screen.dart';
+import '../features/circulars/presentation/circulars_screen.dart';
+import '../features/assets/presentation/assets_screen.dart';
+import '../features/assets/presentation/asset_detail_screen.dart';
+import '../features/expenses/presentation/expenses_screen.dart';
+import '../features/purchases/presentation/purchases_screen.dart';
+import '../features/visitors/presentation/visitors_screen.dart';
+import '../features/vehicles/presentation/vehicles_screen.dart';
+import '../features/checklists/presentation/checklists_screen.dart';
+import '../features/timeline/presentation/timeline_screen.dart';
+import '../features/availability/presentation/availability_screen.dart';
+import '../features/accounts/presentation/accounts_screen.dart';
+import '../features/admin/presentation/admin_dashboard_screen.dart';
+import '../shared/widgets/bottom_nav_bar.dart';
+import '../shared/screens/webview_handoff_screen.dart';
+import '../shared/screens/coming_soon_screen.dart';
+import '../shared/transitions/page_transitions.dart';
+
+final _storage = const FlutterSecureStorage();
+
+class _ShellRouteData {
+  final String path;
+  final String name;
+  final WidgetBuilder builder;
+
+  const _ShellRouteData({
+    required this.path,
+    required this.name,
+    required this.builder,
+  });
+}
+
+final List<_ShellRouteData> _shellRoutes = [
+  _ShellRouteData(
+    path: '/',
+    name: 'dashboard',
+    builder: (_) => const DashboardScreen(),
+  ),
+  _ShellRouteData(
+    path: '/attendance',
+    name: 'attendance',
+    builder: (_) => const AttendanceScreen(),
+  ),
+  _ShellRouteData(
+    path: '/tasks',
+    name: 'tasks',
+    builder: (_) => const TasksScreen(),
+  ),
+  _ShellRouteData(
+    path: '/leaves',
+    name: 'leaves',
+    builder: (_) => const LeavesScreen(),
+  ),
+  _ShellRouteData(
+    path: '/more',
+    name: 'more',
+    builder: (_) => const MoreScreen(),
+  ),
+];
+
+GoRouter buildRouter() {
+  return GoRouter(
+    initialLocation: '/',
+    debugLogDiagnostics: true,
+    redirect: _authGuard,
+    routes: [
+      GoRoute(
+        path: '/auth/login',
+        name: 'login',
+        builder: (_, __) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/auth/signup',
+        name: 'signup',
+        builder: (_, __) => const SignupScreen(),
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, navigationShell) => BottomNavShell(
+          navigationShell: navigationShell,
+        ),
+        branches: _shellRoutes.map((r) {
+          return StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: r.path,
+                name: r.name,
+                builder: (_, __) => r.builder(_),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+      GoRoute(
+        path: '/tasks/create',
+        name: 'taskCreate',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const TaskCreateScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/tasks/:id',
+        name: 'taskDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: TaskDetailScreen(
+            taskId: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/leaves/apply',
+        name: 'leaveApply',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LeaveApplyScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/leaves/balance',
+        name: 'leaveBalance',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LeaveBalanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/leaves/:id',
+        name: 'leaveDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: LeaveDetailScreen(
+            id: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/staff',
+        name: 'staff',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Staff Directory',
+            icon: Icons.people_alt_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/staff/:id',
+        name: 'staffProfile',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Staff Directory',
+            icon: Icons.people_alt_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/announcements',
+        name: 'announcements',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Announcements',
+            icon: Icons.campaign_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/announcements/:id',
+        name: 'announcementDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Announcements',
+            icon: Icons.campaign_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/events',
+        name: 'events',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Events',
+            icon: Icons.event_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/events/:id',
+        name: 'eventDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Events',
+            icon: Icons.event_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/circulars',
+        name: 'circulars',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Circulars',
+            icon: Icons.description_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/polls',
+        name: 'polls',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Polls',
+            icon: Icons.poll_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/polls/:id',
+        name: 'pollDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Polls',
+            icon: Icons.poll_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/bookings',
+        name: 'bookings',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Bookings',
+            icon: Icons.book_online_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/bookings/create',
+        name: 'bookingCreate',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Bookings',
+            icon: Icons.book_online_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/help-desk',
+        name: 'helpDesk',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Help Desk',
+            icon: Icons.support_agent_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/help-desk/tickets/:id',
+        name: 'helpDeskTicket',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Help Desk',
+            icon: Icons.support_agent_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const NotificationsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/recognition',
+        name: 'recognition',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Recognition',
+            icon: Icons.emoji_events_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/assets',
+        name: 'assets',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Assets',
+            icon: Icons.inventory_2_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/assets/:id',
+        name: 'assetDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Assets',
+            icon: Icons.inventory_2_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/expenses',
+        name: 'expenses',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Expenses',
+            icon: Icons.receipt_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/purchases',
+        name: 'purchases',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Purchases',
+            icon: Icons.shopping_cart_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/visitors',
+        name: 'visitors',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Visitors',
+            icon: Icons.people_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/grievances',
+        name: 'grievances',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Grievances',
+            icon: Icons.report_problem_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/grievances/submit',
+        name: 'grievanceSubmit',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Grievances',
+            icon: Icons.report_problem_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/reports',
+        name: 'reports',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Reports',
+            icon: Icons.assignment_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/reports/create',
+        name: 'reportCreate',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Reports',
+            icon: Icons.assignment_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/approvals',
+        name: 'approvals',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Approvals',
+            icon: Icons.approval_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/vehicles',
+        name: 'vehicles',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Vehicles',
+            icon: Icons.directions_car_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/canteen',
+        name: 'canteen',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Canteen',
+            icon: Icons.restaurant_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const SettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/settings/profile',
+        name: 'profileEdit',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ProfileEditScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/settings/password',
+        name: 'passwordChange',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const PasswordChangeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/checklists',
+        name: 'checklists',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Checklists',
+            icon: Icons.checklist_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/timeline',
+        name: 'timeline',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Timeline',
+            icon: Icons.timeline_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/availability',
+        name: 'availability',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Availability',
+            icon: Icons.schedule_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/accounts',
+        name: 'accounts',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Accounts',
+            icon: Icons.account_balance_rounded,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/admin',
+        name: 'admin',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Admin',
+            icon: Icons.admin_panel_settings_rounded,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
+  final isAuthRoute = state.matchedLocation.startsWith('/auth');
+  final token = await _storage.read(key: AppConstants.storageTokenKey);
+  final isLoggedIn = token != null && token.isNotEmpty;
+
+  if (!isLoggedIn && !isAuthRoute) {
+    return '/auth/login';
+  }
+
+  if (isLoggedIn && isAuthRoute) {
+    return '/';
+  }
+
+  return null;
+}

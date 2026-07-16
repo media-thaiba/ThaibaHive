@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 
 type Institution = { id: string; name: string; code: string };
-type Department = {
-  id: string; name: string; code: string; institutionId: string | null;
-  description: string | null; isActive: boolean;
-};
+type Department = { id: string; name: string; code: string; institutionId: string | null; description: string | null; isActive: boolean };
 
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -15,24 +19,23 @@ export default function DepartmentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", institutionId: "", description: "" });
 
-  useState(() => { fetchData(); });
+  useEffect(() => { fetchData(); }, []);
 
   async function fetchData() {
     const [deptRes, instRes] = await Promise.all([
-      fetch("/api/admin/departments"),
-      fetch("/api/admin/institutions"),
+      fetch("/api/admin/departments"), fetch("/api/admin/institutions"),
     ]);
-    setDepartments((await deptRes.json()).departments);
-    setInstitutions((await instRes.json()).institutions);
+    const deptData = await deptRes.json();
+    const instData = await instRes.json();
+    setDepartments(Array.isArray(deptData.departments) ? deptData.departments : []);
+    setInstitutions(Array.isArray(instData.institutions) ? instData.institutions : []);
     setLoading(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     await fetch("/api/admin/departments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form),
     });
     setShowForm(false);
     setForm({ name: "", code: "", institutionId: "", description: "" });
@@ -45,64 +48,62 @@ export default function DepartmentsPage() {
     fetchData();
   }
 
-  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="flex-1 space-y-6 p-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Departments</h1>
-        <button onClick={() => setShowForm(!showForm)} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+        <Button onClick={() => setShowForm(!showForm)}>
           {showForm ? "Cancel" : "Add Department"}
-        </button>
+        </Button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 rounded-lg border p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-md border border-input bg-background px-3 py-2 text-sm" required />
-            <input placeholder="Code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="rounded-md border border-input bg-background px-3 py-2 text-sm" required />
-            <select value={form.institutionId} onChange={(e) => setForm({ ...form, institutionId: e.target.value })} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="">No institution</option>
-              {institutions.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-          </div>
-          <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Create</button>
-        </form>
+        <Card>
+          <CardHeader><CardTitle>New Department</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                <Input placeholder="Code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} required />
+                <Select value={form.institutionId} onChange={(e) => setForm({ ...form, institutionId: e.target.value })}>
+                  <option value="">No institution</option>
+                  {institutions.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </Select>
+              </div>
+              <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Button type="submit">Create</Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Code</th>
-              <th className="px-4 py-3 text-left font-medium">Institution</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {departments.map((dept) => (
-              <tr key={dept.id} className="border-b last:border-0">
-                <td className="px-4 py-3">{dept.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">{dept.code}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {institutions.find((i) => i.id === dept.institutionId)?.name || "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${dept.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {dept.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleDelete(dept.id)} className="text-xs text-destructive hover:underline">Delete</button>
-                </td>
+      <Card>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="px-4 py-3 text-left font-medium">Name</th><th className="px-4 py-3 text-left font-medium">Code</th>
+                <th className="px-4 py-3 text-left font-medium">Institution</th><th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {departments.map((dept) => (
+                <tr key={dept.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="px-4 py-3">{dept.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{dept.code}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{institutions.find((i) => i.id === dept.institutionId)?.name || "—"}</td>
+                  <td className="px-4 py-3"><Badge variant={dept.isActive ? "default" : "secondary"} className="text-[10px]">{dept.isActive ? "Active" : "Inactive"}</Badge></td>
+                  <td className="px-4 py-3 text-right"><Button variant="ghost" size="sm" onClick={() => handleDelete(dept.id)} className="text-destructive hover:text-destructive">Delete</Button></td>
+                </tr>
+              ))}
+              {departments.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No departments yet</td></tr>}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

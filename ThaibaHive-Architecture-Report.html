@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThaibaHive Ecosystem Architecture Report</title>
+<style>
+  @page { margin: 20mm 18mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    color: #1e1e2e;
+    line-height: 1.65;
+    padding: 40px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+  }
+  h1 { font-size: 26px; margin: 0 0 4px 0; color: #111; }
+  h2 { font-size: 20px; margin: 32px 0 12px 0; padding-bottom: 6px; border-bottom: 2px solid #2563eb; color: #1e3a5f; }
+  h3 { font-size: 16px; margin: 24px 0 8px 0; color: #2563eb; }
+  p { margin: 0 0 12px 0; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 28px; }
+  .meta span { display: inline-block; margin-right: 20px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 20px 0; font-size: 13.5px; }
+  th, td { padding: 8px 10px; text-align: left; border: 1px solid #d0d5dd; }
+  th { background: #2563eb; color: #fff; font-weight: 600; font-size: 13px; }
+  tr:nth-child(even) { background: #f8f9fb; }
+
+  .card { background: #f0f4ff; border-left: 4px solid #2563eb; padding: 14px 18px; margin: 16px 0; border-radius: 0 6px 6px 0; font-size: 14px; }
+  .card.green { background: #ecfdf5; border-left-color: #10b981; }
+  .card.amber { background: #fffbeb; border-left-color: #f59e0b; }
+
+  pre { background: #1e1e2e; color: #cdd6f4; padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; margin: 12px 0 18px 0; }
+  code { font-family: 'Cascadia Code', 'Fira Code', monospace; }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 0; font-size: 13px; flex-wrap: wrap; }
+  .flow-step { background: #f0f4ff; border: 1px solid #b9c9e8; border-radius: 6px; padding: 6px 12px; }
+  .flow-arrow { color: #2563eb; font-weight: bold; font-size: 18px; }
+
+  ul, ol { margin: 8px 0 14px 0; padding-left: 22px; }
+  li { margin-bottom: 4px; font-size: 14px; }
+
+  .phase { background: #fff; border: 1px solid #d0d5dd; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+  .phase h4 { color: #2563eb; font-size: 15px; margin-bottom: 6px; }
+  .phase .tag { display: inline-block; background: #2563eb; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 6px; }
+
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #d0d5dd; font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>ThaibaHive Ecosystem</h1>
+<p style="font-size:18px;font-weight:500;margin-bottom:2px;">Consolidated Architecture Report</p>
+<div class="meta">
+  <span>July 7, 2026</span>
+  <span>Final Draft</span>
+  <span>Inputs: Claude · Gemini · ChatGPT</span>
+</div>
+
+<!-- ============ 1 ============ -->
+<h2>1. Executive Summary</h2>
+<p>ThaibaHive will evolve from a monolithic Next.js app into a <strong>modular ecosystem of independent domain apps</strong> sharing common infrastructure. The migration follows a <strong>phased, conservative approach</strong> — extract shared code first, then split incrementally only when a concrete need justifies each split.</p>
+
+<div class="card green">
+<strong>Core Principle:</strong> Solve the UX problem first (RBAC + route groups). Solve the organizational problem later (separate deployments) only if justified.
+</div>
+
+<h3>Why Change?</h3>
+<ul>
+  <li><strong>Current problem:</strong> 800–1000 staff see 22+ navigation items regardless of department. UI is cluttered, bundle is heavy, unrelated features add complexity.</li>
+  <li><strong>Target state:</strong> Each staff member sees only 5–6 relevant items. They can discover and launch additional domain-specific apps from a marketplace.</li>
+</ul>
+
+<!-- ============ 2 ============ -->
+<h2>2. Key Decisions</h2>
+<p>These resolve the points of divergence across the three AI reviews:</p>
+
+<table>
+  <tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr>
+  <tr><td>Split criteria</td><td><strong>By domain, not department</strong></td><td>Departments reorganize; domains (HR, Finance, Media) are stable</td></tr>
+  <tr><td>Parent scope</td><td><strong>True shell</strong></td><td>Parent = auth, dashboard, marketplace, notifications, search, settings only</td></tr>
+  <tr><td>Auth mechanism</td><td><strong>httpOnly cookie</strong> scoped to .thaiba.app</td><td>JWT in URL is unsafe — leaks via logs, history, referrers</td></tr>
+  <tr><td>Backend access</td><td><strong>DB roles per app (start)</strong> → API layer (future)</td><td>Roles are pragmatic for now; API layer adds cost before benefit</td></tr>
+  <tr><td>Event bus</td><td><strong>Deferred</strong></td><td>Valid need but premature. PostgreSQL LISTEN/NOTIFY as lightweight bridge if needed</td></tr>
+  <tr><td>Subdomain vs path</td><td><strong>Path-based during monolith</strong>, subdomains when splitting</td><td>Start with thaiba.app/hr; extracting → media.thaiba.app</td></tr>
+  <tr><td>Packages scope</td><td><strong>Start with 6, grow organically</strong></td><td>ui, db, auth, types, config, utils. Add as needs arise</td></tr>
+</table>
+
+<!-- ============ 3 ============ -->
+<h2>3. Architecture Overview</h2>
+
+<div style="border:2px solid #1e3a5f;border-radius:10px;padding:18px;background:#f8fafc;">
+  <div style="text-align:center;font-weight:700;font-size:16px;padding:6px 0 14px 0;color:#1e3a5f;">THAIBA ECOSYSTEM</div>
+
+  <div style="border:1px dashed #94a3b8;border-radius:6px;padding:10px;margin-bottom:10px;background:#eef2ff;">
+    <div style="font-weight:600;font-size:13px;text-align:center;margin-bottom:6px;color:#4338ca;">SHARED PACKAGES</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:12px;">
+      <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;">@thaiba/ui</span>
+      <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;">@thaiba/db</span>
+      <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;">@thaiba/auth</span>
+      <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;">@thaiba/types</span>
+      <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;">@thaiba/config</span>
+      <span style="background:#2563eb;color:#fff;padding:3px 10px;border-radius:4px;">@thaiba/utils</span>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">
+    <div style="border:1px solid #2563eb;border-radius:6px;padding:10px;text-align:center;background:#eff6ff;">
+      <div style="font-weight:700;font-size:14px;color:#2563eb;">SHELL</div>
+      <div style="font-size:11px;color:#555;">Auth · Dashboard · Marketplace · Notifications · Search · Profile · Settings</div>
+    </div>
+    <div style="border:1px solid #10b981;border-radius:6px;padding:10px;text-align:center;background:#ecfdf5;">
+      <div style="font-weight:700;font-size:14px;color:#10b981;">HR</div>
+      <div style="font-size:11px;color:#555;">Attendance · Leaves · Tasks · Reports · Staff Directory · Approvals</div>
+    </div>
+    <div style="border:1px solid #8b5cf6;border-radius:6px;padding:10px;text-align:center;background:#f5f3ff;">
+      <div style="font-weight:700;font-size:14px;color:#8b5cf6;">MEDIA</div>
+      <div style="font-size:11px;color:#555;">Media Production · Podcast · Printing · Social Media · Website · AI Tools</div>
+    </div>
+    <div style="border:1px solid #f59e0b;border-radius:6px;padding:10px;text-align:center;background:#fffbeb;">
+      <div style="font-weight:700;font-size:14px;color:#f59e0b;">FINANCE</div>
+      <div style="font-size:11px;color:#555;">Accounts · Expense Claims · Purchases · Budget</div>
+    </div>
+    <div style="border:1px solid #ef4444;border-radius:6px;padding:10px;text-align:center;background:#fef2f2;">
+      <div style="font-weight:700;font-size:14px;color:#ef4444;">TRANSPORT</div>
+      <div style="font-size:11px;color:#555;">Vehicles · Bookings · Trip Logs</div>
+    </div>
+    <div style="border:1px solid #f97316;border-radius:6px;padding:10px;text-align:center;background:#fff7ed;">
+      <div style="font-weight:700;font-size:14px;color:#f97316;">OPERATIONS</div>
+      <div style="font-size:11px;color:#555;">Assets · Maintenance · Checklists · Help Desk · Visitors</div>
+    </div>
+    <div style="border:1px solid #06b6d4;border-radius:6px;padding:10px;text-align:center;background:#ecfeff;">
+      <div style="font-weight:700;font-size:14px;color:#06b6d4;">COMMUNICATION</div>
+      <div style="font-size:11px;color:#555;">Announcements · Events · Circulars · Polls · Recognition</div>
+    </div>
+    <div style="border:1px solid #84cc16;border-radius:6px;padding:10px;text-align:center;background:#f7fee7;">
+      <div style="font-weight:700;font-size:14px;color:#65a30d;">ACADEMICS</div>
+      <div style="font-size:11px;color:#555;">FTN · COHI · AST · Moral Academy · Islamic Studies · TSW</div>
+    </div>
+  </div>
+
+  <div style="border:1px dashed #94a3b8;border-radius:6px;padding:10px;margin-bottom:6px;background:#f8fafc;">
+    <div style="font-weight:600;font-size:13px;text-align:center;color:#475569;">SHARED BACKBONE</div>
+    <div style="text-align:center;font-size:12px;color:#64748b;">PostgreSQL (single) + Object Storage (R2/S3) + Cache</div>
+  </div>
+
+  <div style="border:1px dashed #94a3b8;border-radius:6px;padding:8px;background:#f8fafc;">
+    <div style="font-weight:600;font-size:13px;text-align:center;color:#475569;">CROSS-CUTTING</div>
+    <div style="text-align:center;font-size:12px;color:#64748b;">Logging · Monitoring · Audit Trail · Backup</div>
+  </div>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2>4. Domain Architecture</h2>
+
+<h3>Domains (not Departments)</h3>
+<table>
+  <tr><th>Domain</th><th>Features</th><th>Primary Users</th></tr>
+  <tr><td><strong>Shell</strong></td><td>Auth, dashboard, marketplace, notifications, search, profile, settings</td><td>All staff</td></tr>
+  <tr><td><strong>HR</strong></td><td>Attendance, leaves, tasks, daily reports, staff directory, approvals</td><td>All staff (core operations)</td></tr>
+  <tr><td><strong>Media</strong></td><td>Media production, podcast, printing, social media, website, AI tools</td><td>Media/IT Department</td></tr>
+  <tr><td><strong>Finance</strong></td><td>Accounts, expense claims, purchase requests, budget</td><td>Accounts Department</td></tr>
+  <tr><td><strong>Transport</strong></td><td>Vehicles, vehicle bookings, trip logs</td><td>Vehicle Department</td></tr>
+  <tr><td><strong>Operations</strong></td><td>Assets, maintenance, checklists, help desk, visitors</td><td>Maintenance, Project Depts</td></tr>
+  <tr><td><strong>Communication</strong></td><td>Announcements, events, circulars, polls, recognition</td><td>PR, Director Office</td></tr>
+  <tr><td><strong>Academics</strong></td><td>FTN, COHI, AST, Moral Academy, Islamic Studies, TSW</td><td>Academic Institutions</td></tr>
+</table>
+
+<h3>How it Maps to Current Code</h3>
+<div class="card">
+  <strong>Before (current):</strong> All features in one flat <code>src/app/(shell)/</code> directory with 22+ subdirectories mixed together.
+</div>
+<div class="card green">
+  <strong>After (modular monolith):</strong> Route groups organized by domain. Navigation is RBAC-filtered per staff role. When a domain needs independent deployment, the code is already isolated.
+</div>
+
+<pre>apps/shell/         → Auth, Dashboard, Marketplace, Notifications, Search, Profile, Settings
+apps/hr/            → Attendance, Leaves, Tasks, Reports, Staff Directory, Approvals
+apps/media/         → Media Production, Podcast, Printing, Social Media, AI Tools
+apps/finance/       → Accounts, Expense Claims, Purchases, Budget
+apps/transport/     → Vehicles, Vehicle Bookings, Trip Logs
+apps/operations/    → Assets, Maintenance, Checklists, Help Desk, Visitors
+apps/communication/ → Announcements, Events, Circulars, Polls, Recognition
+apps/academics/     → FTN, COHI, AST, Moral Academy, Islamic Studies, TSW</pre>
+
+<!-- ============ 5 ============ -->
+<h2>5. Shared Packages</h2>
+<pre>packages/
+  ui/         ← shadcn components, design tokens, layout primitives
+  db/         ← Drizzle schema, migrations, client, seed data
+  auth/       ← JWT signing/verification, session management, permission helpers
+  types/      ← TypeScript interfaces, enums, constants
+  config/     ← shared environment variables, feature flags, app constants
+  utils/      ← common utilities (date formatting, string helpers, cn())</pre>
+<p>Future additions: <code>api/</code>, <code>permissions/</code>, <code>logger/</code>, <code>notifications/</code>, <code>hooks/</code>, <code>forms/</code></p>
+
+<!-- ============ 6 ============ -->
+<h2>6. Authentication Flow</h2>
+
+<h3>The Problem with JWT in URLs</h3>
+<p>The original proposal passed JWT via query string (<code>?token=&lt;jwt&gt;</code>). This is unsafe because tokens appear in browser history, server logs, can leak via <code>Referer</code> headers, and can be accidentally copied/shared.</p>
+
+<h3>The Solution: httpOnly Cookie</h3>
+<div class="flow">
+  <span class="flow-step">User logs into Shell</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Shell sets httpOnly cookie<br><span style="font-size:11px;color:#666;">Domain=.thaiba.app; Secure; HttpOnly</span></span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Clicks marketplace → navigates to child app</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-step">Cookie sent with request → authenticated</span>
+</div>
+
+<table>
+  <tr><th>Security Property</th><th>Implementation</th></tr>
+  <tr><td>Not in URLs</td><td>Cookie sent via HTTP header only</td></tr>
+  <tr><td>Not accessible to JavaScript</td><td><code>HttpOnly</code> flag prevents JS access</td></tr>
+  <tr><td>Only sent over HTTPS</td><td><code>Secure</code> flag ensures TLS-only</td></tr>
+  <tr><td>Works across subdomains</td><td><code>Domain=.thaiba.app</code> covers all subdomains</td></tr>
+  <tr><td>CSRF protected</td><td><code>SameSite=Lax</code> prevents cross-site requests</td></tr>
+</table>
+
+<!-- ============ 7 ============ -->
+<h2>7. Database Strategy</h2>
+<table>
+  <tr><th>Aspect</th><th>Decision</th></tr>
+  <tr><td>Database</td><td>Single PostgreSQL (same as current production plan)</td></tr>
+  <tr><td>Access pattern</td><td>Each domain app connects with its own DB role (e.g., <code>hr_user</code>, <code>media_user</code>)</td></tr>
+  <tr><td>Permission granularity</td><td>DB roles restrict table access per domain. Core tables read-only for child apps</td></tr>
+  <tr><td>Migrations</td><td>Centralized in <code>@thaiba/db</code> — one source of truth, one migration pipeline</td></tr>
+  <tr><td>RLS</td><td>Row-Level Security as a second layer on top of role-based table access</td></tr>
+</table>
+
+<!-- ============ 8 ============ -->
+<h2>8. Phased Implementation Roadmap</h2>
+
+<div class="phase">
+  <h4><span class="tag">Phase 0</span> Audit &amp; Decouple — 4-6 days</h4>
+  <p>Audit every import to identify cross-department coupling. Refactor tight couplings into shared packages or move into domain boundaries.</p>
+  <p><strong>Deliverable:</strong> A dependency map showing which domains currently depend on each other.</p>
+</div>
+
+<div class="phase">
+  <h4><span class="tag">Phase 1</span> Monorepo + Shared Packages — 4-6 days</h4>
+  <p>Create <code>apps/</code> and <code>packages/</code> directories. Extract <code>@thaiba/ui</code>, <code>@thaiba/db</code>, <code>@thaiba/auth</code>, <code>@thaiba/types</code>, <code>@thaiba/config</code>, <code>@thaiba/utils</code>.</p>
+  <p><strong>Deliverable:</strong> ThaibaHive works identically but imports from shared packages.</p>
+</div>
+
+<div class="phase">
+  <h4><span class="tag">Phase 2</span> RBAC Route Groups (Modular Monolith) — 3-5 days</h4>
+  <p>Group routes by domain. Build RBAC: <code>department_id</code> + <code>role</code> determines visible route groups. Navigation renders only permitted domains.</p>
+  <p><strong>Deliverable:</strong> Staff see 5-6 nav items instead of 22. Single deployment.</p>
+</div>
+
+<div class="phase">
+  <h4><span class="tag">Phase 3</span> True Shell — 5-7 days</h4>
+  <p>Strip Attendance, Leaves, Tasks, Reports, Staff Directory out of Shell. Move into <code>apps/hr/</code>. Shell becomes: Auth, Dashboard, Marketplace, Notifications, Search, Profile, Settings.</p>
+  <p><strong>Deliverable:</strong> Parent app is lightweight. HR domain is its own section.</p>
+</div>
+
+<div class="phase">
+  <h4><span class="tag">Phase 4</span> MediaHive as First Independent App — 5-7 days</h4>
+  <p>Extract Media domain into <code>apps/media/</code>. Set up subdomain <code>media.thaiba.app</code>. Cross-domain auth via cookie.</p>
+  <p><strong>Deliverable:</strong> MediaHive deploys independently. Pattern proven.</p>
+</div>
+
+<div class="phase">
+  <h4><span class="tag">Phase 5</span> Expand (Ongoing)</h4>
+  <p>Extract more domains as needed. Layer on: API gateway, event bus, centralized search (Meilisearch), monitoring stack (Sentry, OpenTelemetry).</p>
+</div>
+
+<!-- ============ 9 ============ -->
+<h2>9. Current vs Future</h2>
+<table>
+  <tr><th>Aspect</th><th>Current Monolith</th><th>Future Ecosystem</th></tr>
+  <tr><td>Staff sees</td><td>22 nav items</td><td>5-6 relevant items</td></tr>
+  <tr><td>Deployments</td><td>1</td><td>1 (monolith) → N (as needed)</td></tr>
+  <tr><td>Code organization</td><td>Flat in <code>src/</code></td><td>Domain-separated in <code>apps/</code></td></tr>
+  <tr><td>Shared code</td><td>Implicit, coupled</td><td>Explicit via <code>packages/</code></td></tr>
+  <tr><td>Access control</td><td>Basic role check</td><td>RBAC per domain + DB roles + RLS</td></tr>
+  <tr><td>Auth</td><td>JWT in localStorage</td><td>httpOnly cookie across all apps</td></tr>
+  <tr><td>Mobile</td><td>Separate Flutter app</td><td>Co-equal parent with same marketplace</td></tr>
+</table>
+
+<!-- ============ 10 ============ -->
+<h2>10. Risk Register</h2>
+<table>
+  <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+  <tr><td>Cross-domain code coupling blocks extraction</td><td>High</td><td>High</td><td>Phase 0 audit catches this early. Refactor into shared packages.</td></tr>
+  <tr><td>Phase 1 timeline underestimated</td><td>Medium</td><td>Medium</td><td>Budget 4-6 days instead of 1-2.</td></tr>
+  <tr><td>RBAC complexity grows</td><td>Low</td><td>Medium</td><td>Keep simple: role + department is sufficient for 800-1000 users.</td></tr>
+  <tr><td>No one uses marketplace</td><td>Low</td><td>Low</td><td>Features auto-pinned by department. Marketplace is for discovery.</td></tr>
+  <tr><td>Cookie auth breaks on some browsers</td><td>Low</td><td>High</td><td>.thaiba.app cookie is well-supported. Fallback: Authorization header.</td></tr>
+  <tr><td>Visual drift across apps</td><td>Medium</td><td>Medium</td><td>@thaiba/ui as single source of truth for components and tokens.</td></tr>
+</table>
+
+<!-- ============ 11 ============ -->
+<h2>11. User Experience Journey</h2>
+
+<div class="card amber">
+  <strong>Today:</strong> Log in → See 22 nav items → Confused → Ignore most → Miss important features
+</div>
+<div class="card">
+  <strong>Phase 2 (Modular Monolith):</strong> Log in → See 6 relevant items → Everything useful → Discover more in marketplace
+</div>
+<div class="card green">
+  <strong>Phase 4 (Full Ecosystem):</strong> Log in → Dashboard shows today's summary → Click "Attendance" → Click "Open MediaHive" → Auto-authenticated → Seamless
+</div>
+
+<!-- ============ 12 ============ -->
+<h2>12. Open Questions for Stakeholders</h2>
+<ol>
+  <li><strong>Domain boundaries:</strong> Does the domain grouping make sense for your org structure?</li>
+  <li><strong>HR vs Shell:</strong> Comfortable moving Attendance/Leaves/Tasks out of the "main app"?</li>
+  <li><strong>MediaHive timeline:</strong> Should extraction start earlier given it's already partially built?</li>
+  <li><strong>Mobile parity:</strong> Flutter app in Phase 3 or run in parallel?</li>
+  <li><strong>Hosting:</strong> Self-hosted (Docker) or cloud (Vercel)?</li>
+</ol>
+
+<!-- ============ Appendix ============ -->
+<h2>Appendix: Decision Traceability</h2>
+<table>
+  <tr><th>Decision</th><th>Origin</th><th>Rationale</th></tr>
+  <tr><td>Split by domain, not department</td><td>ChatGPT</td><td>Departments change; domains are stable</td></tr>
+  <tr><td>True shell for parent</td><td>ChatGPT</td><td>Prevents parent from becoming a second monolith</td></tr>
+  <tr><td>httpOnly cookie instead of URL JWT</td><td>All three (unanimous)</td><td>Security: tokens in URLs leak via logs, history, referrers</td></tr>
+  <tr><td>Modular monolith first</td><td>Claude</td><td>Solve UX first; split only when justified</td></tr>
+  <tr><td>Separate DB roles per app</td><td>Gemini</td><td>Balance between single DB simplicity and security isolation</td></tr>
+  <tr><td>Shared API layer deferred</td><td>Synthesis</td><td>DB roles sufficient for Phase 1-2; API layer adds cost before benefit</td></tr>
+  <tr><td>4-6 days for Phase 1</td><td>Gemini</td><td>Realistic timeline for dependency untangling + extraction</td></tr>
+</table>
+
+<div class="footer">
+  <p>This report synthesizes feedback from Claude, Gemini, and ChatGPT. The "true shell" and "domain-based split" concepts originate from ChatGPT. The timeline correction and DB role isolation originate from Gemini. The modular-monolith-first caution originates from Claude.</p>
+  <p style="margin-top:6px;">All three converged independently on shared packages, single PostgreSQL, and cookie-based auth as core strengths of the approach.</p>
+</div>
+
+</body>
+</html>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { institutions, departments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { pick } from "@/lib/api/pick";
 import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, _session, context) => {
@@ -20,7 +21,10 @@ export const PUT = requireAuth(async (request: Request, _session, context) => {
 
   const updated = await db
     .update(institutions)
-    .set({ ...body, updatedAt: new Date().toISOString() })
+    .set({
+      ...pick(body, ["name", "code", "type", "address", "phone", "email"]),
+      updatedAt: new Date().toISOString(),
+    })
     .where(eq(institutions.id, id))
     .returning()
     .get();

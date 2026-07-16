@@ -27,6 +27,11 @@ export function requireAuth(
       }
     }
 
-    return handler(request, session, context);
+    try {
+      return await handler(request, session, context);
+    } catch (error) {
+      console.error("API error:", error);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
   };
 }

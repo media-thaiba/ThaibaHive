@@ -36,6 +36,44 @@ export default function AdminLayout({
           >
             Shifts
           </Link>
+          <Link
+            href="/admin/attendance-locations"
+            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          >
+            Attendance Locations
+          </Link>
+          <div className="my-3 border-t" />
+          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Leaves
+          </p>
+          <Link
+            href="/admin/leave-types"
+            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          >
+            Leave Types
+          </Link>
+          <Link
+            href="/admin/leave-approvals"
+            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          >
+            Leave Approvals
+          </Link>
+          <div className="my-3 border-t" />
+          <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Checklists
+          </p>
+          <Link
+            href="/admin/checklists"
+            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          >
+            Templates
+          </Link>
+          <Link
+            href="/admin/checklists/assignments"
+            className="block rounded-md px-3 py-2 text-sm hover:bg-muted"
+          >
+            Assignments
+          </Link>
         </nav>
       </aside>
       <main className="flex-1 p-6">{children}</main>

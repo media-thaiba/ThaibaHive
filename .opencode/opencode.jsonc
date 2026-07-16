@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "permission": {
+    "skill": {
+      "graphify": "allow",
+      "awesome-design-md": "allow",
+      "gsd-core": "allow",
+      "ecc": "allow",
+      "ui-ux-pro-max": "allow",
+      "design-system": "allow"
+    }
+  }
+}

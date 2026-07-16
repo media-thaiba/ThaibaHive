@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { dailyReports, dailyReportTasks } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { pick } from "@/lib/api/pick";
 import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, _session, context) => {
@@ -16,11 +17,14 @@ export const GET = requireAuth(async (_request, _session, context) => {
 export const PUT = requireAuth(async (request: Request, _session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
-  const { tasks, ...fields } = body;
+  const { tasks } = body;
 
   const updated = await db
     .update(dailyReports)
-    .set({ ...fields, updatedAt: new Date().toISOString() })
+    .set({
+      ...pick(body, ["summary", "status"]),
+      updatedAt: new Date().toISOString(),
+    })
     .where(eq(dailyReports.id, id))
     .returning()
     .get();
@@ -40,4 +44,4 @@ export const PUT = requireAuth(async (request: Request, _session, context) => {
   }
 
   return NextResponse.json({ report: updated });
-});
+}, "reports:create");

@@ -2,19 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { hashPassword, createSession } from "@/lib/auth";
+import { requireAuth } from "@/lib/api/auth-guard";
+import { signupSchema } from "@/lib/auth/schemas";
 import { eq } from "drizzle-orm";
 
-export async function POST(request: Request) {
+export const POST = requireAuth(async (request: Request) => {
   try {
     const body = await request.json();
-    const { email, password, employeeId, firstName, lastName } = body;
-
-    if (!email || !password || !employeeId || !firstName || !lastName) {
+    const parsed = signupSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: parsed.error.issues[0].message },
         { status: 400 }
       );
     }
+    const { email, password, employeeId, firstName, lastName } = parsed.data;
 
     const existingStaff = await db
       .select()
@@ -45,16 +47,26 @@ export async function POST(request: Request) {
       .returning()
       .get();
 
-    await createSession({
+    const token = await createSession({
       staffId: newStaff.id,
       email: newStaff.email,
       role: newStaff.role,
       employeeId: newStaff.employeeId,
       name: `${newStaff.firstName} ${newStaff.lastName}`,
+      tokenVersion: newStaff.tokenVersion,
     });
 
     return NextResponse.json(
       {
+        token,
+        user: {
+          id: newStaff.id,
+          email: newStaff.email,
+          firstName: newStaff.firstName,
+          lastName: newStaff.lastName,
+          role: newStaff.role,
+          employeeId: newStaff.employeeId,
+        },
         staff: {
           id: newStaff.id,
           email: newStaff.email,
@@ -70,4 +82,4 @@ export async function POST(request: Request) {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+}, "staff:create");

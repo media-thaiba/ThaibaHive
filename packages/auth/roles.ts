@@ -1,0 +1,97 @@
+import type { StaffRole } from "@/types";
+
+type Permission = string;
+
+const rolePermissions: Record<StaffRole, Permission[]> = {
+  super_admin: ["*"],
+  admin: [
+    "staff:read", "staff:create", "staff:update", "staff:delete",
+    "attendance:read", "attendance:manage",
+    "tasks:read", "tasks:create", "tasks:assign",
+    "leaves:read", "leaves:approve", "leaves:delete",
+    "reports:read", "reports:review",
+    "announcements:read", "announcements:create", "announcements:manage",
+    "events:read", "events:create", "events:manage",
+    "polls:read", "polls:create", "polls:manage",
+    "circulars:read", "circulars:create",
+    "bookings:read", "bookings:create", "bookings:manage",
+    "helpdesk:read", "helpdesk:manage",
+    "assets:read", "assets:create", "assets:update", "assets:delete",
+    "finance:create", "finance:update", "finance:delete", "finance:export",
+    "recognition:create",
+    "canteen:create", "canteen:delete",
+    "checklists:update",
+    "notifications:update",
+    "vehicles:create", "vehicles:update", "vehicles:delete",
+    "visitors:create", "visitors:update",
+    "system:telemetry",
+    "org:manage",
+    "grievances:read",
+  ],
+  principal: [
+    "staff:read", "staff:create", "staff:update",
+    "attendance:read", "attendance:manage",
+    "tasks:read", "tasks:create", "tasks:assign",
+    "leaves:read", "leaves:approve", "leaves:delete",
+    "reports:read", "reports:review",
+    "announcements:read", "announcements:create",
+    "events:read", "events:create",
+    "polls:read",
+    "circulars:read", "circulars:create",
+    "bookings:read", "bookings:create", "bookings:manage",
+    "helpdesk:read", "helpdesk:manage",
+    "assets:read", "assets:create", "assets:update",
+    "finance:create", "finance:update", "finance:delete", "finance:export",
+    "recognition:create",
+    "canteen:create",
+    "checklists:update",
+    "notifications:update",
+    "visitors:create", "visitors:update",
+    "grievances:read",
+  ],
+  hod: [
+    "staff:read",
+    "attendance:read", "attendance:manage",
+    "tasks:read", "tasks:create", "tasks:assign",
+    "leaves:read", "leaves:approve",
+    "reports:read", "reports:review",
+    "announcements:read", "announcements:create",
+    "events:read", "events:create",
+    "polls:read",
+    "circulars:read", "circulars:create",
+    "bookings:read", "bookings:create",
+    "helpdesk:read",
+    "assets:read",
+    "finance:create", "finance:update",
+    "notifications:update",
+    "visitors:create",
+    "grievances:read",
+  ],
+  staff: [
+    "staff:read",
+    "announcements:read",
+    "events:read",
+    "polls:read",
+    "circulars:read",
+    "attendance:read",
+    "tasks:read",
+    "leaves:read", "leaves:delete",
+    "reports:create", "reports:read",
+    "notifications:update",
+    "availability:write",
+    "grievances:create", "grievances:read",
+    "canteen:read", "canteen:create",
+    "bookings:read", "bookings:create",
+    "helpdesk:read",
+    "assets:read",
+  ],
+};
+
+export function hasPermission(role: StaffRole, permission: Permission) {
+  if (role === "super_admin") return true;
+  return rolePermissions[role]?.includes(permission) ?? false;
+}
+
+export function getRolePermissions(role: StaffRole) {
+  return rolePermissions[role] ?? [];
+}

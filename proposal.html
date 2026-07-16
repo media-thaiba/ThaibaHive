@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ThaibaHive – Unified Digital Workplace</title>
+<style>
+  @page { margin: 20mm 25mm; size: A4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #1a1a2e;
+    background: #fff;
+    line-height: 1.6;
+    font-size: 10.5pt;
+  }
+  .page { max-width: 210mm; margin: 0 auto; padding: 0; }
+
+  /* Cover */
+  .cover {
+    page-break-after: always;
+    display: flex; flex-direction: column; justify-content: center;
+    min-height: 100vh; padding: 40mm 25mm;
+    background: linear-gradient(135deg, #0d6b5e 0%, #0a4d44 50%, #072e28 100%);
+    color: #fff;
+  }
+  .cover .tag { font-size: 9pt; letter-spacing: 3pt; text-transform: uppercase; opacity: 0.7; margin-bottom: 8mm; }
+  .cover h1 { font-size: 28pt; font-weight: 700; line-height: 1.15; margin-bottom: 6mm; }
+  .cover h1 span { color: #5eead4; }
+  .cover .subtitle { font-size: 13pt; opacity: 0.85; line-height: 1.5; margin-bottom: 12mm; }
+  .cover .meta { font-size: 10pt; opacity: 0.7; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 6mm; }
+
+  /* Section styling */
+  h2 {
+    font-size: 16pt; font-weight: 700; color: #0d6b5e;
+    margin-top: 15mm; margin-bottom: 5mm;
+    padding-bottom: 2mm; border-bottom: 2px solid #0d6b5e;
+  }
+  h3 { font-size: 12pt; font-weight: 600; color: #1a1a2e; margin-top: 8mm; margin-bottom: 3mm; }
+  h4 { font-size: 10.5pt; font-weight: 600; margin-top: 5mm; margin-bottom: 2mm; }
+  p { margin-bottom: 3mm; }
+  ul, ol { margin-bottom: 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.5mm; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm; font-size: 9.5pt; }
+  th { background: #0d6b5e; color: #fff; padding: 2.5mm 3mm; text-align: left; font-weight: 600; }
+  td { padding: 2.5mm 3mm; border-bottom: 1px solid #e2e8f0; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr { page-break-inside: avoid; }
+
+  /* Feature grid */
+  .feature-grid { 
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin: 4mm 0;
+  }
+  .feature-card {
+    border: 1px solid #e2e8f0; border-radius: 4px; padding: 3.5mm;
+    page-break-inside: avoid;
+  }
+  .feature-card h4 { margin-top: 0; color: #0d6b5e; font-size: 10pt; }
+  .feature-card p { font-size: 9pt; margin-bottom: 0; color: #475569; }
+  .feature-card .priority { display: inline-block; font-size: 7.5pt; font-weight: 600; padding: 0.5mm 2mm; border-radius: 2px; margin-bottom: 2mm; }
+  .priority-essential { background: #0d6b5e; color: #fff; }
+  .priority-valuable { background: #dbeafe; color: #1e40af; }
+  .priority-future { background: #f1f5f9; color: #64748b; }
+
+  /* Highlight box */
+  .highlight {
+    background: #f0fdfa; border-left: 3mm solid #0d6b5e; padding: 4mm 5mm;
+    margin: 5mm 0; border-radius: 0 4px 4px 0;
+  }
+  .highlight-yellow {
+    background: #fffbeb; border-left: 3mm solid #f59e0b; padding: 4mm 5mm;
+    margin: 5mm 0; border-radius: 0 4px 4px 0;
+  }
+  .highlight-red {
+    background: #fef2f2; border-left: 3mm solid #ef4444; padding: 4mm 5mm;
+    margin: 5mm 0; border-radius: 0 4px 4px 0;
+  }
+
+  /* Before/After */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin: 4mm 0; }
+  .ba-col { padding: 3mm; border-radius: 4px; }
+  .ba-col.before { background: #fef2f2; border: 1px solid #fecaca; }
+  .ba-col.after { background: #f0fdfa; border: 1px solid #99f6e4; }
+  .ba-col h4 { margin-top: 0; font-size: 10pt; }
+  .ba-col ul { margin-bottom: 0; font-size: 9pt; }
+  .ba-col li { margin-bottom: 1mm; }
+
+  /* Roadmap */
+  .roadmap { position: relative; padding-left: 8mm; margin: 5mm 0; }
+  .roadmap::before {
+    content: ''; position: absolute; left: 2.5mm; top: 0; bottom: 0;
+    width: 1px; background: #0d6b5e;
+  }
+  .roadmap-item { position: relative; margin-bottom: 5mm; }
+  .roadmap-item::before {
+    content: ''; position: absolute; left: -6.5mm; top: 3mm;
+    width: 3mm; height: 3mm; border-radius: 50%; background: #0d6b5e;
+  }
+  .roadmap-item h4 { margin-top: 0; }
+  .roadmap-item .phase { font-size: 8pt; font-weight: 600; color: #0d6b5e; text-transform: uppercase; letter-spacing: 1pt; }
+  .roadmap-item .date { font-size: 8pt; color: #64748b; }
+
+  .page-break { page-break-before: always; }
+
+  /* Score card */
+  .score-row { display: flex; gap: 3mm; margin: 4mm 0; }
+  .score-card { flex: 1; text-align: center; padding: 3mm; border: 1px solid #e2e8f0; border-radius: 4px; }
+  .score-card .number { font-size: 18pt; font-weight: 700; color: #0d6b5e; }
+  .score-card .label { font-size: 8pt; color: #64748b; margin-top: 1mm; }
+
+  .vision-box {
+    background: linear-gradient(135deg, #0d6b5e 0%, #0a4d44 100%);
+    color: #fff; padding: 8mm 10mm; border-radius: 4px; margin: 8mm 0;
+    text-align: center;
+  }
+  .vision-box p { font-size: 12pt; line-height: 1.6; margin-bottom: 0; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ====== COVER ====== -->
+<div class="cover">
+  <div class="tag">Board Proposal &middot; July 2026</div>
+  <h1>ThaibaHive<br><span>The Unified Digital Workplace</span></h1>
+  <p class="subtitle">
+    A comprehensive staff platform for <strong>Thaiba Garden Group of Institutions</strong><br>
+    across 23 campuses and institutions spanning India and the UAE<br>
+    into one secure, intelligent, and easy-to-use system.
+  </p>
+  <div class="meta">
+    <strong>Proposed by:</strong> Media Department<br>
+    <strong>Building on:</strong> MediaHive (production-proven foundation)<br>
+    <strong>For:</strong> Board of Directors &mdash; Thaiba Garden Group of Institutions
+  </div>
+</div>
+
+<!-- ====== EXECUTIVE SUMMARY ====== -->
+<h2>Executive Summary</h2>
+<p>
+ThaibaHive is not another HR application. It is the <strong>digital operating system</strong> for Thaiba Garden Group of Institutions&mdash;a unified workplace that replaces spreadsheets, paper registers, and fragmented WhatsApp communication with a single platform for attendance, tasks, leaves, reports, approvals, communication, resources, and analytics.
+</p>
+<p>
+Built on the proven, production-tested foundation of <strong>MediaHive</strong> (already in daily use at the Media Department), ThaibaHive eliminates development risk and delivers a battle-tested platform at a fraction of the cost of commercial ERP or HRMS alternatives.
+</p>
+<p>
+The approach is <strong>pilot-first and phased</strong>: a representative group of 30&ndash;50 staff across roles will validate each feature set in real conditions. After pilot success is confirmed against strict metrics, the full platform launches to all staff across all institutions simultaneously&mdash;maximizing adoption momentum while minimizing operational risk.
+</p>
+
+<div class="score-row">
+  <div class="score-card"><div class="number">₹2.0L</div><div class="label">First-year investment</div></div>
+  <div class="score-card"><div class="number">₹342</div><div class="label">Per staff / year ongoing</div></div>
+  <div class="score-card"><div class="number">6</div><div class="label">Months to full launch</div></div>
+  <div class="score-card"><div class="number">23</div><div class="label">Institutions connected</div></div>
+</div>
+
+<!-- ====== A DAY WITH THAIBHIVE ====== -->
+<h2>A Day with ThaibaHive</h2>
+<div class="ba-grid">
+  <div class="ba-col before">
+    <h4 style="color:#991b1b;">Today</h4>
+    <ul>
+      <li>Staff queue at reception to sign paper attendance register</li>
+      <li>HOD collects leave forms from desk tray, routes to admin</li>
+      <li>Coordinator chases staff on WhatsApp for daily reports</li>
+      <li>Admin compiles attendance in Excel at week's end</li>
+      <li>No visibility into who is present, on leave, or travelling</li>
+    </ul>
+  </div>
+  <div class="ba-col after">
+    <h4 style="color:#065f46;">With ThaibaHive</h4>
+    <ul>
+      <li>Tap NFC card or scan QR &mdash; attendance logged in seconds</li>
+      <li>Leave applied on phone, auto-routed to HOD, approved same day</li>
+      <li>Tasks auto-assigned; reports submitted before leaving</li>
+      <li>Real-time dashboard shows who is where, what is pending</li>
+      <li>AI morning brief: absentees, approvals due, birthdays, alerts</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ====== WHY THAIBHIVE MATTERS ====== -->
+<h2>Why ThaibaHive Matters</h2>
+<p><strong>Institutional Outcomes, Not Just Features</strong></p>
+<div class="feature-grid">
+  <div class="feature-card"><h4>&check; Save Thousands of Administrative Hours</h4><p>Automated attendance, digital leave workflows, and standardized reporting eliminate manual paperwork across all campuses.</p></div>
+  <div class="feature-card"><h4>&check; Improve Staff Accountability</h4><p>Real-time attendance, task tracking, and report compliance make responsibilities visible and measurable.</p></div>
+  <div class="feature-card"><h4>&check; Faster Decision Making</h4><p>Live dashboards give leadership instant visibility into attendance, task completion, leave trends, and department health.</p></div>
+  <div class="feature-card"><h4>&check; Reduce Paper &amp; Redundancy</h4><p>Digital forms, circulars, approvals, and reports eliminate printing, filing, and duplicate data entry.</p></div>
+  <div class="feature-card"><h4>&check; One Platform for Every Institution</h4><p>All campuses, departments, and sub-departments share one unified system with role-based access.</p></div>
+  <div class="feature-card"><h4>&check; Digital Transformation Initiative</h4><p>ThaibaHive positions the institution group as a technology-forward organization, setting the standard for educational administrative excellence.</p></div>
+</div>
+
+<!-- ====== THE PROBLEM ====== -->
+<div class="page-break"></div>
+<h2>The Problem</h2>
+<p>Currently, the institution manages staff across <strong>multiple campuses, departments, schools, and NGOs</strong> with fragmented, manual processes:</p>
+<div class="ba-grid">
+  <div class="ba-col before">
+    <h4>Current State</h4>
+    <ul>
+      <li>No centralized attendance system</li>
+      <li>Manual work reporting (or none at all)</li>
+      <li>Fragmented communication across WhatsApp groups, notice boards, word of mouth</li>
+      <li>Paper-based leave with no tracking</li>
+      <li>Verbal task assignment &mdash; no accountability</li>
+      <li>No visibility into staff availability</li>
+      <li>Scattered approval processes</li>
+      <li>No centralized asset tracking</li>
+    </ul>
+  </div>
+  <div class="ba-col after">
+    <h4>With ThaibaHive</h4>
+    <ul>
+      <li>Automated NFC / QR attendance, real-time dashboards</li>
+      <li>Standardized daily + task-based reports</li>
+      <li>Central announcements, notices, department boards, emergency broadcast</li>
+      <li>Digital apply &rarr; approve workflow with balance tracking</li>
+      <li>Assigned, tracked, time-stamped tasks with Kanban boards</li>
+      <li>Live presence &amp; availability status</li>
+      <li>Unified approval center (leave, purchase, expense, IT, overtime)</li>
+      <li>QR-tagged assets with full service history</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ====== THE SOLUTION ====== -->
+<h2>The ThaibaHive Platform</h2>
+<p>A unified system with <strong>30+ integrated capabilities</strong> organized by function rather than priority &mdash; because every feature works together on one platform.</p>
+
+<h3>Workforce Management</h3>
+<div class="feature-grid">
+  <div class="feature-card"><h4>Staff Attendance</h4><p>NFC tag / QR code check-in &amp; check-out. Configurable shift hours per department, institution, or individual. Late detection and real-time dashboard.</p></div>
+  <div class="feature-card"><h4>Leave Management</h4><p>Digital apply &rarr; approve workflow. Leave type configuration, balance tracking, department-wise overview, auto-update on approval.</p></div>
+  <div class="feature-card"><h4>Task Management</h4><p>Assign tasks to individuals or departments. Kanban board with To Do, In Progress, Review, Completed. Priorities, due dates, comments, file attachments.</p></div>
+  <div class="feature-card"><h4>Daily Work Reports</h4><p>End-of-day summaries and task-based reporting. Configurable per staff role. Submission compliance tracking.</p></div>
+  <div class="feature-card"><h4>Staff Directory &amp; Portfolio</h4><p>Searchable directory with department, role, institution, contact information. Full HR profile: qualifications, certificates, experience, skills, languages, emergency contacts, Aadhaar/PAN, bank details, contract expiry.</p></div>
+  <div class="feature-card"><h4>Staff Timeline</h4><p>Complete history per staff member &mdash; attendance, leaves, tasks, reports, promotions, department changes, warnings, appreciations &mdash; all in one chronological view.</p></div>
+  <div class="feature-card"><h4>Staff Availability</h4><p>Live presence: Available, Busy, In Meeting, On Leave, Off Campus, Travelling. One-click status update visible across the platform.</p></div>
+</div>
+
+<h3>Operations</h3>
+<div class="feature-grid">
+  <div class="feature-card"><h4>Asset Management</h4><p>QR-tagged institutional assets with purchase date, warranty, service history, assigned person. NFC scan for quick check-in/out.</p></div>
+  <div class="feature-card"><h4>Visitor Management</h4><p>Reception registers visitors, scans ID, notifies host staff, prints visitor pass, records exit. Full audit trail for security.</p></div>
+  <div class="feature-card"><h4>Vehicle Management</h4><p>Fleet registry, driver assignment, fuel logs, maintenance schedules, insurance expiry alerts, trip requests, fuel efficiency (km/L) calculation.</p></div>
+  <div class="feature-card"><h4>Canteen / Meal Management</h4><p>Staff notify skip or guests per meal (breakfast/lunch/dinner). Headcount summary per meal type. Reduces food waste across campuses.</p></div>
+  <div class="feature-card"><h4>Resource Booking</h4><p>Book auditoriums, cameras, projectors, conference halls, sports grounds. Live calendar avoids double booking.</p></div>
+  <div class="feature-card"><h4>IT Help Desk</h4><p>Raise, track, and resolve IT support tickets with comment threads, priority levels, and assignment tracking.</p></div>
+  <div class="feature-card"><h4>Maintenance Tickets</h4><p>Report facility issues (fan, leakage, electrical, internet). Assign technicians, track completion, SLA monitoring.</p></div>
+</div>
+
+<h3>Communication &amp; Engagement</h3>
+<div class="feature-grid">
+  <div class="feature-card"><h4>Announcements &amp; Notices</h4><p>Broadcast to all staff, specific departments, or institutions. Read receipts and priority levels.</p></div>
+  <div class="feature-card"><h4>Events Calendar</h4><p>Institution-wide and department events with RSVP, calendar views, and reminders.</p></div>
+  <div class="feature-card"><h4>Circulars &amp; Document Repository</h4><p>Central storage for policies, circulars, forms, and official documents. Searchable by category, date, department.</p></div>
+  <div class="feature-card"><h4>Staff Polls &amp; Surveys</h4><p>Quick feedback collection on proposals, event attendance, training needs. Live bar chart results.</p></div>
+  <div class="feature-card"><h4>Recognition &amp; Badges</h4><p>Employee of the Month, Excellent Teacher, Team Player, Innovation Award. Peer recognition tokens visible on profiles. Birthday &amp; work anniversary auto-reminders.</p></div>
+  <div class="feature-card"><h4>Grievance / Suggestion Box</h4><p>Anonymous or named submissions in categories: workplace, harassment, facilities, suggestion. Admin response flow with status tracking. Harassment complaints route directly to HR, never sit in an automated queue.</p></div>
+  <div class="feature-card"><h4>Internal Chat</h4><p>Direct messages, department groups, file sharing, voice notes. Reduces dependency on personal WhatsApp groups.</p></div>
+</div>
+
+<h3>Administration &amp; Finance</h3>
+<div class="feature-grid">
+  <div class="feature-card"><h4>Approval Center</h4><p>Unified inbox for all approvals &mdash; leaves, purchases, expenses, IT requests, bookings, duty changes. Delegate approver support when managers are unavailable.</p></div>
+  <div class="feature-card"><h4>Expense Claims</h4><p>Staff submit bills and travel expenses with photo upload. Approval workflow included. Track reimbursement status.</p></div>
+  <div class="feature-card"><h4>Purchase Requests</h4><p>Multi-stage approval: Staff &rarr; HOD &rarr; Accounts &rarr; Purchase. Full audit trail and stage progress tracker.</p></div>
+  <div class="feature-card"><h4>Accounts &amp; Financial Overview</h4><p>Income/expense tracking per institution. Categories, transaction ledger with filters, summary dashboards for leadership.</p></div>
+  <div class="feature-card"><h4>Digital Forms Builder</h4><p>Admins create custom forms without coding &mdash; hostel inspection, trip approval, campus inspection. Integrated approval workflows.</p></div>
+  <div class="feature-card"><h4>Executive Dashboard</h4><p>Board-level view: staff present, leave statistics, task completion, department productivity, institution comparison, open tickets.</p></div>
+</div>
+
+<h3>Intelligence &amp; Automation</h3>
+<div class="feature-grid">
+  <div class="feature-card"><h4>AI Assistant</h4><p>Natural language queries: &ldquo;Who is on leave tomorrow?&rdquo;, &ldquo;Show pending tasks for Media Department.&rdquo; No menus required.</p></div>
+  <div class="feature-card"><h4>AI Daily Summary</h4><p>Every morning: who is absent, important meetings, pending approvals, overdue tasks, birthdays, critical alerts. Delivered automatically.</p></div>
+  <div class="feature-card"><h4>AI-Assisted Report Generation</h4><p>Generate monthly department reports, attendance summaries, and management meeting reports in one click.</p></div>
+  <div class="feature-card"><h4>Reminder Engine</h4><p>Automatically reminds about expiring IDs, probation reviews, contract renewals, pending reports, unapproved leave, incomplete tasks.</p></div>
+  <div class="feature-card"><h4>Department Health Score</h4><p>Each department scored on attendance, task completion, report submission, response time, leave trends. Identifies areas needing support.</p></div>
+  <div class="feature-card"><h4>Workflow Automation</h4><p>Event-driven automation: when leave is approved &rarr; notify HOD &rarr; update attendance &rarr; inform security &rarr; update calendar.</p></div>
+</div>
+
+<!-- ====== ORGANIZATIONAL STRUCTURE ====== -->
+<div class="page-break"></div>
+<h2>Organizational Structure</h2>
+<p>ThaibaHive's role hierarchy directly reflects Thaiba Garden's management structure:</p>
+<table>
+  <tr><th>Level</th><th>Role</th><th>Access Scope</th></tr>
+  <tr><td>1</td><td><strong>Director</strong></td><td>Full system access across all 23 institutions</td></tr>
+  <tr><td>2</td><td><strong>Joint Director / HR Manager</strong></td><td>Full access, staff management, HR operations</td></tr>
+  <tr><td rowspan="5">3</td><td>General Manager</td><td rowspan="5">Department-scoped admin access &mdash; forms the Admin panel</td></tr>
+  <tr><td>Media Manager</td></tr>
+  <tr><td>Accounts Manager</td></tr>
+  <tr><td>Project Manager</td></tr>
+  <tr><td>Head of Moral Education</td></tr>
+  <tr><td>4</td><td><strong>Principals &amp; Managers</strong> (per institution)</td><td>Institution-scoped access to their campus only</td></tr>
+  <tr><td>5</td><td><strong>Staff</strong></td><td>Self-service: attendance, leaves, tasks, reports</td></tr>
+</table>
+
+<h3>Institutions &amp; Departments</h3>
+<p><strong>23 institutions</strong> across India and the UAE:</p>
+<table>
+  <tr><th>Campus</th><th>Type</th></tr>
+  <tr><td>TPS &ndash; Majhikhanda (Main Campus)</td><td>Main campus &amp; HQ</td></tr>
+  <tr><td>TPS &ndash; Godda, Antla, Baleshwar, Kosbagolla, Mallikpur, Raiganj, Manipur</td><td>TPS campuses across India</td></tr>
+  <tr><td>New Katak Public School &ndash; Cuttack</td><td>School</td></tr>
+  <tr><td>Model School &ndash; Baghait</td><td>School</td></tr>
+  <tr><td>Orphan Home &ndash; Baghait</td><td>Orphanage</td></tr>
+  <tr><td>Spark Academy</td><td>Academy (planned)</td></tr>
+  <tr><td>Edu Berry &ndash; UAE</td><td>International</td></tr>
+  <tr><td>CIS Boys &ndash; Majhikhanda</td><td>Islamic school</td></tr>
+  <tr><td>CIS Banath &ndash; Baghait</td><td>Islamic school</td></tr>
+  <tr><td>CIS Da'awra &ndash; Majhikhanda</td><td>Islamic school</td></tr>
+  <tr><td>School Of Quran &ndash; Baghait</td><td>Quran school</td></tr>
+  <tr><td>School Of Quran &ndash; Mallikpur</td><td>Quran school</td></tr>
+  <tr><td>CIS Junior Boys &ndash; Choumini, Bisfi</td><td>Junior schools</td></tr>
+  <tr><td>Model Academy &ndash; Samsi, Konar, Chakolia</td><td>Academies</td></tr>
+</table>
+<p><strong>18 administrative departments</strong> at Main Campus: Director Office, Joint Director Office, General Manager, Media &amp; IT, Accounts, Projects, Vehicle, Maintenance, PR, Feed The Needy, Candle Of Hope International, Al Siddiqia Trust, Kahani From Thaiba, Amar Thaiba, Group Of Schools, Moral Academy, Islamic Studies, Thaiba Sweet Water, Central Canteen.</p>
+
+<!-- ====== TECH STACK + SECURITY ====== -->
+<h2>Technology Stack</h2>
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Why</th></tr>
+  <tr><td>Web Frontend</td><td>Next.js + React</td><td>Modern, fast, proven from MediaHive production</td></tr>
+  <tr><td>Mobile App</td><td>Flutter (Android + iOS)</td><td>Cross-platform, works offline</td></tr>
+  <tr><td>Backend &amp; Database</td><td>Secure cloud database</td><td>Scalable, real-time, enterprise-grade</td></tr>
+  <tr><td>Authentication</td><td>Enterprise login system</td><td>Password hashing, secure sessions, role-based access</td></tr>
+  <tr><td>Attendance Hardware</td><td>NFC tags + QR codes</td><td>Low-cost, reliable, reusable</td></tr>
+  <tr><td>Offline Capability</td><td>Local data sync</td><td>Works without internet, syncs when connected</td></tr>
+  <tr><td>Hosting</td><td>Scalable cloud</td><td>Auto-scales with user base</td></tr>
+</table>
+
+<h3>Security &amp; Data Protection</h3>
+<div class="highlight">
+  <strong>Security is built in from day one:</strong>
+</div>
+<table>
+  <tr><th>Concern</th><th>Implementation</th></tr>
+  <tr><td>Access Control</td><td>Every database query is scoped to the user's role and permissions &mdash; no user can access data they shouldn't see</td></tr>
+  <tr><td>Role-Based Permissions</td><td>4-tier: Super Admin, Admin, HOD, Staff &mdash; granular per-module permissions</td></tr>
+  <tr><td>Data Encryption</td><td>Encrypted in transit and at rest using industry-standard protocols</td></tr>
+  <tr><td>Authentication</td><td>Secure password hashing with encrypted session cookies</td></tr>
+  <tr><td>Audit Logs</td><td>Every action logged with timestamp, user, and details</td></tr>
+  <tr><td>Daily Backups</td><td>Automated database backups with 30-day retention</td></tr>
+  <tr><td>Disaster Recovery</td><td>Point-in-time recovery, multi-region option</td></tr>
+  <tr><td>Compliance</td><td>Designed to meet DPDP Act 2023 &mdash; data classification, consent documentation, retention schedules</td></tr>
+  <tr><td>Data Ownership</td><td>All institutional data remains the exclusive property of Thaiba Garden Group of Institutions. No third-party data sharing, no vendor lock-in. Full database export available on demand.</td></tr>
+</table>
+
+<!-- ====== ARCHITECTURE ====== -->
+<div class="page-break"></div>
+<h2>Platform Architecture</h2>
+<p>A single integrated platform connecting every layer of institutional operations:</p>
+<pre style="background:#f8fafc;padding:4mm;border:1px solid #e2e8f0;border-radius:4px;font-size:9pt;margin:4mm 0;line-height:1.8;">
+  Board &amp; Leadership
+  ────────────────────
+  Executive Dashboard &amp; Health Scores
+        │
+  ──────────────────────────────────────────
+  Workforce Mgmt  │  Operations  │  Finance
+  Attendance      │  Assets      │  Accounts
+  Leave / Tasks   │  Visitors    │  Expenses
+  Reports         │  Vehicles    │  Purchases
+  Directory       │  Bookings    │  Approvals
+        │
+  ──────────────────────────────────────────
+  Communication &amp; Engagement
+  Announcements / Events / Circulars
+  Polls / Recognition / Grievances
+        │
+  ──────────────────────────────────────────
+  Intelligence &amp; Automation
+  AI Assistant / Daily Summary / Reminders
+        │
+  ──────────────────────────────────────────
+         Shared Database &amp; Security
+  ──────────────────────────────────────────
+  Mobile App (Flutter)     Web Portal (Next.js)
+  NFC / QR / Offline Sync
+</pre>
+<p><strong>Key design principle:</strong> Every module shares the same database, auth system, and permission model. Adding new capabilities never requires rebuilding infrastructure.</p>
+
+<!-- ====== ROI ====== -->
+<div class="page-break"></div>
+<h2>Return on Investment</h2>
+<div class="highlight-yellow">
+  <strong>The question is not whether we can afford ThaibaHive. It is whether we can afford to continue without it.</strong>
+</div>
+
+<h3>Quantified Savings</h3>
+<table>
+  <tr><th>Area</th><th>Current Cost</th><th>With ThaibaHive</th><th>Annual Savings</th></tr>
+  <tr><td>Attendance processing</td><td>~15 hrs/week (manual registers)</td><td>Automated, real-time</td><td>~₹1.2L in admin time</td></tr>
+  <tr><td>Leave management</td><td>~8 hrs/week (paper forms, tracking)</td><td>Digital workflow, auto-balance</td><td>~₹0.6L in admin time</td></tr>
+  <tr><td>Task coordination</td><td>~10 hrs/week (chasing, meetings)</td><td>Kanban, auto-assign, tracking</td><td>~₹0.8L in productive time</td></tr>
+  <tr><td>Reporting</td><td>~6 hrs/week (compiling, formatting)</td><td>Auto-generated from live data</td><td>~₹0.5L in admin time</td></tr>
+  <tr><td>Communication</td><td>Fragmented, untracked</td><td>Central, trackable, searchable</td><td>~₹0.3L in wasted effort</td></tr>
+  <tr><td>Printing &amp; stationery</td><td>~₹2,500/month</td><td>Digital forms &amp; approvals</td><td>~₹0.3L direct savings</td></tr>
+  <tr><td>Help desk (manual)</td><td>~4 hrs/week (phone, walk-ins)</td><td>Self-service ticketing</td><td>~₹0.3L in support time</td></tr>
+  <tr><td colspan="2"><strong>Estimated Total Annual Savings</strong></td><td></td><td><strong>~₹4.0L</strong></td></tr>
+</table>
+<p><em>Based on blended staff cost of ₹250/hr. First-year investment of ₹2.0L is recovered in approximately 6 months.</em></p>
+<p style="font-size:8.5pt;color:#64748b;margin-top:2mm;"><strong>Assumptions:</strong> Savings estimates are conservative projections based on current administrative workflows for approximately 250 staff, using a blended administrative cost model. Actual savings will be validated during the pilot baseline measurement phase and may vary based on adoption rates and institutional workflows.</p>
+
+<h3>Qualitative Benefits</h3>
+<ul>
+  <li><strong>Leave processing: Days &rarr; Hours</strong> &mdash; Digital workflow eliminates paper routing</li>
+  <li><strong>Accountability: None &rarr; Measurable</strong> &mdash; Every task, report, and attendance is tracked</li>
+  <li><strong>Decision making: Gut feel &rarr; Data-driven</strong> &mdash; Live dashboards for leadership</li>
+  <li><strong>Staff satisfaction: Higher</strong> &mdash; Self-service, transparency, recognition</li>
+  <li><strong>Institutional reputation: Enhanced</strong> &mdash; Digital-first, technology-forward</li>
+</ul>
+
+<!-- ====== BUDGET ====== -->
+<h2>Budget</h2>
+<table>
+  <tr><th>Item</th><th>Cost (₹)</th><th>Notes</th></tr>
+  <tr><td colspan="3"><strong>One-Time Setup Costs</strong></td></tr>
+  <tr><td>NFC tags (10 entry points &times; 2 campuses)</td><td>12,500</td><td>Reusable, durable tags</td></tr>
+  <tr><td>QR code printed materials</td><td>2,500</td><td>Weatherproof signage</td></tr>
+  <tr><td>Contingency buffer (15%)</td><td>2,250</td><td>Broken tags, unforeseen hardware</td></tr>
+  <tr><td>Google Play Developer account</td><td>2,125</td><td>$25 one-time registration</td></tr>
+  <tr><td style="font-weight:600;">Subtotal (One-Time)</td><td style="font-weight:600;">19,375</td><td></td></tr>
+  <tr><td colspan="3"><strong>Annual Recurring Costs</strong></td></tr>
+  <tr><td>Cloud hosting (Supabase + Next.js)</td><td>72,000</td><td>Scalable for 250&ndash;500 users</td></tr>
+  <tr><td>Mobile app distribution</td><td>0</td><td>Institution-published: no per-app store fee</td></tr>
+  <tr><td>Apple Developer Program</td><td>8,415</td><td>$99/yr for iOS app distribution</td></tr>
+  <tr><td>Domain &amp; SSL</td><td>2,500</td><td>Annual renewal</td></tr>
+  <tr><td>NFC tag replacements</td><td>2,500</td><td>~10% annual loss/damage</td></tr>
+  <tr><td style="font-weight:600;">Subtotal (Annual)</td><td style="font-weight:600;">85,415</td><td></td></tr>
+  <tr><td colspan="3"><strong>Development &amp; Implementation</strong></td></tr>
+  <tr><td>Development (Media Manager)</td><td>60,000</td><td>₹10k/month × 6 months — work outside regular job scope</td></tr>
+  <tr><td>Training &amp; change management</td><td>20,000</td><td>Pilot training, materials, support</td></tr>
+  <tr><td>Pilot deployment &amp; validation</td><td>15,000</td><td>100 hrs &times; 3 staff</td></tr>
+  <tr><td style="font-weight:600;">Subtotal (Implementation)</td><td style="font-weight:600;">95,000</td><td></td></tr>
+  <tr><td style="font-weight:700;border-top:2px solid #0d6b5e;">    <strong>Year 1 Total</strong></td><td style="font-weight:700;border-top:2px solid #0d6b5e;"><strong>₹1,99,790</strong></td><td style="border-top:2px solid #0d6b5e;"></td></tr>
+  <tr><td style="font-weight:600;">Annual Recurring (Year 2+)</td><td style="font-weight:600;">₹85,415</td><td>~₹342/staff/year (current 250 staff). Year 1: ₹800/staff.</td></tr>
+</table>
+
+<div class="highlight">
+  <strong>Key advantages:</strong> No annual licence fees. Institution owns the platform. No vendor lock-in. Fully customizable. Future modules reuse the same infrastructure at minimal additional cost.
+</div>
+
+<!-- ====== RISK ====== -->
+<div class="page-break"></div>
+<h2>Risk &amp; Mitigation</h2>
+<table>
+  <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+  <tr><td>Staff resistance to adoption</td><td>Medium</td><td>High</td><td>Pilot group builds advocates. Training sessions. Incentives for early adopters. Clear communication of benefits.</td></tr>
+  <tr><td>Internet outages affecting attendance</td><td>Medium</td><td>Medium</td><td>Offline mode: NFC/QR data cached locally, syncs when connected. Paper backup for critical check-ins.</td></tr>
+  <tr><td>Data migration errors</td><td>Low</td><td>Medium</td><td>Phased migration with validation checks. Parallel run during pilot. Rollback plan documented.</td></tr>
+  <tr><td>Software bugs in production</td><td>Medium</td><td>Medium</td><td>4-phase build with testing at every phase. Pilot validation gates. Hotfix deployment within 24 hours.</td></tr>
+  <tr><td>Security breach / data leak</td><td>Low</td><td>Critical</td><td>RLS, encryption, audit logs, auto-backups, access reviews. No sensitive data stored unnecessarily.</td></tr>
+  <tr><td>Support staff without smartphones</td><td>Medium</td><td>Medium</td><td>Dedicated tablets at entry points. QR-based check-in at common areas. NFC tags at turnstiles.</td></tr>
+  <tr><td>Long-term maintenance gap</td><td>Medium</td><td>High</td><td>IT Department trained during build. Documentation &amp; runbooks created. Transition plan from Media to IT.</td></tr>
+  <tr><td>Scope creep delaying launch</td><td>Medium</td><td>Medium</td><td>Phased rollout with clear feature freeze per phase. Future features captured in roadmap, not current build.</td></tr>
+  <tr><td>Bus factor (solo developer)</td><td>High</td><td>Critical</td><td>Codebase documented with runbooks. Knowledge transfer sessions scheduled. IT staff trained alongside build. Source code owned by institution.</td></tr>
+  <tr><td>Timeline overrun &mdash; optimistic estimates</td><td>Medium</td><td>High</td><td>Realistic range of 23&ndash;32 weeks (5&ndash;8 months). Feature freeze per phase with no mid-phase scope addition. Monthly board progress reviews.</td></tr>
+  <tr><td>Child safeguarding / minor safety compliance</td><td>Low</td><td>Critical</td><td>Platform never handles student data. Separate staff-only system. No student-facing features. Physical check-in systems only for adult staff.</td></tr>
+  <tr><td>Data privacy regulation (DPDP Act 2023)</td><td>Medium</td><td>Critical</td><td>Data classification policy &mdash; only essential HR data stored. Consent documented at enrollment. Aadhaar/PAN encrypted at rest. Retention schedules. Data Protection Officer designated.</td></tr>
+  <tr><td>Staff surveillance perception</td><td>Medium</td><td>High</td><td>Transparent policy &mdash; attendance tracking, not surveillance. Staff can view own data anytime. No keystroke logging, screen monitoring, or location tracking. Pilot group as advocates.</td></tr>
+</table>
+
+<!-- ====== ROLLOUT STRATEGY ====== -->
+<h2>Rollout Strategy: 6 Phases</h2>
+<div class="roadmap">
+  <div class="roadmap-item">
+    <div class="phase">Phase 1 &mdash; Foundation</div>
+    <div class="date">Weeks 1&ndash;6</div>
+    <h4>Attendance, Directory &amp; Access Control</h4>
+    <ul>
+      <li>NFC/QR attendance with configurable shifts</li>
+      <li>Staff directory with org hierarchy &amp; portfolio profiles</li>
+      <li>Role-based access control (Super Admin, Admin, HOD, Staff)</li>
+      <li>Auth system with secure login</li>
+    </ul>
+  </div>
+  <div class="roadmap-item">
+    <div class="phase">Phase 2 &mdash; Productivity</div>
+    <div class="date">Weeks 7&ndash;10</div>
+    <h4>Tasks, Reports, Leaves &amp; Approvals</h4>
+    <ul>
+      <li>Task management with Kanban board</li>
+      <li>Daily work reports &amp; task-based reporting</li>
+      <li>Leave management with approval workflow &amp; balance tracking</li>
+      <li>Unified approval center</li>
+    </ul>
+  </div>
+  <div class="roadmap-item">
+    <div class="phase">Phase 3 &mdash; Communication</div>
+    <div class="date">Weeks 11&ndash;13</div>
+    <h4>Announcements, Events, Circulars &amp; Polls</h4>
+    <ul>
+      <li>Announcements &amp; departmental notice boards</li>
+      <li>Events calendar with RSVP</li>
+      <li>Circulars &amp; document repository</li>
+      <li>Staff polls &amp; surveys</li>
+    </ul>
+  </div>
+  <div class="roadmap-item">
+    <div class="phase">Phase 4 &mdash; Services</div>
+    <div class="date">Weeks 14&ndash;17</div>
+    <h4>Help Desk, Assets, Visitors, Recognition</h4>
+    <ul>
+      <li>IT help desk with ticket tracking</li>
+      <li>Resource booking (rooms, equipment)</li>
+      <li>Asset management with QR tagging</li>
+      <li>Visitor management system</li>
+      <li>Staff recognition, badges, birthdays</li>
+    </ul>
+  </div>
+  <div class="roadmap-item">
+    <div class="phase">Phase 5 &mdash; Finance &amp; Operations</div>
+    <div class="date">Weeks 18&ndash;22</div>
+    <h4>Accounts, Vehicles, Canteen, Digital Forms</h4>
+    <ul>
+      <li>Income/expense tracking per institution</li>
+      <li>Expense claims &amp; purchase requests with approval workflow</li>
+      <li>Vehicle management (fleet, bookings, fuel logs)</li>
+      <li>Canteen meal notifications &amp; headcount</li>
+      <li>Digital forms builder</li>
+      <li>Executive dashboard &amp; department health scores</li>
+    </ul>
+  </div>
+  <div class="roadmap-item">
+    <div class="phase">Institution-wide Launch</div>
+    <div class="date">Week 23&ndash;26</div>
+    <h4>Big Bang Launch &mdash; All Features, All Staff, All Campuses</h4>
+    <ul>
+      <li>Rollout to all staff across all campuses</li>
+      <li>Training sessions for all roles</li>
+      <li>Support &amp; monitoring period</li>
+    </ul>
+  </div>
+  <div class="roadmap-item">
+    <div class="phase">Phase 6 &mdash; Enhancement</div>
+    <div class="date">Weeks 27&ndash;32</div>
+    <h4>Advanced Features &amp; Optimization</h4>
+    <ul>
+      <li>Delegate / backup approver for leave &amp; approvals</li>
+      <li>Onboarding &amp; offboarding workflow with checklists</li>
+      <li>Data export for regulatory compliance (CSV/Excel)</li>
+      <li>Payroll-ready attendance &amp; leave export</li>
+      <li>Multi-language UI support</li>
+      <li>Performance review cycles (quarterly goals &amp; ratings)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ====== PILOT PLAN ====== -->
+<div class="page-break"></div>
+<h2>Pilot Plan</h2>
+
+<h3>Pilot Group</h3>
+<p><strong>30&ndash;50 staff</strong> from the main campus, representing a balanced cross-section of roles:</p>
+<ul>
+  <li><strong>Management / Administration</strong> (3&ndash;5) &mdash; Validate dashboards, approvals, reporting</li>
+  <li><strong>Department Heads / HODs</strong> (5&ndash;8) &mdash; Validate task assignment, leave approval, team oversight</li>
+  <li><strong>Teaching / Academic staff</strong> (10&ndash;15) &mdash; Validate attendance, reports, leave, tasks</li>
+  <li><strong>Support staff</strong> (8&ndash;12) &mdash; Security, housekeeping, transport &mdash; validate NFC/QR check-in</li>
+  <li><strong>Media / IT Department</strong> (4&ndash;5) &mdash; Technical validation, feedback, bug reporting</li>
+</ul>
+
+<h3>Device Policy</h3>
+<p>Not all staff own smartphones capable of running the app. ThaibaHive addresses this with a tiered approach:</p>
+<ul>
+  <li><strong>BYOD (Bring Your Own Device):</strong> Most staff use personal smartphones</li>
+  <li><strong>Institution-provided tablets:</strong> Dedicated devices stationed at key entry points for QR/NFC check-in</li>
+  <li><strong>NFC tags at turnstiles:</strong> Quick tap check-in without needing a phone</li>
+  <li><strong>Paper fallback:</strong> Manual check-in option during the transition period</li>
+</ul>
+
+<h3>Baseline Measurement &amp; Validation</h3>
+<p><strong>Before Phase 1 begins</strong>, current-state metrics are recorded to establish a measurable before/after: attendance accuracy, report submission rates, leave processing times, and admin hours spent on manual tasks. These baselines directly support the ROI claims in this proposal.</p>
+
+<h3>Pilot Validation Criteria</h3>
+<table>
+  <tr><th>Metric</th><th>Target</th></tr>
+  <tr><td>Attendance check-in compliance</td><td>&ge; 90%</td></tr>
+  <tr><td>Daily report submission rate (eligible staff)</td><td>&ge; 85%</td></tr>
+  <tr><td>User satisfaction survey</td><td>&ge; 4 / 5</td></tr>
+  <tr><td>Critical bugs</td><td>0</td></tr>
+  <tr><td>Features validated by real usage</td><td>100%</td></tr>
+  <tr><td>Task assignment &amp; tracking adoption</td><td>&ge; 70% of HODs assigning tasks</td></tr>
+  <tr><td>Leave approval processing time</td><td>&le; 4 hours (target: same-day)</td></tr>
+</table>
+
+<h3>Post-Launch Success Metrics</h3>
+<table>
+  <tr><th>Metric</th><th>Target</th></tr>
+  <tr><td>Attendance compliance (all institutions)</td><td>95%+</td></tr>
+  <tr><td>Report submission rate</td><td>90%+</td></tr>
+  <tr><td>Task completion rate (on time)</td><td>80%+</td></tr>
+  <tr><td>Leave processing time</td><td>Reduced from days to hours</td></tr>
+  <tr><td>Staff satisfaction (after 3 months)</td><td>80%+ positive</td></tr>
+  <tr><td>Monthly active users</td><td>90%+ of all staff</td></tr>
+</table>
+
+<!-- ====== LONG-TERM ROADMAP ====== -->
+<div class="page-break"></div>
+<h2>Long-Term Vision &amp; Roadmap</h2>
+<p>ThaibaHive is designed as a <strong>platform for decades</strong>, not a project for months. The same infrastructure supports unlimited future modules:</p>
+
+<div class="vision-box">
+  <p>&ldquo;ThaibaHive is more than a staff management application&mdash;it is the digital operating system for Thaiba Garden Group of Institutions. By connecting people, processes, and information on one platform, it lays the foundation for smarter decisions, greater accountability, and sustainable growth across every campus.&rdquo;</p>
+</div>
+
+<h3>Future Expansion Modules</h3>
+<div class="feature-grid">
+  <div class="feature-card"><h4>Biometric Device Integration</h4><p>Connect existing biometric scanners for attendance, sync with ThaibaHive records.</p></div>
+  <div class="feature-card"><h4>Smart Classroom Automation</h4><p>Room scheduling, AV equipment control, attendance-linked classroom access.</p></div>
+  <div class="feature-card"><h4>Inventory &amp; Procurement</h4><p>Stock management, reorder alerts, supplier management, purchase order workflow.</p></div>
+  <div class="feature-card"><h4>Payroll Integration</h4><p>Attendance data feeds into payroll. Payslip portal, PF statements, tax breakdown sheets.</p></div>
+  <div class="feature-card"><h4>Student Portal</h4><p>Attendance view, assignments, communication with parents, fee status.</p></div>
+  <div class="feature-card"><h4>Parent Portal</h4><p>Real-time updates on student attendance, performance, events, and communications.</p></div>
+  <div class="feature-card"><h4>AI Analytics &amp; Reports</h4><p>Predictive analytics for attrition risk, performance trends, and resource optimization.</p></div>
+  <div class="feature-card"><h4>Learning Management (LMS)</h4><p>Course materials, assignments, quizzes, progress tracking for academic programs.</p></div>
+  <div class="feature-card"><h4>Hostel Management</h4><p>Room allocation, attendance, visitor logs, maintenance, leave tracking for hostel students.</p></div>
+</div>
+
+<div class="highlight">
+  <strong>Growth-ready architecture:</strong> Every future module runs on the same infrastructure &mdash; no new servers, databases, or platforms needed. The incremental cost of adding a module is primarily development time.
+</div>
+
+<!-- ====== INTEGRATIONS ====== -->
+<h2>Integration Possibilities</h2>
+<p>ThaibaHive is designed to integrate with existing and future systems:</p>
+<table>
+  <tr><th>System</th><th>Integration Type</th></tr>
+  <tr><td>Google Workspace</td><td>Calendar sync, single sign-on, Drive document attachment</td></tr>
+  <tr><td>Microsoft 365</td><td>Calendar sync, Teams status, Outlook contact sync</td></tr>
+  <tr><td>WhatsApp / Telegram</td><td>Automated notifications for approvals, reminders, broadcasts</td></tr>
+  <tr><td>Email (SMTP)</td><td>Transactional emails for approvals, notifications, reports</td></tr>
+  <tr><td>Biometric Devices</td><td>Attendance data import from existing biometric systems</td></tr>
+  <tr><td>Payroll Software</td><td>Attendance and leave data export for payroll processing</td></tr>
+  <tr><td>Existing ERPs</td><td>Staff data sync, single source of truth</td></tr>
+  <tr><td>SMS Gateway</td><td>Emergency broadcasts and critical notifications via SMS</td></tr>
+</table>
+
+<!-- ====== GOVERNANCE ====== -->
+<h2>Platform Governance</h2>
+<table>
+  <tr><th>Role</th><th>Responsibility</th></tr>
+  <tr><td><strong>Steering Committee</strong></td><td>Director, Joint Director / HR, Media Manager &mdash; strategic oversight, phase approvals, budget decisions</td></tr>
+  <tr><td><strong>Product Owner</strong></td><td>Media Department &mdash; roadmap prioritization, feature definition, stakeholder liaison</td></tr>
+  <tr><td><strong>IT Operations</strong></td><td>IT Department &mdash; hosting, backups, user support, security monitoring</td></tr>
+  <tr><td><strong>Change Champions</strong></td><td>One per department/institution &mdash; training, adoption advocacy, feedback collection</td></tr>
+</table>
+<p>This governance model ensures clear ownership, sustainable operations, and a direct line from staff feedback to product decisions.</p>
+
+<!-- ====== SUPPORT & MAINTENANCE ====== -->
+<div class="page-break"></div>
+<h2>Support &amp; Maintenance</h2>
+<p>Long-term operational ownership is critical for a staff platform. Our plan:</p>
+
+<table>
+  <tr><th>Phase</th><th>Responsible</th><th>Activities</th></tr>
+  <tr><td>Build &amp; Pilot (Months 1&ndash;6)</td><td>Media Department</td><td>Development, pilot support, bug fixes, training</td></tr>
+  <tr><td>Transition (Months 6&ndash;7)</td><td>Media &rarr; IT Department</td><td>Knowledge transfer, documentation handover, runbook creation</td></tr>
+  <tr><td>Operations (Month 8+)</td><td>IT Department</td><td>User support, password resets, database backups, monitoring</td></tr>
+  <tr><td>Enhancements (Ongoing)</td><td>Media Department</td><td>New features, version upgrades, integration development</td></tr>
+</table>
+
+<p><strong>Documentation deliverables:</strong> Technical architecture guide, admin playbook, user training manual, backup &amp; restore runbook, troubleshooting guide.</p>
+
+<!-- ====== BUILD VS BUY ====== -->
+<div class="page-break"></div>
+<h2>Why Build Instead of Buy?</h2>
+<p>Commercial HRMS and ERP platforms are designed for generic enterprises. ThaibaHive is built specifically for Thaiba Garden. The differences are fundamental:</p>
+<table>
+  <tr><th>Factor</th><th>Commercial ERP / HRMS</th><th>ThaibaHive</th></tr>
+  <tr><td>Fit to institution</td><td>Generic, requires costly customisation</td><td>Built for your hierarchy, roles, and workflows</td></tr>
+  <tr><td>Annual license cost</td><td>₹5&ndash;15L+ per year for 250 users</td><td>₹0 &mdash; institution owns the platform</td></tr>
+  <tr><td>Customisation</td><td>Limited, vendor-dependent, expensive</td><td>Fully customisable in-house</td></tr>
+  <tr><td>Vendor lock-in</td><td>Data trapped in proprietary systems</td><td>No lock-in. Full data export any time.</td></tr>
+  <tr><td>Upgrades</td><td>Mandatory, costly, disruptive</td><td>Controlled internally, when needed</td></tr>
+  <tr><td>Integration</td><td>Requires paid middleware or APIs</td><td>Built on the same infrastructure as MediaHive</td></tr>
+  <tr><td>Support</td><td>External helpdesk, SLA-dependent</td><td>In-house IT team, same-day response</td></tr>
+  <tr><td>Data security</td><td>Data stored on vendor servers</td><td>Full control. Data stays within institution.</td></tr>
+</table>
+<div class="highlight">
+  <strong>The bottom line:</strong> Commercial platforms would cost more in annual license fees alone than ThaibaHive's entire first-year investment &mdash; and the institution would still not own the platform or its data.
+</div>
+
+<!-- ====== CONCLUSION ====== -->
+<h2>Conclusion &amp; Recommendation</h2>
+
+<div class="highlight" style="background:#f0fdfa;border-left-color:#0d6b5e;">
+  <p style="font-size:11pt;margin-bottom:0;"><strong>Recommendation: Proceed to Project Kickoff.</strong></p>
+</div>
+
+<p>For a first-year investment of <strong>₹2.0L</strong>, ThaibaHive delivers a unified digital workplace that pays for itself in under six months. Of this, ₹60,000 is a development allowance for the Media Manager building the platform&mdash;work that falls outside his regular job description. Every other rupee goes directly into infrastructure and institutional efficiency, not license fees or vendor lock-in.</p>
+<p>With <strong>23 institutions</strong> across India and the UAE, a single commercial platform would cost ₹5&ndash;15L+ per year. ThaibaHive costs ₹2.0L once, is owned by the institution, and grows with it&mdash;with no recurring licence fees, no vendor dependency, and no limits on customisation.</p>
+
+<p>The foundation has been proven through MediaHive in daily production use. The implementation plan is complete. The team is prepared to begin immediately upon approval.</p>
+
+<div class="vision-box">
+  <p>Every day we delay digital transformation, staff continue spending valuable time on paperwork instead of serving students and advancing the institution. ThaibaHive is an investment in efficiency, accountability, and the future of Thaiba Garden.</p>
+</div>
+
+<!-- ====== NEXT STEPS ====== -->
+<h2>Next Steps</h2>
+<ol>
+  <li><strong>Board approval</strong> to proceed with Project Kickoff</li>
+  <li><strong>Finalize pilot group</strong> composition across roles and departments</li>
+  <li><strong>Set up NFC infrastructure</strong> at main campus entry points</li>
+  <li><strong>Configure org structure,</strong> roles, shift policies, and access permissions</li>
+  <li><strong>Begin Phase 1 development</strong> using the MediaHive foundation</li>
+  <li><strong>Deploy pilot</strong> and begin validation within 2 weeks of approval</li>
+  <li><strong>Schedule board update</strong> at the end of each phase (every 4&ndash;6 weeks)</li>
+</ol>
+
+<br>
+<hr style="border:none;border-top:1px solid #e2e8f0;margin:8mm 0;">
+<p style="font-size:9pt;color:#64748b;text-align:center;">
+  Prepared by the Media Department &mdash; Building on the success of MediaHive for the benefit of the entire institution.<br>
+  <strong>Thaiba Garden Group of Institutions</strong> &mdash; July 2026
+</p>
+
+</div>
+</body>
+</html>

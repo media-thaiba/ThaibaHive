@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 export default function NewStaffPage() {
   const router = useRouter();
@@ -19,8 +22,8 @@ export default function NewStaffPage() {
       fetch("/api/admin/institutions").then((r) => r.json()),
       fetch("/api/admin/departments").then((r) => r.json()),
     ]).then(([instData, deptData]) => {
-      setInstitutions(instData.institutions);
-      setDepartments(deptData.departments);
+      setInstitutions(Array.isArray(instData.institutions) ? instData.institutions : []);
+      setDepartments(Array.isArray(deptData.departments) ? deptData.departments : []);
     });
   }, []);
 
@@ -51,48 +54,48 @@ export default function NewStaffPage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <label className="text-sm font-medium">First Name</label>
-            <input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" required />
+            <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Last Name</label>
-            <input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" required />
+            <Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
           </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Email</label>
-          <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" required />
+          <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <label className="text-sm font-medium">Employee ID</label>
-            <input value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" required />
+            <Input value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })} required />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Phone</label>
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <label className="text-sm font-medium">Designation</label>
-            <input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <Input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Role</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="staff">Staff</option>
               <option value="hod">HOD</option>
               <option value="admin">Admin</option>
-            </select>
+            </Select>
           </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Password</label>
-          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <p className="text-xs text-muted-foreground">Leave blank for no-password access (admin will set later)</p>
         </div>
 
@@ -145,12 +148,8 @@ export default function NewStaffPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex gap-3">
-          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-            Create Staff
-          </button>
-          <button type="button" onClick={() => router.back()} className="rounded-md border border-input px-4 py-2 text-sm">
-            Cancel
-          </button>
+          <Button type="submit">Create Staff</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
         </div>
       </form>
     </div>

@@ -1,0 +1,81 @@
+name: thaibahive_mobile
+description: ThaibaHive - Unified Staff Management Platform
+version: 1.0.0+1
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  go_router: ^14.2.0
+  dio: ^5.4.3+1
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  flutter_secure_storage: ^9.2.2
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.3.1
+  pull_to_refresh: ^2.0.0
+  shimmer: ^3.0.0
+  fl_chart: ^0.68.0
+  image_picker: ^1.0.7
+  file_picker: ^8.0.3
+  flutter_local_notifications: ^17.2.1+2
+  url_launcher: ^6.2.6
+  share_plus: ^12.0.2
+  fluttertoast: ^8.2.10
+  table_calendar: ^3.1.2
+  badges: ^3.1.2
+  timeago: ^3.6.1
+  # Mobile-specific dependencies for Phase 1
+  nfc_manager: ^3.3.0
+  hive_flutter: ^1.1.0
+  crypto: ^3.0.3
+  geolocator: ^11.1.0
+  # Phase 2 - WebView auth handoff
+  webview_flutter: ^4.10.0
+  # Phase 1 - QR code scanning for attendance
+  mobile_scanner: ^5.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.9
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/PlusJakartaSans/PlusJakartaSans-ExtraBold.ttf
+          weight: 800

@@ -19,7 +19,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@thaiba/db": ["./packages/db/index.ts"],
+      "@thaiba/db/*": ["./packages/db/*"],
+      "@thaiba/auth": ["./packages/auth/index.ts"],
+      "@thaiba/auth/*": ["./packages/auth/*"]
     }
   },
   "include": [

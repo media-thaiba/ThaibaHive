@@ -37,6 +37,11 @@ next-env.d.ts
 # database
 dev.db
 *.db-journal
+*.db-shm
+*.db-wal
+stdout.txt
+stderr.txt
+uploads/
 
 # drizzle
 drizzle/meta/

@@ -2,19 +2,40 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function NewTaskPage() {
   const router = useRouter();
+  const { staff } = useAuth();
   const [staffList, setStaffList] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
+  const [tomorrow] = useState(() => new Date(Date.now() + 86400000).toISOString().split("T")[0]);
   const [form, setForm] = useState({
     title: "", description: "", priority: "medium",
-    assignedToId: "", dueDate: "",
+    assignedToId: "", dueDate: tomorrow,
   });
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/staff").then(r => r.json()).then(d => setStaffList(d.staff));
-  }, []);
+    fetch("/api/staff")
+      .then((r) => r.json())
+      .then((d) => {
+        setStaffList(Array.isArray(d.staff) ? d.staff : []);
+        if (staff?.id) {
+          setForm((prev) => {
+            if (!prev.assignedToId) {
+              return { ...prev, assignedToId: staff.id };
+            }
+            return prev;
+          });
+        }
+      })
+      .catch((e) => { setError("Failed to load staff list"); console.error(e); });
+  }, [staff]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,44 +62,44 @@ export default function NewTaskPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="text-sm font-medium">Title</label>
-          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" required />
+          <Label>Title</Label>
+          <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Description</label>
-          <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" rows={3} />
+          <Label>Description</Label>
+          <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-medium">Priority</label>
-            <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <Label>Priority</Label>
+            <Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
-            </select>
+            </Select>
           </div>
           <div>
-            <label className="text-sm font-medium">Due Date</label>
-            <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <Label>Due Date</Label>
+            <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
           </div>
         </div>
 
         <div>
-          <label className="text-sm font-medium">Assign To</label>
-          <select value={form.assignedToId} onChange={(e) => setForm({ ...form, assignedToId: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+          <Label>Assign To</Label>
+          <Select value={form.assignedToId} onChange={(e) => setForm({ ...form, assignedToId: e.target.value })}>
             <option value="">Unassigned</option>
             {staffList.map((s) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
-          </select>
+          </Select>
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex gap-3">
-          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Create Task</button>
-          <button type="button" onClick={() => router.back()} className="rounded-md border border-input px-4 py-2 text-sm">Cancel</button>
+          <Button type="submit">Create Task</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
         </div>
       </form>
     </div>

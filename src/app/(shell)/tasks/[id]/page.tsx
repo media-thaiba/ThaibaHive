@@ -1,25 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   type TaskData = { id: string; title: string; description: string | null; status: string; priority: string; dueDate: string | null };
-  type CommentData = { id: string; content: string; createdAt: string };
+  type CommentData = {
+    id: string;
+    content: string;
+    createdAt: string;
+    authorFirstName?: string | null;
+    authorLastName?: string | null;
+    authorDesignation?: string | null;
+  };
   const [task, setTask] = useState<TaskData | null>(null);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
 
-  useState(() => {
-    fetch(`/api/tasks/${id}`).then(r => r.json()).then(data => {
-      setTask(data.task);
-      setComments(data.comments || []);
-      setLoading(false);
-    });
-  });
+  useEffect(() => {
+    fetch(`/api/tasks/${id}`)
+      .then(r => r.json())
+      .then(data => {
+        setTask(data.task);
+        setComments(data.comments || []);
+        setLoading(false);
+      })
+      .catch(() => toast.error("Failed to load task"));
+  }, [id]);
 
   async function addComment() {
     if (!newComment.trim()) return;
@@ -44,37 +59,70 @@ export default function TaskDetailPage() {
     setTask({ ...(task as TaskData), status });
   }
 
-  if (loading) return <div className="flex-1 p-6 text-sm text-muted-foreground">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex-1 p-6 max-w-2xl space-y-6">
+        <Skeleton className="h-4 w-16" />
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-4 w-full" />
+          <div className="flex gap-3">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-7 w-24" />
+            <Skeleton className="h-7 w-24" />
+            <Skeleton className="h-7 w-24" />
+          </div>
+        </div>
+        <div className="rounded-lg border p-4 space-y-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-16 w-full" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 flex-1" />
+            <Skeleton className="h-9 w-16" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!task) return <div className="flex-1 p-6 text-sm text-destructive">Task not found</div>;
 
   return (
     <div className="flex-1 p-6 max-w-2xl">
-      <button onClick={() => router.back()} className="mb-4 text-sm text-muted-foreground hover:underline">&larr; Back</button>
+      <Button variant="ghost" size="sm" onClick={() => router.back()} className="mb-4">
+        &larr; Back
+      </Button>
 
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-2xl font-bold">{task.title}</h1>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-            task.priority === "urgent" ? "bg-red-100 text-red-700" :
-            task.priority === "high" ? "bg-amber-100 text-amber-700" :
-            "bg-blue-100 text-blue-700"
-          }`}>{task.priority}</span>
+          <Badge variant={
+            task.priority === "urgent" ? "destructive" :
+            task.priority === "high" ? "warning" :
+            "info"
+          }>
+            {task.priority}
+          </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{task.description || "No description"}</p>
         <div className="mt-3 flex items-center gap-3 text-sm">
-          <span className={`rounded-md px-2 py-1 text-xs font-medium ${
-            task.status === "todo" ? "bg-gray-100" :
-            task.status === "in_progress" ? "bg-blue-100 text-blue-700" :
-            task.status === "review" ? "bg-amber-100 text-amber-700" :
-            "bg-green-100 text-green-700"
-          }`}>{task.status.replace("_", " ")}</span>
+          <Badge variant={
+            task.status === "todo" ? "secondary" :
+            task.status === "in_progress" ? "info" :
+            task.status === "review" ? "warning" :
+            "success"
+          }>
+            {task.status.replace("_", " ")}
+          </Badge>
           {task.dueDate && <span>Due: {task.dueDate}</span>}
         </div>
         <div className="mt-3 flex gap-2">
           {["todo", "in_progress", "review", "completed"].filter(s => s !== task.status).map(s => (
-            <button key={s} onClick={() => updateStatus(s)} className="rounded-md border border-input px-3 py-1 text-xs hover:bg-muted">
+            <Button key={s} variant="outline" size="sm" onClick={() => updateStatus(s)}>
               Move to {s.replace("_", " ")}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -84,15 +132,30 @@ export default function TaskDetailPage() {
         <div className="space-y-3 mb-4">
           {comments.map((c) => (
             <div key={c.id} className="rounded-md bg-muted/30 p-3">
-              <p className="text-xs text-muted-foreground mb-1">{c.createdAt?.split("T")[0]}</p>
+              <div className="flex items-center gap-2 mb-1">
+                {c.authorFirstName && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary">
+                      {c.authorFirstName[0]}{c.authorLastName?.[0] || ""}
+                    </div>
+                    <span className="text-xs font-medium">
+                      {c.authorFirstName} {c.authorLastName}
+                    </span>
+                    {c.authorDesignation && (
+                      <span className="text-xs text-muted-foreground">· {c.authorDesignation}</span>
+                    )}
+                  </div>
+                )}
+                <span className="text-xs text-muted-foreground ml-auto">{c.createdAt?.split("T")[0]}</span>
+              </div>
               <p className="text-sm">{c.content}</p>
             </div>
           ))}
           {comments.length === 0 && <p className="text-sm text-muted-foreground">No comments yet</p>}
         </div>
         <div className="flex gap-2">
-          <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment..." className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" onKeyDown={(e) => e.key === "Enter" && addComment()} />
-          <button onClick={addComment} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Send</button>
+          <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment..." onKeyDown={(e) => e.key === "Enter" && addComment()} />
+          <Button onClick={addComment}>Send</Button>
         </div>
       </div>
     </div>

@@ -1,0 +1,1 @@
+export { getUserInstitutionScope } from "@thaiba/auth";

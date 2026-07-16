@@ -1,41 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type Department = { id: string; name: string };
-type SubDepartment = {
-  id: string; name: string; code: string | null;
-  departmentId: string; description: string | null; isActive: boolean;
-};
+type SubDept = { id: string; name: string; code: string; departmentId: string; headOfSubDepartment: string | null; isActive: boolean };
 
 export default function SubDepartmentsPage() {
-  const [subDepts, setSubDepts] = useState<SubDepartment[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [subDepts, setSubDepts] = useState<SubDept[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", code: "", departmentId: "", description: "" });
+  const [form, setForm] = useState({ name: "", code: "", departmentId: "", headOfSubDepartment: "" });
 
-  useState(() => { fetchData(); });
+  useEffect(() => { fetchData(); }, []);
 
   async function fetchData() {
-    const [subRes, deptRes] = await Promise.all([
-      fetch("/api/admin/sub-departments"),
-      fetch("/api/admin/departments"),
-    ]);
-    setSubDepts((await subRes.json()).subDepartments);
-    setDepartments((await deptRes.json()).departments);
+    const res = await fetch("/api/admin/sub-departments");
+    const data = await res.json();
+    setSubDepts(Array.isArray(data.subDepartments) ? data.subDepartments : []);
     setLoading(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     await fetch("/api/admin/sub-departments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form),
     });
     setShowForm(false);
-    setForm({ name: "", code: "", departmentId: "", description: "" });
+    setForm({ name: "", code: "", departmentId: "", headOfSubDepartment: "" });
     fetchData();
   }
 
@@ -45,64 +40,48 @@ export default function SubDepartmentsPage() {
     fetchData();
   }
 
-  if (loading) return <div className="text-sm text-muted-foreground">Loading...</div>;
+  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sub-departments</h1>
-        <button onClick={() => setShowForm(!showForm)} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-          {showForm ? "Cancel" : "Add Sub-department"}
-        </button>
+    <div className="flex-1 space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Sub-Departments</h1>
+        <Button onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "Add Sub-Department"}
+        </Button>
       </div>
-
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 rounded-lg border p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-md border border-input bg-background px-3 py-2 text-sm" required />
-            <input placeholder="Code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
-            <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} className="rounded-md border border-input bg-background px-3 py-2 text-sm" required>
-              <option value="">Select department</option>
-              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </div>
-          <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Create</button>
-        </form>
+        <Card>
+          <CardHeader><CardTitle>New Sub-Department</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                <Input placeholder="Code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} required />
+              </div>
+              <Button type="submit">Create</Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
-
-      <div className="rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Code</th>
-              <th className="px-4 py-3 text-left font-medium">Department</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subDepts.map((sub) => (
-              <tr key={sub.id} className="border-b last:border-0">
-                <td className="px-4 py-3">{sub.name}</td>
-                <td className="px-4 py-3 text-muted-foreground">{sub.code || "—"}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {departments.find((d) => d.id === sub.departmentId)?.name || "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${sub.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                    {sub.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleDelete(sub.id)} className="text-xs text-destructive hover:underline">Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b bg-muted/50"><th className="px-4 py-3 text-left font-medium">Name</th><th className="px-4 py-3 text-left font-medium">Code</th><th className="px-4 py-3 text-left font-medium">Status</th><th className="px-4 py-3 text-right font-medium">Actions</th></tr></thead>
+            <tbody>
+              {subDepts.map((sd) => (
+                <tr key={sd.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="px-4 py-3">{sd.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{sd.code}</td>
+                  <td className="px-4 py-3"><Badge variant={sd.isActive ? "default" : "secondary"} className="text-[10px]">{sd.isActive ? "Active" : "Inactive"}</Badge></td>
+                  <td className="px-4 py-3 text-right"><Button variant="ghost" size="sm" onClick={() => handleDelete(sd.id)} className="text-destructive hover:text-destructive">Delete</Button></td>
+                </tr>
+              ))}
+              {subDepts.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">No sub-departments yet</td></tr>}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
