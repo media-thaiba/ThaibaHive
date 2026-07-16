@@ -81,7 +81,7 @@ export default function ShellLayout({
           <div className="flex flex-1">
             <SidebarNav onSearchOpen={() => setCmdOpen(true)} />
             <main className="flex-1 pb-20 lg:pb-0">
-              {isPhaseOnePath(pathname) ? children : <WorkInProgress />}
+              {children}
             </main>
           </div>
           <BottomNav />
