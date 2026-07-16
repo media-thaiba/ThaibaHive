@@ -166,19 +166,6 @@ async function seed() {
 // ─── Marketplace Seed ───
 
 async function seedMarketplace() {
-const arg = process.argv[2];
-
-if (arg === "marketplace") {
-  seedMarketplace().catch((e) => {
-    console.error("Marketplace seed failed:", e);
-    process.exit(1);
-  });
-} else {
-  seed().catch((e) => {
-    console.error("Seed failed:", e);
-    process.exit(1);
-  });
-}
   const existing = await db.select().from(marketplaceApps).limit(1).get();
   if (existing) {
     console.log("Marketplace already seeded.");
@@ -229,4 +216,18 @@ if (arg === "marketplace") {
   }
 
   console.log(`Seeded ${allApps.length} marketplace apps (${instantApps.length} instant, ${restrictedApps.length} restricted).`);
+}
+
+const arg = process.argv[2];
+
+if (arg === "marketplace") {
+  seedMarketplace().catch((e) => {
+    console.error("Marketplace seed failed:", e);
+    process.exit(1);
+  });
+} else {
+  seed().catch((e) => {
+    console.error("Seed failed:", e);
+    process.exit(1);
+  });
 }
