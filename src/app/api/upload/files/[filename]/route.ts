@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { stat } from "fs/promises";
+import { downloadFromDrive } from "@/lib/drive";
+import { Readable } from "stream";
 
 export const runtime = "nodejs";
 
@@ -21,6 +23,26 @@ const MIME_TYPES: Record<string, string> = {
   txt: "text/plain",
 };
 
+// Helper to convert Node stream to Web ReadableStream
+function nodeStreamToWeb(nodeStream: any): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      nodeStream.on("data", (chunk: any) => {
+        controller.enqueue(chunk);
+      });
+      nodeStream.on("end", () => {
+        controller.close();
+      });
+      nodeStream.on("error", (err: any) => {
+        controller.error(err);
+      });
+    },
+    cancel() {
+      nodeStream.destroy();
+    }
+  });
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ filename: string }> }
@@ -32,6 +54,24 @@ export async function GET(
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }
 
+    // 1. Production check - fetch from Google Drive
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+      const driveFile = await downloadFromDrive(filename);
+      if (!driveFile) {
+        return NextResponse.json({ error: "File not found in Google Drive" }, { status: 404 });
+      }
+
+      const webStream = nodeStreamToWeb(driveFile.stream);
+
+      return new NextResponse(webStream, {
+        headers: {
+          "Content-Type": driveFile.mimeType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
+    // 2. Local dev check - fetch from filesystem
     const filepath = join(UPLOAD_DIR, filename);
 
     try {

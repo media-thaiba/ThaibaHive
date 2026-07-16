@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { uploadToDrive } from "@/lib/drive";
 
 export const runtime = "nodejs";
 
@@ -73,13 +74,24 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     const ext = file.name.split(".").pop() || "bin";
     const filename = `${randomUUID()}.${ext}`;
-    const filepath = join(UPLOAD_DIR, filename);
-
-    await mkdir(UPLOAD_DIR, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filepath, buffer);
 
-    const fileUrl = `/api/upload/files/${filename}`;
+    let fileUrl = "";
+
+    // Production check - stream to Google Drive
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+      const driveFileId = await uploadToDrive(filename, file.type, buffer);
+      if (!driveFileId) {
+        throw new Error("Failed to store file in Google Drive");
+      }
+      fileUrl = `/api/upload/files/${filename}`;
+    } else {
+      // Local dev check - store in filesystem
+      const filepath = join(UPLOAD_DIR, filename);
+      await mkdir(UPLOAD_DIR, { recursive: true });
+      await writeFile(filepath, buffer);
+      fileUrl = `/api/upload/files/${filename}`;
+    }
 
     return NextResponse.json({
       url: fileUrl,
