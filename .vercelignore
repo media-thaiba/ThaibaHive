@@ -1,0 +1,28 @@
+# Vercel Ignore File
+
+# Ignore mobile app
+thaibahive_mobile_app/
+
+# Ignore tests & tools
+e2e/
+test-results/
+playwright/
+jest/
+
+# Ignore dependencies and builds
+node_modules/
+.next/
+out/
+build/
+
+# Ignore database and assets
+dev.db*
+*.db
+*.db-wal
+*.db-shm
+uploads/
+stdout.txt
+stderr.txt
+.env*.local
+.env
+.vercel
