@@ -81,8 +81,26 @@ export const primaryNav: NavItem[] = [
 
 export const allNavItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
-export function isPhaseOnePath(): boolean {
-  return true;
+const ENABLED_PATHS = new Set([
+  "/",
+  "/attendance",
+  "/tasks",
+  "/leaves",
+  "/approvals",
+  "/announcements",
+  "/events",
+  "/circulars",
+  "/polls",
+  "/staff",
+  "/bookings",
+  "/assets",
+  "/settings",
+  "/help-desk",
+  "/marketplace",
+]);
+
+export function isPhaseOnePath(href: string): boolean {
+  return ENABLED_PATHS.has(href);
 }
 
 export function searchNav(query: string): NavItem[] {

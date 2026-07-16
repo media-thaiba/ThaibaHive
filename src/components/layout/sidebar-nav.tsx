@@ -127,7 +127,7 @@ function SidebarLink({
   active: boolean;
   collapsed: boolean;
 }) {
-  const enabled = isPhaseOnePath();
+  const enabled = isPhaseOnePath(item.href);
   const Icon = item.icon;
 
   if (!enabled) {
