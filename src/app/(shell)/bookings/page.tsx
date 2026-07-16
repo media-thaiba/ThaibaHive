@@ -88,7 +88,7 @@ export default function BookingsPage() {
   const [success, setSuccess] = useState("");
 
   const [permissions, setPermissions] = useState<Permissions | null>(null);
-  const isAdmin = permissions?.permissions.includes("bookings:manage") ?? false;
+  const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("bookings:manage") ?? false);
   const currentStaffId = permissions?.role ? (permissions as any).staffId : null;
 
   const loadData = useCallback(async () => {

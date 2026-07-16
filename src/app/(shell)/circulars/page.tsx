@@ -87,8 +87,8 @@ export default function CircularsPage() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
 
-  const canCreate = permissions?.permissions.includes("circulars:create") ?? false;
-  const isAdmin = permissions?.permissions.includes("announcements:manage") ?? false;
+  const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("circulars:create") ?? false);
+  const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:manage") ?? false);
 
   const fetchData = useCallback(async () => {
     try {

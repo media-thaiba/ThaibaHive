@@ -80,8 +80,8 @@ export default function PollsPage() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
 
-  const canCreate = permissions?.permissions.includes("polls:create") ?? false;
-  const isAdmin = permissions?.permissions.includes("polls:manage") ?? false;
+  const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("polls:create") ?? false);
+  const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("polls:manage") ?? false);
 
   const loadData = useCallback(async () => {
     try {

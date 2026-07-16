@@ -70,8 +70,8 @@ export default function AnnouncementsPage() {
   const [permissions, setPermissions] = useState<Permissions | null>(null);
   const [markingRead, setMarkingRead] = useState<Set<string>>(new Set());
 
-  const canCreate = permissions?.permissions.includes("announcements:create") ?? false;
-  const canManage = permissions?.permissions.includes("announcements:manage") ?? false;
+  const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:create") ?? false);
+  const canManage = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:manage") ?? false);
   const isAdmin = canManage;
 
   const fetchData = useCallback(async () => {

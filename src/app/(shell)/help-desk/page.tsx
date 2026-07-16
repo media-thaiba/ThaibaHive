@@ -101,7 +101,7 @@ export default function HelpDeskPage() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
 
-  const isAdmin = permissions?.permissions.includes("helpdesk:manage") ?? false;
+  const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("helpdesk:manage") ?? false);
 
   const fetchTickets = useCallback(async () => {
     try {

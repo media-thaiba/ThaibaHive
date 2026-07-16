@@ -98,8 +98,8 @@ export default function EventsPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  const canCreate = permissions?.permissions.includes("events:create") ?? false;
-  const canManage = permissions?.permissions.includes("events:manage") ?? false;
+  const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("events:create") ?? false);
+  const canManage = permissions?.role === "super_admin" || (permissions?.permissions.includes("events:manage") ?? false);
   const isAdmin = canManage || canCreate;
 
   const fetchData = useCallback(async () => {
