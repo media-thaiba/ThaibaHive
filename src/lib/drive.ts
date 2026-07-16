@@ -24,9 +24,11 @@ function getDriveClient() {
   return google.drive({ version: "v3", auth });
 }
 
-export async function uploadToDrive(filename: string, mimeType: string, buffer: Buffer): Promise<string | null> {
+export async function uploadToDrive(filename: string, mimeType: string, buffer: Buffer): Promise<string> {
   const drive = getDriveClient();
-  if (!drive) return null;
+  if (!drive) {
+    throw new Error("Google Drive client not configured. Check environment variables.");
+  }
 
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
   const stream = Readable.from(buffer);
@@ -48,10 +50,14 @@ export async function uploadToDrive(filename: string, mimeType: string, buffer: 
       fields: "id",
     });
 
-    return response.data.id || null;
+    if (!response.data.id) {
+      throw new Error("Google Drive returned an empty file ID");
+    }
+
+    return response.data.id;
   } catch (error) {
     console.error("Google Drive upload error:", error);
-    return null;
+    throw error;
   }
 }
 

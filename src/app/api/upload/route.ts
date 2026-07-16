@@ -80,10 +80,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     // Production check - stream to Google Drive
     if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
-      const driveFileId = await uploadToDrive(filename, file.type, buffer);
-      if (!driveFileId) {
-        throw new Error("Failed to store file in Google Drive");
-      }
+      await uploadToDrive(filename, file.type, buffer);
       fileUrl = `/api/upload/files/${filename}`;
     } else {
       // Local dev check - store in filesystem
@@ -101,8 +98,9 @@ export const POST = requireAuth(async (request: Request, session) => {
     }, { status: 201 });
   } catch (error) {
     console.error("Upload error:", error);
+    const message = error instanceof Error ? error.message : "Failed to upload file";
     return NextResponse.json(
-      { error: "Failed to upload file" },
+      { error: message },
       { status: 500 }
     );
   }
