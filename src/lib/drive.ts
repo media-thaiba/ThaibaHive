@@ -2,19 +2,22 @@ import { google } from "googleapis";
 import { Readable } from "stream";
 
 function getDriveClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   let privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
   if (!email || !privateKey) {
     return null;
   }
 
+  // Trim and strip surrounding quotes
+  email = email.trim().replace(/^"/, "").replace(/"$/, "");
+  privateKey = privateKey.trim().replace(/^"/, "").replace(/"$/, "");
+
   // Handle newline characters in private key
   if (privateKey.includes("\\n")) {
     privateKey = privateKey.replace(/\\n/g, "\n");
   }
 
-  // Use the options object configuration for authentication
   const auth = new google.auth.JWT({
     email,
     key: privateKey,
@@ -30,7 +33,11 @@ export async function uploadToDrive(filename: string, mimeType: string, buffer: 
     throw new Error("Google Drive client not configured. Check environment variables.");
   }
 
-  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  let folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (folderId) {
+    folderId = folderId.trim().replace(/^"/, "").replace(/"$/, "");
+  }
+
   const stream = Readable.from(buffer);
 
   try {
@@ -48,6 +55,7 @@ export async function uploadToDrive(filename: string, mimeType: string, buffer: 
       requestBody: fileMetadata,
       media: media,
       fields: "id",
+      supportsAllDrives: true, // Crucial for Shared Drive support
     });
 
     if (!response.data.id) {
@@ -66,8 +74,12 @@ export async function downloadFromDrive(filename: string): Promise<{ stream: any
   if (!drive) return null;
 
   try {
-    // 1. Search for the file by name
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    let folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (folderId) {
+      folderId = folderId.trim().replace(/^"/, "").replace(/"$/, "");
+    }
+
+    // Search for the file by name
     let query = `name = '${filename}' and trashed = false`;
     if (folderId) {
       query += ` and '${folderId}' in parents`;
@@ -77,6 +89,8 @@ export async function downloadFromDrive(filename: string): Promise<{ stream: any
       q: query,
       fields: "files(id, name, mimeType)",
       pageSize: 1,
+      includeItemsFromAllDrives: true, // Crucial for Shared Drive support
+      supportsAllDrives: true,         // Crucial for Shared Drive support
     });
 
     const file = listRes.data.files?.[0];
@@ -84,9 +98,9 @@ export async function downloadFromDrive(filename: string): Promise<{ stream: any
       return null;
     }
 
-    // 2. Fetch the file download stream (cast to any to bypass return overload resolution type issues)
+    // Fetch the file download stream
     const fileRes = (await drive.files.get(
-      { fileId: file.id, alt: "media" },
+      { fileId: file.id, alt: "media", supportsAllDrives: true },
       { responseType: "stream" }
     )) as any;
 
