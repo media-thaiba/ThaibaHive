@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/providers/update_provider.dart';
 import '../../../models/user_model.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -124,6 +125,83 @@ class SettingsScreen extends ConsumerWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface
                               .withValues(alpha: 0.6))),
+                ),
+                const Divider(height: 1, indent: 72),
+                TapScale(
+                  onTap: () async {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => const AlertDialog(
+                        content: Row(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(width: 20),
+                            Text('Checking for updates...'),
+                          ],
+                        ),
+                      ),
+                    );
+                    
+                    try {
+                      final service = ref.read(updateServiceProvider);
+                      final info = await service.checkForUpdate();
+                      
+                      if (context.mounted) Navigator.pop(context);
+                      
+                      if (context.mounted) {
+                        if (info.isUpdateAvailable) {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text('Update Available (v${info.latestVersion})'),
+                              content: Text('A new update is available. Do you want to download and install it now?\n\nRelease Notes:\n${info.releaseNotes}'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Later'),
+                                ),
+                                FilledButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    ref.read(updateStateProvider.notifier).downloadUpdate(info.downloadUrl);
+                                  },
+                                  child: const Text('Update Now'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('You are on the latest version.')),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) Navigator.pop(context);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to check for updates: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const ListTile(
+                    leading: Icon(Icons.system_update_rounded),
+                    title: Text('Check for Updates'),
+                    trailing: Icon(Icons.chevron_right_rounded),
+                    onTap: null,
+                  ),
+                ),
+                const Divider(height: 1, indent: 72),
+                TapScale(
+                  onTap: () => context.push('/settings/diagnostics'),
+                  child: ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: const Text('Diagnostics & Logs'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: null,
+                  ),
                 ),
                 const Divider(height: 1, indent: 72),
                 TapScale(

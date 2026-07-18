@@ -35,11 +35,29 @@ import { uploadRouter } from "./routes/upload";
 const app = express();
 const PORT = parseInt(process.env.PORT || "4000", 10);
 
+app.set("trust proxy", true); // Support proxy headers (Cloudflare + Nginx/Caddy)
+
 app.use(helmet());
+
+const isProd = process.env.NODE_ENV === "production";
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
+  : isProd
+    ? ["https://yourdomain.com"]
+    : ["http://localhost:3000", "http://10.0.2.2:3000", "http://localhost:4000"];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS Blocked] Request from origin "${origin}" rejected. Allowed origins: ${allowedOrigins.join(", ")}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
+
 app.use(express.json());
 
 app.use("/api/auth", authRouter);
@@ -81,7 +99,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`ThaibaHive API server running on port ${PORT}`);
   const routes: string[] = [];
   app._router?.stack.forEach((layer: any) => {

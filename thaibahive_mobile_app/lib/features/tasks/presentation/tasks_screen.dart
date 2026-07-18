@@ -169,6 +169,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: () async {
           await context.push('/tasks/create');
           ref.read(tasksProvider.notifier).refresh();

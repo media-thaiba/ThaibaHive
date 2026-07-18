@@ -1,7 +1,8 @@
 # Memory — ThaibaHive Build Status
 
-> **Last updated**: 2026-07-16
+> **Last updated**: 2026-07-18
 > **Current phase**: Phase 3 complete (Admin & Operations) → Ready for Phase 4 (Finance & Reports)
+> **Roadmap**: 3-track system — Track A (Web: Ph0–7), Track B (Mobile: M1–M3), Track C (Media: MD1–MD3)
 
 ---
 
@@ -139,6 +140,18 @@
 - [ ] Export functionality may be incomplete
 - [ ] Seed data may need enrichment
 
+### Track B: Mobile Platform (Not Started)
+- [ ] PWA / mobile web optimization (Phase M1)
+- [ ] Native shell and widget bridge (Phase M2)
+- [ ] Home screen widgets — Jetpack Glance (Phase M3)
+- [ ] Lock screen / Wear OS integrations (Phase M3)
+
+### Track C: Media Platform (Not Started)
+- [ ] Media library and upload pipeline (Phase MD1)
+- [ ] NAS storage integration (Phase MD2)
+- [ ] Production queue management (Phase MD2)
+- [ ] Live production sync (Phase MD3)
+
 ### Testing
 - [x] Unit tests: 25+ written and passing
 - [ ] E2E tests: Setup but need additional path coverage
@@ -156,11 +169,19 @@
   - Defined and mapped `"bookings:read"`, `"bookings:create"`, and `"assets:read"` permissions.
   - Updated bookings API routes to prevent overlapping bookings (409 Conflict) and support resource availability calendar GET queries.
   - Polished staff directory page, room booking calendar dashboard, IT help-desk comment thread details, and asset management details.
+- **3-Track Roadmap Integration (Complete)**:
+  - Added Section 30 to PRD.md: Android Home Screen Widgets & Glanceable Info spec (ThaibaHive + MediaHive widgets, lock screen, Wear OS).
+  - Restructured Phasis.md into 3 parallel tracks: Track A (Core Web, Phases 0–7), Track B (Mobile, Phases M1–M3), Track C (Media, Phases MD1–MD3).
+  - Updated MASTER_BLUEPRINT.md: 3-track architecture, widget integration strategy, shared storage mapping, security controls.
 
 
 ## Last Modified Files
 | File | Last Modified | Purpose |
 |------|--------------|---------|
+| [PRD.md](file:///d:/ThaibaHive/PRD.md) | 2026-07-18 | Added Section 30: Android Home Screen Widgets & Glanceable Info; renumbered Admin Panel to 31 |
+| [Phasis.md](file:///d:/ThaibaHive/Phasis.md) | 2026-07-18 | Restructured into 3 parallel tracks (Web, Mobile, Media) |
+| [MASTER_BLUEPRINT.md](file:///d:/ThaibaHive/MASTER_BLUEPRINT.md) | 2026-07-18 | Updated sub-platform architecture, widget integration strategy, security controls |
+| [Memory.md](file:///d:/ThaibaHive/Memory.md) | 2026-07-18 | Logged roadmap decisions, widget constraints, 3-track system |
 | [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/tasks/page.tsx) | 2026-07-15 | Replaced raw HTML buttons with Button component |
 | [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/attendance/page.tsx) | 2026-07-15 | Replaced raw HTML buttons with Button component |
 | [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/approvals/page.tsx) | 2026-07-15 | Replaced custom modal overlays with standard Dialog components; hardcoded color maps → Badge variants |
@@ -184,6 +205,8 @@
 | [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/polls/page.tsx) | 2026-07-16 | Premium poll visualization and voting system |
 | [shell-nav.tsx](file:///d:/ThaibaHive/src/components/layout/shell-nav.tsx) | 2026-07-16 | Linked notification dropdown items to target pages |
 | [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/settings/page.tsx) | 2026-07-16 | Added local storage notification preferences card |
+| [router.dart](file:///d:/ThaibaHive/thaibahive_mobile_app/lib/app/router.dart) | 2026-07-16 | Unlocked Bookings and Assets screen paths |
+| [more_screen.dart](file:///d:/ThaibaHive/thaibahive_mobile_app/lib/features/dashboard/presentation/more_screen.dart) | 2026-07-16 | Unlocked Bookings and Assets in navigation registry |
 
 ## Blockers
 *List any current blockers here.*
@@ -233,3 +256,13 @@
 | 2026-07-16 | Immediate notifications | Dispatch alerts directly in POST handler for simplicity |
 | 2026-07-16 | Anonymous + Auth download tracking | Log download events for both authenticated and guest users via IP address |
 | 2026-07-16 | localStorage notification preferences | Client-side setting toggles to avoid database complexity |
+| 2026-07-18 | 3-track parallel roadmap (Web/Mobile/Media) | Allows concurrent development; Track A is foundation, B and C can run in parallel after Phase 2 |
+| 2026-07-18 | Jetpack Glance for Android widgets | Declarative Kotlin-based UI; industry standard for Android home screen widgets |
+| 2026-07-18 | FCM only (no APNs) for push | Single push provider simplifies infrastructure; iOS not in current scope |
+| 2026-07-18 | Android App Links for sensitive deep links | Prevents deep-link hijacking (custom URI schemes are vulnerable); uses `assetlinks.json` verification |
+| 2026-07-18 | `androidx.biometric:biometric` library | Supports back to Android 6.0 (API 23); avoids raw SDK constraints |
+| 2026-07-18 | Technology-agnostic mobile terminology | "Companion app" and "native widget bridge" used instead of Flutter-specific terms until Phase M2 finalizes stack |
+| 2026-07-18 | WorkManager min 15-min widget sync | System-enforced minimum for periodic background work; FCM used for real-time |
+| 2026-07-18 | 30-min staleness threshold for widgets | Balance between freshness and battery/data usage; amber badge for stale data |
+| 2026-07-18 | Widget data via Room DB cache (not direct network) | Security: widget processes cannot access Keystore tokens; companion app pre-fetches data |
+| 2026-07-18 | Smart Widget Engine (multi-instance) | Users configure per-instance modules (Tasks, Calendar, etc.); saved per launcher instance ID |

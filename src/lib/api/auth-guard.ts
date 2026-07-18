@@ -23,6 +23,16 @@ export function requireAuth(
     if (requiredPermission) {
       const allowed = hasPermission(session.role as StaffRole, requiredPermission);
       if (!allowed) {
+        console.warn(
+          JSON.stringify({
+            event: "unauthorized_access_attempt",
+            staffId: session.staffId,
+            role: session.role,
+            requiredPermission,
+            url: request.url,
+            timestamp: new Date().toISOString(),
+          })
+        );
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }

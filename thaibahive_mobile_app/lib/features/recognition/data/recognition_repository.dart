@@ -26,7 +26,8 @@ class RecognitionRepository {
       '/recognition',
       queryParameters: params,
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        final list = (json is Map ? (json['recognitions'] ?? json['data'] ?? json) : json)
+            as List<dynamic>? ?? [];
         return list
             .map((e) =>
                 RecognitionModel.fromJson(e as Map<String, dynamic>))

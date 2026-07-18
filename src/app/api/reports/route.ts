@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { dailyReports, dailyReportTasks, staff, departments, staffDepartments } from "@/db/schema";
+import {
+  dailyReports,
+  dailyReportTasks,
+  staff,
+  staffDepartments,
+  departments,
+  tasks,
+} from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, inArray } from "drizzle-orm";
-import type { StaffRole } from "@/types";
+import { eq, desc, inArray, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { role, staffId } = session;
   let reports: any[] = [];
 
   if (role === "super_admin" || role === "admin" || role === "principal") {
-    // Admin/Principal: Retrieve all daily work reports
     reports = await db
       .select({
         id: dailyReports.id,
@@ -20,6 +25,9 @@ export const GET = requireAuth(async (request, session) => {
         staffId: dailyReports.staffId,
         firstName: staff.firstName,
         lastName: staff.lastName,
+        reviewerComment: dailyReports.reviewerComment,
+        reviewedAt: dailyReports.reviewedAt,
+        createdAt: dailyReports.createdAt,
       })
       .from(dailyReports)
       .leftJoin(staff, eq(dailyReports.staffId, staff.id))
@@ -27,22 +35,26 @@ export const GET = requireAuth(async (request, session) => {
       .limit(100)
       .all();
   } else if (role === "hod") {
-    // HOD: Retrieve reports of staff members in their departments
     const userDepts = await db
       .select({ id: departments.id })
       .from(departments)
       .where(eq(departments.headUserId, staffId))
       .all();
-    
+
     if (userDepts.length > 0) {
       const deptStaff = await db
         .select({ staffId: staffDepartments.staffId })
         .from(staffDepartments)
-        .where(inArray(staffDepartments.departmentId, userDepts.map((d) => d.id)))
+        .where(
+          inArray(
+            staffDepartments.departmentId,
+            userDepts.map((d) => d.id)
+          )
+        )
         .all();
-      
+
       const staffIds = deptStaff.map((s) => s.staffId).filter(Boolean);
-      
+
       if (staffIds.length > 0) {
         reports = await db
           .select({
@@ -53,16 +65,23 @@ export const GET = requireAuth(async (request, session) => {
             staffId: dailyReports.staffId,
             firstName: staff.firstName,
             lastName: staff.lastName,
+            reviewerComment: dailyReports.reviewerComment,
+            reviewedAt: dailyReports.reviewedAt,
+            createdAt: dailyReports.createdAt,
           })
           .from(dailyReports)
           .leftJoin(staff, eq(dailyReports.staffId, staff.id))
-          .where(inArray(dailyReports.staffId, staffIds))
+          .where(
+            and(
+              inArray(dailyReports.staffId, staffIds),
+              inArray(dailyReports.status, ["submitted", "reviewed", "rejected"])
+            )
+          )
           .orderBy(desc(dailyReports.date))
           .all();
       }
     }
   } else {
-    // Standard Staff: Retrieve only their own reports
     reports = await db
       .select({
         id: dailyReports.id,
@@ -72,6 +91,9 @@ export const GET = requireAuth(async (request, session) => {
         staffId: dailyReports.staffId,
         firstName: staff.firstName,
         lastName: staff.lastName,
+        reviewerComment: dailyReports.reviewerComment,
+        reviewedAt: dailyReports.reviewedAt,
+        createdAt: dailyReports.createdAt,
       })
       .from(dailyReports)
       .leftJoin(staff, eq(dailyReports.staffId, staff.id))
@@ -86,38 +108,118 @@ export const GET = requireAuth(async (request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { date, summary, tasks } = body;
+  const { date, summary, status, tasks: reportTasks } = body;
 
   if (!date) {
     return NextResponse.json({ error: "Date is required" }, { status: 400 });
   }
 
-  const report = await db
-    .insert(dailyReports)
-    .values({
-      id: crypto.randomUUID(),
-      staffId: session.staffId,
-      date,
-      summary,
-      status: "submitted", // Set to submitted on submit
-    })
-    .returning()
-    .get();
+  const reportStatus = status === "draft" ? "draft" : "submitted";
 
-  if (tasks?.length) {
-    await db
-      .insert(dailyReportTasks)
-      .values(
-        tasks.map((t: { description: string; hoursSpent?: number; status?: string }) => ({
-          id: crypto.randomUUID(),
-          reportId: report.id,
-          description: t.description,
-          hoursSpent: t.hoursSpent || 0,
-          status: t.status || "completed",
-        }))
-      )
-      .run();
+  // Validate hours
+  if (reportTasks?.length) {
+    for (const t of reportTasks) {
+      if (
+        t.hoursSpent !== undefined &&
+        t.hoursSpent !== null &&
+        (t.hoursSpent < 0.1 || t.hoursSpent > 24)
+      ) {
+        return NextResponse.json(
+          { error: "Hours spent must be between 0.1 and 24.0" },
+          { status: 400 }
+        );
+      }
+    }
+    const totalHours = reportTasks.reduce(
+      (sum: number, t: any) => sum + (t.hoursSpent || 0),
+      0
+    );
+    if (totalHours > 24) {
+      return NextResponse.json(
+        { error: "Total hours for a single day cannot exceed 24.0" },
+        { status: 400 }
+      );
+    }
   }
+
+  // Validate task ownership
+  if (reportTasks?.length) {
+    const taskIds = reportTasks
+      .map((t: any) => t.taskId)
+      .filter(Boolean);
+    if (taskIds.length > 0) {
+      const ownedTasks = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(
+          and(
+            inArray(tasks.id, taskIds),
+            eq(tasks.assignedToId, session.staffId)
+          )
+        )
+        .all();
+      const ownedIds = new Set(ownedTasks.map((t) => t.id));
+      for (const tid of taskIds) {
+        if (!ownedIds.has(tid)) {
+          return NextResponse.json(
+            { error: `Task ${tid} is not assigned to you` },
+            { status: 403 }
+          );
+        }
+      }
+    }
+  }
+
+  const reportId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  try {
+    await db.transaction(async () => {
+      await db.insert(dailyReports)
+        .values({
+          id: reportId,
+          staffId: session.staffId,
+          date,
+          summary,
+          status: reportStatus,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      if (reportTasks?.length) {
+        await db.insert(dailyReportTasks)
+          .values(
+            reportTasks.map((t: any) => ({
+              id: crypto.randomUUID(),
+              reportId,
+              taskId: t.taskId || null,
+              description: t.description,
+              hoursSpent: t.hoursSpent || 0,
+              status: t.status || "completed",
+            }))
+          )
+          .run();
+      }
+    });
+  } catch (err: any) {
+    if (
+      err?.message?.includes("UNIQUE constraint failed") ||
+      err?.code === "SQLITE_CONSTRAINT_UNIQUE"
+    ) {
+      return NextResponse.json(
+        { error: "A report for this date already exists." },
+        { status: 400 }
+      );
+    }
+    throw err;
+  }
+
+  const report = await db
+    .select()
+    .from(dailyReports)
+    .where(eq(dailyReports.id, reportId))
+    .get();
 
   return NextResponse.json({ report }, { status: 201 });
 }, "reports:create");

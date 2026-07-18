@@ -50,35 +50,32 @@ export const GET = requireAuth(async (request, session) => {
     return NextResponse.json({ logs: ownLogs, total, page, limit });
   }
 
-  let effectiveDepartmentId: string | null = null;
-  let effectiveInstitutionId: string | null = null;
+  let effectiveDepartmentIds: string[] = departmentId ? [departmentId] : [];
+  let effectiveInstitutionIds: string[] = institutionId ? [institutionId] : [];
 
   if (session.role === "principal") {
-    const instRow = await db
+    const instRows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
       .where(eq(staffInstitutions.staffId, session.staffId))
-      .limit(1);
-    effectiveInstitutionId = instRow[0]?.institutionId ?? null;
+      .all();
+    effectiveInstitutionIds = instRows.map((r) => r.institutionId).filter(Boolean);
   } else if (session.role === "hod") {
-    const deptRow = await db
+    const deptRows = await db
       .select({ departmentId: staffDepartments.departmentId })
       .from(staffDepartments)
       .where(eq(staffDepartments.staffId, session.staffId))
-      .limit(1);
-    effectiveDepartmentId = deptRow[0]?.departmentId ?? null;
-  } else {
-    effectiveDepartmentId = departmentId;
-    effectiveInstitutionId = institutionId;
+      .all();
+    effectiveDepartmentIds = deptRows.map((r) => r.departmentId).filter(Boolean);
   }
 
   const matchedStaffConditions: any[] = [eq(staff.isActive, true)];
 
-  if (effectiveInstitutionId) {
+  if (effectiveInstitutionIds.length > 0) {
     const instStaffRows = await db
       .select({ staffId: staffInstitutions.staffId })
       .from(staffInstitutions)
-      .where(eq(staffInstitutions.institutionId, effectiveInstitutionId))
+      .where(inArray(staffInstitutions.institutionId, effectiveInstitutionIds))
       .all();
     const instStaffIds = instStaffRows.map((r) => r.staffId);
     if (instStaffIds.length === 0) {
@@ -87,11 +84,11 @@ export const GET = requireAuth(async (request, session) => {
     matchedStaffConditions.push(inArray(staff.id, instStaffIds));
   }
 
-  if (effectiveDepartmentId) {
+  if (effectiveDepartmentIds.length > 0) {
     const deptStaffRows = await db
       .select({ staffId: staffDepartments.staffId })
       .from(staffDepartments)
-      .where(eq(staffDepartments.departmentId, effectiveDepartmentId))
+      .where(inArray(staffDepartments.departmentId, effectiveDepartmentIds))
       .all();
     const deptStaffIds = deptStaffRows.map((r) => r.staffId);
     if (deptStaffIds.length === 0) {

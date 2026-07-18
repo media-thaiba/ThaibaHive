@@ -11,6 +11,9 @@ class AttendanceRepository {
   final Dio _client;
   AttendanceRepository(this._client);
 
+  // Store geofence config from check-in response
+  Map<String, dynamic>? lastGeofenceConfig;
+
   Future<List<AttendanceLogModel>> getMyAttendance({
     int page = 1,
     int limit = 20,
@@ -43,6 +46,14 @@ class AttendanceRepository {
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
     });
+
+    // Extract geofence config from response
+    if (response.data is Map<String, dynamic>) {
+      lastGeofenceConfig = response.data['geofence'] as Map<String, dynamic>?;
+      return AttendanceLogModel.fromJson(response.data['log'] as Map<String, dynamic>);
+    }
+
+    lastGeofenceConfig = null;
     return AttendanceLogModel.fromJson(response.data);
   }
 

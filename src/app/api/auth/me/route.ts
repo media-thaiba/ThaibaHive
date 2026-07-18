@@ -51,11 +51,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const row = await db.select({ passwordHash: staff.passwordHash }).from(staff).where(eq(staff.id, session.staffId)).get();
-    if (!row) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
-    if (!row.passwordHash) return NextResponse.json({ error: "Password not set" }, { status: 400 });
+    const rows = await db.select({ passwordHash: staff.passwordHash, tokenVersion: staff.tokenVersion }).from(staff).where(eq(staff.id, session.staffId)).all();
+    if (!rows || rows.length === 0) return NextResponse.json({ error: "Staff not found" }, { status: 404 });
+    if (!rows[0].passwordHash) return NextResponse.json({ error: "Password not set" }, { status: 400 });
 
-    const valid = await verifyPassword(parsed.data.currentPassword, row.passwordHash);
+    const valid = await verifyPassword(parsed.data.currentPassword, rows[0].passwordHash);
     if (!valid) return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
 
     const hashed = await hashPassword(parsed.data.newPassword);

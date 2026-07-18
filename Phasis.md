@@ -1,5 +1,36 @@
 # Phasis — ThaibaHive Phase Breakdown
 
+## Overview
+
+The project roadmap is organized into **3 parallel, independent tracks**. Tracks can progress concurrently but share the same API backend and database. The web platform (Track A) is the foundation; mobile (Track B) and media (Track C) build on top of it.
+
+| Track | Focus | Phases | Status |
+|-------|-------|--------|--------|
+| **Track A** | Core Web Platform | Phases 0–7 | In Progress (Phase 4 next) |
+| **Track B** | Mobile Platform | Phases M1–M3 | Not Started |
+| **Track C** | Media Platform | Phases MD1–MD3 | Not Started |
+
+### Track Dependencies
+
+```
+Track A (Web)          Track B (Mobile)         Track C (Media)
+─────────────          ─────────────────        ────────────────
+Phase 0 ──────┐
+Phase 1 ──────┤
+Phase 2 ──────┤──→ M1 (PWA/Web App) ─────→ MD1 (MediaHive Core)
+Phase 3 ──────┤──→ M2 (Native Shell) ────→ MD2 (NAS/Storage)
+Phase 4 ──────┤──→ M3 (Widgets/Wear OS) ──→ MD3 (Live Sync)
+Phase 5 ──────┤
+Phase 6 ──────┤
+Phase 7 ──────┘
+```
+
+> **Rule**: Track B and Track C require Track A Phase 2+ (API + Auth stable) as a prerequisite. After that, they can proceed in parallel.
+
+---
+
+# Track A: Core Web Platform
+
 ## Phase 0: Foundation ✅ (Completed)
 **Goal**: Project scaffolding, database schema, auth system, core UI shell.
 
@@ -319,3 +350,223 @@
 - [ ] Security audit passed
 - [ ] Production deployment successful
 - [ ] Monitoring and alerting configured
+
+---
+
+# Track B: Mobile Platform
+
+> Prerequisites: Track A Phase 2 (API + Auth) complete.
+> Technology: Flutter (existing prototype in `thaibahive_mobile_app/`). Final stack to be confirmed in Phase M2.
+
+## Phase M1: Progressive Web App
+**Goal**: Mobile-optimized web experience as the first mobile touchpoint.
+
+### M1.1 PWA Foundation
+- Service worker registration and caching
+- Web app manifest with install prompts
+- Responsive mobile layouts for all core pages
+- Touch-optimized navigation (bottom sheet patterns)
+
+### M1.2 Offline Capabilities
+- IndexedDB-based offline data cache
+- Sync queue for offline write operations
+- Conflict resolution UI for stale edits
+- Network status indicators
+
+### M1.3 Mobile Auth Handoff
+- WebView handoff screen with nonce exchange (`/auth/mobile-handoff/nonce`)
+- Secure session cookie propagation from native to web context
+- JWT token storage via secure mechanism (no raw `localStorage`)
+
+### Exit Criteria
+- [ ] PWA installable on Android and iOS
+- [ ] Core pages (Dashboard, Tasks, Attendance, Leaves) work offline
+- [ ] Offline writes sync when reconnected
+- [ ] Auth handoff works between native shell and web views
+
+---
+
+## Phase M2: Native Shell & Widget Bridge
+**Goal**: Thin native wrapper around the web app, enabling native-only capabilities (widgets, biometrics, push).
+
+### M2.1 Native Shell
+- WebView-based app shell (Flutter or platform-native)
+- Native navigation bar with deep link handling
+- Secure token storage (Android Keystore / iOS Keychain)
+- Biometric authentication integration (`androidx.biometric:biometric`)
+
+### M2.2 Push Notifications
+- Firebase Cloud Messaging (FCM) integration — **single push provider** (no APNs)
+- Push notification categories: approvals, tasks, announcements, live events
+- Deep link handling from push taps
+- Notification permission flow
+
+### M2.3 Widget Bridge Architecture
+- Data sharing layer between native app and Jetpack Glance widgets
+- Room database for offline widget data cache
+- WorkManager registration for periodic widget sync
+- Widget update triggers from app state changes
+
+### M2.4 App Links Configuration
+- Android App Links (verified HTTPS) for sensitive routes
+- Digital Asset Links file (`/.well-known/assetlinks.json`) deployment
+- Deep link routing table for widget and notification actions
+
+### Exit Criteria
+- [ ] App installs and opens correctly on Android 8.0+
+- [ ] FCM push notifications received and deep link to correct screens
+- [ ] Biometric confirmation available for sensitive operations
+- [ ] Widget bridge layer provides data to Glance widget rendering
+
+---
+
+## Phase M3: Home Screen Widgets & Glanceable Info
+**Goal**: Full Android widget suite with Jetpack Glance, plus lock screen and Wear OS integrations.
+
+### M3.1 ThaibaHive Widgets (Jetpack Glance)
+- My Tasks (4×2), Today's Schedule (4×2), Quick Actions (4×1)
+- Dashboard (2×2), Approval Widget (4×2 with biometric trampoline)
+- Today's Command Center / Smart Widget Engine (4×4)
+- Multi-instance support with per-instance configuration
+- Smart Widget Configuration interface (module selection, filters, saved configs)
+
+### M3.2 MediaHive Widgets (Jetpack Glance)
+- Production Queue (4×2), Camera Shortcut (1×1)
+- Upload Widget (2×1), Storage Widget (2×2)
+- Live Production (4×2)
+
+### M3.3 Refresh & Sync
+- WorkManager periodic sync (minimum 15-minute intervals)
+- FCM-driven real-time widget updates for approvals/urgent events
+- Manual refresh buttons on all widgets
+- Main app foreground triggers widget refresh
+- System broadcast receivers (connectivity, timezone, locale)
+
+### M3.4 Offline Indicators
+- "Last synced: [Timestamp]" label on all widgets
+- Cached local dataset display
+- Amber stale badge if last sync > 30 minutes
+- Graceful offline degradation (cached data, queued actions)
+
+### M3.5 Lock Screen & Wear OS
+- AOD/lock screen summary via persistent notification templates
+- Wear OS 3+ complications for tasks, schedule, reminders
+
+### Exit Criteria
+- [ ] All ThaibaHive widgets render correctly on Android 8.0+ launchers
+- [ ] Approval widget triggers biometric confirmation flow
+- [ ] Multi-instance widget configurations persist independently
+- [ ] Widgets display cached data when offline with stale indicator
+- [ ] WorkManager syncs widget data at configured intervals
+- [ ] FCM push triggers immediate widget refresh for approvals
+- [ ] Wear OS complications display task and schedule data
+
+---
+
+# Track C: Media Platform (MediaHive)
+
+> Prerequisites: Track A Phase 2 (API + Auth) complete.
+> Scope: Media asset management, NAS storage, live production support.
+
+## Phase MD1: MediaHive Core
+**Goal**: Media library, upload pipeline, and basic asset management.
+
+### MD1.1 Media Library
+- Upload media assets (photo, video, audio, document)
+- Folder and tag-based organization
+- Thumbnail generation and preview
+- Search and filter by type, date, tags, uploader
+- Download tracking with analytics
+
+### MD1.2 Media Upload Pipeline
+- Chunked upload for large files
+- Upload progress tracking and resume
+- File type validation and size limits
+- Image compression and EXIF metadata extraction
+- Video thumbnail extraction
+
+### MD1.3 Media Permissions & Sharing
+- Role-based access to media library
+- Share links with expiry and password protection
+- Department-scoped media folders
+- Download audit trail
+
+### MD1.4 Media API
+- RESTful API endpoints for media CRUD
+- Signed URL generation for direct uploads
+- Webhook support for upload completion events
+- Batch operations (move, tag, delete)
+
+### Exit Criteria
+- [ ] Users can upload, browse, and download media assets
+- [ ] Upload pipeline handles large files with progress tracking
+- [ ] Media library is searchable and filterable
+- [ ] Download tracking records analytics
+- [ ] Permissions restrict access by role and department
+
+---
+
+## Phase MD2: NAS Storage & Production Management
+**Goal**: Connect to local NAS storage and manage production workflows.
+
+### MD2.1 NAS Integration
+- Connect to local NAS via SMB/WebDAV
+- Storage quota and usage monitoring
+- Auto-sync media to NAS after upload
+- NAS backup and restore functionality
+- Storage health indicators
+
+### MD2.2 Production Queue
+- Create and manage production entries
+- Assign crew and resources
+- Status tracking (planned → in_progress → review → completed)
+- Due date and priority management
+- Production templates for recurring shoots
+
+### MD2.3 Crew Management
+- Crew assignment to productions
+- Availability calendar
+- Role-based crew permissions
+- Communication hooks for crew notifications
+
+### Exit Criteria
+- [ ] NAS connection works with real-time sync
+- [ ] Storage usage is monitored and displayed
+- [ ] Production queue tracks active productions
+- [ ] Crew can be assigned and notified
+
+---
+
+## Phase MD3: Live Production & Sync
+**Goal**: Real-time production coordination and live event support.
+
+### MD3.1 Live Production
+- Real-time shoot coordination dashboard
+- Location and timing management
+- Crew check-in/check-out during live events
+- Live status broadcast to team
+
+### MD3.2 Live Sync
+- Real-time file sync from shoot locations
+- Incremental backup during production
+- Conflict resolution for concurrent edits
+- Offline-first with sync-on-reconnect
+
+### MD3.3 Production Analytics
+- Production timeline and metrics
+- Resource utilization reports
+- Cost tracking per production
+- Export production reports
+
+### MD3.4 MediaHive Widgets
+- Production Queue widget (4×2)
+- Camera Shortcut widget (1×1)
+- Upload Widget (2×1)
+- Storage Widget (2×2) with NAS health
+- Live Production widget (4×2)
+
+### Exit Criteria
+- [ ] Live productions can be coordinated in real-time
+- [ ] Files sync from shoot locations reliably
+- [ ] Production analytics provide actionable insights
+- [ ] MediaHive widgets display on home screen with live data

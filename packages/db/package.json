@@ -9,7 +9,11 @@
     "./schema": "./schema.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "drizzle-orm": "^0.45.2",
-    "@libsql/client": "^0.17.4"
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0"
   }
 }

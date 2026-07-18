@@ -164,7 +164,86 @@ A single web-based platform where every staff member — from teachers to direct
 ### 29. Export
 - CSV/Excel export for reports, attendance, financials
 
-### 30. Admin Panel
+### 30. Android Home Screen Widgets & Glanceable Info (Roadmap)
+
+> This section defines the specification for Android home screen widgets, lock screen information, and companion app integrations. Built using Jetpack Glance (Kotlin-based declarative UI). All widget implementations target **Android 8.0 (API 26)** minimum for Glance support, with Material You theming on **Android 12.0+ (API 31)**.
+
+#### 30.1 ThaibaHive Widgets
+
+| Widget | Target Size | Min Width/Height | Description |
+|--------|-------------|------------------|-------------|
+| **My Tasks** | 4×2 | 250dp × 110dp | Today's pending, overdue, high-priority tasks. "Add Task" button deep links to task creation. |
+| **Today's Schedule** | 4×2 | 250dp × 110dp | Today's meetings, events, live streams. Optional prayer timings toggle. |
+| **Quick Actions** | 4×1 | 250dp × 50dp | Fast shortcuts: New Task, Upload Media, Start Live, Send Notice. |
+| **Dashboard Widget** | 2×2 | 120dp × 110dp | Consolidated metrics: pending tasks, completed count, team availability status. |
+| **Approval Widget** | 4×2 | 250dp × 110dp | Unified view of pending approvals (HOD/Principal/Admin). Tap triggers biometric trampoline activity. Uses Secure App Links (`https://thaibahive.com/approvals`). |
+| **Today's Command Center** | 4×4 | 250dp × 250dp | Rich interactive dashboard: schedule, approvals, quick actions, shortcuts. Supports user customization via Smart Widget Configuration. |
+
+**Smart Widget Engine Features:**
+- Multiple independent launcher instances per widget type
+- Configuration interface for per-instance module selection (Tasks, Calendar, Notices, Attendance, etc.)
+- Saved configuration persisted per launcher instance ID
+
+#### 30.2 MediaHive Widgets
+
+| Widget | Target Size | Description |
+|--------|-------------|-------------|
+| **Production Queue** | 4×2 | List of active productions, statuses, and due dates. |
+| **Camera Shortcut** | 1×1 | Opens camera view directly inside MediaHive companion app. |
+| **Upload Widget** | 2×1 | One-tap asset upload selectors (photo, video, audio, document). |
+| **Storage Widget** | 2×2 | Connected NAS usage status: free space, used percentage, health indicator. |
+| **Live Production** | 4×2 | Today's live shoot location, timing, and assigned crew members. |
+
+#### 30.3 Lock Screen & Wear OS
+
+- **AOD / Lock Screen**: Handled via custom notification templates (persistent low-priority summary). No custom lock screen widget API used (not available pre-Android 15).
+- **Wear OS Complications**: Task counts, upcoming schedule, and reminder indicators for Wear OS 3+ watches.
+
+#### 30.4 Deep Linking & Security
+
+| Widget | Deep Link | Security Model |
+|--------|-----------|----------------|
+| Approval Widget | `https://thaibahive.com/approvals` | **Android App Links** (verified HTTPS via `assetlinks.json`). Biometric trampoline activity required for approve/reject actions. |
+| Quick Actions | `thaibahive://widget/task/new` etc. | Standard custom URI scheme (non-sensitive shortcuts). |
+| My Tasks | `https://thaibahive.com/tasks` | Android App Links. |
+| Production Queue | `thaibahive://media/queue` | Custom URI scheme (companion app only). |
+
+**Security Controls:**
+- JWT tokens stored in Android Keystore (encrypted at rest, never exposed to widget process)
+- Biometric confirmation via `androidx.biometric:biometric` library (supports back to Android 6.0 / API 23)
+- Server-side API auth limits: widget data endpoints require valid session cookie or FCM-authorized token
+- Digital Asset Links (`assetlinks.json`) verified at `https://thaibahive.com/.well-known/assetlinks.json`
+
+#### 30.5 Refresh Strategy
+
+| Mechanism | Details |
+|-----------|---------|
+| **WorkManager Periodic Sync** | Minimum 15-minute intervals (system-enforced minimum). Configurable per widget. |
+| **FCM Push Notifications** | Real-time triggers for approvals, urgent tasks, live events. Push payload updates widget data via `RemoteViews`. |
+| **Manual Refresh** | Pull-to-refresh or tap-to-refresh button on each widget. |
+| **Main App State Change** | Widget updates triggered when companion app foregrounds or performs write operations. |
+| **System Broadcasts** | `ConnectivityAction`, `ACTION_TIMEZONE_CHANGED`, `ACTION_LOCALE_CHANGED` trigger selective re-sync. |
+
+#### 30.6 Offline Support & Indicators
+
+- **Cached Data**: Widgets display last-synced local dataset (stored in companion app's Room database).
+- **Timestamp Label**: "Last synced: [ISO timestamp]" displayed on every widget.
+- **Stale Badge**: Visual offline/stale status badge (amber dot) if last sync exceeds 30 minutes.
+- **Network Graceful Degradation**: Widgets continue showing cached data when offline; action buttons queue operations for retry.
+
+#### 30.7 Compatibility Matrix
+
+| Feature | Minimum Android Version | Library/SDK |
+|---------|------------------------|-------------|
+| Jetpack Glance Widgets | Android 8.0 (API 26) | `androidx.glance:glance-appwidget` |
+| AndroidX Biometrics | Android 6.0 (API 23) | `androidx.biometric:biometric` |
+| Material You Theming | Android 12.0 (API 31) | `com.google.android.material:material` |
+| WorkManager | Android 8.0 (API 26) | `androidx.work:work-runtime` |
+| FCM Push | Android 8.0 (API 26) | Firebase Cloud Messaging |
+| Wear OS Complications | Wear OS 3+ | `androidx.wear.watchface:watchface` |
+| App Links (Verified) | Android 6.0 (API 23) | Digital Asset Links |
+
+### 31. Admin Panel
 - Manage institutions, departments, sub-departments
 - Shift management
 - Checklist template management
@@ -189,9 +268,11 @@ A single web-based platform where every staff member — from teachers to direct
 
 ## Out of Scope (Current Phase)
 
-- Mobile native app (iOS/Android)
 - Real-time WebSocket notifications
 - Multi-language / i18n
 - Payroll integration
 - Biometric attendance hardware integration
 - Student management features
+- iOS companion app (future roadmap consideration)
+- Wear OS complications (Phase M3)
+- Desktop app via Tauri (future consideration)

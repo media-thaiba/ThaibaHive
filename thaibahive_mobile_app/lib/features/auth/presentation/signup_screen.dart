@@ -62,7 +62,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.status == AuthStatus.authenticated) {
-        context.go('/');
+        context.go('/dashboard');
       } else if (next.status == AuthStatus.error && next.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

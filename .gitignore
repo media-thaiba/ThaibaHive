@@ -49,3 +49,11 @@ drizzle/*.sql
 
 .vercel
 .env*
+
+# scratch and scripts
+scratch/
+scripts/
+
+# APK binaries
+*.apk
+

@@ -4,3 +4,5 @@ export { createSession, verifySession, destroySession } from "@thaiba/auth";
 export type { SessionPayload } from "@thaiba/auth";
 export { hasPermission, getRolePermissions } from "@thaiba/auth";
 export { getUserInstitutionScope } from "@thaiba/auth";
+export { verifyGoogleToken } from "@thaiba/auth";
+

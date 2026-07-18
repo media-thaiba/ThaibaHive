@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import { stat } from "fs/promises";
 import { downloadFromDrive } from "@/lib/drive";
+import { isStorageConfigured, downloadFromSupabase } from "@/lib/storage";
 import { Readable } from "stream";
 
 export const runtime = "nodejs";
@@ -54,7 +55,22 @@ export async function GET(
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }
 
-    // 1. Production check - fetch from Google Drive
+    // 1. Prioritize Supabase Storage
+    if (isStorageConfigured) {
+      const supabaseFile = await downloadFromSupabase(filename, "uploads");
+      if (!supabaseFile) {
+        return NextResponse.json({ error: "File not found in Supabase Storage" }, { status: 404 });
+      }
+
+      return new NextResponse(supabaseFile.stream, {
+        headers: {
+          "Content-Type": supabaseFile.mimeType,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
+    // 2. Production check - fetch from Google Drive
     if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
       const driveFile = await downloadFromDrive(filename);
       if (!driveFile) {

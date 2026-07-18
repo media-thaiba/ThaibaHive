@@ -4,6 +4,7 @@ import { pollResponses } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
+// "polls:read" is used intentionally for this self-service write action — staff can vote on polls they can read
 export const POST = requireAuth(async (request, session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
@@ -30,4 +31,4 @@ export const POST = requireAuth(async (request, session, context) => {
   }
 
   return NextResponse.json({ success: true });
-});
+}, "polls:read");

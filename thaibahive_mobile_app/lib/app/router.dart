@@ -9,6 +9,7 @@ import '../features/attendance/presentation/attendance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/signup_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
+import '../features/auth/presentation/welcome_screen.dart';
 import '../features/dashboard/presentation/more_screen.dart';
 import '../features/events/presentation/events_screen.dart';
 import '../features/leaves/presentation/leave_apply_screen.dart';
@@ -22,6 +23,8 @@ import '../features/reports/presentation/report_create_screen.dart';
 import '../features/settings/presentation/password_change_screen.dart';
 import '../features/settings/presentation/profile_edit_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/settings/presentation/crash_logs_screen.dart';
+
 import '../features/staff/presentation/staff_directory_screen.dart';
 import '../features/staff/presentation/staff_profile_screen.dart';
 import '../features/tasks/presentation/task_create_screen.dart';
@@ -32,6 +35,8 @@ import '../features/help_desk/presentation/help_desk_ticket_detail_screen.dart';
 import '../features/polls/presentation/polls_screen.dart';
 import '../features/polls/presentation/poll_detail_screen.dart';
 import '../features/circulars/presentation/circulars_screen.dart';
+import '../features/bookings/presentation/booking_create_screen.dart';
+import '../features/bookings/presentation/bookings_screen.dart';
 import '../features/assets/presentation/assets_screen.dart';
 import '../features/assets/presentation/asset_detail_screen.dart';
 import '../features/expenses/presentation/expenses_screen.dart';
@@ -64,7 +69,7 @@ class _ShellRouteData {
 
 final List<_ShellRouteData> _shellRoutes = [
   _ShellRouteData(
-    path: '/',
+    path: '/dashboard',
     name: 'dashboard',
     builder: (_) => const DashboardScreen(),
   ),
@@ -97,14 +102,27 @@ GoRouter buildRouter() {
     redirect: _authGuard,
     routes: [
       GoRoute(
+        path: '/',
+        name: 'welcome',
+        builder: (_, __) => const WelcomeScreen(),
+      ),
+      GoRoute(
         path: '/auth/login',
         name: 'login',
-        builder: (_, __) => const LoginScreen(),
+        builder: (context, state) {
+          final mode = state.uri.queryParameters['mode'];
+          return LoginScreen(initialMode: mode);
+        },
+      ),
+      GoRoute(
+        path: '/auth/diagnostics',
+        name: 'authDiagnostics',
+        builder: (_, __) => const CrashLogsScreen(),
       ),
       GoRoute(
         path: '/auth/signup',
         name: 'signup',
-        builder: (_, __) => const SignupScreen(),
+        redirect: (context, state) => '/auth/login?mode=signup',
       ),
       StatefulShellRoute.indexedStack(
         builder: (_, __, navigationShell) => BottomNavShell(
@@ -256,10 +274,7 @@ GoRouter buildRouter() {
         name: 'bookings',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Bookings',
-            icon: Icons.book_online_rounded,
-          ),
+          child: const BookingsScreen(),
         ),
       ),
       GoRoute(
@@ -267,10 +282,7 @@ GoRouter buildRouter() {
         name: 'bookingCreate',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Bookings',
-            icon: Icons.book_online_rounded,
-          ),
+          child: const BookingCreateScreen(),
         ),
       ),
       GoRoute(
@@ -312,10 +324,7 @@ GoRouter buildRouter() {
         name: 'assets',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Assets',
-            icon: Icons.inventory_2_rounded,
-          ),
+          child: const AssetsScreen(),
         ),
       ),
       GoRoute(
@@ -323,9 +332,8 @@ GoRouter buildRouter() {
         name: 'assetDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Assets',
-            icon: Icons.inventory_2_rounded,
+          child: AssetDetailScreen(
+            assetId: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -455,6 +463,15 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
+        path: '/settings/diagnostics',
+        name: 'settingsDiagnostics',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const CrashLogsScreen(),
+        ),
+      ),
+
+      GoRoute(
         path: '/checklists',
         name: 'checklists',
         pageBuilder: (context, state) => AppTransitions.slide(
@@ -515,6 +532,12 @@ GoRouter buildRouter() {
 
 Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isAuthRoute = state.matchedLocation.startsWith('/auth');
+  final isWelcomeRoute = state.matchedLocation == '/';
+
+  if (isWelcomeRoute) {
+    return null;
+  }
+
   final token = await _storage.read(key: AppConstants.storageTokenKey);
   final isLoggedIn = token != null && token.isNotEmpty;
 
@@ -523,7 +546,7 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   }
 
   if (isLoggedIn && isAuthRoute) {
-    return '/';
+    return '/dashboard';
   }
 
   return null;

@@ -1,5 +1,4 @@
-import type { StaffRole } from "@/types";
-
+export type StaffRole = "super_admin" | "admin" | "principal" | "hod" | "staff";
 type Permission = string;
 
 const rolePermissions: Record<StaffRole, Permission[]> = {
@@ -27,6 +26,8 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "system:telemetry",
     "org:manage",
     "grievances:read",
+    "chat:read", "chat:manage",
+    "availability:write",
   ],
   principal: [
     "staff:read", "staff:create", "staff:update",
@@ -48,6 +49,8 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:update",
     "visitors:create", "visitors:update",
     "grievances:read",
+    "chat:read", "chat:manage",
+    "availability:write",
   ],
   hod: [
     "staff:read",
@@ -66,6 +69,8 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:update",
     "visitors:create",
     "grievances:read",
+    "chat:read", "chat:manage",
+    "availability:write",
   ],
   staff: [
     "staff:read",
@@ -84,6 +89,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "bookings:read", "bookings:create",
     "helpdesk:read",
     "assets:read",
+    "chat:read", "chat:manage",
   ],
 };
 

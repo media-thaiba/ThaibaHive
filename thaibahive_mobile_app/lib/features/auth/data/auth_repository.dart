@@ -12,16 +12,25 @@ class AuthRepository {
   final Dio client;
   AuthRepository(this.client);
 
-  Future<AuthResponseModel> login(String email, String password) async {
+  Future<AuthResponseModel> login(String email, String password, {bool rememberMe = false}) async {
     final response = await client.post('/auth/login', data: {
       'email': email,
       'password': password,
+      'rememberMe': rememberMe,
     });
     return AuthResponseModel.fromJson(response.data);
   }
 
   Future<AuthResponseModel> signup(Map<String, dynamic> data) async {
-    final response = await client.post('/auth/signup', data: data);
+    final camelCaseData = {
+      'firstName': data['first_name'] ?? data['firstName'],
+      'lastName': data['last_name'] ?? data['lastName'],
+      'email': data['email'],
+      'employeeId': data['employee_id'] ?? data['employeeId'],
+      'phone': data['phone'],
+      'password': data['password'],
+    };
+    final response = await client.post('/auth/signup', data: camelCaseData);
     return AuthResponseModel.fromJson(response.data);
   }
 
@@ -32,6 +41,13 @@ class AuthRepository {
 
   Future<void> logout() async {
     await client.post('/auth/logout');
+  }
+
+  Future<AuthResponseModel> loginWithGoogle(String idToken) async {
+    final response = await client.post('/auth/google', data: {
+      'idToken': idToken,
+    });
+    return AuthResponseModel.fromJson(response.data);
   }
 
   Future<String> getHandoffNonce({String? firstName, String? lastName}) async {

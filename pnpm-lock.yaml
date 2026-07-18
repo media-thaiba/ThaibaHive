@@ -279,6 +279,13 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@libsql/client@0.17.4)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(better-sqlite3@12.11.1)(pg@8.22.0)
+      pg:
+        specifier: ^8.22.0
+        version: 8.22.0
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
 
 packages:
 
@@ -8366,7 +8373,6 @@ snapshots:
       '@types/node': 20.19.43
       pg-protocol: 1.15.0
       pg-types: 2.2.0
-    optional: true
 
   '@types/react-dom@19.2.3(@types/react@19.2.17)':
     dependencies:
@@ -11418,19 +11424,15 @@ snapshots:
   pg-cloudflare@1.4.0:
     optional: true
 
-  pg-connection-string@2.14.0:
-    optional: true
+  pg-connection-string@2.14.0: {}
 
-  pg-int8@1.0.1:
-    optional: true
+  pg-int8@1.0.1: {}
 
   pg-pool@3.14.0(pg@8.22.0):
     dependencies:
       pg: 8.22.0
-    optional: true
 
-  pg-protocol@1.15.0:
-    optional: true
+  pg-protocol@1.15.0: {}
 
   pg-types@2.2.0:
     dependencies:
@@ -11439,7 +11441,6 @@ snapshots:
       postgres-bytea: 1.0.1
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
-    optional: true
 
   pg@8.22.0:
     dependencies:
@@ -11450,12 +11451,10 @@ snapshots:
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.4.0
-    optional: true
 
   pgpass@1.0.5:
     dependencies:
       split2: 4.2.0
-    optional: true
 
   picocolors@1.1.1: {}
 
@@ -11536,19 +11535,15 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres-array@2.0.0:
-    optional: true
+  postgres-array@2.0.0: {}
 
-  postgres-bytea@1.0.1:
-    optional: true
+  postgres-bytea@1.0.1: {}
 
-  postgres-date@1.0.7:
-    optional: true
+  postgres-date@1.0.7: {}
 
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
-    optional: true
 
   powershell-utils@0.1.0: {}
 
@@ -12071,8 +12066,7 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  split2@4.2.0:
-    optional: true
+  split2@4.2.0: {}
 
   sprintf-js@1.0.3: {}
 
@@ -12685,8 +12679,7 @@ snapshots:
 
   xmlchars@2.2.0: {}
 
-  xtend@4.0.2:
-    optional: true
+  xtend@4.0.2: {}
 
   y18n@5.0.8: {}
 

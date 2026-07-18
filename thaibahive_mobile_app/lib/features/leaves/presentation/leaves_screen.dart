@@ -49,6 +49,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: () => context.push('/leaves/apply'),
         child: const Icon(Icons.add_rounded),
       ),

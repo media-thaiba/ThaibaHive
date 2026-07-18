@@ -1,0 +1,38 @@
+{
+  "project": "ThaibaHive",
+  "version": "1.0.0",
+  "phase": 4,
+  "status": "active",
+  "current_track": "Track A (Web Phase 4: Finance & Reports)",
+  "tracks": {
+    "Track A (Web)": "Phase 4 - Finance & Reports (Next)",
+    "Track B (Mobile)": "Phase M1 - PWA / Mobile optimization (Next)",
+    "Track C (Media)": "Phase MD1 - Media library & upload pipeline (Next)"
+  },
+  "completed_phases": [
+    "Phase 0 (Foundation Setup)",
+    "Phase 1 (Core Operations Polish)",
+    "Phase 2 (Mobile-Web Auth Handoff & Features Integration)",
+    "Phase 3 (Admin & Operations)"
+  ],
+  "blocked_status": {
+    "is_blocked": false,
+    "blockers": []
+  },
+  "tech_stack": {
+    "nextjs": "16.2.10",
+    "react": "19.2.4",
+    "tailwind": "3.4.19",
+    "drizzle_orm": "0.45.2",
+    "jose": "6.2.3",
+    "zustand": "5.0.14",
+    "tanstack_query": "5.101.2",
+    "flutter": "3.x",
+    "riverpod": "latest",
+    "gorouter": "latest",
+    "databases": {
+      "development": "SQLite (dev.db)",
+      "production": "PostgreSQL"
+    }
+  }
+}

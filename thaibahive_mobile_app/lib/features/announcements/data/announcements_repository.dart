@@ -26,7 +26,8 @@ class AnnouncementsRepository {
       '/announcements',
       queryParameters: params,
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        final list = (json is Map ? (json['announcements'] ?? json['data'] ?? json) : json)
+            as List<dynamic>? ?? [];
         return list
             .map(
                 (e) => AnnouncementModel.fromJson(e as Map<String, dynamic>))

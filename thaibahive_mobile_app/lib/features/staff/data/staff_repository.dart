@@ -34,7 +34,8 @@ class StaffRepository {
       '/staff',
       queryParameters: params,
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        final list = (json is Map ? (json['staff'] ?? json['data'] ?? json) : json)
+            as List<dynamic>? ?? [];
         return list
             .map((e) => StaffModel.fromJson(e as Map<String, dynamic>))
             .toList();
@@ -62,7 +63,8 @@ class StaffRepository {
     return _api.get(
       '/departments',
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        final list = (json is Map ? (json['departments'] ?? json['data'] ?? json) : json)
+            as List<dynamic>? ?? [];
         return list
             .map((e) => DepartmentModel.fromJson(e as Map<String, dynamic>))
             .toList();

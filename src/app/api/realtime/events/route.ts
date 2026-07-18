@@ -20,42 +20,47 @@ export async function GET(request: Request) {
         encoder.encode(`data: ${JSON.stringify({ type: "connected", staffId: session.staffId })}\n\n`)
       );
 
-      // Poll for tokenVersion changes every 5 seconds
-      const checkInterval = setInterval(async () => {
+      const staffId = session.staffId;
+      const currentTokenVersion = session.tokenVersion;
+      let polling = true;
+
+      async function pollTokenVersion() {
+        if (!polling) return;
         try {
           const user = await db
             .select({ tokenVersion: staff.tokenVersion, isActive: staff.isActive })
             .from(staff)
-            .where(eq(staff.id, session.staffId))
+            .where(eq(staff.id, staffId))
             .get();
 
           if (!user || !user.isActive) {
-            // Account deactivated
+            polling = false;
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ type: "account_deactivated" })}\n\n`)
             );
-            clearInterval(checkInterval);
             controller.close();
             return;
           }
 
-          if (user.tokenVersion !== session.tokenVersion) {
-            // Token version changed - session invalidated
+          if (user.tokenVersion !== currentTokenVersion) {
+            polling = false;
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ type: "session_invalidated" })}\n\n`)
             );
-            clearInterval(checkInterval);
             controller.close();
             return;
           }
         } catch {
           // Ignore errors, keep polling
         }
-      }, 5_000);
+        if (polling) setTimeout(pollTokenVersion, 5_000);
+      }
+
+      pollTokenVersion();
 
       // Clean up on connection close
       request.signal.addEventListener("abort", () => {
-        clearInterval(checkInterval);
+        polling = false;
         controller.close();
       });
     },

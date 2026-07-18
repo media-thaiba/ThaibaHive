@@ -28,19 +28,23 @@ class TaskModel {
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) => TaskModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
+        id: (json['id'] ?? '') as String,
+        title: (json['title'] ?? '') as String,
         description: json['description'] as String?,
-        status: json['status'] as String,
-        priority: json['priority'] as String,
+        status: (json['status'] ?? 'todo') as String,
+        priority: (json['priority'] ?? 'medium') as String,
         assignee: json['assignee'] != null
             ? UserModel.fromJson(json['assignee'] as Map<String, dynamic>)
             : null,
-        dueDate: json['due_date'] as String?,
-        createdBy: json['created_by'] as String?,
-        commentCount: json['comment_count'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
+        dueDate: (json['due_date'] ?? json['dueDate']) as String?,
+        createdBy: (json['created_by'] ?? json['createdById'] ?? json['createdBy']) as String?,
+        commentCount: (json['comment_count'] ?? json['commentCount']) as int? ?? 0,
+        createdAt: json['created_at'] != null 
+            ? DateTime.parse(json['created_at'] as String) 
+            : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
+        updatedAt: json['updated_at'] != null 
+            ? DateTime.parse(json['updated_at'] as String) 
+            : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : DateTime.now()),
       );
 
   TaskModel copyWith({

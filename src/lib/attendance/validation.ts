@@ -1,8 +1,9 @@
 import { createHmac } from "crypto";
 import { db } from "@/db";
 import { staff, attendanceLocations, usedNonces } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { getDistanceMeters } from "./geo";
+import { parseWifiSsids } from "./utils";
 
 export class AttendanceValidationError extends Error {
   status: number;
@@ -17,7 +18,9 @@ export async function validateNfcCheckIn(
   staffId: string,
   nfcTagId: string,
   latitude?: number,
-  longitude?: number
+  longitude?: number,
+  accuracy?: number,
+  wifiSsid?: string
 ) {
   const user = await db
     .select()
@@ -30,14 +33,15 @@ export async function validateNfcCheckIn(
     return;
   }
 
-  // Check if NFC tag is registered to an active location
+  // Check if NFC tag is registered to an active, non-deleted location
   const location = await db
     .select()
     .from(attendanceLocations)
     .where(
       and(
         eq(attendanceLocations.nfcTagId, nfcTagId),
-        eq(attendanceLocations.isActive, true)
+        eq(attendanceLocations.isActive, true),
+        isNull(attendanceLocations.deletedAt)
       )
     )
     .get();
@@ -47,6 +51,44 @@ export async function validateNfcCheckIn(
       "NFC tag not registered to you or any active location",
       403
     );
+  }
+
+  // GPS accuracy verification
+  if (location.accuracy !== null) {
+    if (accuracy === undefined) {
+      throw new AttendanceValidationError(
+        "GPS accuracy is required for this checkpoint",
+        400
+      );
+    }
+    if (accuracy > Number(location.accuracy)) {
+      throw new AttendanceValidationError(
+        `GPS accuracy too low. Reported: ${Math.round(accuracy)}m, required: ${Math.round(Number(location.accuracy))}m or better`,
+        403
+      );
+    }
+  }
+
+  // WiFi SSID verification (case-insensitive)
+  if (location.wifiSsids) {
+    const allowedSsids = parseWifiSsids(location.wifiSsids);
+    if (allowedSsids.length > 0) {
+      if (!wifiSsid) {
+        throw new AttendanceValidationError(
+          "WiFi network name is required for this checkpoint",
+          400
+        );
+      }
+      const matchFound = allowedSsids.some(
+        (ssid) => ssid.toLowerCase() === wifiSsid.toLowerCase()
+      );
+      if (!matchFound) {
+        throw new AttendanceValidationError(
+          `WiFi network "${wifiSsid}" is not allowed. Allowed networks: ${allowedSsids.join(", ")}`,
+          403
+        );
+      }
+    }
   }
 
   // Geofencing verification
@@ -76,7 +118,9 @@ export async function validateNfcCheckIn(
 export async function validateQrCheckIn(
   qrCode: string,
   latitude?: number,
-  longitude?: number
+  longitude?: number,
+  accuracy?: number,
+  wifiSsid?: string
 ) {
   let payload: {
     nonce: string;
@@ -108,7 +152,8 @@ export async function validateQrCheckIn(
     .where(
       and(
         eq(attendanceLocations.id, payload.locationId),
-        eq(attendanceLocations.isActive, true)
+        eq(attendanceLocations.isActive, true),
+        isNull(attendanceLocations.deletedAt)
       )
     )
     .get();
@@ -134,6 +179,44 @@ export async function validateQrCheckIn(
 
   if (payload.hmac !== expectedHmac) {
     throw new AttendanceValidationError("Invalid QR code signature", 403);
+  }
+
+  // GPS accuracy verification
+  if (location.accuracy !== null) {
+    if (accuracy === undefined) {
+      throw new AttendanceValidationError(
+        "GPS accuracy is required for this checkpoint",
+        400
+      );
+    }
+    if (accuracy > Number(location.accuracy)) {
+      throw new AttendanceValidationError(
+        `GPS accuracy too low. Reported: ${Math.round(accuracy)}m, required: ${Math.round(Number(location.accuracy))}m or better`,
+        403
+      );
+    }
+  }
+
+  // WiFi SSID verification (case-insensitive)
+  if (location.wifiSsids) {
+    const allowedSsids = parseWifiSsids(location.wifiSsids);
+    if (allowedSsids.length > 0) {
+      if (!wifiSsid) {
+        throw new AttendanceValidationError(
+          "WiFi network name is required for this checkpoint",
+          400
+        );
+      }
+      const matchFound = allowedSsids.some(
+        (ssid) => ssid.toLowerCase() === wifiSsid.toLowerCase()
+      );
+      if (!matchFound) {
+        throw new AttendanceValidationError(
+          `WiFi network "${wifiSsid}" is not allowed. Allowed networks: ${allowedSsids.join(", ")}`,
+          403
+        );
+      }
+    }
   }
 
   // Geofencing verification

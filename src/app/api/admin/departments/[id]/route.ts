@@ -10,7 +10,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
   const dept = await db.select().from(departments).where(eq(departments.id, id)).get();
   if (!dept) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ department: dept });
-});
+}, "org:manage");
 
 export const PUT = requireAuth(async (request: Request, _session, context) => {
   const { id } = await context!.params;

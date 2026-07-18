@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../constants.dart';
+import '../services/logger_service.dart';
 import 'api_exception.dart';
 
 class ApiClient {
@@ -26,9 +29,22 @@ class ApiClient {
       ),
     );
 
+    if (kDebugMode) {
+      _dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient();
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) => true;
+          return client;
+        },
+      );
+    }
+
     _dio.interceptors.addAll([
       _authInterceptor(),
       _errorInterceptor(),
+      _normalizationInterceptor(),
+      _loggerInterceptor(),
       if (kDebugMode)
         LogInterceptor(
           requestBody: true,
@@ -80,6 +96,75 @@ class ApiClient {
         handler.next(error);
       },
     );
+  }
+
+  InterceptorsWrapper _normalizationInterceptor() {
+    return InterceptorsWrapper(
+      onResponse: (response, handler) {
+        if (response.data != null) {
+          response.data = _normalizeJson(response.data);
+        }
+        handler.next(response);
+      },
+    );
+  }
+
+  InterceptorsWrapper _loggerInterceptor() {
+    return InterceptorsWrapper(
+      onRequest: (options, handler) {
+        final path = options.path;
+        final method = options.method;
+        logger.info('HTTP REQUEST: $method ${options.baseUrl}$path');
+        if (options.data != null) {
+          String body = options.data.toString();
+          body = body.replaceAll(RegExp(r'password\s*:\s*[^\s,]+'), 'password: ***');
+          body = body.replaceAll(RegExp(r'"password"\s*:\s*"[^"]*"'), '"password": "***"');
+          logger.info('HTTP REQUEST BODY: $body');
+        }
+        handler.next(options);
+      },
+      onResponse: (response, handler) {
+        final statusCode = response.statusCode;
+        final path = response.requestOptions.path;
+        logger.info('HTTP RESPONSE: $statusCode for $path');
+        handler.next(response);
+      },
+      onError: (error, handler) {
+        final path = error.requestOptions.path;
+        final statusCode = error.response?.statusCode;
+        final message = error.message;
+        final errorData = error.response?.data;
+        logger.error('HTTP ERROR: $statusCode for $path | Message: $message | Response: $errorData');
+        handler.next(error);
+      },
+    );
+  }
+
+  dynamic _normalizeJson(dynamic json) {
+    if (json is List) {
+      return json.map(_normalizeJson).toList();
+    }
+    if (json is Map) {
+      final Map<String, dynamic> normalized = {};
+      json.forEach((k, v) {
+        final key = k.toString();
+        final normalizedValue = _normalizeJson(v);
+        normalized[key] = normalizedValue;
+        
+        final snakeKey = _camelToSnake(key);
+        if (snakeKey != key) {
+          normalized[snakeKey] = normalizedValue;
+        }
+      });
+      return normalized;
+    }
+    return json;
+  }
+
+  String _camelToSnake(String input) {
+    if (input.isEmpty) return input;
+    final RegExp camelCaseExp = RegExp(r'(?<=[a-z0-9])([A-Z])');
+    return input.replaceAllMapped(camelCaseExp, (Match m) => '_${m.group(0)!.toLowerCase()}').toLowerCase();
   }
 
   Dio get dio => _dio;

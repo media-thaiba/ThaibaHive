@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import VerificationSettingsForm from "./verification-settings-form";
 
 type Location = {
   id: string;
@@ -22,10 +23,14 @@ type Location = {
   institutionId: string | null;
   institutionName: string | null;
   nfcTagId: string | null;
+  qrSecret: string;
   isActive: boolean;
   latitude: number | null;
   longitude: number | null;
   radius: number | null;
+  accuracy: number | null;
+  wifiSsids: string | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -40,25 +45,44 @@ export default function AttendanceLocationsPage() {
   const [qrOpen, setQrOpen] = useState(false);
   const [qrLocation, setQrLocation] = useState<Location | null>(null);
   const [qrData, setQrData] = useState<string>("");
-  const [form, setForm] = useState({ name: "", institutionId: "", nfcTagId: "", qrSecret: "", latitude: "", longitude: "", radius: "" });
+  const [form, setForm] = useState({
+    name: "", institutionId: "", nfcTagId: "", qrSecret: "",
+    latitude: "", longitude: "", radius: "", accuracy: "", wifiSsids: "",
+  });
   const [saving, setSaving] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [activeTab, setActiveTab] = useState<"locations" | "settings">("locations");
+  const [userRole, setUserRole] = useState<string>("staff");
+  const [userInstitutionId, setUserInstitutionId] = useState<string | undefined>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchLocations = useCallback(async () => {
-    const res = await fetch("/api/admin/attendance-locations");
+    const url = showDeleted
+      ? "/api/admin/attendance-locations?showDeleted=true"
+      : "/api/admin/attendance-locations";
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       setLocations(data.locations);
     }
     setLoading(false);
-  }, []);
+  }, [showDeleted]);
 
   useEffect(() => {
     fetchLocations();
     fetch("/api/admin/institutions")
       .then((r) => r.json())
       .then((data) => setInstitutions(data.institutions || []));
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          setUserRole(data.user.role);
+          setUserInstitutionId(data.user.institutionId);
+        }
+      })
+      .catch(() => {});
   }, [fetchLocations]);
 
   async function handleCreate() {
@@ -78,6 +102,8 @@ export default function AttendanceLocationsPage() {
         latitude: form.latitude ? parseFloat(form.latitude) : null,
         longitude: form.longitude ? parseFloat(form.longitude) : null,
         radius: form.radius ? parseFloat(form.radius) : null,
+        accuracy: form.accuracy ? parseFloat(form.accuracy) : null,
+        wifiSsids: form.wifiSsids || null,
       }),
     });
     setSaving(false);
@@ -88,7 +114,10 @@ export default function AttendanceLocationsPage() {
     }
     toast.success("Location created");
     setAddOpen(false);
-    setForm({ name: "", institutionId: "", nfcTagId: "", qrSecret: "", latitude: "", longitude: "", radius: "" });
+    setForm({
+      name: "", institutionId: "", nfcTagId: "", qrSecret: "",
+      latitude: "", longitude: "", radius: "", accuracy: "", wifiSsids: "",
+    });
     fetchLocations();
   }
 
@@ -105,8 +134,23 @@ export default function AttendanceLocationsPage() {
     fetchLocations();
   }
 
+  async function restoreLocation(loc: Location) {
+    const res = await fetch(`/api/admin/attendance-locations/${loc.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deletedAt: null }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      toast.error(data.error || "Failed to restore");
+      return;
+    }
+    toast.success("Location restored");
+    fetchLocations();
+  }
+
   async function deleteLocation(loc: Location) {
-    if (!confirm(`Delete "${loc.name}"?`)) return;
+    if (!confirm(`Delete "${loc.name}"? This will soft-delete the checkpoint.`)) return;
     const res = await fetch(`/api/admin/attendance-locations/${loc.id}`, {
       method: "DELETE",
     });
@@ -199,60 +243,126 @@ export default function AttendanceLocationsPage() {
 
   return (
     <div className="p-6 max-w-4xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Attendance Locations</h1>
-        <Button onClick={() => setAddOpen(true)}>Add Location</Button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Attendance Management</h1>
       </div>
 
-      {locations.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            No attendance locations configured yet. Add a checkpoint to get started.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {locations.map((loc) => (
-            <Card key={loc.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{loc.name}</p>
-                    <Badge variant={loc.isActive ? "success" : "secondary"}>
-                      {loc.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {loc.institutionName && <span>{loc.institutionName}</span>}
-                    {loc.nfcTagId && <span>NFC: {loc.nfcTagId}</span>}
-                    {loc.latitude !== null && loc.longitude !== null && (
-                      <span>Geofence: {loc.latitude.toFixed(5)}, {loc.longitude.toFixed(5)} ({loc.radius ?? 100}m)</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <Button variant="outline" size="sm" onClick={() => openQR(loc)}>
-                    QR Code
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleActive(loc)}
-                  >
-                    {loc.isActive ? "Deactivate" : "Activate"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => deleteLocation(loc)}
-                  >
-                    Delete
-                  </Button>
-                </div>
+      <div className="mb-4 flex gap-2 border-b">
+        <Button
+          variant={activeTab === "locations" ? "default" : "ghost"}
+          onClick={() => setActiveTab("locations")}
+          className="rounded-b-none"
+        >
+          Locations
+        </Button>
+        <Button
+          variant={activeTab === "settings" ? "default" : "ghost"}
+          onClick={() => setActiveTab("settings")}
+          className="rounded-b-none"
+        >
+          Verification Settings
+        </Button>
+      </div>
+
+      {activeTab === "locations" && (
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showDeleted}
+                  onChange={(e) => setShowDeleted(e.target.checked)}
+                  className="rounded"
+                />
+                Show Deleted
+              </label>
+              <Button onClick={() => setAddOpen(true)}>Add Location</Button>
+            </div>
+          </div>
+
+          {locations.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                No attendance locations configured yet. Add a checkpoint to get started.
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="space-y-3">
+              {locations.map((loc) => (
+                <Card key={loc.id} className={loc.deletedAt ? "opacity-60" : ""}>
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{loc.name}</p>
+                        {loc.deletedAt ? (
+                          <Badge variant="destructive">Deleted</Badge>
+                        ) : (
+                          <Badge variant={loc.isActive ? "success" : "secondary"}>
+                            {loc.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        {loc.institutionName && <span>{loc.institutionName}</span>}
+                        {loc.nfcTagId && <span>NFC: {loc.nfcTagId}</span>}
+                        {loc.latitude !== null && loc.longitude !== null && (
+                          <span>Geofence: {loc.latitude.toFixed(5)}, {loc.longitude.toFixed(5)} ({loc.radius ?? 100}m)</span>
+                        )}
+                        {loc.accuracy !== null && (
+                          <span>Accuracy: ≤{loc.accuracy}m</span>
+                        )}
+                        {loc.wifiSsids && (
+                          <span>WiFi: {loc.wifiSsids}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      {loc.deletedAt ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => restoreLocation(loc)}
+                        >
+                          Restore
+                        </Button>
+                      ) : (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => openQR(loc)}>
+                            QR Code
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleActive(loc)}
+                          >
+                            {loc.isActive ? "Deactivate" : "Activate"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteLocation(loc)}
+                          >
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "settings" && (
+        <div>
+          <VerificationSettingsForm
+            userRole={userRole}
+            userInstitutionId={userInstitutionId}
+          />
         </div>
       )}
 
@@ -314,13 +424,32 @@ export default function AttendanceLocationsPage() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Radius (Meters)</label>
+                <Input
+                  type="number"
+                  value={form.radius}
+                  onChange={(e) => setForm({ ...form, radius: e.target.value })}
+                  placeholder="e.g. 100"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">GPS Accuracy Limit (m)</label>
+                <Input
+                  type="number"
+                  value={form.accuracy}
+                  onChange={(e) => setForm({ ...form, accuracy: e.target.value })}
+                  placeholder="e.g. 15"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Radius (Meters, Optional)</label>
+              <label className="text-sm font-medium">Allowed WiFi SSIDs (comma-separated)</label>
               <Input
-                type="number"
-                value={form.radius}
-                onChange={(e) => setForm({ ...form, radius: e.target.value })}
-                placeholder="e.g. 100"
+                value={form.wifiSsids}
+                onChange={(e) => setForm({ ...form, wifiSsids: e.target.value })}
+                placeholder="e.g. Office-WiFi, Guest-Network"
               />
             </div>
             <div className="space-y-2">

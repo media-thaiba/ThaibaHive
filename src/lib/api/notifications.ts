@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, notifications as notificationsTable } from "@/db/schema";
-import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import type { StaffRole } from "@/types";
+import { sendToConnection } from "@/lib/api/realtime";
 
 interface CreateNotificationsParams {
   title: string;
@@ -84,5 +85,13 @@ export async function createNotificationsForTarget(params: CreateNotificationsPa
   for (let i = 0; i < notificationRecords.length; i += batchSize) {
     const batch = notificationRecords.slice(i, i + batchSize);
     await db.insert(notificationsTable).values(batch).run();
+  }
+
+  // Broadcast live events to connected clients
+  for (const record of notificationRecords) {
+    sendToConnection(`notification-${record.staffId}`, "notification", {
+      type: "new",
+      notification: record,
+    });
   }
 }

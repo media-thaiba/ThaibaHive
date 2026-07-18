@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/settings/data/settings_provider.dart';
+import '../shared/widgets/offline_banner.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -20,6 +21,10 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.bottom],
+    );
     _router = buildRouter();
     _router.routerDelegate.addListener(_onRouteChange);
   }
@@ -50,28 +55,32 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> {
         final theme = Theme.of(context);
         final isDarkMode = theme.brightness == Brightness.dark;
         final surfaceColor = theme.colorScheme.surface;
-        final dividerColor = theme.dividerTheme.color ?? theme.dividerColor;
+
+        // Get current path to check if we should show the global top status bar border/divider
+        String currentPath = '';
+        try {
+          currentPath = _router.routerDelegate.currentConfiguration.uri.path;
+        } catch (_) {}
+
+        final bool isImmersiveRoute = currentPath == '/' || currentPath.startsWith('/auth');
+        final bool isLoginPath = currentPath == '/auth/login';
+
+        final overlayStyle = SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: (isDarkMode || isLoginPath) ? Brightness.light : Brightness.dark,
+          statusBarBrightness: (isDarkMode || isLoginPath) ? Brightness.dark : Brightness.light,
+          systemNavigationBarColor: isImmersiveRoute ? const Color(0xFF0E1012) : surfaceColor,
+          systemNavigationBarIconBrightness: (isDarkMode || isLoginPath) ? Brightness.light : Brightness.dark,
+        );
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
-            statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
-          ),
+          value: overlayStyle,
           child: Column(
             children: [
-              Container(
-                color: surfaceColor,
-                child: SafeArea(
-                  bottom: false,
-                  child: const SizedBox.shrink(),
-                ),
+              const OfflineBanner(),
+              Expanded(
+                child: child ?? const SizedBox.shrink(),
               ),
-              Container(
-                height: 1,
-                color: dividerColor,
-              ),
-              Expanded(child: child ?? const SizedBox.shrink()),
             ],
           ),
         );

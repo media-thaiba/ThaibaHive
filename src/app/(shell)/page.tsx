@@ -388,7 +388,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-semibold">Welcome to ThaibaHive</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Let's get you set up. Mark your attendance or complete your personal details.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Let&apos;s get you set up. Mark your attendance or complete your personal details.</p>
                   <div className="flex gap-2 mt-3">
                     <Link href="/attendance"><Button size="sm">Mark Attendance</Button></Link>
                     <Link href="/staff"><Button variant="outline" size="sm">Complete Profile</Button></Link>
@@ -491,7 +491,7 @@ export default function DashboardPage() {
             <CardContent className="p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Today's Attendance</p>
+                  <p className="text-xs text-muted-foreground">Today&apos;s Attendance</p>
                   <p className="text-sm font-semibold mt-0.5">
                     {data?.checkedInToday ? "Checked In" : "Not Logged"}
                   </p>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import { ImageCropper } from "@/components/ui/image-cropper";
 import { LogOut, Camera, Loader2, User, Shield, Bell } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,6 +26,8 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState(staff?.avatarUrl || "");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarMsg, setAvatarMsg] = useState("");
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState("");
 
   const [notifPrefs, setNotifPrefs] = useState({
     announcements: true,
@@ -95,27 +98,56 @@ export default function SettingsPage() {
   async function uploadAvatar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setAvatarMsg(""); setUploadingAvatar(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("/api/upload/avatar", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      setAvatarUrl(data.url);
-      setAvatarMsg("Avatar updated successfully.");
-      setTimeout(() => window.location.reload(), 1500);
-    } else {
-      const d = await res.json();
-      setAvatarMsg(d.error || "Failed to upload avatar.");
-    }
-    setUploadingAvatar(false);
     e.target.value = "";
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setTempImageUrl(ev.target?.result as string);
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleCropComplete(dataUrl: string) {
+    setAvatarMsg("");
+    setUploadingAvatar(true);
+
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const uploadRes = await fetch("/api/upload/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (uploadRes.ok) {
+        const data = await uploadRes.json();
+        setAvatarUrl(data.url);
+        setAvatarMsg("Avatar updated successfully.");
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        const d = await uploadRes.json();
+        setAvatarMsg(d.error || "Failed to upload avatar.");
+      }
+    } catch {
+      setAvatarMsg("Failed to process image. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
   return (
@@ -155,7 +187,7 @@ export default function SettingsPage() {
             <div className="space-y-1">
               <p className="text-sm font-medium">Profile Picture</p>
               <p className="text-xs text-muted-foreground">
-                JPG, PNG up to 2MB. Recommended 256x256px.
+                JPG, PNG up to 5MB. Recommended 256x256px.
               </p>
               {uploadingAvatar && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -324,6 +356,13 @@ export default function SettingsPage() {
           Sign Out
         </Button>
       </div>
+
+      <ImageCropper
+        open={showCropper}
+        onOpenChange={setShowCropper}
+        imageSrc={tempImageUrl}
+        onCropComplete={handleCropComplete}
+      />
     </div>
   );
 }

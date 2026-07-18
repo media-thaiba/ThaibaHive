@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thaibahive_mobile/models/attendance_model.dart';
+import 'package:thaibahive_mobile/features/attendance/data/services/background_presence_service.dart';
 import 'attendance_repository.dart';
 
 class AttendanceState {
@@ -8,6 +9,7 @@ class AttendanceState {
   final AttendanceStatsModel? stats;
   final List<AttendanceLogModel> logs;
   final AttendanceLogModel? lastAction;
+  final GeofenceConfig? geofenceConfig;
 
   const AttendanceState({
     this.isLoading = false,
@@ -15,6 +17,7 @@ class AttendanceState {
     this.stats,
     this.logs = const [],
     this.lastAction,
+    this.geofenceConfig,
   });
 
   AttendanceState copyWith({
@@ -23,6 +26,7 @@ class AttendanceState {
     AttendanceStatsModel? stats,
     List<AttendanceLogModel>? logs,
     AttendanceLogModel? lastAction,
+    GeofenceConfig? geofenceConfig,
   }) {
     return AttendanceState(
       isLoading: isLoading ?? this.isLoading,
@@ -30,6 +34,30 @@ class AttendanceState {
       stats: stats ?? this.stats,
       logs: logs ?? this.logs,
       lastAction: lastAction ?? this.lastAction,
+      geofenceConfig: geofenceConfig ?? this.geofenceConfig,
+    );
+  }
+}
+
+class GeofenceConfig {
+  final double latitude;
+  final double longitude;
+  final double radius;
+  final String? locationName;
+
+  const GeofenceConfig({
+    required this.latitude,
+    required this.longitude,
+    required this.radius,
+    this.locationName,
+  });
+
+  factory GeofenceConfig.fromJson(Map<String, dynamic> json) {
+    return GeofenceConfig(
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      radius: (json['radius'] as num).toDouble(),
+      locationName: json['locationName'] as String?,
     );
   }
 }
@@ -75,8 +103,28 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
         latitude: latitude,
         longitude: longitude,
       );
+
+      // Parse geofence config from response if available
+      GeofenceConfig? geofenceConfig;
+      if (_repository.lastGeofenceConfig != null) {
+        geofenceConfig = GeofenceConfig.fromJson(_repository.lastGeofenceConfig!);
+      }
+
       await refresh();
-      state = state.copyWith(lastAction: result);
+      state = state.copyWith(
+        lastAction: result,
+        geofenceConfig: geofenceConfig,
+      );
+
+      // Start background tracking if geofence config is available
+      if (geofenceConfig != null) {
+        await BackgroundPresenceService.instance.startTracking(
+          attendanceId: result.id,
+          officeLatitude: geofenceConfig.latitude,
+          officeLongitude: geofenceConfig.longitude,
+          geofenceRadius: geofenceConfig.radius,
+        );
+      }
     } catch (e) {
       state = state.copyWith(error: 'Check-in failed: $e');
     }
@@ -87,6 +135,9 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       final result = await _repository.checkOut();
       await refresh();
       state = state.copyWith(lastAction: result);
+
+      // Stop background tracking
+      await BackgroundPresenceService.instance.stopTracking();
     } catch (e) {
       state = state.copyWith(error: 'Check-out failed: $e');
     }

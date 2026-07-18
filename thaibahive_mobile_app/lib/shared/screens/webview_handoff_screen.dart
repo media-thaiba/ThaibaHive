@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
@@ -7,11 +10,24 @@ import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 final _webDioProvider = Provider<Dio>((ref) {
-  return Dio(BaseOptions(
+  final dio = Dio(BaseOptions(
     baseUrl: AppConstants.webBaseUrl,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 15),
   ));
+
+  if (kDebugMode) {
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        client.badCertificateCallback =
+            (cert, host, port) => true;
+        return client;
+      },
+    );
+  }
+
+  return dio;
 });
 
 class WebViewHandoffScreen extends ConsumerStatefulWidget {

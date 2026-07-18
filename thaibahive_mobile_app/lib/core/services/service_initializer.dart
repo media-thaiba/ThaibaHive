@@ -1,6 +1,8 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'crash_log_service.dart';
 import 'offline_queue.dart';
 import 'qr_anti_replay.dart';
 
@@ -20,8 +22,12 @@ class ServiceInitializer {
     try {
       debugPrint('[ServiceInitializer] Starting initialization...');
       
+      // 0. Initialize crash log service first to catch downstream startup failures
+      await crashLogService.init();
+      debugPrint('[ServiceInitializer] Crash log service initialized');
+      
       // 1. Initialize secure storage (no dependencies)
-      const secureStorage = FlutterSecureStorage(
+      const secureStorage = const FlutterSecureStorage(
         aOptions: AndroidOptions(encryptedSharedPreferences: true),
       );
       debugPrint('[ServiceInitializer] Secure storage initialized');
@@ -37,6 +43,10 @@ class ServiceInitializer {
       // 4. Clean up expired cache entries
       await qrAntiReplay.cleanupCache();
       debugPrint('[ServiceInitializer] Cache cleanup completed');
+      
+      // 5. Initialize connectivity monitoring
+      await Connectivity().checkConnectivity();
+      debugPrint('[ServiceInitializer] Connectivity monitoring initialized');
       
       _initialized = true;
       debugPrint('[ServiceInitializer] All services initialized successfully');

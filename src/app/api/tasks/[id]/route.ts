@@ -38,7 +38,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
   }));
 
   return NextResponse.json({ task, comments });
-});
+}, "tasks:read");
 
 function computeCompletedAt(status: string | undefined, currentStatus: string | null): string | null {
   if (status === undefined) return null;

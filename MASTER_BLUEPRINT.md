@@ -24,7 +24,7 @@
 | **PRD.md** | What to build, features, success metrics | Start of any phase |
 | **Architecture.md** | Tech stack, folder structure, data flow | Onboarding, structural changes |
 | **Rulers.md** | Code conventions, do/don't rules | Before writing any code |
-| **Phasis.md** | Phase breakdown with exit criteria | Phase planning and tracking |
+| **Phasis.md** | Phase breakdown — 3 parallel tracks (Web, Mobile, Media) | Phase planning and tracking |
 | **Design.md** | Colors, typography, animations, tokens | UI work, styling |
 | **Memory.md** | What's done, what's next, current work | Every session start |
 | **Security.md** | RBAC matrix, RLS policies | Auth/permission changes |
@@ -36,16 +36,31 @@
 ## Sub-Platform Architecture
 
 ```
-ThaibaHive
-├── Web App (Current Build)
+ThaibaHive (3-Track System)
+│
+├── Track A: Core Web Platform
 │   ├── Next.js 16 App Router
 │   ├── 30+ pages, 28 API modules
 │   └── SQLite (dev) → PostgreSQL (prod)
 │
-├── Mobile App (Future — Flutter/React Native)
-│   ├── Shares API routes via absolute URLs
-│   ├── No relative /api/* endpoints
-│   └── Uses dedicated client wrapper
+├── Track B: Mobile Platform
+│   ├── M1: PWA / Mobile Web
+│   │   └── Service worker, offline cache, responsive layouts
+│   ├── M2: Native Shell + Widget Bridge
+│   │   ├── WebView shell (Flutter/native)
+│   │   ├── Keystore token storage
+│   │   ├── FCM push notifications (single provider)
+│   │   └── Widget data bridge (Room DB → Glance)
+│   └── M3: Home Screen Widgets + Wear OS
+│       ├── Jetpack Glance widgets (ThaibaHive + MediaHive)
+│       ├── Smart Widget Engine (multi-instance, configurable)
+│       ├── WorkManager periodic sync (15-min intervals)
+│       └── Wear OS 3+ complications
+│
+├── Track C: Media Platform (MediaHive)
+│   ├── MD1: Media Library & Upload Pipeline
+│   ├── MD2: NAS Storage & Production Queue
+│   └── MD3: Live Production & Sync
 │
 └── Desktop App (Future — Tauri)
     ├── Shares API routes via absolute URLs
@@ -57,6 +72,43 @@ ThaibaHive
 - **Mobile/Desktop**: Use absolute `https://domain.com/api/*` via client wrapper
 - **Rule**: All API calls go through `src/lib/api/client.ts` which resolves URLs dynamically
 - **Never** hardcode `localhost` or relative paths in shared code
+
+### Widget Integration Architecture
+
+#### Shared Storage Mapping
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Server (API)                      │
+│  PostgreSQL ←── Drizzle ORM ←── Next.js API Routes  │
+└──────────────┬──────────────────────┬───────────────┘
+               │                      │
+    ┌──────────▼──────────┐ ┌────────▼────────────┐
+    │  Companion App      │ │  Glance Widgets      │
+    │  (Flutter/Native)   │ │  (Jetpack Glance)    │
+    │                     │ │                      │
+    │  Room DB Cache ◄────┼─┤  RemoteViews Render   │
+    │  Keystore Tokens    │ │  (No direct DB access)│
+    │  FCM Registration   │ │                      │
+    └─────────────────────┘ └──────────────────────┘
+```
+
+- **Companion App → Widget**: Data flows through Room database cache; widgets read from local cache, never directly from network
+- **Server → Widget**: FCM push triggers widget refresh; WorkManager polls API endpoints periodically
+- **Token Isolation**: Widget processes cannot access Keystore tokens; they use data pre-fetched by the companion app
+
+#### Key Security Controls
+
+| Control | Implementation |
+|---------|---------------|
+| **Token Storage** | Android Keystore (encrypted at rest, biometric-gated access) |
+| **Widget Data** | Pre-fetched by companion app, stored in Room DB; widgets read-only |
+| **Biometric Auth** | `androidx.biometric:biometric` library (API 23+) for approval confirmations |
+| **Deep Links (Sensitive)** | Android App Links (verified HTTPS via `assetlinks.json`) |
+| **Deep Links (Non-sensitive)** | Standard custom URI schemes (`thaibahive://`) |
+| **API Auth Limits** | Widget endpoints require valid session or FCM-authorized token |
+| **Digital Asset Links** | `https://thaibahive.com/.well-known/assetlinks.json` |
+| **Offline Cache** | Room DB with encrypted fields for sensitive data; max 30-min staleness |
 
 ---
 
@@ -138,6 +190,8 @@ super_admin (Director Office)
 | `src/app/globals.css` | 237 | Design tokens + animations |
 | `tailwind.config.ts` | 87 | Tailwind configuration |
 | `drizzle.config.ts` | 17 | Database config |
+| `thaibahive_mobile_app/` | — | Flutter companion app (M1–M3) |
+| `.well-known/assetlinks.json` | — | Digital Asset Links for App Links verification |
 
 ---
 

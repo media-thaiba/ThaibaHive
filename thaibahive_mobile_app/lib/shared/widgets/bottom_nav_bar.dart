@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/providers/update_provider.dart';
+import 'update_banner.dart';
 
-class BottomNavShell extends StatelessWidget {
+class BottomNavShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const BottomNavShell({
@@ -10,12 +13,36 @@ class BottomNavShell extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final updateInfoAsync = ref.watch(updateInfoProvider);
+    final updateState = ref.watch(updateStateProvider);
+    final updateProgress = ref.watch(updateProgressProvider);
+
     return Scaffold(
-      body: navigationShell,
+      body: Column(
+        children: [
+          updateInfoAsync.maybeWhen(
+            data: (info) {
+              if (info.isUpdateAvailable) {
+                return SafeArea(
+                  bottom: false,
+                  child: UpdateBanner(
+                    info: info,
+                    state: updateState,
+                    progress: updateProgress,
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+            orElse: () => const SizedBox.shrink(),
+          ),
+          Expanded(child: navigationShell),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF22262b) : Colors.white,

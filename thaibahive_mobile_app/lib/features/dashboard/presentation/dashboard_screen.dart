@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
@@ -92,21 +93,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          if (user?.designation != null)
+                          if (user?.designation != null && user.designation!.isNotEmpty) ...[
                             Text(
                               user.designation!,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          if (user?.email != null)
+                            const SizedBox(height: 2),
+                          ],
+                          if (user?.email != null) ...[
                             Text(
                               user.email!,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
-                                fontSize: 11,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                fontSize: 11.5,
                               ),
                             ),
+                            const SizedBox(height: 6),
+                          ],
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  (() {
+                                    if (user?.role == null) return 'STAFF';
+                                    final r = user.role.toString().toLowerCase();
+                                    if (r == 'super_admin') return 'SUPER ADMIN';
+                                    if (r == 'admin') return 'ADMIN';
+                                    if (r == 'principal') return 'PRINCIPAL';
+                                    if (r == 'hod') return 'HOD';
+                                    return 'STAFF';
+                                  })(),
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: theme.colorScheme.primary,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              if (user?.employeeId != null && user.employeeId.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'ID: ${user.employeeId}',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -312,10 +365,10 @@ class _LightHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 16 + topPadding, 20, 24),
+      clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1a8a3e), Color(0xFF0f6b30)],
+          colors: [Color(0xFF4A4E52), Color(0xFF282C2E)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -326,34 +379,35 @@ class _LightHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Subtle glint overlay — white diagonal stripe at 4% opacity
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(28),
-                bottomRight: Radius.circular(28),
-              ),
-              child: Opacity(
-                opacity: 0.04,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Container(
-                    margin: const EdgeInsets.only(left: 100),
-                    width: 60,
-                    decoration: const BoxDecoration(color: Colors.white),
-                  ),
+          // Faded white brand logo overlay at the bottom right
+          Positioned(
+            right: -25,
+            bottom: -45,
+            child: Opacity(
+              opacity: 0.08,
+              child: SvgPicture.asset(
+                'assets/images/thl_logo.svg',
+                width: 200,
+                height: 200,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
                 ),
               ),
             ),
           ),
-          _HeaderContent(
-            user: user,
-            greeting: greeting,
-            name: name,
-            today: today,
-            onAvatarTap: onAvatarTap,
-            textColor: Colors.white,
-            subtextColor: Colors.white.withValues(alpha: 0.75),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 12 + topPadding, 20, 12),
+            child: _HeaderContent(
+              user: user,
+              greeting: greeting,
+              name: name,
+              today: today,
+              onAvatarTap: onAvatarTap,
+              textColor: Colors.white,
+              subtextColor: Colors.white.withValues(alpha: 0.75),
+              isDark: false,
+            ),
           ),
         ],
       ),
@@ -383,7 +437,7 @@ class _DarkHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 16 + topPadding, 20, 24),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFF22262b),
         borderRadius: const BorderRadius.only(
@@ -397,14 +451,39 @@ class _DarkHeader extends StatelessWidget {
           ),
         ),
       ),
-      child: _HeaderContent(
-        user: user,
-        greeting: greeting,
-        name: name,
-        today: today,
-        onAvatarTap: onAvatarTap,
-        textColor: const Color(0xFFd1d5d1),
-        subtextColor: const Color(0xFFd1d5d1).withValues(alpha: 0.6),
+      child: Stack(
+        children: [
+          // Faded brand logo overlay at the bottom right for dark mode
+          Positioned(
+            right: -25,
+            bottom: -45,
+            child: Opacity(
+              opacity: 0.04,
+              child: SvgPicture.asset(
+                'assets/images/thl_logo.svg',
+                width: 200,
+                height: 200,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 12 + topPadding, 20, 12),
+            child: _HeaderContent(
+              user: user,
+              greeting: greeting,
+              name: name,
+              today: today,
+              onAvatarTap: onAvatarTap,
+              textColor: const Color(0xFFd1d5d1),
+              subtextColor: const Color(0xFFd1d5d1).withValues(alpha: 0.6),
+              isDark: true,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -418,6 +497,7 @@ class _HeaderContent extends StatelessWidget {
   final VoidCallback onAvatarTap;
   final Color textColor;
   final Color subtextColor;
+  final bool isDark;
 
   const _HeaderContent({
     required this.user,
@@ -427,97 +507,66 @@ class _HeaderContent extends StatelessWidget {
     required this.onAvatarTap,
     required this.textColor,
     required this.subtextColor,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                today,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: subtextColor,
-                  letterSpacing: 0.3,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$greeting,',
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: subtextColor,
-                ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                name,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                  letterSpacing: -0.3,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (user?.designation != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  user.designation,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: subtextColor,
-                  ),
-                ),
-              ],
-            ],
-          ),
+        // Brand Logo + Name
+        Row(
+          children: [
+            SvgPicture.asset(
+              'assets/images/thl_logo.svg',
+              height: 32,
+            ),
+            const SizedBox(width: 8),
+            SvgPicture.asset(
+              'assets/images/thl_name.svg',
+              height: 20,
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Column(
+        // Actions
+        Row(
           children: [
             // Notification bell
             GestureDetector(
               onTap: () => context.push('/notifications'),
               child: Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: isDark 
+                      ? Colors.white.withValues(alpha: 0.08) 
+                      : Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Stack(
                   children: [
-                    const Center(
+                    Center(
                       child: Icon(
                         Icons.notifications_outlined,
-                        color: Colors.white,
-                        size: 22,
+                        color: textColor,
+                        size: 20,
                       ),
                     ),
                     // Red badge dot
                     Positioned(
-                      top: 8,
-                      right: 8,
+                      top: 7,
+                      right: 7,
                       child: Container(
-                        width: 8,
-                        height: 8,
+                        width: 7,
+                        height: 7,
                         decoration: BoxDecoration(
                           color: const Color(0xFFf44336),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF22262b) : const Color(0xFF1a8a3e),
+                            width: 1,
+                          ),
                         ),
                       ),
                     ),
@@ -525,35 +574,37 @@ class _HeaderContent extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(width: 10),
             // Avatar
             GestureDetector(
               onTap: onAvatarTap,
               child: Container(
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.22),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 2),
+                  color: isDark 
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.white.withValues(alpha: 0.22),
+                  border: Border.all(color: textColor.withValues(alpha: 0.4), width: 1.5),
                 ),
                 child: Center(
                   child: Text(
                     user?.initials ?? '?',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      color: Colors.white,
+                      color: textColor,
                       fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontSize: 13,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ],
-        ),
-      ],
-    );
+        );
   }
 }
 

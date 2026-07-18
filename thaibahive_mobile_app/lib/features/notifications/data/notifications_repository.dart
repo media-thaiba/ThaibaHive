@@ -19,7 +19,8 @@ class NotificationsRepository {
       '/notifications',
       queryParameters: {'page': page},
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        final list = (json is Map ? (json['notifications'] ?? json['data'] ?? json) : json)
+            as List<dynamic>? ?? [];
         return list
             .map((e) =>
                 NotificationModel.fromJson(e as Map<String, dynamic>))

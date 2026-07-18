@@ -28,7 +28,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
     .all();
 
   return NextResponse.json({ template, items });
-});
+}, "tasks:read");
 
 export const PATCH = requireAuth(async (request: Request, _session, context) => {
   const { id } = await context!.params;

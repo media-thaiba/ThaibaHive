@@ -160,6 +160,8 @@ export const checkInSchema = z
     method: z.enum(["nfc", "qr"]),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+    accuracy: z.number().optional(),
+    wifiSsid: z.string().optional(),
     nfcTagId: z.string().optional(),
     qrCode: z.string().optional(),
   })
@@ -171,3 +173,35 @@ export const checkInSchema = z
     },
     { message: "NFC check-in requires nfcTagId; QR check-in requires qrCode" }
   );
+
+export const chatRoomCreateSchema = z.object({
+  name: z.string().min(1).optional(),
+  participantIds: z.array(z.string()).min(1),
+  isDirectMessage: z.boolean().optional().default(false),
+});
+
+export const chatMessageCreateSchema = z.object({
+  text: z.string().optional(),
+  mediaUrl: z.string().optional(),
+  mediaType: z.enum(["text", "image", "document", "voice"]).optional().default("text"),
+}).refine(
+  (data) => !!(data.text || data.mediaUrl),
+  { message: "Message must have text or media" }
+);
+
+export const chatParticipantAddSchema = z.object({
+  staffId: z.string().min(1),
+  role: z.enum(["Manager", "Member"]).optional().default("Member"),
+});
+
+export const verificationSettingsSchema = z.object({
+  institutionId: z.string().nullable().optional(),
+  isEnabled: z.boolean().optional(),
+  shadowMode: z.boolean().optional(),
+  checkIntervalMinutes: z.number().int().min(1).max(180).optional(),
+  gracePeriodMinutes: z.number().int().min(0).max(60).optional(),
+  autoCheckoutOnViolation: z.boolean().optional(),
+  geofenceRadiusMeters: z.number().int().min(10).max(5000).optional(),
+  lowBatteryIntervalMinutes: z.number().int().min(1).max(180).optional(),
+  criticalBatterySuspend: z.boolean().optional(),
+});

@@ -42,6 +42,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _checkExistingToken() async {
+    final rememberMe = await _storage.read(key: 'remember_me');
+    if (rememberMe == 'false') {
+      await _storage.delete(key: AppConstants.storageTokenKey);
+      await _storage.delete(key: 'remember_me');
+      state = const AuthState(status: AuthStatus.unauthenticated);
+      return;
+    }
+
     final token = await _storage.read(key: AppConstants.storageTokenKey);
     if (token != null && token.isNotEmpty) {
       state = state.copyWith(status: AuthStatus.loading);
@@ -61,11 +69,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String email, String password, {bool rememberMe = false}) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
-      final response = await _repository.login(email, password);
+      final response = await _repository.login(email, password, rememberMe: rememberMe);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      await _storage.write(key: 'remember_me', value: rememberMe ? 'true' : 'false');
+      _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
         user: response.user,
@@ -78,11 +88,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> loginWithGoogle(String idToken) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    try {
+      final response = await _repository.loginWithGoogle(idToken);
+      await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      await _storage.write(key: 'remember_me', value: 'true');
+      _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
+      state = AuthState(
+        status: AuthStatus.authenticated,
+        user: response.user,
+        token: response.token,
+      );
+    } on AppException catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: 'Google login failed: $e');
+    }
+  }
+
+
   Future<void> signup(Map<String, dynamic> data) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
     try {
       final response = await _repository.signup(data);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      await _storage.write(key: 'remember_me', value: 'true'); // signup defaults to keeping signed in
+      _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
         user: response.user,
@@ -100,6 +132,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _repository.logout();
     } catch (_) {}
     await _storage.delete(key: AppConstants.storageTokenKey);
+    await _storage.delete(key: 'remember_me');
+    _repository.client.options.headers.remove('Authorization');
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 

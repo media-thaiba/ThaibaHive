@@ -1,8 +1,18 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { z } from "zod";
 import { authConfig } from "./config";
 import { db, staff } from "@thaiba/db";
 import { eq } from "drizzle-orm";
+
+const sessionPayloadSchema = z.object({
+  staffId: z.string(),
+  email: z.string(),
+  role: z.string(),
+  employeeId: z.string(),
+  name: z.string(),
+  tokenVersion: z.number(),
+});
 
 const secret = new TextEncoder().encode(authConfig.jwtSecret);
 
@@ -46,13 +56,23 @@ export async function createSession(payload: SessionPayload, extendSession = fal
 
 export async function verifySession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(authConfig.cookieName)?.value;
+  let token = cookieStore.get(authConfig.cookieName)?.value;
+
+  if (!token) {
+    const headersList = await headers();
+    const authHeader = headersList.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+  }
 
   if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, secret);
-    const session = payload as unknown as SessionPayload;
+    const result = sessionPayloadSchema.safeParse(payload);
+    if (!result.success) return null;
+    const session = result.data;
 
     const user = await db
       .select({ isActive: staff.isActive, tokenVersion: staff.tokenVersion })

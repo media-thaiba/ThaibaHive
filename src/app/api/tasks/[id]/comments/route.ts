@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { taskComments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+// "tasks:read" is used intentionally for this self-service write action — staff can comment on tasks they can read
 export const POST = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
@@ -22,4 +23,4 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     .get();
 
   return NextResponse.json({ comment }, { status: 201 });
-});
+}, "tasks:read");

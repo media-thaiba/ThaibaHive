@@ -5,8 +5,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
 export const DELETE = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { appId } = body;
+  const appId = new URL(request.url).searchParams.get("appId");
 
   if (!appId) {
     return NextResponse.json({ error: "appId is required" }, { status: 400 });

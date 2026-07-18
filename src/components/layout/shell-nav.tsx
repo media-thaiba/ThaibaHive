@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { usePathname } from "next/navigation";
 import { Search, Bell, Settings, Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatarDropdown } from "@/components/layout/user-avatar-dropdown";
+import { subscribeNotifications } from "@/lib/realtime/notifications";
 
 type Notification = {
   id: string;
@@ -23,22 +24,14 @@ type ShellNavProps = {
   onSearchOpen: () => void;
 };
 
-const quickLinks = [
-  { href: "/attendance", label: "Attendance" },
-  { href: "/tasks", label: "Tasks" },
-  { href: "/leaves", label: "Leaves" },
-];
-
 export function ShellNav({ onSearchOpen }: ShellNavProps) {
-  const pathname = usePathname();
   const { staff } = useAuth();
   const { theme, setTheme } = useTheme();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
 
-  useEffect(() => {
-    if (!staff) return;
+  const fetchNotifications = useCallback(() => {
     fetch("/api/notifications")
       .then((r) => r.json())
       .then((d) => {
@@ -65,11 +58,20 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         setUnread(d.unreadCount || 0);
       })
       .catch(() => {});
-  }, [staff]);
+  }, []);
 
-  function isActive(href: string) {
-    return href === "/" ? pathname === "/" : pathname.startsWith(href);
-  }
+  useEffect(() => {
+    if (!staff) return;
+    fetchNotifications();
+  }, [staff, fetchNotifications]);
+
+  useEffect(() => {
+    if (!staff) return;
+    const unsubscribe = subscribeNotifications(() => {
+      fetchNotifications();
+    });
+    return unsubscribe;
+  }, [staff, fetchNotifications]);
 
   async function markRead(id?: string) {
     await fetch("/api/notifications", {
@@ -85,30 +87,22 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
   return (
     <>
       {/* Brand */}
-      <Link href="/" className="flex items-center gap-2.5 font-semibold text-base tracking-tight shrink-0 group">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold transition-transform duration-200 group-hover:scale-105">
-          TH
-        </div>
-        <span className="hidden sm:inline">ThaibaHive</span>
+      <Link href="/" className="flex items-center gap-3 font-semibold text-base tracking-tight shrink-0 group">
+        <img
+          src="/Logo/thl_logo.svg"
+          alt="ThaibaHive Logo"
+          width={36}
+          height={36}
+          className="rounded-lg transition-transform duration-200 group-hover:scale-105 h-9 w-9"
+        />
+        <img
+          src="/Logo/thl_name.svg"
+          alt="ThaibaHive"
+          width={160}
+          height={40}
+          className="hidden sm:block object-contain h-10 w-auto"
+        />
       </Link>
-
-      {/* Quick links - hidden on mobile */}
-      <nav className="hidden md:flex items-center gap-0.5 flex-1 ml-4">
-        {quickLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-150",
-              isActive(link.href)
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
 
       {/* Right side */}
       <div className="flex items-center gap-1 ml-auto">

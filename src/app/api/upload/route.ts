@@ -4,6 +4,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { uploadToDrive } from "@/lib/drive";
+import { isStorageConfigured, uploadToSupabase, checkStorageConfig } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -78,17 +79,21 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     let fileUrl = "";
 
-    // Production check - stream to Google Drive
-    if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+    // Prioritize Supabase Storage
+    if (isStorageConfigured) {
+      fileUrl = await uploadToSupabase(filename, file.type, buffer);
+    } else if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
       await uploadToDrive(filename, file.type, buffer);
       fileUrl = `/api/upload/files/${filename}`;
     } else {
-      // Local dev check - store in filesystem
+      // Local dev check - store in filesystem (ensure production fails if not configured)
+      checkStorageConfig();
       const filepath = join(UPLOAD_DIR, filename);
       await mkdir(UPLOAD_DIR, { recursive: true });
       await writeFile(filepath, buffer);
       fileUrl = `/api/upload/files/${filename}`;
     }
+
 
     return NextResponse.json({
       url: fileUrl,

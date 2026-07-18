@@ -22,4 +22,4 @@ export const POST = requireAuth(async (_request, session, context) => {
   }
 
   return NextResponse.json({ success: true });
-});
+}, "announcements:read");

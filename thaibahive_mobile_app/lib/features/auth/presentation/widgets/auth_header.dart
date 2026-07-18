@@ -9,27 +9,17 @@ class AuthHeader extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Icon(
-            Icons.hive_rounded,
-            size: 44,
-            color: theme.colorScheme.onPrimary,
-          ),
+        Image.asset(
+          'assets/images/thl_logo_3d.png',
+          width: 130,
+          height: 130,
+          fit: BoxFit.contain,
         ),
         const SizedBox(height: 20),
-        Text(
-          'ThaibaHive',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
-            letterSpacing: 0.5,
-          ),
+        Image.asset(
+          'assets/images/thl_name.png',
+          height: 32,
+          fit: BoxFit.contain,
         ),
         const SizedBox(height: 8),
         Text(

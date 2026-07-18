@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Core Organization ───
@@ -149,6 +149,9 @@ export const attendanceLogs = sqliteTable("attendance_logs", {
   lateMinutes: integer("late_minutes").default(0),
   earlyExitMinutes: integer("early_exit_minutes").default(0),
   notes: text("notes"),
+  presenceStatus: text("presence_status").default("verified"),
+  lastVerifiedAt: text("last_verified_at"),
+  geofenceViolations: integer("geofence_violations").default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   staffDateIdx: uniqueIndex("idx_attendance_staff_date").on(t.staffId, t.date),
@@ -158,16 +161,21 @@ export const attendanceLocations = sqliteTable("attendance_locations", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   institutionId: text("institution_id").references(() => institutions.id),
-  nfcTagId: text("nfc_tag_id").unique(),
+  nfcTagId: text("nfc_tag_id"),
   qrSecret: text("qr_secret").notNull(),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   latitude: real("latitude"),
   longitude: real("longitude"),
   radius: real("radius"),
+  accuracy: real("accuracy"),
+  wifiSsids: text("wifi_ssids"),
+  deletedAt: text("deleted_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
-  nfcTagIdx: uniqueIndex("idx_location_nfc_tag").on(t.nfcTagId),
+  nfcTagIdx: uniqueIndex("idx_location_nfc_tag").on(t.nfcTagId).where(sql`deleted_at IS NULL`),
+  qrSecretIdx: uniqueIndex("idx_location_qr_secret").on(t.qrSecret).where(sql`deleted_at IS NULL`),
+  locationActiveIdx: index("idx_location_active").on(t.institutionId).where(sql`deleted_at IS NULL`),
 }));
 
 // ─── Leave Management ───
@@ -252,19 +260,26 @@ export const taskComments = sqliteTable("task_comments", {
 
 // ─── Daily Reports ───
 
-export const dailyReports = sqliteTable("daily_reports", {
-  id: text("id").primaryKey(),
-  staffId: text("staff_id")
-    .notNull()
-    .references(() => staff.id),
-  date: text("date").notNull(),
-  summary: text("summary"),
-  status: text("status").notNull().default("draft"),
-  reviewedById: text("reviewed_by_id").references(() => staff.id),
-  reviewedAt: text("reviewed_at"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+export const dailyReports = sqliteTable(
+  "daily_reports",
+  {
+    id: text("id").primaryKey(),
+    staffId: text("staff_id")
+      .notNull()
+      .references(() => staff.id),
+    date: text("date").notNull(),
+    summary: text("summary"),
+    status: text("status").notNull().default("draft"),
+    reviewerComment: text("reviewer_comment"),
+    reviewedById: text("reviewed_by_id").references(() => staff.id),
+    reviewedAt: text("reviewed_at"),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    staffDateIdx: uniqueIndex("idx_reports_staff_date").on(t.staffId, t.date),
+  })
+);
 
 export const dailyReportTasks = sqliteTable("daily_report_tasks", {
   id: text("id").primaryKey(),
@@ -849,3 +864,131 @@ export const accessRequests = sqliteTable("access_requests", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
+
+// ─── Presence Verification ───
+
+export const presenceLogs = sqliteTable("presence_logs", {
+  id: text("id").primaryKey(),
+  attendanceId: text("attendance_id").notNull().references(() => attendanceLogs.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  latitude: real("latitude").notNull(),
+  longitude: real("longitude").notNull(),
+  accuracy: real("accuracy"),
+  isWithinGeofence: integer("is_within_geofence", { mode: "boolean" }).notNull().default(true),
+  isMockLocation: integer("is_mock_location", { mode: "boolean" }).default(false),
+  wifiSsid: text("wifi_ssid"),
+  verificationMethod: text("verification_method").default("gps"),
+  distanceFromOffice: real("distance_from_office"),
+  networkState: text("network_state").default("online"),
+  batteryLevel: integer("battery_level"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const presenceVerificationSettings = sqliteTable("presence_verification_settings", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
+  isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
+  shadowMode: integer("shadow_mode", { mode: "boolean" }).notNull().default(true),
+  checkIntervalMinutes: integer("check_interval_minutes").notNull().default(10),
+  gracePeriodMinutes: integer("grace_period_minutes").notNull().default(5),
+  autoCheckoutOnViolation: integer("auto_checkout_on_violation", { mode: "boolean" }).notNull().default(false),
+  geofenceRadiusMeters: integer("geofence_radius_meters").notNull().default(150),
+  lowBatteryIntervalMinutes: integer("low_battery_interval_minutes").notNull().default(15),
+  criticalBatterySuspend: integer("critical_battery_suspend", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  instIdUniqIdx: uniqueIndex("idx_settings_inst_id").on(t.institutionId).where(sql`institution_id IS NOT NULL`),
+  globalUniqIdx: uniqueIndex("idx_settings_global_uniq").on(t.isEnabled).where(sql`institution_id IS NULL`),
+}));
+
+export const fieldWorkSessions = sqliteTable("field_work_sessions", {
+  id: text("id").primaryKey(),
+  attendanceId: text("attendance_id").notNull().references(() => attendanceLogs.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  endedAt: text("ended_at"),
+  reason: text("reason"),
+  status: text("status").notNull().default("pending_approval"),
+  approvedBy: text("approved_by").references(() => staff.id),
+  approvedAt: text("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  locationSnapshots: text("location_snapshots"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Chat / Messaging ───
+
+export const chatRooms = sqliteTable("chat_rooms", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  createdById: text("created_by_id").notNull().references(() => staff.id, { onDelete: "restrict" }),
+  lastMessageTime: text("last_message_time"),
+  lastMessagePreview: text("last_message_preview"),
+  iconUrl: text("icon_url"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  createdByIdx: index("chat_rooms_creator_idx").on(t.createdById),
+}));
+
+export const chatParticipants = sqliteTable("chat_participants", {
+  id: text("id").primaryKey(),
+  roomId: text("room_id").notNull().references(() => chatRooms.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("Member"),
+  addedById: text("added_by_id").references(() => staff.id, { onDelete: "set null" }),
+  lastReadAt: text("last_read_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  roomIdIdx: index("chat_participants_room_idx").on(t.roomId),
+  staffIdIdx: index("chat_participants_staff_idx").on(t.staffId),
+  roomStaffUniq: uniqueIndex("chat_participants_room_staff_uniq").on(t.roomId, t.staffId),
+}));
+
+export const chatMessages = sqliteTable("chat_messages", {
+  id: text("id").primaryKey(),
+  roomId: text("room_id").notNull().references(() => chatRooms.id, { onDelete: "cascade" }),
+  senderId: text("sender_id").notNull().references(() => staff.id, { onDelete: "restrict" }),
+  text: text("text"),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type").notNull().default("text"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  roomIdIdx: index("chat_messages_room_idx").on(t.roomId),
+  senderIdIdx: index("chat_messages_sender_idx").on(t.senderId),
+}));
+
+// ─── Presence & Activity Logs ───
+
+export const presence = sqliteTable("presence", {
+  staffId: text("staff_id").primaryKey().references(() => staff.id, { onDelete: "cascade" }),
+  online: integer("online", { mode: "boolean" }).notNull().default(false),
+  lastSeenAt: text("last_seen_at").notNull(),
+  status: text("status").notNull().default("active"),
+  statusText: text("status_text"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const activityLogs = sqliteTable("activity_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  staffId: text("staff_id").references(() => staff.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(),
+  resourceId: text("resource_id"),
+  details: text("details"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  staffIdIdx: index("activity_logs_staff_idx").on(t.staffId),
+  actionIdx: index("activity_logs_action_idx").on(t.action),
+  resourceIdx: index("activity_logs_resource_idx").on(t.resourceType),
+}));
+
+export const systemConfigs = sqliteTable("system_configs", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+

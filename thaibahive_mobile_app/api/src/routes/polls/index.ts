@@ -48,7 +48,9 @@ pollsRouter.get("/:id/results", async (req: AuthRequest, res) => {
     const poll = await db.select().from(tables.polls).where(eq(tables.polls.id, req.params.id)).get();
     if (!poll) return res.status(404).json({ error: "Poll not found" });
     const responses = await db.select().from(tables.pollResponses).where(eq(tables.pollResponses.pollId, req.params.id)).all();
-    const results = poll.options.map((opt, idx) => ({ option: opt, count: responses.filter(r => r.selectedOption === idx).length }));
+    const optionsArray = (poll.options as string[]) || [];
+    const results = optionsArray.map((opt: string, idx: number) => ({ option: opt, count: responses.filter(r => r.selectedOption === idx).length }));
+
     res.json({ poll, results, totalResponses: responses.length });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

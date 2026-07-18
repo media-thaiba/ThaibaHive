@@ -1,6 +1,6 @@
 name: thaibahive_mobile
 description: ThaibaHive - Unified Staff Management Platform
-version: 1.0.0+1
+version: 1.0.0+3
 environment:
   sdk: '>=3.2.0 <4.0.0'
 
@@ -39,6 +39,22 @@ dependencies:
   webview_flutter: ^4.10.0
   # Phase 1 - QR code scanning for attendance
   mobile_scanner: ^5.2.3
+  # Background presence verification
+  flutter_background_service: ^5.0.7
+  battery_plus: ^6.0.2
+  # Telemetry & Diagnostics dependencies
+  path_provider: ^2.1.2
+  device_info_plus: ^10.1.0
+  package_info_plus: ^8.0.0
+  path: ^1.9.0
+  google_sign_in: ^6.2.1
+  sentry_flutter: ^8.0.0
+  # OTA Updates & Connectivity
+  open_filex: ^4.7.0
+  permission_handler: ^11.3.1
+  connectivity_plus: ^6.1.0
+
+
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +64,12 @@ dev_dependencies:
   json_serializable: ^6.8.0
   riverpod_generator: ^2.4.0
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/thl_logo.png"
 
 flutter:
   uses-material-design: true

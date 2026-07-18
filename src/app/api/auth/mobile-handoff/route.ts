@@ -13,6 +13,7 @@ const RATE_LIMIT_WINDOW = 60_000;
 const RATE_LIMIT_MAX = 5;
 
 function checkRateLimit(ip: string): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {

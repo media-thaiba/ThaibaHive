@@ -7,6 +7,8 @@ import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+import { isStorageConfigured, uploadToSupabase, checkStorageConfig } from "@/lib/storage";
+
 export const runtime = "nodejs";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads", "avatars");
@@ -38,13 +40,20 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     const ext = file.name.split(".").pop() || "bin";
     const filename = `${session.staffId}-${randomUUID()}.${ext}`;
-    const filepath = join(UPLOAD_DIR, filename);
-
-    await mkdir(UPLOAD_DIR, { recursive: true });
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filepath, buffer);
 
-    const fileUrl = `/api/upload/files/avatars/${filename}`;
+    let fileUrl = "";
+
+    if (isStorageConfigured) {
+      fileUrl = await uploadToSupabase(filename, file.type, buffer, "avatars");
+    } else {
+      checkStorageConfig();
+      const filepath = join(UPLOAD_DIR, filename);
+      await mkdir(UPLOAD_DIR, { recursive: true });
+      await writeFile(filepath, buffer);
+      fileUrl = `/api/upload/files/avatars/${filename}`;
+    }
+
 
     await db.update(staff).set({ avatarUrl: fileUrl }).where(eq(staff.id, session.staffId)).run();
 

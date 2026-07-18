@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth/schemas";
+import { logActivity } from "@/lib/api/activity-log";
 import { eq } from "drizzle-orm";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -10,6 +11,7 @@ const RATE_LIMIT_WINDOW = 60_000; // 1 minute
 const RATE_LIMIT_MAX = 5;
 
 function checkRateLimit(ip: string): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { email, password } = parsed.data;
+    const { email, password, rememberMe } = parsed.data;
 
     const staffMember = await db
       .select()
@@ -80,6 +82,13 @@ export async function POST(request: Request) {
       employeeId: staffMember.employeeId,
       name: `${staffMember.firstName} ${staffMember.lastName}`,
       tokenVersion: staffMember.tokenVersion,
+    }, rememberMe);
+
+    await logActivity({
+      request,
+      staffId: staffMember.id,
+      action: "LOGIN",
+      resourceType: "auth",
     });
 
     return NextResponse.json({
@@ -101,7 +110,7 @@ export async function POST(request: Request) {
         employeeId: staffMember.employeeId,
       },
     });
-  } catch (error) {
+} catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

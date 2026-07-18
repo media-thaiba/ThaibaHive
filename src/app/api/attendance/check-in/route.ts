@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { attendanceLogs } from "@/db/schema";
+import { attendanceLogs, attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkInSchema } from "@/lib/validation/schemas";
 import {
@@ -23,11 +23,12 @@ export const POST = requireAuth(async (request, session) => {
       );
     }
 
-    const { method, latitude, longitude, nfcTagId, qrCode } = result.data;
+    const { method, latitude, longitude, accuracy, wifiSsid, nfcTagId, qrCode } = result.data;
     const today = new Date().toISOString().split("T")[0];
     const now = new Date();
 
     // ─── Perform check-in validation ───
+    let locationId: string | null = null;
     if (method === "nfc") {
       if (!nfcTagId) {
         return NextResponse.json(
@@ -35,7 +36,17 @@ export const POST = requireAuth(async (request, session) => {
           { status: 400 }
         );
       }
-      await validateNfcCheckIn(session.staffId, nfcTagId, latitude, longitude);
+      await validateNfcCheckIn(session.staffId, nfcTagId, latitude, longitude, accuracy, wifiSsid);
+      // Look up location by NFC tag to get geofence info
+      const location = await db
+        .select()
+        .from(attendanceLocations)
+        .where(and(
+          eq(attendanceLocations.nfcTagId, nfcTagId),
+          eq(attendanceLocations.isActive, true)
+        ))
+        .get();
+      if (location) locationId = location.id;
     } else if (method === "qr") {
       if (!qrCode) {
         return NextResponse.json(
@@ -43,7 +54,15 @@ export const POST = requireAuth(async (request, session) => {
           { status: 400 }
         );
       }
-      await validateQrCheckIn(qrCode, latitude, longitude);
+      await validateQrCheckIn(qrCode, latitude, longitude, accuracy, wifiSsid);
+      // Extract location ID from QR code payload
+      try {
+        const jsonStr = Buffer.from(qrCode, "base64url").toString("utf-8");
+        const payload = JSON.parse(jsonStr);
+        locationId = payload.locationId;
+      } catch {
+        // Ignore parsing errors - location lookup will fail gracefully
+      }
     }
 
     // ─── Check duplicate check-in ───
@@ -86,7 +105,25 @@ export const POST = requireAuth(async (request, session) => {
       .returning()
       .get();
 
-    return NextResponse.json({ log: newLog }, { status: 201 });
+    // ─── Fetch geofence config for the location ───
+    let geofenceConfig = null;
+    if (locationId) {
+      const location = await db
+        .select()
+        .from(attendanceLocations)
+        .where(eq(attendanceLocations.id, locationId))
+        .get();
+      if (location && location.latitude && location.longitude) {
+        geofenceConfig = {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          radius: location.radius || 150,
+          locationName: location.name,
+        };
+      }
+    }
+
+    return NextResponse.json({ log: newLog, geofence: geofenceConfig }, { status: 201 });
   } catch (error) {
     if (error instanceof AttendanceValidationError) {
       return NextResponse.json(

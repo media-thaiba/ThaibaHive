@@ -18,7 +18,8 @@ class EventsRepository {
       '/events',
       queryParameters: {'page': page},
       fromJson: (json) {
-        final list = json['data'] as List<dynamic>;
+        final list = (json is Map ? (json['events'] ?? json['data'] ?? json) : json)
+            as List<dynamic>? ?? [];
         return list
             .map((e) => EventModel.fromJson(e as Map<String, dynamic>))
             .toList();

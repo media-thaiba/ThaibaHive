@@ -11,18 +11,21 @@ describe("Roles and Permissions", () => {
     it("should correctly evaluate mapped permissions for admin", () => {
       expect(hasPermission("admin", "staff:create")).toBe(true);
       expect(hasPermission("admin", "attendance:manage")).toBe(true);
+      expect(hasPermission("admin", "availability:write")).toBe(true);
       expect(hasPermission("admin", "non_existent_permission")).toBe(false);
     });
 
     it("should correctly evaluate mapped permissions for principal", () => {
       expect(hasPermission("principal", "staff:create")).toBe(true);
       expect(hasPermission("principal", "finance:create")).toBe(true);
+      expect(hasPermission("principal", "availability:write")).toBe(true);
       expect(hasPermission("principal", "system:telemetry")).toBe(false);
     });
 
     it("should correctly evaluate mapped permissions for hod", () => {
       expect(hasPermission("hod", "leaves:approve")).toBe(true);
       expect(hasPermission("hod", "staff:read")).toBe(true);
+      expect(hasPermission("hod", "availability:write")).toBe(true);
       expect(hasPermission("hod", "staff:create")).toBe(false);
     });
 

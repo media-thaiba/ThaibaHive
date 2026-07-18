@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { hashPassword, createSession } from "@/lib/auth";
-import { requireAuth } from "@/lib/api/auth-guard";
 import { signupSchema } from "@/lib/auth/schemas";
 import { eq } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request) => {
+export async function POST(request: Request) {
   try {
     const body = await request.json();
     const parsed = signupSchema.safeParse(body);
@@ -82,4 +81,4 @@ export const POST = requireAuth(async (request: Request) => {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}, "staff:create");
+}

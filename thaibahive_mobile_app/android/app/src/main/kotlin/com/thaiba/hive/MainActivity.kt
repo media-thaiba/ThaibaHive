@@ -1,4 +1,4 @@
-package com.example.thaibahive_mobile
+package com.thaiba.hive
 
 import io.flutter.embedding.android.FlutterActivity
 

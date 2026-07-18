@@ -28,7 +28,8 @@ test.describe("Leaves Page", () => {
     const form = page.locator("form");
     await form.locator("input[type='date']").nth(0).fill("2026-08-01");
     await form.locator("input[type='date']").nth(1).fill("2026-08-03");
-    await form.locator("textarea[placeholder='Reason (optional)']").fill("E2E Test Leave");
+    await form.locator("textarea[placeholder='Reason for leave']").fill("E2E Test Leave");
+
 
     // Click Submit
     const submitBtn = form.locator("button[type='submit']");
