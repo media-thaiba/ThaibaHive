@@ -5,7 +5,7 @@ import { inArray } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const configs = await db
       .select()
@@ -31,9 +31,16 @@ export async function GET() {
       configMap[item.key as keyof typeof configMap] = item.value;
     }
 
+    let downloadUrl = configMap.app_download_url;
+    if (downloadUrl && downloadUrl.startsWith("/")) {
+      const host = request.headers.get("host") || "localhost:3000";
+      const protocol = request.headers.get("x-forwarded-proto") || "http";
+      downloadUrl = `${protocol}://${host}${downloadUrl}`;
+    }
+
     return NextResponse.json({
       latestVersion: configMap.app_latest_version,
-      downloadUrl: configMap.app_download_url,
+      downloadUrl: downloadUrl,
       releaseNotes: configMap.app_release_notes,
       forceUpdate: configMap.app_force_update === "true",
     });
