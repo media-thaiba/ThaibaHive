@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'logger_service.dart';
 import 'update_service.dart';
 
 enum UpdateDownloadState {

@@ -14,6 +14,7 @@ import 'package:thaibahive_mobile/shared/widgets/status_badge.dart';
 import 'package:thaibahive_mobile/shared/widgets/section_header.dart';
 import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
 import 'package:thaibahive_mobile/shared/widgets/tap_scale.dart';
+import 'package:thaibahive_mobile/shared/widgets/update_banner.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -271,6 +272,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               user: user,
               onAvatarTap: () => _showProfileBottomSheet(context, ref, user),
             ),
+            const UpdateBanner(),
             if (dashState.isLoading && dashState.stats == null)
               const _DashboardShimmer()
             else if (dashState.error != null && dashState.stats == null)
