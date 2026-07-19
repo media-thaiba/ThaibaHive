@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'crash_log_service.dart';
 import 'offline_queue.dart';
 import 'qr_anti_replay.dart';
+import 'offline_sync_service.dart';
 
 /// Centralized service initializer for the mobile app
 /// 
@@ -47,6 +48,10 @@ class ServiceInitializer {
       // 5. Initialize connectivity monitoring
       await Connectivity().checkConnectivity();
       debugPrint('[ServiceInitializer] Connectivity monitoring initialized');
+      
+      // 6. Start offline sync service
+      offlineSyncService.start();
+      debugPrint('[ServiceInitializer] Offline sync service started');
       
       _initialized = true;
       debugPrint('[ServiceInitializer] All services initialized successfully');

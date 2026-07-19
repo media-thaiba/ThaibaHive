@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thaibahive_mobile/core/services/nfc_check_in.dart';
 import 'package:thaibahive_mobile/core/services/location_service.dart';
+import 'package:thaibahive_mobile/core/services/offline_queue.dart';
 import 'package:thaibahive_mobile/features/attendance/data/attendance_provider.dart';
 
 class NFCScanScreen extends ConsumerStatefulWidget {
@@ -63,28 +64,31 @@ class _NFCScanScreenState extends ConsumerState<NFCScanScreen>
       _errorMessage = null;
     });
 
+    // Request current coordinates before scan starts
+    double? latitude;
+    double? longitude;
+    try {
+      final position = await locationService.getCurrentLocation();
+      if (position != null) {
+        latitude = position.latitude;
+        longitude = position.longitude;
+      }
+    } catch (e) {
+      debugPrint('Failed to retrieve location: $e');
+    }
+
     await nfcCheckInService.startScanning(
       locationId: 'default',
+      latitude: latitude,
+      longitude: longitude,
       onResult: (result) async {
         if (!mounted) return;
 
         if (result.success) {
+          final clientEventId = result.data?['clientEventId'] as String?;
           final tagData = result.data?['tagData']?['payload'] as String? ??
               result.data?['tagData']?['id'] as String? ??
               'unknown';
-
-          // Request current coordinates
-          double? latitude;
-          double? longitude;
-          try {
-            final position = await locationService.getCurrentLocation();
-            if (position != null) {
-              latitude = position.latitude;
-              longitude = position.longitude;
-            }
-          } catch (e) {
-            debugPrint('Failed to retrieve location: $e');
-          }
 
           await ref.read(attendanceProvider.notifier).checkIn(
             method: 'nfc',
@@ -96,6 +100,10 @@ class _NFCScanScreenState extends ConsumerState<NFCScanScreen>
           if (mounted) {
             final state = ref.read(attendanceProvider);
             if (state.error == null) {
+              if (clientEventId != null) {
+                // Direct check-in succeeded, mark it as completed so it's not retried
+                await offlineQueue.markCompleted(clientEventId);
+              }
               Navigator.of(context).pop(true);
             } else {
               setState(() {

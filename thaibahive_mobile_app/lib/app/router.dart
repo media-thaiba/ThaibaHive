@@ -7,7 +7,6 @@ import '../features/approvals/presentation/approvals_screen.dart';
 import '../features/announcements/presentation/announcements_screen.dart';
 import '../features/attendance/presentation/attendance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
-import '../features/auth/presentation/signup_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
 import '../features/dashboard/presentation/more_screen.dart';
@@ -24,7 +23,6 @@ import '../features/settings/presentation/password_change_screen.dart';
 import '../features/settings/presentation/profile_edit_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/settings/presentation/crash_logs_screen.dart';
-
 import '../features/staff/presentation/staff_directory_screen.dart';
 import '../features/staff/presentation/staff_profile_screen.dart';
 import '../features/tasks/presentation/task_create_screen.dart';
@@ -48,8 +46,10 @@ import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/availability/presentation/availability_screen.dart';
 import '../features/accounts/presentation/accounts_screen.dart';
 import '../features/admin/presentation/admin_dashboard_screen.dart';
+import '../features/grievances/presentation/grievances_screen.dart';
+import '../features/grievances/presentation/grievance_submit_screen.dart';
+import '../features/canteen/presentation/canteen_screen.dart';
 import '../shared/widgets/bottom_nav_bar.dart';
-import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/screens/coming_soon_screen.dart';
 import '../shared/transitions/page_transitions.dart';
 
@@ -226,10 +226,7 @@ GoRouter buildRouter() {
         name: 'events',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Events',
-            icon: Icons.event_rounded,
-          ),
+          child: const EventsScreen(),
         ),
       ),
       GoRoute(
@@ -237,10 +234,7 @@ GoRouter buildRouter() {
         name: 'eventDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Events',
-            icon: Icons.event_rounded,
-          ),
+          child: const EventsScreen(),
         ),
       ),
       GoRoute(
@@ -342,10 +336,7 @@ GoRouter buildRouter() {
         name: 'expenses',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Expenses',
-            icon: Icons.receipt_rounded,
-          ),
+          child: const ExpensesScreen(),
         ),
       ),
       GoRoute(
@@ -353,10 +344,7 @@ GoRouter buildRouter() {
         name: 'purchases',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Purchases',
-            icon: Icons.shopping_cart_rounded,
-          ),
+          child: const PurchasesScreen(),
         ),
       ),
       GoRoute(
@@ -364,10 +352,7 @@ GoRouter buildRouter() {
         name: 'visitors',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Visitors',
-            icon: Icons.people_rounded,
-          ),
+          child: const VisitorsScreen(),
         ),
       ),
       GoRoute(
@@ -375,10 +360,7 @@ GoRouter buildRouter() {
         name: 'grievances',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Grievances',
-            icon: Icons.report_problem_rounded,
-          ),
+          child: const GrievancesScreen(),
         ),
       ),
       GoRoute(
@@ -386,10 +368,7 @@ GoRouter buildRouter() {
         name: 'grievanceSubmit',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Grievances',
-            icon: Icons.report_problem_rounded,
-          ),
+          child: const GrievanceSubmitScreen(),
         ),
       ),
       GoRoute(
@@ -421,10 +400,7 @@ GoRouter buildRouter() {
         name: 'vehicles',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Vehicles',
-            icon: Icons.directions_car_rounded,
-          ),
+          child: const VehiclesScreen(),
         ),
       ),
       GoRoute(
@@ -432,10 +408,7 @@ GoRouter buildRouter() {
         name: 'canteen',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Canteen',
-            icon: Icons.restaurant_rounded,
-          ),
+          child: const CanteenScreen(),
         ),
       ),
       GoRoute(
@@ -476,10 +449,7 @@ GoRouter buildRouter() {
         name: 'checklists',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Checklists',
-            icon: Icons.checklist_rounded,
-          ),
+          child: const ChecklistsScreen(),
         ),
       ),
       GoRoute(
@@ -487,10 +457,7 @@ GoRouter buildRouter() {
         name: 'timeline',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Timeline',
-            icon: Icons.timeline_rounded,
-          ),
+          child: const TimelineScreen(),
         ),
       ),
       GoRoute(
@@ -498,10 +465,7 @@ GoRouter buildRouter() {
         name: 'availability',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Availability',
-            icon: Icons.schedule_rounded,
-          ),
+          child: const AvailabilityScreen(),
         ),
       ),
       GoRoute(
@@ -509,10 +473,7 @@ GoRouter buildRouter() {
         name: 'accounts',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Accounts',
-            icon: Icons.account_balance_rounded,
-          ),
+          child: const AccountsScreen(),
         ),
       ),
       GoRoute(
@@ -520,10 +481,7 @@ GoRouter buildRouter() {
         name: 'admin',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Admin',
-            icon: Icons.admin_panel_settings_rounded,
-          ),
+          child: const AdminDashboardScreen(),
         ),
       ),
     ],

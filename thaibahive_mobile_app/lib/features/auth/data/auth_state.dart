@@ -45,6 +45,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final rememberMe = await _storage.read(key: 'remember_me');
     if (rememberMe == 'false') {
       await _storage.delete(key: AppConstants.storageTokenKey);
+      await _storage.delete(key: AppConstants.storageRefreshTokenKey);
       await _storage.delete(key: 'remember_me');
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
@@ -74,6 +75,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await _repository.login(email, password, rememberMe: rememberMe);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      if (response.refreshToken != null) {
+        await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
+      }
       await _storage.write(key: 'remember_me', value: rememberMe ? 'true' : 'false');
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
@@ -93,6 +97,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await _repository.loginWithGoogle(idToken);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      if (response.refreshToken != null) {
+        await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
+      }
       await _storage.write(key: 'remember_me', value: 'true');
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
@@ -113,6 +120,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await _repository.signup(data);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      if (response.refreshToken != null) {
+        await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
+      }
       await _storage.write(key: 'remember_me', value: 'true'); // signup defaults to keeping signed in
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
@@ -132,6 +142,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _repository.logout();
     } catch (_) {}
     await _storage.delete(key: AppConstants.storageTokenKey);
+    await _storage.delete(key: AppConstants.storageRefreshTokenKey);
     await _storage.delete(key: 'remember_me');
     _repository.client.options.headers.remove('Authorization');
     state = const AuthState(status: AuthStatus.unauthenticated);

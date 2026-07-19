@@ -25,6 +25,18 @@ class MoreScreen extends StatelessWidget {
     '/approvals',
     '/bookings',
     '/assets',
+    '/events',
+    '/expenses',
+    '/purchases',
+    '/visitors',
+    '/grievances',
+    '/vehicles',
+    '/canteen',
+    '/checklists',
+    '/timeline',
+    '/availability',
+    '/accounts',
+    '/admin',
   };
 
   static const _communicationFeatures = [

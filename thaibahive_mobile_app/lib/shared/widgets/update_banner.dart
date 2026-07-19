@@ -17,8 +17,6 @@ class UpdateBanner extends ConsumerWidget {
       data: (info) {
         if (!info.isUpdateAvailable) return const SizedBox.shrink();
 
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Container(

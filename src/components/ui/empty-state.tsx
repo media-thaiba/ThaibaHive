@@ -5,7 +5,7 @@ type EmptyStateProps = {
   icon?: React.ReactNode;
   title: string;
   description: string;
-  action?: { label: string; href: string };
+  action?: { label: string; href?: string; onClick?: () => void };
 };
 
 const defaultIcon = (
@@ -21,9 +21,13 @@ export function EmptyState({ icon = defaultIcon, title, description, action }: E
       <p className="text-base font-semibold text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground max-w-xs leading-relaxed">{description}</p>
       {action && (
-        <Link href={action.href} className="mt-5 inline-block">
-          <Button>{action.label}</Button>
-        </Link>
+        action.href ? (
+          <Link href={action.href} className="mt-5 inline-block">
+            <Button>{action.label}</Button>
+          </Link>
+        ) : (
+          <Button onClick={action.onClick} className="mt-5">{action.label}</Button>
+        )
       )}
     </div>
   );

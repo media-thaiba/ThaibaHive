@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/providers/update_provider.dart';
 import 'update_banner.dart';
 
 class BottomNavShell extends ConsumerWidget {
@@ -17,28 +16,12 @@ class BottomNavShell extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final updateInfoAsync = ref.watch(updateInfoProvider);
-    final updateState = ref.watch(updateStateProvider);
-    final updateProgress = ref.watch(updateProgressProvider);
-
     return Scaffold(
       body: Column(
         children: [
-          updateInfoAsync.maybeWhen(
-            data: (info) {
-              if (info.isUpdateAvailable) {
-                return SafeArea(
-                  bottom: false,
-                  child: UpdateBanner(
-                    info: info,
-                    state: updateState,
-                    progress: updateProgress,
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            orElse: () => const SizedBox.shrink(),
+          SafeArea(
+            bottom: false,
+            child: UpdateBanner(),
           ),
           Expanded(child: navigationShell),
         ],

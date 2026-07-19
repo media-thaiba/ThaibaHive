@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:math';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -107,8 +108,9 @@ class OfflineQueue {
     String? keyString = await _secureStorage.read(key: _keyBoxName);
     
     if (keyString == null) {
-      // Generate new 256-bit key
-      final keyBytes = List<int>.generate(32, (i) => DateTime.now().microsecondsSinceEpoch % 256);
+      // Generate new 256-bit key using cryptographically secure random numbers
+      final random = Random.secure();
+      final keyBytes = List<int>.generate(32, (i) => random.nextInt(256));
       keyString = base64Url.encode(keyBytes);
       await _secureStorage.write(key: _keyBoxName, value: keyString);
     }

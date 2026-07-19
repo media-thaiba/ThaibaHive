@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
@@ -11,6 +12,7 @@ import 'api_exception.dart';
 class ApiClient {
   late final Dio _dio;
   late final FlutterSecureStorage _storage;
+  Completer<String?>? _refreshCompleter;
 
   ApiClient({
     String? baseUrl,
@@ -89,13 +91,77 @@ class ApiClient {
     return InterceptorsWrapper(
       onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
-          await _storage.delete(key: AppConstants.storageTokenKey);
-          await _storage.delete(key: AppConstants.storageRefreshTokenKey);
-          await _storage.delete(key: AppConstants.storageUserProfileKey);
+          // If the request is already a refresh request, don't try to refresh
+          if (error.requestOptions.path.contains('/auth/refresh')) {
+            await _clearAuthData();
+            return handler.next(error);
+          }
+
+          final refreshToken = await _storage.read(key: AppConstants.storageRefreshTokenKey);
+          if (refreshToken != null && refreshToken.isNotEmpty) {
+            try {
+              String? newToken;
+              if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+                newToken = await _refreshCompleter!.future;
+              } else {
+                _refreshCompleter = Completer<String?>();
+                
+                final refreshDio = Dio(BaseOptions(
+                  baseUrl: _dio.options.baseUrl,
+                  connectTimeout: _dio.options.connectTimeout,
+                  receiveTimeout: _dio.options.receiveTimeout,
+                ));
+                if (kDebugMode) {
+                  refreshDio.httpClientAdapter = _dio.httpClientAdapter;
+                }
+                
+                final response = await refreshDio.post('/auth/refresh', data: {
+                  'refreshToken': refreshToken,
+                });
+                
+                if (response.statusCode == 200 || response.statusCode == 201) {
+                  final data = response.data;
+                  final token = data['token'] as String;
+                  final newRefreshToken = data['refreshToken'] as String?;
+                  
+                  await _storage.write(key: AppConstants.storageTokenKey, value: token);
+                  if (newRefreshToken != null) {
+                    await _storage.write(key: AppConstants.storageRefreshTokenKey, value: newRefreshToken);
+                  }
+                  
+                  _refreshCompleter!.complete(token);
+                  newToken = token;
+                } else {
+                  _refreshCompleter!.complete(null);
+                }
+              }
+              
+              if (newToken != null) {
+                final options = error.requestOptions;
+                options.headers['Authorization'] = 'Bearer $newToken';
+                final cloneReq = await _dio.fetch(options);
+                return handler.resolve(cloneReq);
+              }
+            } catch (refreshError) {
+              if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+                _refreshCompleter!.complete(null);
+              }
+              await _clearAuthData();
+              return handler.next(error);
+            }
+          }
+          
+          await _clearAuthData();
         }
         handler.next(error);
       },
     );
+  }
+
+  Future<void> _clearAuthData() async {
+    await _storage.delete(key: AppConstants.storageTokenKey);
+    await _storage.delete(key: AppConstants.storageRefreshTokenKey);
+    await _storage.delete(key: AppConstants.storageUserProfileKey);
   }
 
   InterceptorsWrapper _normalizationInterceptor() {

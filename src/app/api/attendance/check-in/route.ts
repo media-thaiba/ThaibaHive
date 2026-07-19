@@ -89,21 +89,36 @@ export const POST = requireAuth(async (request, session) => {
     const { lateMinutes, status } = calculateLateMinutes(now, shift.startTime, shift.gracePeriodMinutes);
 
     const logId = crypto.randomUUID();
-    const newLog = await db
-      .insert(attendanceLogs)
-      .values({
-        id: logId,
-        staffId: session.staffId,
-        date: today,
-        checkIn: now.toISOString(),
-        method,
-        nfcTagId: nfcTagId || null,
-        qrCode: qrCode || null,
-        status,
-        lateMinutes,
-      })
-      .returning()
-      .get();
+    let newLog;
+    try {
+      newLog = await db
+        .insert(attendanceLogs)
+        .values({
+          id: logId,
+          staffId: session.staffId,
+          date: today,
+          checkIn: now.toISOString(),
+          method,
+          nfcTagId: nfcTagId || null,
+          qrCode: qrCode || null,
+          status,
+          lateMinutes,
+        })
+        .returning()
+        .get();
+    } catch (error: any) {
+      if (
+        error.message?.includes("UNIQUE constraint failed") ||
+        error.code === "SQLITE_CONSTRAINT" ||
+        error.message?.includes("constraint failed")
+      ) {
+        return NextResponse.json(
+          { error: "Already checked in today." },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
 
     // ─── Fetch geofence config for the location ───
     let geofenceConfig = null;

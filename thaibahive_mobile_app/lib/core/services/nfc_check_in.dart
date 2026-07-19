@@ -40,6 +40,8 @@ class NFCCheckInService {
   /// Start NFC scanning for attendance
   Future<void> startScanning({
     required String locationId,
+    double? latitude,
+    double? longitude,
     required Function(NFCCheckInResult) onResult,
   }) async {
     if (_isScanning) {
@@ -65,7 +67,7 @@ class NFCCheckInService {
       await NfcManager.instance.startSession(
         onDiscovered: (NfcTag tag) async {
           try {
-            final result = await _processTag(tag, locationId);
+            final result = await _processTag(tag, locationId, latitude: latitude, longitude: longitude);
             onResult(result);
           } catch (e) {
             onResult(NFCCheckInResult(
@@ -100,7 +102,12 @@ class NFCCheckInService {
   }
 
   /// Process an NFC tag
-  Future<NFCCheckInResult> _processTag(NfcTag tag, String locationId) async {
+  Future<NFCCheckInResult> _processTag(
+    NfcTag tag,
+    String locationId, {
+    double? latitude,
+    double? longitude,
+  }) async {
     // Extract data from NFC tag
     final data = _extractTagData(tag);
     
@@ -118,15 +125,18 @@ class NFCCheckInService {
         'locationId': locationId,
         'tagData': data,
         'timestamp': DateTime.now().toIso8601String(),
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       },
     );
-
+    
     return NFCCheckInResult(
       success: true,
       data: {
         'clientEventId': event.clientEventId,
         'locationId': locationId,
         'timestamp': event.createdAt.toIso8601String(),
+        'tagData': data,
       },
     );
   }

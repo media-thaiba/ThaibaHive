@@ -1,807 +1,684 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { PageHeader } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectItem } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  FileText,
+  FileSpreadsheet,
   Plus,
-  Pencil,
-  Eye,
-  CheckCircle,
-  XCircle,
+  Trash2,
+  Check,
+  X,
+  FileText,
   Clock,
-  AlertTriangle,
+  User,
+  PlusCircle,
+  Eye,
 } from "lucide-react";
 import { formatDate, ensureArray } from "@/lib/utils";
 
-type Report = {
-  id: string;
-  date: string;
-  summary: string | null;
-  status: string;
-  staffId: string;
-  firstName: string;
-  lastName: string;
-  reviewerComment: string | null;
-  reviewedAt: string | null;
-  createdAt: string;
-};
-
-type ReportTask = {
-  id: string;
-  reportId: string;
+type DailyReportTask = {
+  id?: string;
   taskId: string | null;
   description: string;
-  hoursSpent: number | null;
-  status: string;
+  hoursSpent: number;
+  status: string; // completed, in_progress
 };
 
-type Task = {
+type DailyReport = {
+  id: string;
+  staffId: string;
+  date: string;
+  summary: string | null;
+  status: string; // draft, submitted, reviewed, rejected
+  reviewerComment: string | null;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  firstName?: string;
+  lastName?: string;
+};
+
+type AssignedTask = {
   id: string;
   title: string;
   status: string;
-  assignee?: { firstName: string; lastName: string } | null;
 };
 
-type ReportDetail = {
-  report: Report;
-  tasks: ReportTask[];
-};
-
-type Tab = "my" | "team";
-
-const STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "info" | "secondary"> = {
+const statusStyles: Record<string, "secondary" | "warning" | "success" | "destructive"> = {
   draft: "secondary",
-  submitted: "info",
+  submitted: "warning",
   reviewed: "success",
   rejected: "destructive",
 };
 
-const TASK_STATUS_OPTIONS = [
-  { value: "completed", label: "Completed" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "partial", label: "Partial" },
-];
+const statusLabels: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Awaiting Review",
+  reviewed: "Reviewed",
+  rejected: "Rejected",
+};
 
 export default function ReportsPage() {
-  const [tab, setTab] = useState<Tab>("my");
-  const [reports, setReports] = useState<Report[]>([]);
+  const { staff } = useAuth();
+  
+  const [reports, setReports] = useState<DailyReport[]>([]);
+  const [assignedTasks, setAssignedTasks] = useState<AssignedTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingReport, setEditingReport] = useState<DailyReport | null>(null);
 
-  // Dialogs
-  const [createOpen, setCreateOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
+  // Form State
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]);
+  const [summary, setSummary] = useState("");
+  const [reportStatus, setReportStatus] = useState<"draft" | "submitted">("submitted");
+  const [linkedTasks, setLinkedTasks] = useState<DailyReportTask[]>([]);
 
-  // Detail / Review
-  const [selectedReport, setSelectedReport] = useState<ReportDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  // View & Review State
+  const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
+  const [selectedReportTasks, setSelectedReportTasks] = useState<DailyReportTask[]>([]);
+  const [selectedReportLoading, setSelectedReportLoading] = useState(false);
+  
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
-  // Create / Edit form
-  const [editReportId, setEditReportId] = useState<string | null>(null);
-  const [formDate, setFormDate] = useState(new Date().toISOString().split("T")[0]);
-  const [formSummary, setFormSummary] = useState("");
-  const [formTasks, setFormTasks] = useState<
-    { taskId: string; description: string; hoursSpent: number; status: string }[]
-  >([]);
-  const [formSaving, setFormSaving] = useState(false);
-  const [myTasks, setMyTasks] = useState<Task[]>([]);
+  const isHodOrAdmin = staff ? ["super_admin", "admin", "hod"].includes(staff.role) : false;
+  const [activeTab, setActiveTab] = useState<"my" | "team">("my");
 
-  // Review form
-  const [reviewAction, setReviewAction] = useState<"reviewed" | "rejected">("reviewed");
-  const [reviewComment, setReviewComment] = useState("");
-  const [reviewSaving, setReviewSaving] = useState(false);
-
-  const fetchReports = useCallback(async () => {
+  const fetchReports = () => {
     setLoading(true);
-    try {
-      const res = await fetch("/api/reports");
-      const data = await res.json();
-      setReports(ensureArray(data.reports));
-    } catch {
-      toast.error("Failed to load reports");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    fetch("/api/reports")
+      .then((r) => r.ok ? r.json() : { reports: [] })
+      .then((data) => setReports(ensureArray(data.reports)))
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to load daily reports");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const fetchMyTasks = () => {
+    fetch("/api/tasks?scope=my")
+      .then((r) => r.ok ? r.json() : { tasks: [] })
+      .then((data) => setAssignedTasks(ensureArray(data.tasks)))
+      .catch((err) => {
+        console.error(err);
+      });
+  };
 
   useEffect(() => {
     fetchReports();
-  }, [fetchReports]);
+    fetchMyTasks();
+  }, []);
 
-  const openCreateDialog = async () => {
-    setEditReportId(null);
-    setFormDate(new Date().toISOString().split("T")[0]);
-    setFormSummary("");
-    setFormTasks([]);
-    setCreateOpen(true);
-    // Fetch my tasks
+  const handleAddLinkedTask = () => {
+    setLinkedTasks(prev => [
+      ...prev,
+      { taskId: "", description: "", hoursSpent: 1, status: "completed" }
+    ]);
+  };
+
+  const handleRemoveLinkedTask = (index: number) => {
+    setLinkedTasks(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleLinkedTaskChange = (index: number, field: keyof DailyReportTask, value: any) => {
+    setLinkedTasks(prev => {
+      const copy = [...prev];
+      copy[index] = {
+        ...copy[index],
+        [field]: value
+      };
+      return copy;
+    });
+  };
+
+  const loadReportForEdit = async (report: DailyReport) => {
     try {
-      const res = await fetch("/api/tasks?scope=my");
+      setLoading(true);
+      const res = await fetch(`/api/reports/${report.id}`);
+      if (!res.ok) throw new Error("Failed to fetch report details");
       const data = await res.json();
-      setMyTasks(ensureArray(data.tasks));
-    } catch {
-      setMyTasks([]);
-    }
-  };
-
-  const openEditDialog = async (report: Report) => {
-    setEditReportId(report.id);
-    setFormDate(report.date);
-    setFormSummary(report.summary || "");
-    setCreateOpen(true);
-    // Fetch report detail + my tasks
-    try {
-      const [reportRes, tasksRes] = await Promise.all([
-        fetch(`/api/reports/${report.id}`),
-        fetch("/api/tasks?scope=my"),
-      ]);
-      const reportData: ReportDetail = await reportRes.json();
-      const tasksData = await tasksRes.json();
-      setMyTasks(ensureArray(tasksData.tasks));
-      setFormTasks(
-        (ensureArray(reportData.tasks) as ReportTask[]).map((t) => ({
-          taskId: t.taskId || "",
-          description: t.description,
-          hoursSpent: t.hoursSpent || 0,
-          status: t.status || "completed",
-        }))
-      );
-    } catch {
-      toast.error("Failed to load report details");
-    }
-  };
-
-  const openDetailDialog = async (report: Report) => {
-    setDetailLoading(true);
-    setDetailOpen(true);
-    try {
-      const res = await fetch(`/api/reports/${report.id}`);
-      const data: ReportDetail = await res.json();
-      setSelectedReport(data);
-    } catch {
-      toast.error("Failed to load report details");
+      
+      setEditingReport(report);
+      setReportDate(report.date);
+      setSummary(report.summary || "");
+      setReportStatus(report.status === "draft" ? "draft" : "submitted");
+      setLinkedTasks(ensureArray(data.tasks).map((t: any) => ({
+        taskId: t.taskId || "",
+        description: t.description || "",
+        hoursSpent: t.hoursSpent || 0,
+        status: t.status || "completed",
+      })));
+      setShowForm(true);
+    } catch (err) {
+      toast.error("Failed to load report details for editing");
     } finally {
-      setDetailLoading(false);
+      setLoading(false);
     }
   };
 
-  const openReviewDialog = async (report: Report) => {
-    setDetailLoading(true);
-    setReviewOpen(true);
-    setReviewAction("reviewed");
-    setReviewComment("");
-    try {
-      const res = await fetch(`/api/reports/${report.id}`);
-      const data: ReportDetail = await res.json();
-      setSelectedReport(data);
-    } catch {
-      toast.error("Failed to load report details");
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const addFormTask = () => {
-    setFormTasks([...formTasks, { taskId: "", description: "", hoursSpent: 0, status: "completed" }]);
-  };
-
-  const removeFormTask = (index: number) => {
-    setFormTasks(formTasks.filter((_, i) => i !== index));
-  };
-
-  const updateFormTask = (index: number, field: string, value: any) => {
-    const updated = [...formTasks];
-    (updated[index] as any)[field] = value;
-    // Auto-fill description from task title when selecting a task
-    if (field === "taskId" && value) {
-      const task = myTasks.find((t) => t.id === value);
-      if (task && !updated[index].description) {
-        updated[index].description = task.title;
-      }
-    }
-    setFormTasks(updated);
-  };
-
-  const totalHours = formTasks.reduce((sum, t) => sum + (t.hoursSpent || 0), 0);
-
-  const handleSave = async (status: "draft" | "submitted") => {
-    if (!formDate) {
+  const submitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportDate) {
       toast.error("Date is required");
       return;
     }
-    if (formTasks.length === 0) {
-      toast.error("Add at least one task");
-      return;
-    }
-    for (const t of formTasks) {
-      if (!t.description.trim()) {
-        toast.error("Each task needs a description");
-        return;
-      }
+    
+    // Validate tasks hours
+    let totalHours = 0;
+    for (const t of linkedTasks) {
       if (t.hoursSpent < 0.1 || t.hoursSpent > 24) {
-        toast.error("Hours must be between 0.1 and 24.0");
+        toast.error("Hours spent per task must be between 0.1 and 24.0");
         return;
       }
+      totalHours += t.hoursSpent;
     }
     if (totalHours > 24) {
-      toast.error("Total hours cannot exceed 24.0");
+      toast.error("Total hours for a single day cannot exceed 24.0");
       return;
     }
 
-    setFormSaving(true);
+    setLoading(true);
     try {
-      const url = editReportId ? `/api/reports/${editReportId}` : "/api/reports";
-      const method = editReportId ? "PUT" : "POST";
+      const url = editingReport ? `/api/reports/${editingReport.id}` : "/api/reports";
+      const method = editingReport ? "PUT" : "POST";
+      const payload = {
+        date: reportDate,
+        summary: summary.trim(),
+        status: reportStatus,
+        tasks: linkedTasks.map(t => ({
+          taskId: t.taskId || null,
+          description: t.description.trim(),
+          hoursSpent: t.hoursSpent,
+          status: t.status,
+        })),
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: formDate,
-          summary: formSummary,
-          status,
-          tasks: formTasks.map((t) => ({
-            taskId: t.taskId || undefined,
-            description: t.description,
-            hoursSpent: t.hoursSpent,
-            status: t.status,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Failed to save report");
-        return;
+
+      if (res.ok) {
+        toast.success(editingReport ? "Daily report updated successfully" : "Daily report submitted successfully");
+        setShowForm(false);
+        setEditingReport(null);
+        setReportDate(new Date().toISOString().split("T")[0]);
+        setSummary("");
+        setLinkedTasks([]);
+        fetchReports();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to submit report");
       }
-      toast.success(editReportId ? "Report updated" : `Report ${status === "draft" ? "saved as draft" : "submitted"}`);
-      setCreateOpen(false);
-      fetchReports();
     } catch {
-      toast.error("Failed to save report");
+      toast.error("Something went wrong");
     } finally {
-      setFormSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleReview = async () => {
+  const viewReportDetails = async (report: DailyReport) => {
+    setSelectedReport(report);
+    setSelectedReportTasks([]);
+    setSelectedReportLoading(true);
+    
+    try {
+      const res = await fetch(`/api/reports/${report.id}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSelectedReportTasks(ensureArray(data.tasks));
+    } catch {
+      toast.error("Failed to load report detail log");
+    } finally {
+      setSelectedReportLoading(false);
+    }
+  };
+
+  const handleReviewAction = async (status: "reviewed" | "rejected") => {
     if (!selectedReport) return;
-    if (reviewAction === "rejected" && !reviewComment.trim()) {
-      toast.error("A comment is required when rejecting a report");
+    if (status === "rejected" && !reviewNotes.trim()) {
+      toast.error("A comment is required when rejecting daily reports.");
       return;
     }
-    setReviewSaving(true);
+
+    setReviewSubmitting(true);
     try {
-      const res = await fetch(`/api/reports/${selectedReport.report.id}/review`, {
+      const res = await fetch(`/api/reports/${selectedReport.id}/review`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: reviewAction,
-          reviewerComment: reviewComment || undefined,
+          status,
+          reviewerComment: reviewNotes.trim() || undefined,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Failed to review report");
-        return;
+
+      if (res.ok) {
+        toast.success(`Daily report marked as ${status === "reviewed" ? "reviewed" : "rejected"}`);
+        setSelectedReport(null);
+        setReviewNotes("");
+        fetchReports();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to submit review");
       }
-      toast.success(`Report ${reviewAction === "reviewed" ? "approved" : "rejected"}`);
-      setReviewOpen(false);
-      fetchReports();
     } catch {
-      toast.error("Failed to review report");
+      toast.error("Something went wrong");
     } finally {
-      setReviewSaving(false);
+      setReviewSubmitting(false);
     }
   };
 
-  const myReports = reports.filter((r) => r.status === "draft" || r.staffId === undefined || true);
-  const teamReports = reports.filter((r) => r.status !== "draft");
+  // Split reports into personal and pending (for HOD/Admin view)
+  const myReports = reports.filter(r => r.staffId === staff?.id);
+  const teamReports = reports.filter(r => r.staffId !== staff?.id);
+
+  const displayList = activeTab === "my" ? myReports : teamReports;
+
+  if (loading && reports.length === 0) {
+    return (
+      <div className="flex-1 space-y-4 p-6 lg:p-8">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-6 p-6 lg:p-8">
       <PageHeader
-        title="Daily Reports"
-        description="Submit and manage daily work reports."
+        title="Daily Activity Logs"
         actions={
-          <Button onClick={openCreateDialog} size="sm">
-            <Plus className="mr-1.5 h-4 w-4" />
+          <Button onClick={() => {
+            setEditingReport(null);
+            setReportDate(new Date().toISOString().split("T")[0]);
+            setSummary("");
+            setLinkedTasks([]);
+            setShowForm(true);
+          }} className="gap-1.5">
+            <Plus className="h-4 w-4" />
             New Report
           </Button>
         }
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
-        <button
-          onClick={() => setTab("my")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            tab === "my"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          My Reports
-        </button>
-        <button
-          onClick={() => setTab("team")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            tab === "team"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Team Submissions
-        </button>
-      </div>
-
-      {/* Report List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
-        </div>
-      ) : (tab === "my" ? myReports : teamReports).length === 0 ? (
-        <EmptyState
-          icon={<FileText className="h-6 w-6" />}
-          title={tab === "my" ? "No reports yet" : "No team submissions"}
-          description={
-            tab === "my"
-              ? "Create your first daily report to get started."
-              : "No submitted reports from your team members yet."
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          {(tab === "my" ? myReports : teamReports).map((report) => (
-            <Card
-              key={report.id}
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{formatDate(report.date)}</span>
-                      <Badge variant={STATUS_VARIANT[report.status] || "default"}>
-                        {report.status}
-                      </Badge>
-                    </div>
-                    {tab === "team" && (
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {report.firstName} {report.lastName}
-                      </p>
-                    )}
-                    {report.summary && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {report.summary}
-                      </p>
-                    )}
-                    {report.reviewerComment && report.status === "rejected" && (
-                      <p className="text-sm text-destructive mt-1 line-clamp-2">
-                        Rejection reason: {report.reviewerComment}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openDetailDialog(report);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    {(report.status === "draft" || report.status === "rejected") &&
-                      report.staffId === undefined && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditDialog(report);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                    {(report.status === "draft" || report.status === "rejected") && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(report);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {tab === "team" && report.status === "submitted" && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openReviewDialog(report);
-                        }}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      {isHodOrAdmin && (
+        <div className="flex gap-2 border-b pb-px">
+          <Button
+            variant={activeTab === "my" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("my")}
+            className="font-medium"
+          >
+            My Reports
+          </Button>
+          <Button
+            variant={activeTab === "team" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("team")}
+            className="font-medium"
+          >
+            Team Reports ({teamReports.filter((r) => r.status === "submitted").length} Pending)
+          </Button>
         </div>
       )}
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editReportId ? "Edit Daily Report" : "New Daily Report"}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Main List */}
+      <Card className="animate-slide-up">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">
+            {activeTab === "my" ? "Personal Log History" : "Team Activity Logs"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {displayList.length === 0 ? (
+            <EmptyState
+              icon={<FileSpreadsheet className="h-12 w-12" />}
+              title="No daily reports logged"
+              description={
+                activeTab === "my"
+                  ? "Log your accomplishments and hours spent to keep your team aligned."
+                  : "No team activity logs are waiting for review."
+              }
+              action={activeTab === "my" ? { label: "New Report", onClick: () => setShowForm(true) } : undefined}
+            />
+          ) : (
+            <div className="space-y-4">
+              {displayList.map((rep) => (
+                <div
+                  key={rep.id}
+                  className="flex flex-col gap-4 rounded-xl border p-4 hover:bg-muted/20 transition-colors md:flex-row md:items-center md:justify-between"
+                >
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground">
+                        Log for: {formatDate(rep.date)}
+                      </span>
+                      <Badge variant={statusStyles[rep.status] || "secondary"} className="capitalize text-[10px] py-0">
+                        {statusLabels[rep.status] || rep.status}
+                      </Badge>
+                    </div>
+                    {rep.summary && (
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                        {rep.summary}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {activeTab === "team" && (rep.firstName || rep.lastName) && (
+                        <span>Submitted by: <strong>{rep.firstName} {rep.lastName}</strong></span>
+                      )}
+                      <span>Logged on: {formatDate(rep.createdAt)}</span>
+                    </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="report-date">Date</Label>
-                <Input
-                  id="report-date"
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Hours: {totalHours.toFixed(1)} / 24.0</Label>
-                <div className="mt-2">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        totalHours > 24
-                          ? "bg-destructive"
-                          : totalHours > 8
-                          ? "bg-warning"
-                          : "bg-primary"
-                      }`}
-                      style={{ width: `${Math.min((totalHours / 24) * 100, 100)}%` }}
-                    />
+                    {/* Review Comments */}
+                    {rep.reviewerComment && (
+                      <div className="mt-2 rounded-lg bg-muted/60 p-2.5 text-xs border border-border/40">
+                        <span className="font-semibold text-muted-foreground">Reviewer Comment: </span>
+                        <span>{rep.reviewerComment}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 flex items-center gap-2 self-end md:self-center">
+                    <Button variant="outline" size="sm" onClick={() => viewReportDetails(rep)} className="gap-1 text-xs">
+                      <Eye className="h-3.5 w-3.5" /> View Log
+                    </Button>
+                    {activeTab === "my" && ["draft", "rejected"].includes(rep.status) && (
+                      <Button variant="secondary" size="sm" onClick={() => loadReportForEdit(rep)} className="text-xs">
+                        Edit
+                      </Button>
+                    )}
                   </div>
                 </div>
-                {totalHours > 24 && (
-                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Total exceeds 24 hours
-                  </p>
-                )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* New/Edit Report Modal */}
+      <Dialog open={showForm} onOpenChange={(open) => {
+        if (!open) {
+          setShowForm(false);
+          setEditingReport(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingReport ? "Edit Daily Activity Log" : "New Daily Activity Log"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={submitReport} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Log Date
+                </label>
+                <Input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Status
+                </label>
+                <Select
+                  value={reportStatus}
+                  onChange={(e) => setReportStatus(e.target.value as "draft" | "submitted")}
+                  required
+                >
+                  <option value="submitted">Submit for Review</option>
+                  <option value="draft">Save as Draft</option>
+                </Select>
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="report-summary">Summary</Label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Summary of Accomplishments
+              </label>
               <Textarea
-                id="report-summary"
-                placeholder="Brief summary of your day..."
-                value={formSummary}
-                onChange={(e) => setFormSummary(e.target.value)}
+                placeholder="Briefly describe what you worked on today..."
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
                 rows={3}
+                required
               />
             </div>
 
-            <Separator />
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Tasks</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addFormTask}>
-                  <Plus className="mr-1 h-3 w-3" />
-                  Add Task
+            {/* Linked Tasks Section */}
+            <div className="space-y-3 pt-2 border-t">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Linked Tasks & Hours
+                </h4>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddLinkedTask} className="gap-1 text-xs">
+                  <PlusCircle className="h-3.5 w-3.5" /> Add Task
                 </Button>
               </div>
 
-              {formTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No tasks added yet. Click &quot;Add Task&quot; to begin.
+              {linkedTasks.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic text-center py-4 bg-muted/20 rounded-lg">
+                  No specific tasks linked. Click Add Task above to record detailed breakdown.
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {formTasks.map((task, index) => (
-                    <div
-                      key={index}
-                      className="border rounded-lg p-3 space-y-2"
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 grid grid-cols-2 gap-2">
-                          <div>
-                            <Select
-                              value={task.taskId}
-                              onChange={(e) => updateFormTask(index, "taskId", e.target.value)}
-                            >
-                              <option value="">Select a task...</option>
-                              {myTasks.map((t) => (
-                                <SelectItem key={t.id} value={t.id}>
-                                  {t.title}
-                                </SelectItem>
-                              ))}
-                            </Select>
-                          </div>
-                          <div>
-                            <Input
-                              placeholder="Task description"
-                              value={task.description}
-                              onChange={(e) =>
-                                updateFormTask(index, "description", e.target.value)
-                              }
-                            />
-                          </div>
+                  {linkedTasks.map((t, idx) => (
+                    <div key={idx} className="rounded-lg border p-3 bg-muted/10 space-y-2 relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleRemoveLinkedTask(idx)}
+                        className="absolute top-2 right-2 text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Associated Project Task</label>
+                        <Select
+                          value={t.taskId || ""}
+                          onChange={(e) => handleLinkedTaskChange(idx, "taskId", e.target.value)}
+                        >
+                          <option value="">General Work (No linked task)</option>
+                          {assignedTasks.map(task => (
+                            <option key={task.id} value={task.id}>
+                              [{task.status.toUpperCase()}] {task.title}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase">What was done</label>
+                          <Input
+                            placeholder="e.g. Fixed navigation state bugs..."
+                            value={t.description}
+                            onChange={(e) => handleLinkedTaskChange(idx, "description", e.target.value)}
+                            required
+                          />
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase">Hours spent</label>
                           <Input
                             type="number"
-                            step="0.1"
                             min="0.1"
                             max="24"
-                            placeholder="Hrs"
-                            className="w-20"
-                            value={task.hoursSpent || ""}
-                            onChange={(e) =>
-                              updateFormTask(
-                                index,
-                                "hoursSpent",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
+                            step="0.1"
+                            value={t.hoursSpent}
+                            onChange={(e) => handleLinkedTaskChange(idx, "hoursSpent", parseFloat(e.target.value) || 0)}
+                            required
                           />
-                          <Select
-                            value={task.status}
-                            onChange={(e) => updateFormTask(index, "status", e.target.value)}
-                          >
-                            {TASK_STATUS_OPTIONS.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => removeFormTask(index)}
-                          >
-                            <XCircle className="h-4 w-4 text-muted-foreground" />
-                          </Button>
                         </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Task End Status</label>
+                        <Select
+                          value={t.status}
+                          onChange={(e) => handleLinkedTaskChange(idx, "status", e.target.value)}
+                          required
+                        >
+                          <option value="completed">Completed</option>
+                          <option value="in_progress">Still in progress</option>
+                        </Select>
                       </div>
                     </div>
                   ))}
+                  <p className="text-right text-xs text-muted-foreground">
+                    Total Hours Logged: <strong>{linkedTasks.reduce((sum, t) => sum + (t.hoursSpent || 0), 0).toFixed(1)} / 24.0</strong>
+                  </p>
                 </div>
               )}
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              disabled={formSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleSave("draft")}
-              disabled={formSaving}
-            >
-              Save as Draft
-            </Button>
-            <Button onClick={() => handleSave("submitted")} disabled={formSaving}>
-              Submit
-            </Button>
-          </DialogFooter>
+            <div className="flex justify-end gap-2 border-t pt-4">
+              <Button type="button" variant="outline" onClick={() => {
+                setShowForm(false);
+                setEditingReport(null);
+              }}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {reportStatus === "draft" ? "Save Draft" : "Submit Activity Log"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      {/* Details & Review Dialog */}
+      <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Report Details</DialogTitle>
+            <DialogTitle>Daily Activity Log Details</DialogTitle>
           </DialogHeader>
-          {detailLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : selectedReport ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">
-                  {formatDate(selectedReport.report.date)}
-                </span>
-                <Badge variant={STATUS_VARIANT[selectedReport.report.status] || "default"}>
-                  {selectedReport.report.status}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                By {selectedReport.report.firstName} {selectedReport.report.lastName}
-              </p>
-              {selectedReport.report.summary && (
-                <p className="text-sm">{selectedReport.report.summary}</p>
-              )}
-              {selectedReport.report.reviewerComment && (
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">
-                    Reviewer Comment
-                  </p>
-                  <p className="text-sm">{selectedReport.report.reviewerComment}</p>
+          {selectedReport && (
+            <div className="space-y-5">
+              <div className="rounded-xl border p-4 bg-muted/20 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Log for {formatDate(selectedReport.date)}</h3>
+                    {selectedReport.firstName && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Submitted by: {selectedReport.firstName} {selectedReport.lastName}</p>
+                    )}
+                  </div>
+                  <Badge variant={statusStyles[selectedReport.status] || "secondary"} className="capitalize">
+                    {statusLabels[selectedReport.status] || selectedReport.status}
+                  </Badge>
                 </div>
-              )}
-              <Separator />
-              <div>
-                <p className="text-sm font-medium mb-2">
-                  Tasks ({selectedReport.tasks.length})
-                </p>
-                {selectedReport.tasks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tasks logged.</p>
+
+                <div className="text-xs border-t pt-2.5">
+                  <span className="text-muted-foreground block mb-1">Daily Summary:</span>
+                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">{selectedReport.summary || "No summary provided."}</p>
+                </div>
+              </div>
+
+              {/* Tasks Breakdown */}
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Tasks Breakdown
+                </h4>
+                {selectedReportLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : selectedReportTasks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic text-center py-2 bg-muted/10 rounded-lg">
+                    No individual task logs linked to this report.
+                  </p>
                 ) : (
                   <div className="space-y-2">
-                    {selectedReport.tasks.map((t) => (
-                      <div
-                        key={t.id}
-                        className="flex items-center justify-between text-sm border-b pb-2 last:border-0"
-                      >
-                        <span className="flex-1">{t.description}</span>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <Badge variant="outline" className="text-xs">
-                            {t.status}
-                          </Badge>
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {t.hoursSpent}h
-                          </span>
+                    {selectedReportTasks.map((t, idx) => (
+                      <div key={idx} className="rounded-lg border p-3 text-xs bg-muted/5 space-y-1.5">
+                        <div className="flex justify-between font-semibold">
+                          <span className="text-foreground">{t.description}</span>
+                          <span className="text-primary shrink-0">{t.hoursSpent} hr{t.hoursSpent !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>Task Link: {t.taskId ? "Yes" : "General Work"}</span>
+                          <span className="capitalize font-medium">Status: {t.status}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
-          ) : null}
-          <DialogFooter showCloseButton>
-            <Button variant="outline" onClick={() => setDetailOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Review Dialog */}
-      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Review Report</DialogTitle>
-          </DialogHeader>
-          {detailLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : selectedReport ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">
-                  {formatDate(selectedReport.report.date)}
-                </span>
-                <Badge variant="info">submitted</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                By {selectedReport.report.firstName} {selectedReport.report.lastName}
-              </p>
-              {selectedReport.report.summary && (
-                <p className="text-sm">{selectedReport.report.summary}</p>
-              )}
-              <Separator />
-              <div>
-                <p className="text-sm font-medium mb-2">
-                  Tasks ({selectedReport.tasks.length})
-                </p>
-                {selectedReport.tasks.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between text-sm border-b pb-2 last:border-0"
-                  >
-                    <span className="flex-1">{t.description}</span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <Badge variant="outline" className="text-xs">
-                        {t.status}
-                      </Badge>
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {t.hoursSpent}h
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Separator />
-              <div>
-                <Label>Decision</Label>
-                <div className="flex gap-2 mt-1">
-                  <Button
-                    variant={reviewAction === "reviewed" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setReviewAction("reviewed")}
-                  >
-                    <CheckCircle className="mr-1 h-4 w-4" />
-                    Approve
-                  </Button>
-                  <Button
-                    variant={reviewAction === "rejected" ? "destructive" : "outline"}
-                    size="sm"
-                    onClick={() => setReviewAction("rejected")}
-                  >
-                    <XCircle className="mr-1 h-4 w-4" />
-                    Reject
-                  </Button>
+              {/* Review notes if any */}
+              {selectedReport.reviewerComment && (
+                <div className="rounded-lg bg-muted/60 p-3 text-xs border border-border/40">
+                  <span className="font-semibold text-muted-foreground flex items-center gap-1 mb-1">
+                    <Clock className="h-3.5 w-3.5" /> Review Comment
+                  </span>
+                  <p className="leading-relaxed">{selectedReport.reviewerComment}</p>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="review-comment">
-                  Comment {reviewAction === "rejected" && <span className="text-destructive">*</span>}
-                </Label>
-                <Textarea
-                  id="review-comment"
-                  placeholder={
-                    reviewAction === "rejected"
-                      ? "Provide a reason for rejection..."
-                      : "Optional feedback..."
-                  }
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  rows={3}
-                />
-              </div>
+              )}
+
+              {/* Review Input for HODs (only if status is submitted) */}
+              {isHodOrAdmin && selectedReport.status === "submitted" && selectedReport.staffId !== staff?.id && (
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Add HOD Review Comments
+                  </h4>
+                  <Textarea
+                    placeholder="Enter review comments (required for rejection)..."
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    maxLength={500}
+                    rows={2}
+                  />
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSelectedReport(null)}
+                      disabled={reviewSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => handleReviewAction("rejected")}
+                      disabled={reviewSubmitting}
+                    >
+                      Reject Log
+                    </Button>
+                    <Button
+                      type="button"
+                      className="bg-success text-success-foreground hover:bg-success/90"
+                      onClick={() => handleReviewAction("reviewed")}
+                      disabled={reviewSubmitting}
+                    >
+                      Mark Reviewed
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReviewOpen(false)} disabled={reviewSaving}>
-              Cancel
-            </Button>
-            <Button
-              variant={reviewAction === "rejected" ? "destructive" : "default"}
-              onClick={handleReview}
-              disabled={reviewSaving || !selectedReport}
-            >
-              {reviewAction === "reviewed" ? "Approve" : "Reject"}
-            </Button>
-          </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 import { SignJWT } from "jose";
 import { db, tables } from "../../db";
 import { eq } from "drizzle-orm";
-import { authenticate, createToken, AuthRequest } from "../../middleware/auth";
+import { authenticate, createToken, createRefreshToken, verifyRefreshToken, AuthRequest } from "../../middleware/auth";
 import { verifyGoogleToken } from "../../utils/google";
 
 export const authRouter = Router();
@@ -48,8 +48,9 @@ authRouter.post("/login", authLimiter, async (req, res) => {
     if (!valid) return res.status(401).json({ error: "Invalid credentials" });
     if (!user.isActive) return res.status(403).json({ error: "Account is deactivated" });
     const token = await createToken({ id: user.id, email: user.email, role: user.role, employeeId: user.employeeId, tokenVersion: user.tokenVersion });
+    const refreshToken = await createRefreshToken({ id: user.id, email: user.email, role: user.role, employeeId: user.employeeId, tokenVersion: user.tokenVersion });
     const { passwordHash, ...safeUser } = user;
-    res.json({ token, user: safeUser });
+    res.json({ token, refreshToken, user: safeUser });
   } catch (err: any) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -69,9 +70,61 @@ authRouter.post("/signup", authLimiter, async (req, res) => {
     const tokenVersion = 0;
     await db.insert(tables.staff).values({ id, email, passwordHash, firstName, lastName, employeeId, role, tokenVersion }).run();
     const token = await createToken({ id, email, role, employeeId, tokenVersion });
-    res.status(201).json({ token, user: { id, email, firstName, lastName, employeeId, role } });
+    const refreshToken = await createRefreshToken({ id, email, role, employeeId, tokenVersion });
+    res.status(201).json({ token, refreshToken, user: { id, email, firstName, lastName, employeeId, role } });
   } catch (err: any) {
     console.error("Signup error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+authRouter.post("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ error: "Refresh token is required" });
+    }
+
+    let payload;
+    try {
+      payload = await verifyRefreshToken(refreshToken);
+    } catch (err: any) {
+      return res.status(401).json({ error: err.message || "Invalid refresh token" });
+    }
+
+    // Verify user still exists and is active in database
+    const users = await db
+      .select()
+      .from(tables.staff)
+      .where(eq(tables.staff.id, payload.id))
+      .all();
+    const user = users[0] || null;
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: "Account is deactivated" });
+    }
+
+    // Check tokenVersion matches
+    if (user.tokenVersion !== payload.tokenVersion) {
+      return res.status(401).json({ error: "Session invalid, please login again" });
+    }
+
+    // Generate new access token and rotated refresh token
+    const newAuthUser = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      employeeId: user.employeeId,
+      tokenVersion: user.tokenVersion,
+    };
+
+    const token = await createToken(newAuthUser);
+    const newRefreshToken = await createRefreshToken(newAuthUser);
+    const { passwordHash, ...safeUser } = user;
+
+    res.json({ token, refreshToken: newRefreshToken, user: safeUser });
+  } catch (err: any) {
+    console.error("Refresh token error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -169,9 +222,16 @@ authRouter.post("/google", authLimiter, async (req, res) => {
       employeeId: user.employeeId,
       tokenVersion: user.tokenVersion,
     });
+    const refreshToken = await createRefreshToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      employeeId: user.employeeId,
+      tokenVersion: user.tokenVersion,
+    });
 
     const { passwordHash, ...safeUser } = user;
-    res.json({ token, user: safeUser });
+    res.json({ token, refreshToken, user: safeUser });
   } catch (err: any) {
     console.error("Google login error:", err);
     res.status(500).json({ error: "Internal server error" });

@@ -33,6 +33,27 @@ export async function createToken(payload: AuthUser): Promise<string> {
     .sign(getSecret());
 }
 
+export async function createRefreshToken(payload: AuthUser): Promise<string> {
+  return new SignJWT({ id: payload.id, type: "refresh", tokenVersion: payload.tokenVersion })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("30d")
+    .setJti(uuid())
+    .sign(getSecret());
+}
+
+export async function verifyRefreshToken(token: string): Promise<any> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    if (payload.type !== "refresh") {
+      throw new Error("Not a refresh token");
+    }
+    return payload;
+  } catch (err: any) {
+    throw new Error(err.message || "Invalid or expired refresh token");
+  }
+}
+
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {

@@ -43,6 +43,13 @@ class AuthRepository {
     await client.post('/auth/logout');
   }
 
+  Future<AuthResponseModel> refreshAccessToken(String refreshToken) async {
+    final response = await client.post('/auth/refresh', data: {
+      'refreshToken': refreshToken,
+    });
+    return AuthResponseModel.fromJson(response.data);
+  }
+
   Future<AuthResponseModel> loginWithGoogle(String idToken) async {
     final response = await client.post('/auth/google', data: {
       'idToken': idToken,

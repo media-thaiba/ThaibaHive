@@ -1,6 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../network/providers.dart';
-import '../services/logger_service.dart';
 import '../services/update_service.dart';
 
 enum UpdateDownloadState {
@@ -13,9 +11,7 @@ enum UpdateDownloadState {
 
 /// Provider for the UpdateService
 final updateServiceProvider = Provider<UpdateService>((ref) {
-  final api = ref.watch(apiClientProvider);
-  final loggerSvc = ref.watch(loggerServiceProvider);
-  return UpdateService(api, loggerSvc);
+  return UpdateService();
 });
 
 /// FutureProvider that fetches the latest update metadata and parses it
