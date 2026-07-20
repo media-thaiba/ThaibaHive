@@ -47,6 +47,7 @@ class DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
         bottom: Radius.circular(AppRadius.card),
       ),
       child: Container(
+        height: maxExtent,
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1A1D21) : const Color(0xFFF0F7F2),
           boxShadow: [
