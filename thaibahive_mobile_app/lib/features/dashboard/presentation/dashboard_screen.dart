@@ -246,6 +246,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             pinned: true,
             delegate: DashboardHeaderDelegate(
               user: user,
+              stats: dashState.stats,
               onAvatarTap: () => _showProfileBottomSheet(user),
               topPadding: topPadding,
             ),
