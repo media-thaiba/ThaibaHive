@@ -19,7 +19,6 @@ import {
   HelpCircle,
   ChevronRight,
   Sparkles,
-  ArrowRight,
   LogOut,
   CalendarPlus,
   ClipboardPlus,
@@ -31,9 +30,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Calendar,
-  Layers,
   ArrowUpRight,
-  AlertCircle,
 } from "lucide-react";
 
 type DashboardData = {
@@ -92,55 +89,35 @@ export default function DashboardPage() {
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback(async () => {
     if (!staff) return;
-    Promise.all([
-      fetch("/api/staff").then((r) => r.json()).catch(() => ({ staff: [] })),
-      fetch("/api/attendance/my").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/tasks").then((r) => r.json()).catch(() => ({ tasks: [] })),
-      fetch("/api/approvals").then((r) => r.json()).catch(() => ({ approvals: [] })),
-      fetch("/api/leaves/balances").then((r) => r.json()).catch(() => ({ balances: [] })),
-      fetch("/api/attendance/logs").then((r) => r.json()).catch(() => ({ logs: [] })),
-    ]).then(([staffData, attData, taskData, approvalData, leaveData, logData]) => {
-      const tasks = taskData.tasks || [];
-      const myTasks = tasks.filter((t: { assignedToId: string }) => t.assignedToId === staff.id);
-      const pendingTasks = myTasks.filter((t: { status: string }) => t.status !== "completed");
-      const completedTasks = myTasks.length - pendingTasks.length;
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      const d = await res.json();
 
-      setActiveTasks(pendingTasks.slice(0, 4)); // Show top 4 pending tasks
+      if (!res.ok) { setLoading(false); return; }
 
-      const hasCheckedIn = !!attData.todayLog;
-      const s = staffData.staff?.find((st: { id: string }) => st.id === staff.id) || staff;
-      const profileChecks = [s.phone, s.designation, s.dateOfBirth, s.qualifications, s.skills, s.emergencyContactName, s.bankAccount];
-      const filledFields = profileChecks.filter(Boolean).length;
-      const totalFields = profileChecks.length;
-
-      const balances = leaveData.balances || [];
-      let leaveTotal = balances.reduce((sum: number, b: any) => sum + (b.totalDays || 0), 0);
-      let leaveUsed = balances.reduce((sum: number, b: any) => sum + (b.usedDays || 0), 0);
-      if (balances.length === 0) { leaveTotal = 18; leaveUsed = 0; }
-      const leaveRemaining = leaveTotal - leaveUsed;
-
-      const todayStr = new Date().toISOString().split("T")[0];
-      const allLogs = logData.logs || [];
-      const presentTodayCount = allLogs.filter((l: any) => l.date === todayStr && l.checkIn).length;
+      setActiveTasks(d.activeTasks || []);
 
       setData({
-        staffCount: staffData.staff?.length || 0,
-        todayPresent: presentTodayCount,
-        pendingApprovals: approvalData.approvals?.length || 0,
-        myPendingTasks: pendingTasks.length,
-        completedTasks,
-        totalTasks: myTasks.length,
-        checkedInToday: hasCheckedIn,
-        profileFields: { filled: filledFields, total: totalFields },
-        leaveRemaining,
-        leaveTotal,
-        hasCheckedIn,
-        showWelcome: !hasCheckedIn && myTasks.length === 0,
+        staffCount: d.staffCount ?? 0,
+        todayPresent: d.todayPresent ?? 0,
+        pendingApprovals: d.pendingApprovals ?? 0,
+        myPendingTasks: d.myPendingTasks ?? 0,
+        completedTasks: d.completedTasks ?? 0,
+        totalTasks: d.totalTasks ?? 0,
+        checkedInToday: d.checkedInToday ?? false,
+        profileFields: d.profileFields ?? { filled: 0, total: 7 },
+        leaveRemaining: d.leaveRemaining ?? 0,
+        leaveTotal: d.leaveTotal ?? 0,
+        hasCheckedIn: d.checkedInToday ?? false,
+        showWelcome: !(d.checkedInToday) && (d.totalTasks ?? 0) === 0,
       });
+    } catch {
+      // silently fail
+    } finally {
       setLoading(false);
-    });
+    }
   }, [staff]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -405,7 +382,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-base font-semibold">My Active Tasks</CardTitle>
                 <p className="text-xs text-muted-foreground">Things you need to focus on today</p>
               </div>
-              <Link href="/tasks" className="text-xs font-medium text-primary hover:underline flex items-center gap-0.5">
+              <Link href="/tasks" aria-label="View all tasks" className="text-xs font-medium text-primary hover:underline flex items-center gap-0.5">
                 View all tasks <ChevronRight className="h-3 w-3" />
               </Link>
             </CardHeader>
@@ -417,6 +394,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <button
                           onClick={() => handleToggleTask(task.id)}
+                          aria-label={`Mark "${task.title}" as complete`}
                           className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-muted-foreground/30 hover:border-primary text-transparent hover:text-primary hover:bg-primary/5 transition-colors"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
@@ -585,28 +563,28 @@ export default function DashboardPage() {
           <DialogHeader><DialogTitle>Apply for Leave</DialogTitle></DialogHeader>
           <form onSubmit={handleLeaveSubmit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Leave Type *</Label>
-              <Select value={leaveForm.leaveTypeId} onChange={(e) => setLeaveForm({ ...leaveForm, leaveTypeId: e.target.value })} required>
+              <Label htmlFor="leave-type">Leave Type *</Label>
+              <Select id="leave-type" value={leaveForm.leaveTypeId} onChange={(e) => setLeaveForm({ ...leaveForm, leaveTypeId: e.target.value })} required>
                 <option value="">Select leave type</option>
                 {leaveTypes.map((lt) => <option key={lt.id} value={lt.id}>{lt.name}</option>)}
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Start Date *</Label>
-                <Input type="date" value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })} required />
+                <Label htmlFor="leave-start">Start Date *</Label>
+                <Input id="leave-start" type="date" value={leaveForm.startDate} onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })} required />
               </div>
               <div className="space-y-1.5">
-                <Label>End Date *</Label>
-                <Input type="date" value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} required />
+                <Label htmlFor="leave-end">End Date *</Label>
+                <Input id="leave-end" type="date" value={leaveForm.endDate} onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })} required />
               </div>
             </div>
             {leaveForm.startDate && leaveForm.endDate && (
               <p className="text-xs text-muted-foreground">Duration: {calcDays(leaveForm.startDate, leaveForm.endDate)} day(s)</p>
             )}
             <div className="space-y-1.5">
-              <Label>Reason</Label>
-              <Textarea placeholder="Reason for leave (optional)" value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} rows={2} />
+              <Label htmlFor="leave-reason">Reason</Label>
+              <Textarea id="leave-reason" placeholder="Reason for leave (optional)" value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} rows={2} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setLeaveOpen(false)}>Cancel</Button>
@@ -621,17 +599,17 @@ export default function DashboardPage() {
           <DialogHeader><DialogTitle>Create Task</DialogTitle></DialogHeader>
           <form onSubmit={handleTaskSubmit} className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Title *</Label>
-              <Input placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required />
+              <Label htmlFor="task-title">Title *</Label>
+              <Input id="task-title" placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required />
             </div>
             <div className="space-y-1.5">
-              <Label>Description</Label>
-              <Textarea placeholder="Task description (optional)" value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} />
+              <Label htmlFor="task-desc">Description</Label>
+              <Textarea id="task-desc" placeholder="Task description (optional)" value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Priority</Label>
-                <Select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}>
+                <Label htmlFor="task-priority">Priority</Label>
+                <Select id="task-priority" value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
@@ -639,13 +617,13 @@ export default function DashboardPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Due Date</Label>
-                <Input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
+                <Label htmlFor="task-due">Due Date</Label>
+                <Input id="task-due" type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Assign To</Label>
-              <Select value={taskForm.assignedToId} onChange={(e) => setTaskForm({ ...taskForm, assignedToId: e.target.value })}>
+              <Label htmlFor="task-assign">Assign To</Label>
+              <Select id="task-assign" value={taskForm.assignedToId} onChange={(e) => setTaskForm({ ...taskForm, assignedToId: e.target.value })}>
                 <option value="">Unassigned</option>
                 {staffList.map((s) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
               </Select>
@@ -661,21 +639,23 @@ export default function DashboardPage() {
       {/* ─── Guided Tour Overlay ─── */}
       {tourActive && (
         <>
-          <div className="fixed inset-0 z-[var(--z-overlay)] bg-black/35 backdrop-blur-sm" onClick={() => setTourActive(false)} />
+          <div className="fixed inset-0 z-[var(--z-overlay)] bg-black/35 backdrop-blur-sm" onClick={() => setTourActive(false)} aria-hidden="true" />
           <div
             ref={tooltipRef}
+            role="dialog"
+            aria-label={`Tour step ${tourStep + 1} of ${TOUR_STEPS.length}: ${TOUR_STEPS[tourStep]?.title}`}
             className="fixed z-[var(--z-tooltip)] w-72 rounded-xl border bg-popover p-4 shadow-lg animate-in fade-in-0 zoom-in-95 duration-200"
             style={{ top: tooltipPos.top, left: tooltipPos.left }}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <p className="text-sm font-semibold">{TOUR_STEPS[tourStep]?.title}</p>
-              <button onClick={() => setTourActive(false)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setTourActive(false)} aria-label="Close tour" className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <p className="text-xs text-muted-foreground mb-3">{TOUR_STEPS[tourStep]?.content}</p>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5" aria-hidden="true">
                 {TOUR_STEPS.map((_, i) => (
                   <Circle key={i} className={`h-2 w-2 transition-colors ${i === tourStep ? "fill-primary text-primary" : "fill-muted text-muted-foreground"}`} />
                 ))}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staffShifts, staff, shifts } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async () => {
   const all = await db

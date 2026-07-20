@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { announcements, announcementReads, staff, departments, staffDepartments, staffInstitutions } from "@/db/schema";
+import { announcements, announcementReads, staff, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { announcementCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, sql, inArray } from "drizzle-orm";

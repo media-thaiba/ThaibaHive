@@ -8,7 +8,7 @@ const config = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
-  testPathIgnorePatterns: ["<rootDir>/e2e/"],
+  testPathIgnorePatterns: ["/node_modules/", "<rootDir>/e2e/"],
 };
 
 module.exports = createJestConfig(config);

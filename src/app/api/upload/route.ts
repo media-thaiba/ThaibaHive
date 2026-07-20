@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { uploadToDrive } from "@/lib/drive";
 import { isStorageConfigured, uploadToSupabase, checkStorageConfig } from "@/lib/storage";
+import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -23,33 +24,10 @@ const ALLOWED_TYPES = new Set([
   "text/plain",
 ]);
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 10;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
-
-export const POST = requireAuth(async (request: Request, session) => {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
-
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json(
-      { error: "Too many upload requests. Please try again later." },
-      { status: 429 }
-    );
-  }
+export const POST = requireAuth(async (request: Request, _session) => {
+  const ip = extractIp(request);
+  const rl = checkRateLimit(ip, "upload");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   try {
     const formData = await request.formData();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { purchaseRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { isManagedBy } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
 
 type Transition = {
@@ -26,6 +27,20 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (status === "rejected") {
+    const rejectTransition = transitions.find((t) => t.from === existing.status);
+    if (!rejectTransition) {
+      return NextResponse.json({ error: "Cannot reject from current status" }, { status: 403 });
+    }
+
+    if (!rejectTransition.roles.includes(session.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const authorized = await isManagedBy(session.staffId, session.role, existing.requesterId);
+    if (!authorized) {
+      return NextResponse.json({ error: "You are not authorized to reject this purchase request" }, { status: 403 });
+    }
+
     const updated = await db
       .update(purchaseRequests)
       .set({
@@ -46,6 +61,11 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   if (!transition) {
     return NextResponse.json({ error: "Cannot transition from current status with your role" }, { status: 403 });
+  }
+
+  const authorized = await isManagedBy(session.staffId, session.role, existing.requesterId);
+  if (!authorized) {
+    return NextResponse.json({ error: "You are not authorized to approve this purchase request" }, { status: 403 });
   }
 
   const updateData: Record<string, unknown> = {

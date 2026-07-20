@@ -21,7 +21,7 @@ Select.displayName = "Select";
 interface SelectItemProps {
   children: React.ReactNode;
   value: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const SelectItem = ({ children, value, ...props }: SelectItemProps) => (

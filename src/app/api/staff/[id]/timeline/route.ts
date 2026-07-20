@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, leaveRequests, tasks, dailyReports, staffRecognition, expenseClaims } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq, desc } from "drizzle-orm";
 
 type TimelineItem = {
@@ -13,8 +14,13 @@ type TimelineItem = {
   metadata: Record<string, unknown>;
 };
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+
+  const authorized = await canAccessStaff(session.staffId, session.role, id);
+  if (!authorized) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const [attendance, leaves, assignedTasks, reports, recognitions, expenses] = await Promise.all([
     db.select().from(attendanceLogs).where(eq(attendanceLogs.staffId, id)).orderBy(desc(attendanceLogs.date)).all(),

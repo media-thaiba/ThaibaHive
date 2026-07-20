@@ -233,6 +233,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final authState = ref.watch(authProvider);
     final user = authState.user;
     final sectionOrder = ref.watch(dashboardSectionOrderProvider);
+    final topPadding = MediaQuery.of(context).padding.top;
 
     return RefreshIndicator(
       color: AppColors.primary(context),
@@ -241,12 +242,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           // ── Collapsible Header ──
-          SliverPersistentHeader(
+            SliverPersistentHeader(
             pinned: true,
             delegate: DashboardHeaderDelegate(
               user: user,
-              stats: dashState.isLoading ? null : dashState.stats,
               onAvatarTap: () => _showProfileBottomSheet(user),
+              topPadding: topPadding,
             ),
           ),
 
@@ -272,7 +273,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding:
-                          const EdgeInsets.only(top: AppSpacing.section),
+                          const EdgeInsets.only(top: AppSpacing.dashboardSection),
                       child: AttendanceCard(stats: dashState.stats!),
                     ),
                   );
@@ -280,7 +281,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding:
-                          const EdgeInsets.only(top: AppSpacing.section),
+                          const EdgeInsets.only(top: AppSpacing.dashboardSection),
                       child: QuickActionsGrid(),
                     ),
                   );
@@ -288,7 +289,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding:
-                          const EdgeInsets.only(top: AppSpacing.section),
+                          const EdgeInsets.only(top: AppSpacing.dashboardSection),
                       child: PersonalSummary(stats: dashState.stats!),
                     ),
                   );
@@ -296,7 +297,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(
-                          top: AppSpacing.section, bottom: AppSpacing.major),
+                          top: AppSpacing.dashboardSection, bottom: AppSpacing.major),
                       child: RecentActivity(
                         announcements:
                             dashState.stats!.recentAnnouncements,

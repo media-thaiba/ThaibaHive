@@ -34,34 +34,30 @@ class RoleBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final gradients = ThaibaHiveTheme.roleBadgeGradients;
     final colors = gradients[role.toLowerCase()] ??
         [const Color(0xFF6B7280), const Color(0xFF9CA3AF)];
+    final primaryColor = colors.first;
 
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: primaryColor.withValues(alpha: isDark ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: colors.first.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: primaryColor.withValues(alpha: isDark ? 0.35 : 0.25),
+          width: 1.0,
+        ),
       ),
       child: Text(
         _label,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'PlusJakartaSans',
-          fontSize: 10,
+          fontSize: 9.5,
           fontWeight: FontWeight.w800,
-          color: Colors.white,
+          color: primaryColor,
           letterSpacing: 0.8,
         ),
       ),

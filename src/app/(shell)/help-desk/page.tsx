@@ -20,8 +20,6 @@ import {
   Plus, 
   Wrench,
   Search,
-  Filter,
-  CheckCircle,
   Inbox
 } from "lucide-react";
 

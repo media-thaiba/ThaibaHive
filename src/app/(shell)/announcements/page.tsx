@@ -68,7 +68,7 @@ export default function AnnouncementsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
-  const [markingRead, setMarkingRead] = useState<Set<string>>(new Set());
+  const [_markingRead, _setMarkingRead] = useState<Set<string>>(new Set());
 
   const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:create") ?? false);
   const canManage = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:manage") ?? false);

@@ -41,17 +41,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Google ID token is required" }, { status: 400 });
     }
 
-    // Retrieve allowed client IDs from environment
-    const allowedClientIds = process.env.GOOGLE_CLIENT_IDS 
+    const allowedClientIds = process.env.GOOGLE_CLIENT_IDS
       ? process.env.GOOGLE_CLIENT_IDS.split(",").map(c => c.trim())
       : [];
+
+    if (allowedClientIds.length === 0) {
+      console.error("GOOGLE_CLIENT_IDS is not configured — rejecting Google auth");
+      return NextResponse.json({ error: "Google authentication is not configured" }, { status: 503 });
+    }
 
     let payload;
     try {
       payload = await verifyGoogleToken(idToken, allowedClientIds);
     } catch (err: any) {
       console.error("Google token verification failed:", err);
-      return NextResponse.json({ error: err.message || "Invalid Google token" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid Google token" }, { status: 401 });
     }
 
     const { email } = payload;
@@ -64,8 +68,8 @@ export async function POST(request: Request) {
 
     if (!staffMember) {
       return NextResponse.json(
-        { error: `Account with email ${email} is not registered in the system.` },
-        { status: 404 }
+        { error: "Invalid Google token" },
+        { status: 401 }
       );
     }
 

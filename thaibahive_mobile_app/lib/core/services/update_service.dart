@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:thaibahive_mobile/core/constants.dart';
 import 'logger_service.dart';
 
 class UpdateInfo {
@@ -96,7 +97,7 @@ class UpdateService {
       final PackageInfo packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
-      final baseUrl = apiBaseUrl ?? 'https://thaiba-hive.vercel.app/api';
+      final baseUrl = apiBaseUrl ?? AppConstants.apiBaseUrl;
       final response = await _dio.get(
         '$baseUrl/system/update',
         options: Options(receiveTimeout: const Duration(seconds: 10)),

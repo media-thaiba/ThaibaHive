@@ -1,5 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:thaibahive_mobile/app/theme.dart';
 import 'tap_scale.dart';
+
+enum AppCardVariant { solid, flat, glass }
 
 class AppCard extends StatelessWidget {
   final Widget child;
@@ -8,10 +12,11 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final Color? color;
   final Color? borderColor;
-  final double borderRadius;
+  final double? borderRadius;
   final double borderWidth;
   final List<BoxShadow>? customShadows;
   final bool useScaleOnTap;
+  final AppCardVariant variant;
 
   const AppCard({
     super.key,
@@ -21,36 +26,62 @@ class AppCard extends StatelessWidget {
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     this.color,
     this.borderColor,
-    this.borderRadius = 16,
+    this.borderRadius,
     this.borderWidth = 1.0,
     this.customShadows,
     this.useScaleOnTap = true,
+    this.variant = AppCardVariant.solid,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final radius = borderRadius ?? AppRadius.card;
 
-    final resolvedColor = color ?? (isDark ? const Color(0xFF22262b) : Colors.white);
-    final resolvedBorderColor = borderColor ?? 
-        (isDark 
-            ? Colors.white.withValues(alpha: 0.06) 
-            : const Color(0xFFd4dbd4).withValues(alpha: 0.5));
+    Color resolvedColor;
+    Color resolvedBorderColor;
+    List<BoxShadow> resolvedShadows;
 
-    final resolvedShadows = customShadows ?? [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-        blurRadius: 10,
-        offset: const Offset(0, 2),
-      ),
-    ];
+    switch (variant) {
+      case AppCardVariant.flat:
+        resolvedColor = color ??
+            (isDark
+                ? Colors.white.withOpacity(0.04)
+                : Colors.white.withOpacity(0.65));
+        resolvedBorderColor = borderColor ??
+            (isDark
+                ? Colors.white.withOpacity(0.06)
+                : const Color(0xFFd4dbd4).withOpacity(0.35));
+        resolvedShadows = customShadows ?? [];
+        break;
+      case AppCardVariant.glass:
+        resolvedColor = color ??
+            (isDark
+                ? const Color(0xFF22262b).withOpacity(0.4)
+                : Colors.white.withOpacity(0.65));
+        resolvedBorderColor = borderColor ??
+            (isDark
+                ? Colors.white.withOpacity(0.08)
+                : const Color(0xFFd4dbd4).withOpacity(0.4));
+        resolvedShadows = customShadows ?? AppColors.surfaceShadow2(context);
+        break;
+      case AppCardVariant.solid:
+      default:
+        resolvedColor = color ?? AppColors.card(context);
+        resolvedBorderColor = borderColor ??
+            (isDark
+                ? Colors.white.withOpacity(0.06)
+                : const Color(0xFFd4dbd4).withOpacity(0.5));
+        resolvedShadows = customShadows ?? AppColors.surfaceShadow2(context);
+        break;
+    }
 
     Widget cardWidget = Container(
       margin: margin,
       decoration: BoxDecoration(
         color: resolvedColor,
-        borderRadius: BorderRadius.circular(borderRadius),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(
           color: resolvedBorderColor,
           width: borderWidth,
@@ -58,19 +89,19 @@ class AppCard extends StatelessWidget {
         boxShadow: resolvedShadows,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius - borderWidth),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: useScaleOnTap ? null : onTap,
-            child: Padding(
-              padding: padding ?? EdgeInsets.zero,
-              child: child,
-            ),
-          ),
-        ),
+        borderRadius: BorderRadius.circular(radius - borderWidth),
+        child: variant == AppCardVariant.glass
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: _buildInner(context),
+              )
+            : _buildInner(context),
       ),
     );
+
+    if (variant == AppCardVariant.glass) {
+      cardWidget = RepaintBoundary(child: cardWidget);
+    }
 
     if (onTap != null && useScaleOnTap) {
       cardWidget = TapScale(
@@ -80,5 +111,18 @@ class AppCard extends StatelessWidget {
     }
 
     return cardWidget;
+  }
+
+  Widget _buildInner(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: useScaleOnTap ? null : onTap,
+        child: Padding(
+          padding: padding ?? EdgeInsets.zero,
+          child: child,
+        ),
+      ),
+    );
   }
 }

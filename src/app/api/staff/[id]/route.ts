@@ -3,10 +3,17 @@ import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLog } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq, sql } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+
+  const authorized = await canAccessStaff(session.staffId, session.role, id);
+  if (!authorized) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const member = await db
     .select({
       id: staff.id, email: staff.email, firstName: staff.firstName,
@@ -32,8 +39,14 @@ const UPDATABLE_FIELDS = [
   "contractEndDate", "teachingSubjects", "biography",
 ] as const;
 
-export const PUT = requireAuth(async (request: Request, _session, context) => {
+export const PUT = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
+
+  const authorized = await canAccessStaff(session.staffId, session.role, id);
+  if (!authorized) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json();
 
   const { departmentIds, institutionIds, ...fields } = body;
@@ -79,8 +92,14 @@ export const PUT = requireAuth(async (request: Request, _session, context) => {
   return NextResponse.json({ staff: safeStaff });
 }, "staff:update");
 
-export const PATCH = requireAuth(async (request: Request, _session, context) => {
+export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
+
+  const authorized = await canAccessStaff(session.staffId, session.role, id);
+  if (!authorized) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json();
 
   const safeFields: Record<string, unknown> = {};

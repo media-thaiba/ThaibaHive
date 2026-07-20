@@ -182,7 +182,7 @@ function TaskCardOverlay({ task }: { task: Task }) {
 }
 
 export default function TasksPage() {
-  const { staff } = useAuth();
+  const { staff: _staff } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTask, setActiveTask] = useState<Task | null>(null);

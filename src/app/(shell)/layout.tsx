@@ -5,10 +5,17 @@ import { QueryProvider } from "@/providers/query-provider";
 import { ShellNav } from "@/components/layout/shell-nav";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { BottomNav } from "@/components/layout/bottom-nav";
-import { CommandPalette } from "@/components/layout/command-palette";
 import { DiagnosticsButton } from "@/components/diagnostics-button";
 import { Toaster } from "sonner";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
+
+const CommandPalette = lazy(() =>
+  import("@/components/layout/command-palette").then((m) => ({ default: m.CommandPalette }))
+);
+
+function CommandPaletteFallback() {
+  return null;
+}
 
 export default function ShellLayout({
   children,
@@ -38,7 +45,9 @@ export default function ShellLayout({
           <BottomNav />
           <DiagnosticsButton />
           <Toaster position="top-right" richColors />
-          <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+          <Suspense fallback={<CommandPaletteFallback />}>
+            <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+          </Suspense>
         </div>
       </AuthProvider>
     </QueryProvider>

@@ -1,5 +1,4 @@
 import { GET, PUT } from "@/app/api/attendance/settings/route";
-import { db } from "@/db";
 import { verifySession, hasPermission } from "@/lib/auth";
 
 const mockGet = jest.fn();

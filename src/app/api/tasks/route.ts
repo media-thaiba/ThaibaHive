@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { tasks, staff, staffDepartments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { taskCreateSchema } from "@/lib/validation/schemas";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { desc, eq, and, asc, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -68,6 +69,9 @@ export const GET = requireAuth(async (request, session) => {
 }, "tasks:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json();
   const parsed = taskCreateSchema.safeParse(body);
   if (!parsed.success) {

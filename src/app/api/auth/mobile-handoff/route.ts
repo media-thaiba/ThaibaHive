@@ -111,7 +111,17 @@ export async function POST(request: Request) {
       return redirectWithError("session_invalid", "Session is no longer valid. Please login again.");
     }
 
-    const redirectPath = new URL(request.url).searchParams.get("redirect") || "/";
+    const rawRedirect = new URL(request.url).searchParams.get("redirect") || "/";
+    // Validate redirect is a same-origin relative path (no protocol-relative or absolute URLs)
+    let redirectPath = "/";
+    if (
+      rawRedirect.startsWith("/") &&
+      !rawRedirect.startsWith("//") &&
+      !rawRedirect.startsWith("/\\") &&
+      !rawRedirect.startsWith("\\/")
+    ) {
+      redirectPath = rawRedirect;
+    }
 
     await createSession({
       staffId: user.id,

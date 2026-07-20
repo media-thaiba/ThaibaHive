@@ -19,8 +19,7 @@ import {
   Info,
   CheckCircle,
   Clock,
-  XCircle,
-  AlertTriangle
+  XCircle
 } from "lucide-react";
 
 type Event = {

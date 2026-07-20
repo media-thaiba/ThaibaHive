@@ -6,11 +6,13 @@ import 'package:thaibahive_mobile/shared/widgets/tap_scale.dart';
 
 class _ActionItem {
   final String label;
+  final String description;
   final IconData icon;
   final Color color;
   final String route;
   const _ActionItem(
       {required this.label,
+      required this.description,
       required this.icon,
       required this.color,
       required this.route});
@@ -21,21 +23,25 @@ class QuickActionsGrid extends StatelessWidget {
   final List<_ActionItem> _actions = const [
     _ActionItem(
         label: 'Check In/Out',
+        description: 'Log hours & breaks',
         icon: Icons.fingerprint_rounded,
         color: Color(0xFF1a8a3e),
         route: '/attendance'),
     _ActionItem(
         label: 'Apply Leave',
+        description: 'Request time off',
         icon: Icons.beach_access_rounded,
         color: Color(0xFFFF9800),
         route: '/leaves/apply'),
     _ActionItem(
         label: 'New Task',
+        description: 'Assign pending items',
         icon: Icons.add_task_rounded,
         color: Color(0xFF2196F3),
         route: '/tasks/create'),
     _ActionItem(
-        label: 'Attendance',
+        label: 'View History',
+        description: 'Check past records',
         icon: Icons.calendar_month_rounded,
         color: Color(0xFF9C27B0),
         route: '/attendance'),
@@ -58,9 +64,10 @@ class QuickActionsGrid extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 2.2,
+              childAspectRatio: 2.3,
               crossAxisSpacing: AppSpacing.normal,
               mainAxisSpacing: AppSpacing.normal,
             ),
@@ -92,43 +99,66 @@ class _ActionCard extends StatelessWidget {
           color: AppColors.card(context),
           borderRadius: BorderRadius.circular(AppRadius.button),
           border: Border.all(
-            color: action.color.withValues(alpha: isDark ? 0.2 : 0.15),
+            color: AppColors.border(context).withValues(alpha: isDark ? 0.4 : 0.6),
+            width: 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.shadow(context),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+              color: AppColors.shadow(context).withValues(alpha: isDark ? 0.15 : 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(width: AppSpacing.normal),
+            // Outlined soft icon box
             Container(
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: action.color.withValues(alpha: isDark ? 0.18 : 0.1),
-                borderRadius: BorderRadius.circular(AppRadius.button),
+                color: action.color.withValues(alpha: isDark ? 0.15 : 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.badge + 2),
+                border: Border.all(
+                  color: action.color.withValues(alpha: isDark ? 0.35 : 0.25),
+                  width: 1.0,
+                ),
               ),
-              child: Icon(action.icon, color: action.color, size: 22),
+              child: Icon(action.icon, color: action.color, size: 18),
             ),
             const SizedBox(width: AppSpacing.normal),
-            Flexible(
-              child: Text(
-                action.label.toUpperCase(),
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: action.color.withValues(alpha: isDark ? 0.9 : 0.85),
-                  letterSpacing: 0.3,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+            // Text labels Stacked
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    action.label,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.foreground(context),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    action.description,
+                    style: AppTypography.caption(context).copyWith(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
+            const SizedBox(width: AppSpacing.compact),
           ],
         ),
       ),

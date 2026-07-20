@@ -80,7 +80,7 @@ export default function AttendancePage() {
 
   // Pagination states
   const [myPage, setMyPage] = useState(1);
-  const [myTotal, setMyTotal] = useState(0);
+  const [, setMyTotal] = useState(0);
   const [hasMoreMy, setHasMoreMy] = useState(false);
   const [loadingMoreMy, setLoadingMoreMy] = useState(false);
 

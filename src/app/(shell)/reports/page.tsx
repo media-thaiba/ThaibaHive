@@ -17,11 +17,7 @@ import {
   FileSpreadsheet,
   Plus,
   Trash2,
-  Check,
-  X,
-  FileText,
   Clock,
-  User,
   PlusCircle,
   Eye,
 } from "lucide-react";
@@ -161,7 +157,7 @@ export default function ReportsPage() {
         status: t.status || "completed",
       })));
       setShowForm(true);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load report details for editing");
     } finally {
       setLoading(false);

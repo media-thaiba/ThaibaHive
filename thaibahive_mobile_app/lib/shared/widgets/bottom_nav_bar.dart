@@ -20,13 +20,20 @@ class BottomNavShell extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          SafeArea(
-            bottom: false,
-            child: UpdateBanner(),
+          Positioned.fill(
+            child: navigationShell,
           ),
-          Expanded(child: navigationShell),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: UpdateBanner(),
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: Padding(
@@ -43,18 +50,20 @@ class BottomNavShell extends ConsumerWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: isDark
-                    ? theme.colorScheme.surface.withValues(alpha: 0.85)
-                    : theme.colorScheme.surface.withValues(alpha: 0.90),
+                    ? const Color(0xFF22262b).withValues(alpha: 0.94)
+                    : Colors.white.withValues(alpha: 0.98),
                 borderRadius: BorderRadius.circular(AppRadius.card),
                 border: Border.all(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFd4dbd4).withValues(alpha: 0.6),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.shadow(context),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),

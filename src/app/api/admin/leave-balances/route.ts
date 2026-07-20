@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveBalances, staff, leaveTypes } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request) => {
   const { searchParams } = new URL(request.url);

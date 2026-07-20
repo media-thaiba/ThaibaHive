@@ -38,5 +38,21 @@
     "apk_name": "ThaibaHive_V1.0.0_3.apk",
     "apk_size_mb": 31.13,
     "status": "success"
+  },
+  {
+    "version": "1.0.0+4",
+    "tag": "v1.0.0-4",
+    "timestamp": "2026-07-19T14:43:57.408811Z",
+    "apk_name": "ThaibaHive_V1.0.0_4.apk",
+    "apk_size_mb": 31.13,
+    "status": "success"
+  },
+  {
+    "version": "1.0.0+4",
+    "tag": "v1.0.0-4",
+    "timestamp": "2026-07-19T14:52:54.635499Z",
+    "apk_name": "ThaibaHive_V1.0.0_4.apk",
+    "apk_size_mb": 31.13,
+    "status": "success"
   }
 ]

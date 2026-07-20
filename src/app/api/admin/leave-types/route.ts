@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveTypes } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async () => {
   const all = await db.select().from(leaveTypes).orderBy(leaveTypes.name).all();

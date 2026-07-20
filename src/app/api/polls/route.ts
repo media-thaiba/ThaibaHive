@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { polls, staff, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { pollCreateSchema } from "@/lib/validation/schemas";
-import { eq, desc, and, or, isNull, inArray, sql } from "drizzle-orm";
+import { eq, desc, and, or, isNull, inArray } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";
 import type { StaffRole } from "@/types";
 

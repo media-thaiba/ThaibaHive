@@ -12,7 +12,7 @@ import {
   financialTransactions,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, gte, lte, inArray, sql } from "drizzle-orm";
+import { eq, and, gte, lte, inArray } from "drizzle-orm";
 
 function esc(val: unknown): string {
   if (val === null || val === undefined) return "";
@@ -69,6 +69,42 @@ export const GET = requireAuth(async (request: Request, session) => {
   let csv = "";
   const filename = `thaibahive_${type}_${new Date().toISOString().split("T")[0]}.csv`;
 
+  // Resolve staff IDs belonging to the institution up front if institutionId is provided
+  let staffIds: string[] | undefined = undefined;
+  if (institutionId) {
+    try {
+      const staffInsts = await db
+        .select({ staffId: staffInstitutions.staffId })
+        .from(staffInstitutions)
+        .where(eq(staffInstitutions.institutionId, institutionId));
+      staffIds = staffInsts.map((s: any) => s.staffId);
+    } catch (error) {
+      console.error("Failed to query institution staff:", error);
+      return NextResponse.json({ error: "Failed to fetch institution details" }, { status: 500 });
+    }
+
+    // Short-circuit: if a valid institution has no staff, all staff-related exports should return empty rows.
+    if (staffIds.length === 0 && type !== "accounts") {
+      let headersRow = "";
+      if (type === "attendance") {
+        headersRow = csvRow(["Employee ID", "Name", "Department", "Date", "Check In", "Check Out", "Status", "Hours Worked"]);
+      } else if (type === "leaves") {
+        headersRow = csvRow(["Employee ID", "Name", "Leave Type", "Start Date", "End Date", "Days", "Status", "Reason"]);
+      } else if (type === "staff") {
+        headersRow = csvRow(["Employee ID", "Name", "Email", "Phone", "Designation", "Department", "Institution", "Role", "Date of Joining", "Status"]);
+      } else if (type === "payroll") {
+        headersRow = csvRow(["Employee ID", "Name", "Designation", "Department", "Total Working Days", "Days Present", "Days Absent", "Late Arrivals", "Early Departures", "Leave Days", "Leave Breakdown", "Net Payable Days"]);
+      }
+      return new Response(headersRow, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+        },
+      });
+    }
+  }
+
   if (type === "attendance") {
     csv += csvRow(["Employee ID", "Name", "Department", "Date", "Check In", "Check Out", "Status", "Hours Worked"]);
     let query = db
@@ -91,16 +127,8 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: any[] = [];
     if (dateFrom) conditions.push(gte(attendanceLogs.date, dateFrom));
     if (dateTo) conditions.push(lte(attendanceLogs.date, dateTo));
-    if (institutionId) {
-      const staffIds = await db
-        .select({ id: staffInstitutions.staffId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.institutionId, institutionId));
-      if (staffIds.length > 0) {
-        conditions.push(inArray(attendanceLogs.staffId, staffIds.map((s: any) => s.id)));
-      } else {
-        conditions.push(eq(attendanceLogs.staffId, "__no_match__"));
-      }
+    if (staffIds) {
+      conditions.push(inArray(attendanceLogs.staffId, staffIds));
     }
     if (conditions.length > 0) query = query.where(and(...conditions) as any) as any;
     const rows = await query;
@@ -131,16 +159,8 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: any[] = [];
     if (dateFrom) conditions.push(gte(leaveRequests.startDate, dateFrom));
     if (dateTo) conditions.push(lte(leaveRequests.endDate, dateTo));
-    if (institutionId) {
-      const staffIds = await db
-        .select({ id: staffInstitutions.staffId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.institutionId, institutionId));
-      if (staffIds.length > 0) {
-        conditions.push(inArray(leaveRequests.staffId, staffIds.map((s: any) => s.id)));
-      } else {
-        conditions.push(eq(leaveRequests.staffId, "__no_match__"));
-      }
+    if (staffIds) {
+      conditions.push(inArray(leaveRequests.staffId, staffIds));
     }
     if (conditions.length > 0) query = query.where(and(...conditions) as any) as any;
     const rows = await query;
@@ -166,16 +186,16 @@ export const GET = requireAuth(async (request: Request, session) => {
       })
       .from(staff);
 
-    if (institutionId) {
+    if (staffIds) {
       query = query
         .innerJoin(staffInstitutions, eq(staff.id, staffInstitutions.staffId))
-        .where(eq(staffInstitutions.institutionId, institutionId)) as any;
+        .where(inArray(staff.id, staffIds)) as any;
     }
 
     const rows = await query;
-    const staffIds = rows.map((r: any) => r.id);
+    const rowStaffIds = rows.map((r: any) => r.id);
 
-    if (staffIds.length > 0) {
+    if (rowStaffIds.length > 0) {
       const allDepts = await db
         .select({
           staffId: staffDepartments.staffId,
@@ -183,7 +203,7 @@ export const GET = requireAuth(async (request: Request, session) => {
         })
         .from(staffDepartments)
         .innerJoin(departments, eq(staffDepartments.departmentId, departments.id))
-        .where(inArray(staffDepartments.staffId, staffIds));
+        .where(inArray(staffDepartments.staffId, rowStaffIds));
 
       const allInsts = await db
         .select({
@@ -192,7 +212,7 @@ export const GET = requireAuth(async (request: Request, session) => {
         })
         .from(staffInstitutions)
         .innerJoin(institutions, eq(staffInstitutions.institutionId, institutions.id))
-        .where(inArray(staffInstitutions.staffId, staffIds));
+        .where(inArray(staffInstitutions.staffId, rowStaffIds));
 
       const deptMap: Record<string, string[]> = {};
       for (const d of allDepts) {
@@ -240,17 +260,28 @@ export const GET = requireAuth(async (request: Request, session) => {
       .leftJoin(staffDepartments, eq(staff.id, staffDepartments.staffId))
       .leftJoin(departments, eq(staffDepartments.departmentId, departments.id));
 
-    const staffConditions: any[] = [];
-    if (institutionId) {
+    if (staffIds) {
       staffQuery = staffQuery
         .innerJoin(staffInstitutions, eq(staff.id, staffInstitutions.staffId))
-        .where(eq(staffInstitutions.institutionId, institutionId)) as any;
+        .where(inArray(staff.id, staffIds)) as any;
     }
     const allStaff = await staffQuery;
+
+    // Short-circuit if database has no matching staff at all
+    if (allStaff.length === 0) {
+      return new Response(csv, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+        },
+      });
+    }
+
     const rangeStart = dateFrom || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
     const rangeEnd = dateTo || new Date().toISOString().split("T")[0];
     const totalWorkingDays = getWeekdays(rangeStart, rangeEnd);
-    const staffIds = allStaff.map((s: any) => s.id);
+    const allStaffIds = allStaff.map((s: any) => s.id);
 
     const attendanceRows = await db
       .select({
@@ -261,7 +292,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       .from(attendanceLogs)
       .where(
         and(
-          inArray(attendanceLogs.staffId, staffIds),
+          inArray(attendanceLogs.staffId, allStaffIds),
           gte(attendanceLogs.date, rangeStart),
           lte(attendanceLogs.date, rangeEnd)
         )
@@ -278,7 +309,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       .innerJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
       .where(
         and(
-          inArray(leaveRequests.staffId, staffIds),
+          inArray(leaveRequests.staffId, allStaffIds),
           gte(leaveRequests.startDate, rangeStart),
           lte(leaveRequests.endDate, rangeEnd)
         )

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { isManagedBy } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
@@ -19,6 +20,11 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   const existing = await db.select().from(expenseClaims).where(eq(expenseClaims.id, id)).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const authorized = await isManagedBy(session.staffId, session.role, existing.staffId);
+  if (!authorized) {
+    return NextResponse.json({ error: "You are not authorized to review this expense claim" }, { status: 403 });
+  }
 
   const updated = await db
     .update(expenseClaims)

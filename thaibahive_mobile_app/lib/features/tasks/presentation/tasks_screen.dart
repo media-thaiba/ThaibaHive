@@ -168,6 +168,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     final taskCount = state.filteredTasks.length;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Tasks')),
       floatingActionButton: FloatingActionButton(
         heroTag: null,
         onPressed: () async {
@@ -184,7 +185,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

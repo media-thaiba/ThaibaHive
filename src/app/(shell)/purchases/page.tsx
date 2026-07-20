@@ -24,9 +24,7 @@ import {
   X, 
   Clock, 
   FileText, 
-  ChevronRight, 
-  User, 
-  AlertCircle 
+  ChevronRight
 } from "lucide-react";
 import { formatDate, ensureArray } from "@/lib/utils";
 

@@ -4,7 +4,7 @@ import { join } from "path";
 import { stat } from "fs/promises";
 import { downloadFromDrive } from "@/lib/drive";
 import { isStorageConfigured, downloadFromSupabase } from "@/lib/storage";
-import { Readable } from "stream";
+import { verifySession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -44,14 +44,22 @@ function nodeStreamToWeb(nodeStream: any): ReadableStream {
   });
 }
 
+// NOTE: All uploaded files are designed to be organization-wide readable by any authenticated user.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
+    const session = await verifySession();
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { filename } = await params;
 
-    if (!filename || filename.includes("..") || filename.includes("/")) {
+    // Strict validation: files are UUIDv4 followed by extension. This blocks traversal (.., /, \) and injection.
+    const filenameRegex = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\.[a-zA-Z0-9]+$/;
+    if (!filename || !filenameRegex.test(filename)) {
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }
 

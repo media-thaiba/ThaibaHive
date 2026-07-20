@@ -16,11 +16,7 @@ import {
   Clock, 
   CheckCircle2, 
   Plus, 
-  Trash2, 
   Users, 
-  Calendar,
-  Layers,
-  Building,
   Check
 } from "lucide-react";
 
@@ -81,7 +77,7 @@ export default function PollsPage() {
   const [permissions, setPermissions] = useState<Permissions | null>(null);
 
   const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("polls:create") ?? false);
-  const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("polls:manage") ?? false);
+  const _isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("polls:manage") ?? false);
 
   const loadData = useCallback(async () => {
     try {

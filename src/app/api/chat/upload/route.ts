@@ -56,8 +56,9 @@ export const POST = requireAuth(async (request: Request) => {
       );
     }
 
-    const ext = file.name.split(".").pop() || "bin";
-    const filename = `${randomUUID()}.${ext}`;
+    const rawExt = file.name.split(".").pop() || "bin";
+    const ext = rawExt.replace(/[^a-zA-Z0-9]/g, "");
+    const filename = `${randomUUID()}.${ext || "bin"}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
     let fileUrl = "";

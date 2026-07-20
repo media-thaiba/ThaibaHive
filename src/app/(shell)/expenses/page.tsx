@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { 
   DollarSign, 
-  FileText, 
   Plus, 
   Upload, 
   CheckCircle2, 

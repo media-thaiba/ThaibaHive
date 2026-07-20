@@ -15,14 +15,26 @@ class AppSpacing {
   static const double spacing = 24.0;
   static const double major = 32.0;
   static const double page = 48.0;
+
+  // Spacing system consolidation
+  static const double dashboardSection = 12.0;
+  static const double pageSection = 16.0;
+}
+
+class AppIconSize {
+  AppIconSize._();
+  static const double badge = 16.0;
+  static const double list = 20.0;
+  static const double button = 24.0;
+  static const double hero = 28.0;
 }
 
 class AppRadius {
   AppRadius._();
-  static const double card = 24.0;
+  static const double card = 16.0; // Standardized card corner radius
   static const double button = 12.0;
   static const double badge = 8.0;
-  static const double sheet = 28.0;
+  static const double sheet = 24.0; // Standardized sheet corner radius
 }
 
 class AppElevation {
@@ -50,7 +62,7 @@ class AppColors {
       Theme.of(context).brightness == Brightness.dark;
 
   static Color background(BuildContext context) =>
-      _isDark(context) ? const Color(0xFF1A1D21) : const Color(0xFFf5f7f5);
+      _isDark(context) ? const Color(0xFF171A17) : const Color(0xFFF4F7F4);
   static Color foreground(BuildContext context) =>
       _isDark(context) ? const Color(0xFFd1d5d1) : const Color(0xFF4a4e52);
   static Color card(BuildContext context) =>
@@ -83,8 +95,33 @@ class AppColors {
   /// Shadow colour adjusted for dark / light mode.
   static Color shadow(BuildContext context) =>
       _isDark(context)
-          ? Colors.black.withValues(alpha: 0.4)
+          ? Colors.black.withValues(alpha: 0.45)
           : Colors.black.withValues(alpha: 0.08);
+
+  // Standardized Elevation and Shadow System
+  static List<BoxShadow> surfaceShadow1(BuildContext context) => [];
+  
+  static List<BoxShadow> surfaceShadow2(BuildContext context) {
+    final isDark = _isDark(context);
+    return [
+      BoxShadow(
+        color: Colors.black.withOpacity(isDark ? 0.25 : 0.04),
+        blurRadius: 10,
+        offset: const Offset(0, 2),
+      ),
+    ];
+  }
+
+  static List<BoxShadow> surfaceShadow3(BuildContext context) {
+    final isDark = _isDark(context);
+    return [
+      BoxShadow(
+        color: Colors.black.withOpacity(isDark ? 0.35 : 0.08),
+        blurRadius: 20,
+        offset: const Offset(0, 6),
+      ),
+    ];
+  }
 }
 
 class AppTypography {
@@ -148,11 +185,11 @@ class ThaibaHiveTheme {
   static const Color _slateForeground = Color(0xFF4a4e52);
 
   // Light surface colours
-  static const Color _backgroundLight = Color(0xFFf5f7f5);
+  static const Color _backgroundLight = Color(0xFFF4F7F4);
   static const Color _cardLight = Color(0xFFFFFFFF);
 
   // Dark surface colours (Design.md dark tokens)
-  static const Color _backgroundDark = Color(0xFF1A1D21);
+  static const Color _backgroundDark = Color(0xFF171A17);
   static const Color _cardDark = Color(0xFF22262b);
   static const Color _surfaceDark = Color(0xFF22262b);
 
@@ -230,12 +267,12 @@ class ThaibaHiveTheme {
       // ── Cards — elevation 0 + explicit shadow ─────────────────────────
       cardTheme: CardThemeData(
         elevation: 0,
-        shadowColor: Colors.black.withValues(alpha: 0.08),
-        color: _cardLight,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        color: _cardLight.withOpacity(0.85),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.card), // Standardized corner radius
           side: BorderSide(
-            color: const Color(0xFFd4dbd4).withValues(alpha: 0.6),
+            color: const Color(0xFFd4dbd4).withOpacity(0.35),
             width: 1,
           ),
         ),
@@ -452,12 +489,12 @@ class ThaibaHiveTheme {
       // ── Cards — dark-specific shadow (black shadows are visible in dark) ──
       cardTheme: CardThemeData(
         elevation: 0,
-        shadowColor: Colors.black.withValues(alpha: 0.4),
-        color: _cardDark,
+        shadowColor: Colors.black.withValues(alpha: 0.35),
+        color: _cardDark.withOpacity(0.75),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.card), // Standardized corner radius
           side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: Colors.white.withOpacity(0.06),
             width: 1,
           ),
         ),

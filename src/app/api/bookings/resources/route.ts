@@ -9,7 +9,7 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ resources });
 }, "bookings:read");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { name, type, capacity, location, description } = body;
   if (!name || !type) {

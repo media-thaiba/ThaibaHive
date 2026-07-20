@@ -18,8 +18,6 @@ import {
   Users, 
   Plus, 
   Trash2, 
-  CheckCircle, 
-  AlertTriangle,
   Building,
   Laptop,
   Car,
@@ -89,7 +87,7 @@ export default function BookingsPage() {
 
   const [permissions, setPermissions] = useState<Permissions | null>(null);
   const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("bookings:manage") ?? false);
-  const currentStaffId = permissions?.role ? (permissions as any).staffId : null;
+  const _currentStaffId = permissions?.role ? (permissions as any).staffId : null;
 
   const loadData = useCallback(async () => {
     try {

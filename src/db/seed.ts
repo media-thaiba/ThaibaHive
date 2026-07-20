@@ -3,7 +3,6 @@ import { db } from "./index";
 import { institutions, departments, staff, staffDepartments, staffInstitutions, marketplaceApps, appDefaultRoles } from "./schema";
 import { eq } from "drizzle-orm";
 
-const MAIN_CAMPUS = "TPS – Majhikhanda";
 
 const institutionData = [
   { name: "TPS – Majhikhanda", code: "TPS-MAJHI", type: "campus" },
@@ -62,15 +61,16 @@ interface SeedStaff {
   departmentCode: string;
 }
 
-  const managementStaff: SeedStaff[] = [
-    { email: "director@thaibahive.local", employeeId: "DIR-001", firstName: "Director", lastName: "", designation: "Director", role: "super_admin", departmentCode: "DIR-OFF" },
-    { email: "jointdirector@thaibahive.local", employeeId: "JD-001", firstName: "Joint Director", lastName: "", designation: "Joint Director / HR Manager", role: "admin", departmentCode: "JD-OFF" },
-    { email: "generalmanager@thaibahive.local", employeeId: "GM-001", firstName: "General Manager", lastName: "", designation: "General Manager", role: "admin", departmentCode: "DIR-OFF" },
-    { email: "mediamanager@thaibahive.local", employeeId: "MEDIA-001", firstName: "Media Manager", lastName: "", designation: "Media Manager", role: "admin", departmentCode: "MEDIA-IT" },
-    { email: "accountsmanager@thaibahive.local", employeeId: "ACCTS-001", firstName: "Accounts Manager", lastName: "", designation: "Accounts Manager", role: "admin", departmentCode: "ACCTS" },
-    { email: "projectmanager@thaibahive.local", employeeId: "PROJ-001", firstName: "Project Manager", lastName: "", designation: "Project Manager", role: "admin", departmentCode: "PROJECT" },
-    { email: "moralhead@thaibahive.local", employeeId: "MORAL-001", firstName: "Head of Moral Education", lastName: "", designation: "Head of Moral Education", role: "admin", departmentCode: "MORAL" },
-  ];
+const managementStaff: SeedStaff[] = [
+  { email: "director@thaibahive.local", employeeId: "DIR-001", firstName: "Director", lastName: "", designation: "Director", role: "super_admin", departmentCode: "DIR-OFF" },
+  { email: "jointdirector@thaibahive.local", employeeId: "JD-001", firstName: "Joint Director", lastName: "", designation: "Joint Director / HR Manager", role: "admin", departmentCode: "JD-OFF" },
+  { email: "generalmanager@thaibahive.local", employeeId: "GM-001", firstName: "General Manager", lastName: "", designation: "General Manager", role: "admin", departmentCode: "DIR-OFF" },
+  { email: "mediamanager@thaibahive.local", employeeId: "MEDIA-001", firstName: "Media Manager", lastName: "", designation: "Media Manager", role: "admin", departmentCode: "MEDIA-IT" },
+  { email: "accountsmanager@thaibahive.local", employeeId: "ACCTS-001", firstName: "Accounts Manager", lastName: "", designation: "Accounts Manager", role: "accounts", departmentCode: "ACCTS" },
+  { email: "purchaseofficer@thaibahive.local", employeeId: "PURCH-001", firstName: "Purchase Officer", lastName: "", designation: "Purchase Officer", role: "purchase", departmentCode: "ACCTS" },
+  { email: "projectmanager@thaibahive.local", employeeId: "PROJ-001", firstName: "Project Manager", lastName: "", designation: "Project Manager", role: "admin", departmentCode: "PROJECT" },
+  { email: "moralhead@thaibahive.local", employeeId: "MORAL-001", firstName: "Head of Moral Education", lastName: "", designation: "Head of Moral Education", role: "admin", departmentCode: "MORAL" },
+];
 
 function uuid(): string {
   return crypto.randomUUID();

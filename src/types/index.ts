@@ -1,4 +1,4 @@
-export type StaffRole = "super_admin" | "admin" | "hod" | "principal" | "staff";
+export type StaffRole = "super_admin" | "admin" | "hod" | "principal" | "staff" | "accounts" | "purchase";
 
 export type AttendanceStatus =
   | "present"

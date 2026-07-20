@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff, staffDepartments, staffInstitutions } from "@/db/schema";
+import { staff, staffDepartments, staffInstitutions, departments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { hashPassword } from "@/lib/auth";
 import { staffCreateSchema } from "@/lib/validation/schemas";
-import { eq } from "drizzle-orm";
+import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
+import { eq, and, inArray } from "drizzle-orm";
 
 const SAFE_STAFF_FIELDS = {
   id: staff.id,
@@ -22,41 +23,65 @@ const SAFE_STAFF_FIELDS = {
 } as const;
 
 export const GET = requireAuth(async (request, session) => {
-  if (session.role === "principal") {
-    const instRow = await db
-      .select({ institutionId: staffInstitutions.institutionId })
-      .from(staffInstitutions)
-      .where(eq(staffInstitutions.staffId, session.staffId))
-      .limit(1);
-    const instId = instRow[0]?.institutionId;
-    if (instId) {
-      const instStaff = await db
-        .select({ sid: staffInstitutions.staffId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.institutionId, instId))
-        .all();
-      const instStaffIds = instStaff.map((s) => s.sid);
-      const filtered = await db
-        .select(SAFE_STAFF_FIELDS)
-        .from(staff)
-        .orderBy(staff.firstName)
-        .all();
-      return NextResponse.json({
-        staff: filtered.filter((s) => instStaffIds.includes(s.id)),
-      });
-    }
+  const accessibleIds = await getAccessibleStaffIds(session.staffId, session.role);
+
+  if (accessibleIds === null) {
+    const all = await db.select(SAFE_STAFF_FIELDS).from(staff).orderBy(staff.firstName).all();
+    return NextResponse.json({ staff: all });
   }
-  const all = await db.select(SAFE_STAFF_FIELDS).from(staff).orderBy(staff.firstName).all();
-  return NextResponse.json({ staff: all });
+
+  if (accessibleIds.length === 0) {
+    return NextResponse.json({ staff: [] });
+  }
+
+  const filtered = await db
+    .select(SAFE_STAFF_FIELDS)
+    .from(staff)
+    .where(inArray(staff.id, accessibleIds))
+    .orderBy(staff.firstName)
+    .all();
+
+  return NextResponse.json({ staff: filtered });
 }, "staff:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const parsed = staffCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const { email, employeeId, firstName, lastName, phone, designation, role, password, departmentIds, institutionIds } = parsed.data;
+
+  if (session.role === "principal" && institutionIds?.length) {
+    const callerInst = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, session.staffId))
+      .limit(1);
+    const instId = callerInst[0]?.institutionId;
+    if (instId && !institutionIds.includes(instId)) {
+      return NextResponse.json({ error: "Cannot assign staff to institutions outside your own" }, { status: 403 });
+    }
+  }
+
+  if (session.role === "principal" && departmentIds?.length) {
+    const callerInst = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, session.staffId))
+      .limit(1);
+    const instId = callerInst[0]?.institutionId;
+    if (instId) {
+      const validDepts = await db
+        .select({ id: departments.id })
+        .from(departments)
+        .where(and(eq(departments.institutionId, instId), inArray(departments.id, departmentIds)))
+        .all();
+      if (validDepts.length !== departmentIds.length) {
+        return NextResponse.json({ error: "Cannot assign staff to departments outside your institution" }, { status: 403 });
+      }
+    }
+  }
 
   const passwordHash = password ? await hashPassword(password) : null;
 

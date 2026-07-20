@@ -25,6 +25,7 @@ class _AnimatedCounterState extends State<AnimatedCounter>
   late AnimationController _controller;
   late Animation<double> _animation;
   int _displayValue = 0;
+  bool _started = false;
 
   @override
   void initState() {
@@ -47,8 +48,15 @@ class _AnimatedCounterState extends State<AnimatedCounter>
         _displayValue = _animation.value.round();
       });
     });
+  }
 
-    _startAnimation();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _startAnimation();
+    }
   }
 
   void _startAnimation() {

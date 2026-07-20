@@ -4,37 +4,14 @@ import { staff } from "@/db/schema";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth/schemas";
 import { logActivity } from "@/lib/api/activity-log";
+import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq } from "drizzle-orm";
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 5;
-
-function checkRateLimit(ip: string): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || request.headers.get("x-real-ip")
-      || "unknown";
-
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json(
-        { error: "Too many login attempts. Please try again later." },
-        { status: 429 }
-      );
-    }
+    const ip = extractIp(request);
+    const rl = checkRateLimit(ip, "auth");
+    if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
@@ -70,8 +47,8 @@ export async function POST(request: Request) {
 
     if (!staffMember.isActive) {
       return NextResponse.json(
-        { error: "Account is deactivated" },
-        { status: 403 }
+        { error: "Invalid email or password" },
+        { status: 401 }
       );
     }
 

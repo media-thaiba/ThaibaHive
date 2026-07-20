@@ -85,6 +85,7 @@ class PersonalSummary extends StatelessWidget {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               childAspectRatio: 1.35,
@@ -107,24 +108,38 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AppCard(
       margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(AppSpacing.section - 2),
+      borderColor: AppColors.border(context).withValues(alpha: isDark ? 0.4 : 0.6),
+      customShadows: [
+        BoxShadow(
+          color: AppColors.shadow(context).withValues(alpha: isDark ? 0.15 : 0.03),
+          blurRadius: 12,
+          offset: const Offset(0, 3),
+        ),
+      ],
       onTap: () => context.push(entry.route),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Colored left accent + icon
+          // Outlined soft icon box
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: entry.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  color: entry.color.withValues(alpha: isDark ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.badge + 2),
+                  border: Border.all(
+                    color: entry.color.withValues(alpha: isDark ? 0.35 : 0.25),
+                    width: 1.0,
+                  ),
                 ),
-                child: Icon(entry.icon, color: entry.color, size: 20),
+                child: Icon(entry.icon, color: entry.color, size: 18),
               ),
             ],
           ),

@@ -1,9 +1,7 @@
 import { GET, POST } from "@/app/api/reports/route";
-import { GET as getDetail, PUT } from "@/app/api/reports/[id]/route";
+import { GET as getDetail } from "@/app/api/reports/[id]/route";
 import { PATCH } from "@/app/api/reports/[id]/review/route";
-import { db } from "@/db";
 import { verifySession, hasPermission } from "@/lib/auth";
-import { NextResponse } from "next/server";
 
 const mockGet = jest.fn();
 const mockAll = jest.fn();

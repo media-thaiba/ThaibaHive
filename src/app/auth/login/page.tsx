@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { ArrowRight, Lock, Mail, User, ShieldCheck } from "lucide-react";
@@ -128,7 +127,7 @@ export default function LoginPage() {
       // Simulate reset email delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setRecoverySent(true);
-    } catch (err) {
+    } catch {
       setError("Recovery request failed");
     } finally {
       setLoading(false);

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Search, Bell, Settings, Sun, Moon, Monitor } from "lucide-react";
@@ -109,6 +108,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         {/* Search - visible on mobile only (desktop has sidebar search) */}
         <button
           onClick={onSearchOpen}
+          aria-label="Search"
           className="lg:hidden flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
         >
           <Search className="h-3.5 w-3.5" />
@@ -122,6 +122,8 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
               setNotifOpen(!notifOpen);
               if (!notifOpen) markRead();
             }}
+            aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
+            aria-expanded={notifOpen}
             className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
           >
             <Bell className="h-[18px] w-[18px]" />
@@ -220,8 +222,8 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
             const nextTheme = themes[(currentIndex + 1) % themes.length];
             setTheme(nextTheme);
           }}
+          aria-label={`Switch theme (current: ${theme})`}
           className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
-          title={`Theme: ${theme}`}
         >
           {theme === "light" && <Sun className="h-[18px] w-[18px]" />}
           {theme === "dark" && <Moon className="h-[18px] w-[18px]" />}
@@ -231,6 +233,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         {/* Settings - hidden on mobile, bottom nav has it */}
         <Link
           href="/settings"
+          aria-label="Settings"
           className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center"
         >
           <Settings className="h-[18px] w-[18px]" />

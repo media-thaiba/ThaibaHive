@@ -19,14 +19,18 @@ class AttendanceCard extends StatelessWidget {
     final hasCheckOut = stats.todayCheckOut != null;
     final isPresent = stats.todayStatus == 'present';
 
+    final isDark = theme.brightness == Brightness.dark;
     final statusColor =
         isPresent ? const Color(0xFF1a8a3e) : const Color(0xFFFF9800);
+    final cardBorderColor = statusColor.withValues(alpha: isDark ? 0.3 : 0.2);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.section),
       child: AppCard(
         margin: EdgeInsets.zero,
         padding: const EdgeInsets.all(AppSpacing.section),
+        borderColor: cardBorderColor,
+        borderWidth: 1.5,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -55,9 +59,9 @@ class AttendanceCard extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: AppSpacing.normal + 10),
                       child: Text(
-                        '${hasCheckIn ? 'In: ${stats.todayCheckIn}' : ''}'
-                        '${hasCheckIn && hasCheckOut ? '  \u00b7  ' : ''}'
-                        '${hasCheckOut ? 'Out: ${stats.todayCheckOut}' : ''}',
+                        'In: ${stats.todayCheckIn ?? '--:--'}'
+                        '  \u00b7  '
+                        'Out: ${stats.todayCheckOut ?? '--:--'}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground(context),
                           fontWeight: FontWeight.w500,
@@ -68,10 +72,10 @@ class AttendanceCard extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: AppSpacing.normal + 10),
                       child: Text(
-                        'Tap NFC or QR to check in',
+                        'Tap NFC or scan QR code',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground(context)
-                              .withValues(alpha: 0.6),
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ),
@@ -85,11 +89,7 @@ class AttendanceCard extends StatelessWidget {
                 _ScanButton(
                   label: 'TAP NFC',
                   icon: Icons.nfc_rounded,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFFFF9800),
                   onTap: () {
                     HapticFeedback.lightImpact();
                     context.push('/attendance');
@@ -99,11 +99,7 @@ class AttendanceCard extends StatelessWidget {
                 _ScanButton(
                   label: 'SCAN QR',
                   icon: Icons.qr_code_scanner_rounded,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF9C27B0), Color(0xFFBA68C8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: const Color(0xFF9C27B0),
                   onTap: () {
                     HapticFeedback.lightImpact();
                     context.push('/attendance');
@@ -121,47 +117,49 @@ class AttendanceCard extends StatelessWidget {
 class _ScanButton extends StatelessWidget {
   final String label;
   final IconData icon;
-  final Gradient gradient;
+  final Color color;
   final VoidCallback onTap;
 
   const _ScanButton({
     required this.label,
     required this.icon,
-    required this.gradient,
+    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = color.withValues(alpha: isDark ? 0.15 : 0.08);
+    final borderColor = color.withValues(alpha: isDark ? 0.35 : 0.25);
+    final textColor = isDark ? color.withValues(alpha: 0.9) : color;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 110,
+        width: 105,
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.normal, vertical: AppSpacing.compact),
         decoration: BoxDecoration(
-          gradient: gradient,
+          color: bgColor,
           borderRadius: BorderRadius.circular(AppRadius.button),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(
+            color: borderColor,
+            width: 1.0,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 18),
+            Icon(icon, color: textColor, size: 16),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: textColor,
                 letterSpacing: 0.5,
               ),
             ),

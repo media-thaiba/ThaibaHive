@@ -56,7 +56,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get("Authorization");
-    const secret = process.env.SYSTEM_UPDATE_SECRET || "fallback-secret-key-123456";
+    const secret = process.env.SYSTEM_UPDATE_SECRET;
+
+    if (!secret || secret.trim() === "") {
+      console.error("System update configure error: SYSTEM_UPDATE_SECRET is not configured or is empty.");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     if (authHeader !== `Bearer ${secret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -1,7 +1,7 @@
 # Memory — ThaibaHive Build Status
 
-> **Last updated**: 2026-07-18
-> **Current phase**: Phase 3 complete (Admin & Operations) → Ready for Phase 4 (Finance & Reports)
+> **Last updated**: 2026-07-19
+> **Current phase**: Phase 7 in progress (Polish & Launch — Performance Optimization)
 > **Roadmap**: 3-track system — Track A (Web: Ph0–7), Track B (Mobile: M1–M3), Track C (Media: MD1–MD3)
 
 ---
@@ -164,11 +164,17 @@
 ---
 
 ## Currently Worked On
-- **Phase 3: Admin & Operations (Complete)**:
-  - Enabled `"staff:read"` on standard staff, allowing directory access.
-  - Defined and mapped `"bookings:read"`, `"bookings:create"`, and `"assets:read"` permissions.
-  - Updated bookings API routes to prevent overlapping bookings (409 Conflict) and support resource availability calendar GET queries.
-  - Polished staff directory page, room booking calendar dashboard, IT help-desk comment thread details, and asset management details.
+- **Phase 7: Polish & Launch (In Progress)**:
+  - **Performance Optimization**:
+    - Enhanced `next.config.ts`: image optimization (avif/webp), `optimizePackageImports` (lucide-react, date-fns, Radix), security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy), cache headers for static assets and stable API routes.
+    - Installed `@next/bundle-analyzer` (run with `ANALYZE=true pnpm build`).
+    - Dynamic import for `CommandPalette` in shell layout (lazy-loaded, only fetched on Cmd+K).
+    - Consolidated dashboard: replaced 6 parallel API fetches with single `/api/dashboard/stats` endpoint (parallel DB queries, one response). Faster dashboard load, less network overhead.
+  - **Security Hardening**:
+    - Created shared rate limiter utility (`src/lib/api/rate-limit.ts`) — configurable per-route limits: auth (5/min), signup (3/min), writes (30/min), uploads (10/min). Production-only.
+    - Enhanced `proxy.ts` (Next.js 16 middleware equivalent): blocks scanner paths (wp-admin, .env, .git, phpmyadmin), enforces 5MB body size limit on write APIs, validates content-type (JSON/multipart only), adds security headers (X-Content-Type-Options, X-Frame-Options, Permissions-Policy), no-cache on API routes.
+    - Applied rate limiting to login, signup, upload, leaves, expense claims, and tasks POST endpoints using shared utility.
+    - Removed per-route inline rate limiters — centralized in `rate-limit.ts`.
 - **3-Track Roadmap Integration (Complete)**:
   - Added Section 30 to PRD.md: Android Home Screen Widgets & Glanceable Info spec (ThaibaHive + MediaHive widgets, lock screen, Wear OS).
   - Restructured Phasis.md into 3 parallel tracks: Track A (Core Web, Phases 0–7), Track B (Mobile, Phases M1–M3), Track C (Media, Phases MD1–MD3).
@@ -178,35 +184,15 @@
 ## Last Modified Files
 | File | Last Modified | Purpose |
 |------|--------------|---------|
-| [PRD.md](file:///d:/ThaibaHive/PRD.md) | 2026-07-18 | Added Section 30: Android Home Screen Widgets & Glanceable Info; renumbered Admin Panel to 31 |
-| [Phasis.md](file:///d:/ThaibaHive/Phasis.md) | 2026-07-18 | Restructured into 3 parallel tracks (Web, Mobile, Media) |
-| [MASTER_BLUEPRINT.md](file:///d:/ThaibaHive/MASTER_BLUEPRINT.md) | 2026-07-18 | Updated sub-platform architecture, widget integration strategy, security controls |
-| [Memory.md](file:///d:/ThaibaHive/Memory.md) | 2026-07-18 | Logged roadmap decisions, widget constraints, 3-track system |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/tasks/page.tsx) | 2026-07-15 | Replaced raw HTML buttons with Button component |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/attendance/page.tsx) | 2026-07-15 | Replaced raw HTML buttons with Button component |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/approvals/page.tsx) | 2026-07-15 | Replaced custom modal overlays with standard Dialog components; hardcoded color maps → Badge variants |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/approvals/delegations/page.tsx) | 2026-07-15 | Replaced custom modal overlays with Dialog; pulse skeletons, hardcoded badge colors |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/assets/page.tsx) | 2026-07-15 | 11 inputs, 7 selects, 7 buttons, 2 textareas, 1 skeleton replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/purchases/page.tsx) | 2026-07-15 | Hardcoded statusColor → Badge variant; form elements replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/grievances/page.tsx) | 2026-07-15 | Form elements and buttons replaced with UI primitives |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/staff/[id]/edit/page.tsx) | 2026-07-15 | Loading skeleton, buttons, select, inputs replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/staff/new/page.tsx) | 2026-07-15 | 7 inputs, 1 select, 2 buttons replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/admin/institutions/page.tsx) | 2026-07-15 | Skeleton, button, inputs, select, delete button replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/admin/departments/page.tsx) | 2026-07-15 | Skeleton, button, inputs, select, delete button replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/admin/sub-departments/page.tsx) | 2026-07-15 | Skeleton, button, inputs, delete button replaced |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/admin/leave-types/page.tsx) | 2026-07-15 | Skeleton import added, pulse loading replaced |
-| [build.gradle.kts](file:///d:/ThaibaHive/thaibahive_mobile_app/android/app/build.gradle.kts) | 2026-07-15 | Forced aligned native dependency versions |
-| [roles.ts](file:///d:/ThaibaHive/packages/auth/roles.ts) | 2026-07-16 | Added read permissions for Phase 2 |
-| [schema.ts](file:///d:/ThaibaHive/packages/db/schema.ts) | 2026-07-16 | Added circularDownloads table |
-| [notifications.ts](file:///d:/ThaibaHive/src/lib/api/notifications.ts) | 2026-07-16 | Created targeted auto-notifications dispatcher |
-| [route.ts](file:///d:/ThaibaHive/src/app/api/circulars/route.ts) | 2026-07-16 | Refactored circulars API route and permissions |
-| [route.ts](file:///d:/ThaibaHive/src/app/api/circulars/[id]/download/route.ts) | 2026-07-16 | Created download tracking with rate limiting |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/circulars/page.tsx) | 2026-07-16 | Premium redesign with dropzone file uploader |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/polls/page.tsx) | 2026-07-16 | Premium poll visualization and voting system |
-| [shell-nav.tsx](file:///d:/ThaibaHive/src/components/layout/shell-nav.tsx) | 2026-07-16 | Linked notification dropdown items to target pages |
-| [page.tsx](file:///d:/ThaibaHive/src/app/(shell)/settings/page.tsx) | 2026-07-16 | Added local storage notification preferences card |
-| [router.dart](file:///d:/ThaibaHive/thaibahive_mobile_app/lib/app/router.dart) | 2026-07-16 | Unlocked Bookings and Assets screen paths |
-| [more_screen.dart](file:///d:/ThaibaHive/thaibahive_mobile_app/lib/features/dashboard/presentation/more_screen.dart) | 2026-07-16 | Unlocked Bookings and Assets in navigation registry |
+| [rate-limit.ts](file:///d:/ThaibaHive/src/lib/api/rate-limit.ts) | 2026-07-19 | Shared rate limiter utility with configurable per-route limits |
+| [proxy.ts](file:///d:/ThaibaHive/src/proxy.ts) | 2026-07-19 | Security hardening: path blocking, body size limits, content-type validation, security headers |
+| [route.ts](file:///d:/ThaibaHive/src/app/api/auth/login/route.ts) | 2026-07-19 | Refactored to use shared rate limiter |
+| [route.ts](file:///d:/ThaibaHive/src/app/api/auth/signup/route.ts) | 2026-07-19 | Refactored to use shared rate limiter |
+| [route.ts](file:///d:/ThaibaHive/src/app/api/upload/route.ts) | 2026-07-19 | Refactored to use shared rate limiter |
+| [route.ts](file:///d:/ThaibaHive/src/app/api/leaves/route.ts) | 2026-07-19 | Added rate limiting to leave applications |
+| [route.ts](file:///d:/ThaibaHive/src/app/api/expense-claims/route.ts) | 2026-07-19 | Added rate limiting to expense claims |
+| [route.ts](file:///d:/ThaibaHive/src/app/api/tasks/route.ts) | 2026-07-19 | Added rate limiting to task creation |
+| [next.config.ts](file:///d:/ThaibaHive/next.config.ts) | 2026-07-19 | Performance: image optimization, bundle analyzer, security headers, cache headers, package import optimization |
 
 ## Blockers
 *List any current blockers here.*
