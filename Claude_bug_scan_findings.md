@@ -130,6 +130,30 @@
 
 ## Further fixes applied in the second pass (Antigravity)
 
+> **Independent verification note (Claude, 2026-07-22):** this batch was
+> initially reported as pushed but wasn't actually present in the repo
+> on first check — confirmed via direct `grep` for `canAccessTask`,
+> the export scoping logic, and `institutionIds` in realtime.ts, all
+> absent. Re-confirmed after a second push (commit `771fabd`), which
+> **is** genuinely present this time: pulled it, ran typecheck (clean),
+> lint (0 errors), and the full test suite (127/127, matching the
+> report exactly). Additionally live-tested the two highest-stakes
+> items with real seeded data rather than relying on the test suite
+> alone:
+> - **Item 24 (export scoping)** — this file has now been modified
+>   three times across this audit, so it got the closest look. Live
+>   confirmed: an `accounts`-role user assigned to one institution gets
+>   403 when requesting a different institution's export, 200 for their
+>   own. Also re-ran the *original* leak from item 11 — an admin
+>   requesting an institution with zero staff still gets an empty CSV,
+>   not all-institution data — still correctly fixed after all three
+>   rounds of edits to this file.
+> - **Item 18 (tasks)** — confirmed `canAccessTask` exists and is wired
+>   into all four HTTP methods; not separately live-exploit-tested.
+> - Items 19-23, 25, 26 — confirmed present in source and covered by
+>   the passing test suite; not independently live-tested by Claude
+>   beyond that.
+
 ### 18. Tasks API Routes IDOR and Scoping
 - **Files**: `src/lib/auth/department-scope.ts`, `src/app/api/tasks/route.ts`, `src/app/api/tasks/[id]/route.ts`, `src/app/api/tasks/[id]/comments/route.ts`, `src/app/api/tasks/reorder/route.ts`
 - **Risk**: HIGH — unauthorized users could view, edit, comment, or reorder tasks outside their assigned department/institution.
