@@ -8,7 +8,8 @@ import {
   checklistTemplates,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, asc, sql } from "drizzle-orm";
+import { eq, desc, asc, sql, inArray } from "drizzle-orm";
+import { getAccessibleStaffIds, canAccessStaff } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (_request, session) => {
   let query = db
@@ -29,7 +30,9 @@ export const GET = requireAuth(async (_request, session) => {
     .from(staffChecklists);
 
   if (session.role !== "super_admin" && session.role !== "admin") {
-    query = query.where(eq(staffChecklists.staffId, session.staffId)) as typeof query;
+    const staffIds = await getAccessibleStaffIds(session.staffId, session.role);
+    const allowedIds = staffIds && staffIds.length > 0 ? staffIds : [session.staffId];
+    query = query.where(inArray(staffChecklists.staffId, allowedIds)) as typeof query;
   }
 
   const assignments = await query
@@ -53,6 +56,13 @@ export const POST = requireAuth(async (request: Request, session) => {
       { error: "staffId, templateId, and type are required" },
       { status: 400 }
     );
+  }
+
+  if (session.role !== "super_admin" && session.role !== "admin") {
+    const hasAccess = await canAccessStaff(session.staffId, session.role, staffId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const template = await db

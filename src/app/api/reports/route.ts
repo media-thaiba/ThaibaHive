@@ -9,13 +9,14 @@ import {
   tasks,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, inArray, and } from "drizzle-orm";
+import { eq, desc, inArray, and, or } from "drizzle-orm";
+import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (request, session) => {
   const { role, staffId } = session;
   let reports: any[] = [];
 
-  if (role === "super_admin" || role === "admin" || role === "principal") {
+  if (role === "super_admin" || role === "admin") {
     reports = await db
       .select({
         id: dailyReports.id,
@@ -34,52 +35,66 @@ export const GET = requireAuth(async (request, session) => {
       .orderBy(desc(dailyReports.date))
       .limit(100)
       .all();
-  } else if (role === "hod") {
-    const userDepts = await db
-      .select({ id: departments.id })
-      .from(departments)
-      .where(eq(departments.headUserId, staffId))
-      .all();
-
-    if (userDepts.length > 0) {
-      const deptStaff = await db
-        .select({ staffId: staffDepartments.staffId })
-        .from(staffDepartments)
+  } else if (role === "principal") {
+    const accessibleStaffIds = await getAccessibleStaffIds(staffId, role);
+    if (accessibleStaffIds && accessibleStaffIds.length > 0) {
+      reports = await db
+        .select({
+          id: dailyReports.id,
+          date: dailyReports.date,
+          summary: dailyReports.summary,
+          status: dailyReports.status,
+          staffId: dailyReports.staffId,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          reviewerComment: dailyReports.reviewerComment,
+          reviewedAt: dailyReports.reviewedAt,
+          createdAt: dailyReports.createdAt,
+        })
+        .from(dailyReports)
+        .leftJoin(staff, eq(dailyReports.staffId, staff.id))
         .where(
-          inArray(
-            staffDepartments.departmentId,
-            userDepts.map((d) => d.id)
-          )
-        )
-        .all();
-
-      const staffIds = deptStaff.map((s) => s.staffId).filter(Boolean);
-
-      if (staffIds.length > 0) {
-        reports = await db
-          .select({
-            id: dailyReports.id,
-            date: dailyReports.date,
-            summary: dailyReports.summary,
-            status: dailyReports.status,
-            staffId: dailyReports.staffId,
-            firstName: staff.firstName,
-            lastName: staff.lastName,
-            reviewerComment: dailyReports.reviewerComment,
-            reviewedAt: dailyReports.reviewedAt,
-            createdAt: dailyReports.createdAt,
-          })
-          .from(dailyReports)
-          .leftJoin(staff, eq(dailyReports.staffId, staff.id))
-          .where(
-            and(
-              inArray(dailyReports.staffId, staffIds),
-              inArray(dailyReports.status, ["submitted", "reviewed", "rejected"])
+          and(
+            inArray(dailyReports.staffId, accessibleStaffIds),
+            or(
+              inArray(dailyReports.status, ["submitted", "reviewed", "rejected"]),
+              eq(dailyReports.staffId, staffId)
             )
           )
-          .orderBy(desc(dailyReports.date))
-          .all();
-      }
+        )
+        .orderBy(desc(dailyReports.date))
+        .limit(100)
+        .all();
+    }
+  } else if (role === "hod") {
+    const accessibleStaffIds = await getAccessibleStaffIds(staffId, role);
+    if (accessibleStaffIds && accessibleStaffIds.length > 0) {
+      reports = await db
+        .select({
+          id: dailyReports.id,
+          date: dailyReports.date,
+          summary: dailyReports.summary,
+          status: dailyReports.status,
+          staffId: dailyReports.staffId,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          reviewerComment: dailyReports.reviewerComment,
+          reviewedAt: dailyReports.reviewedAt,
+          createdAt: dailyReports.createdAt,
+        })
+        .from(dailyReports)
+        .leftJoin(staff, eq(dailyReports.staffId, staff.id))
+        .where(
+          and(
+            inArray(dailyReports.staffId, accessibleStaffIds),
+            or(
+              inArray(dailyReports.status, ["submitted", "reviewed", "rejected"]),
+              eq(dailyReports.staffId, staffId)
+            )
+          )
+        )
+        .orderBy(desc(dailyReports.date))
+        .all();
     }
   } else {
     reports = await db

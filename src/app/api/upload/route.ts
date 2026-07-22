@@ -11,18 +11,20 @@ export const runtime = "nodejs";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
-const ALLOWED_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/plain",
-]);
+const MIME_TO_EXTENSIONS: Record<string, string[]> = {
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/png": ["png"],
+  "image/gif": ["gif"],
+  "image/webp": ["webp"],
+  "application/pdf": ["pdf"],
+  "application/msword": ["doc"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"],
+  "application/vnd.ms-excel": ["xls"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ["xlsx"],
+  "text/plain": ["txt", "csv", "log", "md"],
+};
+
+const ALLOWED_TYPES = new Set(Object.keys(MIME_TO_EXTENSIONS));
 
 export const POST = requireAuth(async (request: Request, _session) => {
   const ip = extractIp(request);
@@ -51,7 +53,15 @@ export const POST = requireAuth(async (request: Request, _session) => {
       );
     }
 
-    const ext = file.name.split(".").pop() || "bin";
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const expectedExtensions = MIME_TO_EXTENSIONS[file.type];
+    if (!expectedExtensions || !expectedExtensions.includes(ext)) {
+      return NextResponse.json(
+        { error: `File extension ".${ext}" does not match declared file type "${file.type}"` },
+        { status: 400 }
+      );
+    }
+
     const filename = `${randomUUID()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 

@@ -52,39 +52,72 @@ function getWeekdays(from: string, to: string): number {
 }
 
 export const GET = requireAuth(async (request: Request, session) => {
-  if (session.role !== "super_admin" && session.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const dateFrom = getDateParam(searchParams, "dateFrom");
   const dateTo = getDateParam(searchParams, "dateTo");
-  const institutionId = getInstitutionParam(searchParams);
+  const requestedInstitutionId = getInstitutionParam(searchParams);
 
   if (!type || !["attendance", "leaves", "staff", "payroll", "accounts"].includes(type)) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   }
 
-  let csv = "";
-  const filename = `thaibahive_${type}_${new Date().toISOString().split("T")[0]}.csv`;
+  const isSystemAdmin = session.role === "super_admin" || session.role === "admin";
+  let allowedInstIds: string[] = [];
 
-  // Resolve staff IDs belonging to the institution up front if institutionId is provided
+  if (!isSystemAdmin) {
+    const callerInsts = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, session.staffId))
+      .all();
+    allowedInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
+
+    if (allowedInstIds.length === 0) {
+      return NextResponse.json({ error: "Forbidden: No institution assigned" }, { status: 403 });
+    }
+
+    if (requestedInstitutionId && !allowedInstIds.includes(requestedInstitutionId)) {
+      return NextResponse.json({ error: "Forbidden: Cannot export this institution's data" }, { status: 403 });
+    }
+  }
+
+  const finalInstitutionId = requestedInstitutionId;
   let staffIds: string[] | undefined = undefined;
-  if (institutionId) {
+
+  // Resolve staffIds
+  if (finalInstitutionId) {
     try {
       const staffInsts = await db
         .select({ staffId: staffInstitutions.staffId })
         .from(staffInstitutions)
-        .where(eq(staffInstitutions.institutionId, institutionId));
+        .where(eq(staffInstitutions.institutionId, finalInstitutionId))
+        .all();
       staffIds = staffInsts.map((s: any) => s.staffId);
     } catch (error) {
       console.error("Failed to query institution staff:", error);
       return NextResponse.json({ error: "Failed to fetch institution details" }, { status: 500 });
     }
+  } else if (!isSystemAdmin) {
+    // Non-admin with no specific institution requested: filter by all allowed institutions
+    try {
+      const staffInsts = await db
+        .select({ staffId: staffInstitutions.staffId })
+        .from(staffInstitutions)
+        .where(inArray(staffInstitutions.institutionId, allowedInstIds))
+        .all();
+      staffIds = staffInsts.map((s: any) => s.staffId);
+    } catch (error) {
+      console.error("Failed to query allowed institutions staff:", error);
+      return NextResponse.json({ error: "Failed to fetch institution details" }, { status: 500 });
+    }
+  }
+
+  let csv = "";
+  const filename = `thaibahive_${type}_${new Date().toISOString().split("T")[0]}.csv`;
 
     // Short-circuit: if a valid institution has no staff, all staff-related exports should return empty rows.
-    if (staffIds.length === 0 && type !== "accounts") {
+    if (staffIds && staffIds.length === 0 && type !== "accounts") {
       let headersRow = "";
       if (type === "attendance") {
         headersRow = csvRow(["Employee ID", "Name", "Department", "Date", "Check In", "Check Out", "Status", "Hours Worked"]);
@@ -103,7 +136,6 @@ export const GET = requireAuth(async (request: Request, session) => {
         },
       });
     }
-  }
 
   if (type === "attendance") {
     csv += csvRow(["Employee ID", "Name", "Department", "Date", "Check In", "Check Out", "Status", "Hours Worked"]);
@@ -375,7 +407,11 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: any[] = [];
     if (dateFrom) conditions.push(gte(financialTransactions.transactionDate, dateFrom));
     if (dateTo) conditions.push(lte(financialTransactions.transactionDate, dateTo));
-    if (institutionId) conditions.push(eq(financialTransactions.institutionId, institutionId));
+    if (finalInstitutionId) {
+      conditions.push(eq(financialTransactions.institutionId, finalInstitutionId));
+    } else if (!isSystemAdmin) {
+      conditions.push(inArray(financialTransactions.institutionId, allowedInstIds));
+    }
     if (conditions.length > 0) query = query.where(and(...conditions) as any) as any;
     const rows = await query;
     for (const r of rows) {

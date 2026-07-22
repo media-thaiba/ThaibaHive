@@ -4,11 +4,17 @@ import { tasks, taskComments, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { eq } from "drizzle-orm";
+import { canAccessTask } from "@/lib/auth/department-scope";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
   const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const hasAccess = await canAccessTask(session.staffId, session.role, task);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const rows = await db
     .select({
@@ -47,12 +53,17 @@ function computeCompletedAt(status: string | undefined, currentStatus: string | 
   return null;
 }
 
-async function handleUpdate(request: Request, _session: unknown, context?: { params: Promise<Record<string, string>> }) {
+async function handleUpdate(request: Request, session: any, context?: { params: Promise<Record<string, string>> }) {
   const { id } = await context!.params;
   const body = await request.json();
 
   const existing = await db.select().from(tasks).where(eq(tasks.id, id)).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const hasAccess = await canAccessTask(session.staffId, session.role, existing);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const fields = pick(body, ["title", "description", "status", "priority", "assignedToId", "dueDate"]);
   const completedAt = computeCompletedAt(body.status, existing.status);
@@ -74,11 +85,18 @@ async function handleUpdate(request: Request, _session: unknown, context?: { par
 export const PUT = requireAuth(handleUpdate, "tasks:create");
 export const PATCH = requireAuth(handleUpdate, "tasks:create");
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
+export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
-  const existing = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.id, id)).get();
+  const existing = await db.select().from(tasks).where(eq(tasks.id, id)).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const hasAccess = await canAccessTask(session.staffId, session.role, existing);
+  if (!hasAccess) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   await db.delete(taskComments).where(eq(taskComments.taskId, id)).run();
   await db.delete(tasks).where(eq(tasks.id, id)).run();
   return NextResponse.json({ success: true });
 }, "tasks:create");
+

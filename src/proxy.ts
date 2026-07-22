@@ -10,6 +10,7 @@ const publicPaths = [
   "/Logo",
   "/api/auth/login",
   "/api/auth/signup",
+  "/api/auth/google",
   "/api/auth/mobile-handoff",
   "/favicon.ico",
 ];
@@ -116,5 +117,5 @@ function addSecurityHeaders(response: NextResponse, pathname: string): NextRespo
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo|manifest.json|sw.js|offline.html|.*\\.svg$).*)"],
 };

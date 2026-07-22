@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { dailyReports, departments, staffDepartments, auditLog } from "@/db/schema";
+import { dailyReports, auditLog } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
@@ -42,32 +43,10 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     );
   }
 
-  // HOD department scoping check
-  if (session.role === "hod") {
-    const userDepts = await db
-      .select({ id: departments.id })
-      .from(departments)
-      .where(eq(departments.headUserId, session.staffId))
-      .all();
-
-    if (userDepts.length === 0) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const deptStaff = await db
-      .select({ staffId: staffDepartments.staffId })
-      .from(staffDepartments)
-      .where(
-        inArray(
-          staffDepartments.departmentId,
-          userDepts.map((d) => d.id)
-        )
-      )
-      .all();
-
-    const staffIds = deptStaff.map((s) => s.staffId).filter(Boolean);
-
-    if (!staffIds.includes(report.staffId)) {
+  // Auth scoping check for non-admins (principal, HOD)
+  if (session.role !== "super_admin" && session.role !== "admin") {
+    const hasAccess = await canAccessStaff(session.staffId, session.role, report.staffId);
+    if (!hasAccess) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }

@@ -10,6 +10,8 @@ import {
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and, inArray } from "drizzle-orm";
+import { canAccessStaff } from "@/lib/auth/department-scope";
+
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -24,48 +26,17 @@ export const GET = requireAuth(async (_request, session, context) => {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Super admin, admin, principal bypass all checks
-  if (role !== "super_admin" && role !== "admin" && role !== "principal") {
-    if (role === "hod") {
-      // HOD can only view reports from their managed departments, and not drafts
-      const userDepts = await db
-        .select({ id: departments.id })
-        .from(departments)
-        .where(eq(departments.headUserId, staffId))
-        .all();
-
-      if (userDepts.length === 0) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-
-      const deptStaff = await db
-        .select({ staffId: staffDepartments.staffId })
-        .from(staffDepartments)
-        .where(
-          inArray(
-            staffDepartments.departmentId,
-            userDepts.map((d) => d.id)
-          )
-        )
-        .all();
-
-      const staffIds = deptStaff.map((s) => s.staffId).filter(Boolean);
-
-      if (!staffIds.includes(report.staffId)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-
-      if (report.status === "draft") {
-        return NextResponse.json(
-          { error: "Cannot view draft reports" },
-          { status: 403 }
-        );
-      }
-    } else {
-      // Staff: can only view own reports
-      if (report.staffId !== staffId) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+  // Super admin, admin bypass all checks
+  if (role !== "super_admin" && role !== "admin") {
+    const hasAccess = await canAccessStaff(staffId, role, report.staffId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (report.staffId !== staffId && report.status === "draft") {
+      return NextResponse.json(
+        { error: "Cannot view draft reports" },
+        { status: 403 }
+      );
     }
   }
 

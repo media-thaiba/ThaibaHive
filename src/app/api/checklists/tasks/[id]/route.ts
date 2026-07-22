@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { staffChecklistTasks, staffChecklists } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
@@ -32,10 +33,14 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .where(eq(staffChecklists.id, task.checklistId))
     .get();
 
+  if (!checklist) {
+    return NextResponse.json({ error: "Checklist not found" }, { status: 404 });
+  }
+
   if (
     session.role !== "super_admin" &&
     session.role !== "admin" &&
-    checklist?.staffId !== session.staffId
+    !(await canAccessStaff(session.staffId, session.role, checklist.staffId))
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

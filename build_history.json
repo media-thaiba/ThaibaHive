@@ -54,5 +54,37 @@
     "apk_name": "ThaibaHive_V1.0.0_4.apk",
     "apk_size_mb": 31.13,
     "status": "success"
+  },
+  {
+    "version": "1.0.0+5",
+    "tag": "v1.0.0-5",
+    "timestamp": "2026-07-20T12:52:47.102766Z",
+    "apk_name": "ThaibaHive_V1.0.0_5.apk",
+    "apk_size_mb": 31.19,
+    "status": "success"
+  },
+  {
+    "version": "1.0.0+6",
+    "tag": "v1.0.0-6",
+    "timestamp": "2026-07-20T12:56:47.293074Z",
+    "apk_name": "ThaibaHive_V1.0.0_6.apk",
+    "apk_size_mb": 31.19,
+    "status": "success"
+  },
+  {
+    "version": "1.0.0+6",
+    "tag": "v1.0.0-6",
+    "timestamp": "2026-07-20T13:39:35.756215Z",
+    "apk_name": "ThaibaHive_V1.0.0_6.apk",
+    "apk_size_mb": 31.19,
+    "status": "success"
+  },
+  {
+    "version": "1.0.0+6",
+    "tag": "v1.0.0-6",
+    "timestamp": "2026-07-20T13:59:02.140944Z",
+    "apk_name": "ThaibaHive_V1.0.0_6.apk",
+    "apk_size_mb": 31.19,
+    "status": "success"
   }
 ]

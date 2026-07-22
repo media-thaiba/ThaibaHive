@@ -478,7 +478,7 @@ export default function LoginPage() {
                       </svg>
                     </div>
                     <p className="text-xs text-zinc-400 text-center leading-relaxed max-w-[260px]">
-                      Authenticate your group account (username@thaibagarden.org) securely without credentials.
+                      Authenticate your Google account securely without credentials.
                     </p>
                   </div>
 

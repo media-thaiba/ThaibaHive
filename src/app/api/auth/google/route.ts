@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       .get();
 
     if (!staffMember) {
+      console.warn(`[Auth] Google login failed: User ${email} does not exist in the staff database.`);
       return NextResponse.json(
         { error: "Invalid Google token" },
         { status: 401 }

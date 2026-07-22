@@ -1,11 +1,12 @@
 import { db } from "@/db";
-import { presence } from "@thaiba/db/schema";
+import { presence, staffInstitutions } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 import { logActivity } from "@/lib/api/activity-log";
 
 export type SSEConnection = {
   controller: ReadableStreamDefaultController;
   writer: WritableStreamDefaultWriter;
+  institutionIds?: string[];
 };
 
 const globalForSSE = globalThis as unknown as {
@@ -77,7 +78,7 @@ export function connectionCount(key: string): number {
 
 // ─── Presence-aware SSE helpers ───
 
-export function broadcastPresence(
+export async function broadcastPresence(
   staffId: string,
   online: boolean,
   lastSeenAt: string,
@@ -85,15 +86,33 @@ export function broadcastPresence(
   statusText?: string | null
 ) {
   const payload = { type: "change", staffId, online, lastSeenAt, status, statusText };
-  // Broadcast to all presence subscribers
+  
+  let updaterInstIds: string[] = [];
+  try {
+    const updaterInsts = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, staffId))
+      .all();
+    updaterInstIds = updaterInsts.map((i) => i.institutionId).filter(Boolean);
+  } catch (err) {
+    console.error("Failed to query updater institutions in broadcastPresence:", err);
+  }
+
+  // Broadcast to all presence subscribers sharing at least one institution
   const set = sseConnections.get("presence");
   if (set && set.size > 0) {
     const encoded = `event: presence\ndata: ${JSON.stringify(payload)}\n\n`;
     for (const conn of set) {
-      try {
-        conn.writer.write(new TextEncoder().encode(encoded));
-      } catch (err) {
-        console.error(`Failed to write presence broadcast for staff ID ${staffId}:`, err);
+      const sharesInstitution =
+        !conn.institutionIds ||
+        conn.institutionIds.some((id) => updaterInstIds.includes(id));
+      if (sharesInstitution) {
+        try {
+          conn.writer.write(new TextEncoder().encode(encoded));
+        } catch (err) {
+          console.error(`Failed to write presence broadcast for staff ID ${staffId}:`, err);
+        }
       }
     }
   }

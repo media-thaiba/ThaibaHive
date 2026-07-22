@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, asc, sql } from "drizzle-orm";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -44,7 +45,7 @@ export const GET = requireAuth(async (_request, session, context) => {
   if (
     session.role !== "super_admin" &&
     session.role !== "admin" &&
-    assignment.staffId !== session.staffId
+    !(await canAccessStaff(session.staffId, session.role, assignment.staffId))
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -77,7 +78,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   if (
     session.role !== "super_admin" &&
     session.role !== "admin" &&
-    assignment.staffId !== session.staffId
+    !(await canAccessStaff(session.staffId, session.role, assignment.staffId))
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

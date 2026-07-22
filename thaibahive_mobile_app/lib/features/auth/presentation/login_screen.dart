@@ -754,7 +754,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Authenticate your group account (username@thaibagarden.org) securely without credentials.',
+                    'Authenticate your Google account securely without credentials.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.4),
                   ),

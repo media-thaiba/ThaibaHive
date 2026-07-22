@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       .get();
 
     if (!staffMember || !staffMember.passwordHash) {
+      console.warn(`[Auth] Login failed: User ${email} not found in database.`);
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     const valid = await verifyPassword(password, staffMember.passwordHash);
 
     if (!valid) {
+      console.warn(`[Auth] Login failed: Password mismatch for ${email}.`);
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
     }
 
     if (!staffMember.isActive) {
+      console.warn(`[Auth] Login failed: User ${email} is inactive.`);
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }

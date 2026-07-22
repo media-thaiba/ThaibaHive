@@ -132,3 +132,47 @@ export async function getAccessibleStaffIds(
 
   return getManagedStaffIds(callerStaffId, role);
 }
+
+/**
+ * Checks whether the caller is authorized to access a specific task.
+ * - super_admin/admin: see/modify everything
+ * - assignedToId or assignedById is the caller: see/modify
+ * - principal: task's department belongs to the same institution
+ * - hod: task's department is managed by the HOD
+ */
+export async function canAccessTask(
+  callerStaffId: string,
+  role: string,
+  task: { assignedToId: string | null; assignedById: string | null; departmentId: string | null }
+): Promise<boolean> {
+  if (role === "super_admin" || role === "admin") return true;
+  if (task.assignedToId === callerStaffId || task.assignedById === callerStaffId) return true;
+
+  if (role === "principal" && task.departmentId) {
+    const dept = await db
+      .select({ institutionId: departments.institutionId })
+      .from(departments)
+      .where(eq(departments.id, task.departmentId))
+      .get();
+    if (dept?.institutionId) {
+      const callerInst = await db
+        .select({ institutionId: staffInstitutions.institutionId })
+        .from(staffInstitutions)
+        .where(eq(staffInstitutions.staffId, callerStaffId))
+        .limit(1);
+      return callerInst[0]?.institutionId === dept.institutionId;
+    }
+  }
+
+  if (role === "hod" && task.departmentId) {
+    const dept = await db
+      .select({ headUserId: departments.headUserId })
+      .from(departments)
+      .where(eq(departments.id, task.departmentId))
+      .get();
+    return dept?.headUserId === callerStaffId;
+  }
+
+  return false;
+}
+

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { tasks, staff, staffDepartments } from "@/db/schema";
+import { tasks, staff, staffDepartments, departments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { taskCreateSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
-import { desc, eq, and, asc, sql } from "drizzle-orm";
+import { desc, eq, and, or, inArray, asc, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
@@ -32,8 +32,80 @@ export const GET = requireAuth(async (request, session) => {
     .leftJoin(staff, eq(tasks.assignedToId, staff.id))
     .orderBy(asc(tasks.sortOrder), desc(tasks.createdAt));
 
+  // RLS Access Filters:
+  // - super_admin/admin: see all
+  // - principal: see all tasks in their institution, or assigned/created by them
+  // - hod: see tasks in their managed departments, or assigned/created by them
+  // - staff: see tasks assigned to/by them
+  let accessFilter = null;
+  if (session.role !== "super_admin" && session.role !== "admin") {
+    if (session.role === "principal") {
+      const callerInst = await db
+        .select({ institutionId: staffInstitutions.institutionId })
+        .from(staffInstitutions)
+        .where(eq(staffInstitutions.staffId, session.staffId))
+        .limit(1);
+      const instId = callerInst[0]?.institutionId;
+      if (instId) {
+        const instDepts = await db
+          .select({ id: departments.id })
+          .from(departments)
+          .where(eq(departments.institutionId, instId))
+          .all();
+        const deptIds = instDepts.map((d) => d.id).filter(Boolean);
+        if (deptIds.length > 0) {
+          accessFilter = or(
+            inArray(tasks.departmentId, deptIds),
+            eq(tasks.assignedToId, session.staffId),
+            eq(tasks.assignedById, session.staffId)
+          );
+        } else {
+          accessFilter = or(
+            eq(tasks.assignedToId, session.staffId),
+            eq(tasks.assignedById, session.staffId)
+          );
+        }
+      } else {
+        accessFilter = or(
+          eq(tasks.assignedToId, session.staffId),
+          eq(tasks.assignedById, session.staffId)
+        );
+      }
+    } else if (session.role === "hod") {
+      const managedDepts = await db
+        .select({ id: departments.id })
+        .from(departments)
+        .where(eq(departments.headUserId, session.staffId))
+        .all();
+      const deptIds = managedDepts.map((d) => d.id).filter(Boolean);
+      if (deptIds.length > 0) {
+        accessFilter = or(
+          inArray(tasks.departmentId, deptIds),
+          eq(tasks.assignedToId, session.staffId),
+          eq(tasks.assignedById, session.staffId)
+        );
+      } else {
+        accessFilter = or(
+          eq(tasks.assignedToId, session.staffId),
+          eq(tasks.assignedById, session.staffId)
+        );
+      }
+    } else {
+      // staff
+      accessFilter = or(
+        eq(tasks.assignedToId, session.staffId),
+        eq(tasks.assignedById, session.staffId)
+      );
+    }
+  }
+
+  const conditions = [];
+  if (accessFilter) {
+    conditions.push(accessFilter);
+  }
+
   if (scope === "my") {
-    query = query.where(eq(tasks.assignedToId, session.staffId)) as typeof query;
+    conditions.push(eq(tasks.assignedToId, session.staffId));
   } else if (scope === "department") {
     const primaryDept = await db
       .select({ departmentId: staffDepartments.departmentId })
@@ -41,9 +113,16 @@ export const GET = requireAuth(async (request, session) => {
       .where(and(eq(staffDepartments.staffId, session.staffId), eq(staffDepartments.isPrimary, true)))
       .get();
     if (primaryDept) {
-      query = query.where(eq(tasks.departmentId, primaryDept.departmentId)) as typeof query;
+      conditions.push(eq(tasks.departmentId, primaryDept.departmentId));
+    } else {
+      conditions.push(sql`1=0`);
     }
   }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as typeof query;
+  }
+
 
   const rows = await query.all();
   const all = rows.map((r) => ({
