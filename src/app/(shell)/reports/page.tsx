@@ -20,6 +20,7 @@ import {
   Clock,
   PlusCircle,
   Eye,
+  Download,
 } from "lucide-react";
 import { formatDate, ensureArray } from "@/lib/utils";
 
@@ -298,16 +299,26 @@ export default function ReportsPage() {
       <PageHeader
         title="Daily Activity Logs"
         actions={
-          <Button onClick={() => {
-            setEditingReport(null);
-            setReportDate(new Date().toISOString().split("T")[0]);
-            setSummary("");
-            setLinkedTasks([]);
-            setShowForm(true);
-          }} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            New Report
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => window.open("/api/export?type=staff", "_blank")}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => {
+              setEditingReport(null);
+              setReportDate(new Date().toISOString().split("T")[0]);
+              setSummary("");
+              setLinkedTasks([]);
+              setShowForm(true);
+            }} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              New Report
+            </Button>
+          </div>
         }
       />
 

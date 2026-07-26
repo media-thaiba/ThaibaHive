@@ -25,7 +25,8 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Clock, 
-  ExternalLink 
+  ExternalLink,
+  Download
 } from "lucide-react";
 import { formatDate, ensureArray } from "@/lib/utils";
 
@@ -258,10 +259,20 @@ export default function ExpensesPage() {
       <PageHeader
         title="Expense Claims"
         actions={
-          <Button onClick={() => setShowForm(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            Submit Claim
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => window.open("/api/export?type=expenses", "_blank")}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => setShowForm(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Submit Claim
+            </Button>
+          </div>
         }
       />
 

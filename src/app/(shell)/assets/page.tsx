@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -259,9 +260,19 @@ export default function AssetsPage() {
           <h1 className="text-2xl font-bold">Assets</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{assets.length} total</p>
         </div>
-        <Button onClick={openAddForm}>
-          Add Asset
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.open("/api/export?type=assets", "_blank")}
+            className="gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button onClick={openAddForm}>
+            Add Asset
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
