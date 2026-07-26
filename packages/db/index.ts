@@ -35,6 +35,7 @@ if (isPostgres) {
     url: databaseUrl,
     authToken: process.env.DATABASE_AUTH_TOKEN,
   });
+  client.execute("PRAGMA foreign_keys = ON;").catch((e) => console.error("Failed to enable foreign keys:", e));
   dbInstance = sqliteDrizzle(client, { schema: sqliteSchema });
 }
 

@@ -992,3 +992,73 @@ export const systemConfigs = sqliteTable("system_configs", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
 
+// ─── Media Library (MediaHive) ───
+
+export const mediaFolders = sqliteTable("media_folders", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parentId: text("parent_id").references((): any => mediaFolders.id, { onDelete: "cascade" }),
+  departmentId: text("department_id").references(() => departments.id, { onDelete: "cascade" }),
+  createdById: text("created_by_id").notNull().references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const mediaAssets = sqliteTable("media_assets", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  fileSize: integer("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  fileType: text("file_type").notNull(), // 'image' | 'video' | 'audio' | 'document'
+  status: text("status").notNull().default("ready"), // 'ready' | 'processing' | 'failed'
+  folderId: text("folder_id").references(() => mediaFolders.id, { onDelete: "cascade" }),
+  tags: text("tags", { mode: "json" }).$type<string[]>(),
+  metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
+  downloadCount: integer("download_count").notNull().default(0),
+  createdById: text("created_by_id").notNull().references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  folderIdIdx: index("idx_media_assets_folder_id").on(t.folderId),
+  fileTypeIdx: index("idx_media_assets_file_type").on(t.fileType),
+  statusIdx: index("idx_media_assets_status").on(t.status),
+}));
+
+export const mediaShareLinks = sqliteTable("media_share_links", {
+  id: text("id").primaryKey(),
+  assetId: text("asset_id").references(() => mediaAssets.id, { onDelete: "cascade" }),
+  folderId: text("folder_id").references(() => mediaFolders.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  passwordHash: text("password_hash"),
+  expiresAt: text("expires_at"),
+  downloadCount: integer("download_count").notNull().default(0),
+  createdById: text("created_by_id").notNull().references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const mediaDownloads = sqliteTable("media_downloads", {
+  id: text("id").primaryKey(),
+  assetId: text("asset_id").notNull().references(() => mediaAssets.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => staff.id),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  downloadedAt: text("downloaded_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const mediaUploads = sqliteTable("media_uploads", {
+  id: text("id").primaryKey(),
+  filename: text("filename").notNull(),
+  fileSize: integer("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sha256: text("sha256").notNull(),
+  totalChunks: integer("total_chunks").notNull(),
+  completedChunks: text("completed_chunks", { mode: "json" }).$type<number[]>().notNull(),
+  createdById: text("created_by_id").notNull().references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+

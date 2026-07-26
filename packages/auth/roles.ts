@@ -28,6 +28,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "grievances:read",
     "chat:read", "chat:manage",
     "availability:write",
+    "media:read", "media:create", "media:manage", "media:share",
   ],
   principal: [
     "staff:read", "staff:create", "staff:update",
@@ -51,6 +52,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "grievances:read",
     "chat:read", "chat:manage",
     "availability:write",
+    "media:read", "media:create", "media:share",
   ],
   hod: [
     "staff:read",
@@ -71,6 +73,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "grievances:read",
     "chat:read", "chat:manage",
     "availability:write",
+    "media:read", "media:create", "media:share",
   ],
   staff: [
     "staff:read",
@@ -91,6 +94,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "assets:read",
     "chat:read", "chat:manage",
     "finance:create",
+    "media:read", "media:create", "media:share",
   ],
   accounts: [
     "staff:read",
@@ -111,6 +115,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "assets:read",
     "chat:read", "chat:manage",
     "finance:create", "finance:update", "finance:export",
+    "media:read", "media:create", "media:share",
   ],
   purchase: [
     "staff:read",
@@ -131,6 +136,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "assets:read", "assets:create", "assets:update", "assets:delete",
     "chat:read", "chat:manage",
     "finance:create", "finance:update",
+    "media:read", "media:create", "media:share",
   ],
 };
 

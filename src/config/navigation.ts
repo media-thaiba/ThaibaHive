@@ -3,7 +3,7 @@ import {
   Megaphone, Sparkles, BarChart3, Users, DollarSign, ShoppingCart,
   CalendarCheck, Briefcase, Settings, HelpCircle, Truck, Coffee,
   DoorOpen, MessageSquare, Award, CircleDot, LayoutDashboard,
-  Store,
+  Store, FolderOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +62,7 @@ export const navGroups: NavGroup[] = [
       { href: "/grievances", label: "Feedback", desc: "Submit suggestions, concerns, or anonymous feedback", icon: MessageSquare },
       { href: "/recognition", label: "Recognition", desc: "Send kudos to colleagues and view birthday reminders", icon: Award },
       { href: "/availability", label: "Availability", desc: "Set your availability status for team visibility", icon: CircleDot },
+      { href: "/media", label: "Media Library", desc: "Browse, upload, and share institutional media assets", icon: FolderOpen },
     ],
   },
   {
@@ -97,6 +98,7 @@ const ENABLED_PATHS = new Set([
   "/settings",
   "/help-desk",
   "/marketplace",
+  "/media",
 ]);
 
 export function isPhaseOnePath(href: string): boolean {

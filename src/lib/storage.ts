@@ -59,10 +59,13 @@ export async function uploadToSupabase(
  */
 export async function downloadFromSupabase(
   filename: string,
-  bucket = "uploads"
+  bucket = "uploads",
+  range?: string
 ): Promise<{
   stream: ReadableStream;
   mimeType: string;
+  contentLength?: string;
+  contentRange?: string;
 } | null> {
   if (!isStorageConfigured) {
     return null;
@@ -70,11 +73,17 @@ export async function downloadFromSupabase(
 
   const downloadUrl = new URL(`/storage/v1/object/authenticated/${bucket}/${filename}`, supabaseUrl).toString();
 
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${supabaseKey}`,
+  };
+
+  if (range) {
+    headers["Range"] = range;
+  }
+
   const response = await fetch(downloadUrl, {
     method: "GET",
-    headers: {
-      "Authorization": `Bearer ${supabaseKey}`,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -83,6 +92,8 @@ export async function downloadFromSupabase(
   }
 
   const contentType = response.headers.get("content-type") || "application/octet-stream";
+  const contentLength = response.headers.get("content-length") || undefined;
+  const contentRange = response.headers.get("content-range") || undefined;
   
   if (!response.body) {
     throw new Error("Empty response body from Supabase Storage");
@@ -91,5 +102,40 @@ export async function downloadFromSupabase(
   return {
     stream: response.body,
     mimeType: contentType,
+    contentLength,
+    contentRange,
   };
+}
+
+/**
+ * Copy an object within Supabase Storage
+ */
+export async function copySupabaseObject(
+  sourcePath: string,
+  destPath: string,
+  bucket = "uploads"
+): Promise<void> {
+  if (!isStorageConfigured) {
+    throw new Error("Supabase Storage is not configured.");
+  }
+
+  const copyUrl = new URL(`/storage/v1/object/copy`, supabaseUrl).toString();
+
+  const response = await fetch(copyUrl, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${supabaseKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      bucketId: bucket,
+      sourceKey: sourcePath,
+      destinationKey: destPath,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Failed to copy object in Supabase Storage: ${response.statusText} (${errText})`);
+  }
 }

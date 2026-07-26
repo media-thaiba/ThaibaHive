@@ -205,3 +205,22 @@ export const verificationSettingsSchema = z.object({
   lowBatteryIntervalMinutes: z.number().int().min(1).max(180).optional(),
   criticalBatterySuspend: z.boolean().optional(),
 });
+
+export const mediaFolderCreateSchema = z.object({
+  name: z.string().min(1),
+  parentId: z.string().optional().nullable(),
+  departmentId: z.string().optional().nullable(),
+});
+
+export const mediaAssetCreateSchema = z.object({
+  name: z.string().min(1),
+  fileUrl: z.string().min(1),
+  thumbnailUrl: z.string().optional().nullable(),
+  fileSize: z.number().int().nonnegative(),
+  mimeType: z.string().min(1),
+  fileType: z.enum(["image", "video", "audio", "document"]),
+  status: z.enum(["ready", "processing", "failed"]).optional().default("ready"),
+  folderId: z.string().optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+  metadata: z.record(z.string(), z.any()).optional().nullable(),
+});
