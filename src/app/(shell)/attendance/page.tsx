@@ -12,7 +12,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ExportButton } from "@/components/export-button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Clock, LogOut, Smartphone } from "lucide-react";
+import { Clock, LogOut } from "lucide-react";
+import { CheckInPanel } from "@/components/attendance/check-in-panel";
 import { formatDate, formatTime } from "@/lib/utils";
 
 type AttendanceLog = {
@@ -314,17 +315,7 @@ export default function AttendancePage() {
                     </div>
                     <Badge variant={statusVariant[todayLog.status] || "secondary"} className="capitalize">{todayLog.status}</Badge>
                   </>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10 text-warning">
-                      <Smartphone className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Check-in via mobile app</p>
-                      <p className="text-xs text-muted-foreground">Use the mobile app with NFC or QR code to check in</p>
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
               <div className="mt-4">
                 {todayLog && !todayLog.checkOut && (
@@ -336,6 +327,13 @@ export default function AttendancePage() {
               </div>
             </CardContent>
           </Card>
+
+          {!todayLog && (
+            <CheckInPanel
+              staff={staff}
+              onCheckInComplete={() => fetchAttendance(1, false)}
+            />
+          )}
 
           {/* History */}
           <Card className="animate-slide-up">

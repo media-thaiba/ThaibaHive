@@ -32,6 +32,7 @@ export async function GET() {
       avatarUrl: staffMember.avatarUrl,
       isActive: staffMember.isActive,
       isFirstLogin: staffMember.isFirstLogin,
+      nfcTagId: staffMember.nfcTagId,
     },
   });
 }

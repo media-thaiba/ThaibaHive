@@ -59,6 +59,7 @@
     "framer-motion": "^12.42.2",
     "googleapis": "^173.0.0",
     "jose": "^6.2.3",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.23.0",
     "md-to-pdf": "^5.2.5",
     "next": "16.2.10",

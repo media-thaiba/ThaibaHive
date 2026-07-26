@@ -22,6 +22,7 @@ type StaffUser = {
   designation: string | null;
   avatarUrl: string | null;
   isFirstLogin: boolean;
+  nfcTagId: string | null;
 };
 
 type AuthContextType = {
