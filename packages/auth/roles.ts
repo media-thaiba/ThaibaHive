@@ -90,6 +90,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "helpdesk:read",
     "assets:read",
     "chat:read", "chat:manage",
+    "finance:create",
   ],
   accounts: [
     "staff:read",
