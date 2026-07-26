@@ -234,3 +234,10 @@ export const mediaShareLinkCreateSchema = z.object({
 }).refine(d => !!(d.assetId || d.folderId), {
   message: "Either assetId or folderId is required",
 });
+
+export const mediaBatchDownloadSchema = z.object({
+  assetIds: z.array(z.string().min(1)).max(100).optional(),
+  token: z.string().optional(),
+  folderId: z.string().optional(),
+  password: z.string().optional(),
+});
