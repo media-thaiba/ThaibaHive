@@ -257,7 +257,7 @@ export default function TasksPage() {
       const oldIndex = tasks.findIndex((t) => t.id === activeId);
       const newIndex = tasks.findIndex((t) => t.id === overId);
       updatedTasks = arrayMove(tasks, oldIndex, newIndex);
-    } else if (columns.includes(overId as any)) {
+    } else if (columns.includes(overId as typeof columns[number])) {
       // Cross-column drop onto a column container
       const targetColumn = overId;
       const activeIndex = tasks.findIndex((t) => t.id === activeId);

@@ -84,8 +84,8 @@ export async function verifySession(): Promise<SessionPayload | null> {
     if (user.tokenVersion !== session.tokenVersion) return null;
 
     return session;
-  } catch (error: any) {
-    console.error("[Auth] Session verification failed:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("[Auth] Session verification failed:", error instanceof Error ? error.message : error);
     return null;
   }
 }

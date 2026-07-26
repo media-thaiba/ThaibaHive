@@ -106,11 +106,12 @@ export const POST = requireAuth(async (request, session) => {
         })
         .returning()
         .get();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (
-        error.message?.includes("UNIQUE constraint failed") ||
-        error.code === "SQLITE_CONSTRAINT" ||
-        error.message?.includes("constraint failed")
+        error instanceof Error && (
+          error.message.includes("UNIQUE constraint failed") ||
+          error.message.includes("constraint failed")
+        )
       ) {
         return NextResponse.json(
           { error: "Already checked in today." },

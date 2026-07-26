@@ -107,7 +107,6 @@ function makeRequest(pathname: string, opts?: { cookie?: string; authorization?:
   if (opts?.authorization) headers["authorization"] = opts.authorization;
   if (opts?.contentType) headers["content-type"] = opts.contentType;
   if (opts?.contentLength) headers["content-length"] = opts.contentLength;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { NextRequest } = require("next/server");
   return new NextRequest(url, { method: opts?.method || "GET", headers });
 }

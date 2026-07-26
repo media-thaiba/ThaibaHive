@@ -25,21 +25,23 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 // Helper to convert Node stream to Web ReadableStream
-function nodeStreamToWeb(nodeStream: any): ReadableStream {
+function nodeStreamToWeb(nodeStream: NodeJS.ReadableStream): ReadableStream {
   return new ReadableStream({
     start(controller) {
-      nodeStream.on("data", (chunk: any) => {
-        controller.enqueue(chunk);
+      nodeStream.on("data", (chunk: Buffer | string) => {
+        controller.enqueue(typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk);
       });
       nodeStream.on("end", () => {
         controller.close();
       });
-      nodeStream.on("error", (err: any) => {
+      nodeStream.on("error", (err: Error) => {
         controller.error(err);
       });
     },
     cancel() {
-      nodeStream.destroy();
+      if ("destroy" in nodeStream && typeof nodeStream.destroy === "function") {
+        (nodeStream as import("stream").Readable).destroy();
+      }
     }
   });
 }

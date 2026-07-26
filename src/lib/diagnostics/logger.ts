@@ -90,8 +90,8 @@ function serializeArg(arg: unknown): string {
 
 function patchConsole() {
   if (typeof window === "undefined") return;
-  if ((window as any).__telemetryPatched) return;
-  (window as any).__telemetryPatched = true;
+  if ((window as unknown as Record<string, unknown>).__telemetryPatched) return;
+  (window as unknown as Record<string, unknown>).__telemetryPatched = true;
 
   console.log = (...args) => {
     origConsole.log(...args);
@@ -124,8 +124,8 @@ function patchConsole() {
 
 function patchFetch() {
   if (typeof window === "undefined") return;
-  if ((window as any).__telemetryFetchPatched) return;
-  (window as any).__telemetryFetchPatched = true;
+  if ((window as unknown as Record<string, unknown>).__telemetryFetchPatched) return;
+  (window as unknown as Record<string, unknown>).__telemetryFetchPatched = true;
 
   const origFetch = window.fetch.bind(window);
 
@@ -174,8 +174,8 @@ function patchFetch() {
 
 function patchNavigation() {
   if (typeof window === "undefined") return;
-  if ((window as any).__telemetryNavPatched) return;
-  (window as any).__telemetryNavPatched = true;
+  if ((window as unknown as Record<string, unknown>).__telemetryNavPatched) return;
+  (window as unknown as Record<string, unknown>).__telemetryNavPatched = true;
 
   function recordNav(path: string) {
     addEntry("info", `NAV → ${path}`);

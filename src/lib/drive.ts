@@ -69,7 +69,7 @@ export async function uploadToDrive(filename: string, mimeType: string, buffer: 
   }
 }
 
-export async function downloadFromDrive(filename: string): Promise<{ stream: any; mimeType: string } | null> {
+export async function downloadFromDrive(filename: string): Promise<{ stream: NodeJS.ReadableStream; mimeType: string } | null> {
   const drive = getDriveClient();
   if (!drive) return null;
 
@@ -99,13 +99,13 @@ export async function downloadFromDrive(filename: string): Promise<{ stream: any
     }
 
     // Fetch the file download stream
-    const fileRes = (await drive.files.get(
+    const fileRes = await drive.files.get(
       { fileId: file.id, alt: "media", supportsAllDrives: true },
       { responseType: "stream" }
-    )) as any;
+    );
 
     return {
-      stream: fileRes.data,
+      stream: fileRes.data as NodeJS.ReadableStream,
       mimeType: file.mimeType || "application/octet-stream",
     };
   } catch (error) {

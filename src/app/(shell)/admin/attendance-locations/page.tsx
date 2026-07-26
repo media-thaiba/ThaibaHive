@@ -516,7 +516,6 @@ function drawQR(canvas: HTMLCanvasElement, data: string) {
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = "#000000";
 
-  const hash = simpleHash(data);
   const bits = dataToBits(data, moduleCount * moduleCount);
 
   for (let y = 0; y < moduleCount; y++) {
@@ -540,15 +539,6 @@ function isFinderPattern(x: number, y: number, size: number) {
     }
   }
   return false;
-}
-
-function simpleHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
 }
 
 function dataToBits(data: string, length: number): boolean[] {

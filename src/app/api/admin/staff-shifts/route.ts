@@ -54,8 +54,8 @@ export const POST = requireAuth(async (request: Request) => {
       .get();
 
     return NextResponse.json({ assignment }, { status: 201 });
-  } catch (err: any) {
-    if (err.message?.includes("UNIQUE") || err.message?.includes("unique")) {
+  } catch (err: unknown) {
+    if (err instanceof Error && (err.message.includes("UNIQUE") || err.message.includes("unique"))) {
       return NextResponse.json(
         { error: "This staff member already has a shift assignment for this effective date" },
         { status: 409 }

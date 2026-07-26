@@ -40,7 +40,7 @@ async function globalSetup() {
   };
 
   // Seed multi-role test users for approval flow testing
-  const adminId = await seedUser("test-admin@thaibahive.local", "TEST-ADMIN-99", "Test", "Admin", "admin");
+  const _adminId = await seedUser("test-admin@thaibahive.local", "TEST-ADMIN-99", "Test", "Admin", "admin");
   const staffId = await seedUser("test-staff@thaibahive.local", "TEST-STAFF-99", "Test", "Staff", "staff", "test-nfc-tag-id-99");
   const hodId = await seedUser("test-hod@thaibahive.local", "TEST-HOD-99", "Test", "HOD", "hod");
   const principalId = await seedUser("test-principal@thaibahive.local", "TEST-PRIN-99", "Test", "Principal", "principal");

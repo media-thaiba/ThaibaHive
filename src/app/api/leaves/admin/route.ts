@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, staff, leaveTypes } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, type SQL } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request) => {
   const { searchParams } = new URL(request.url);
@@ -10,10 +10,12 @@ export const GET = requireAuth(async (request: Request) => {
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
 
-  const conditions: any[] = [];
+  const conditions: (SQL | undefined)[] = [];
   if (status) conditions.push(eq(leaveRequests.status, status));
   if (startDate) conditions.push(gte(leaveRequests.startDate, startDate));
   if (endDate) conditions.push(lte(leaveRequests.endDate, endDate));
+
+  const activeConditions = conditions.filter((c): c is SQL => !!c);
 
   const leaves = await db
     .select({
@@ -37,7 +39,7 @@ export const GET = requireAuth(async (request: Request) => {
     .from(leaveRequests)
     .leftJoin(staff, eq(leaveRequests.staffId, staff.id))
     .leftJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(activeConditions.length > 0 ? and(...activeConditions) : undefined)
     .orderBy(desc(leaveRequests.createdAt))
     .limit(100)
     .all();

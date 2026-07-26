@@ -34,8 +34,8 @@ export const POST = requireAuth(async (request: Request) => {
       .get();
 
     return NextResponse.json({ leaveType }, { status: 201 });
-  } catch (err: any) {
-    if (err.message?.includes("UNIQUE") || err.message?.includes("unique")) {
+  } catch (err: unknown) {
+    if (err instanceof Error && (err.message.includes("UNIQUE") || err.message.includes("unique"))) {
       return NextResponse.json(
         { error: "A leave type with this code already exists" },
         { status: 409 }

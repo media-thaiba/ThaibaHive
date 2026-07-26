@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export default function ExpensesPage() {
 
   const canApprove = staff ? ["super_admin", "admin", "hod"].includes(staff.role) : false;
 
-  const fetchClaims = () => {
+  const fetchClaims = useCallback(() => {
     setLoading(true);
     const personalPromise = fetch("/api/expense-claims?viewAll=false")
       .then((r) => {
@@ -111,11 +111,11 @@ export default function ExpensesPage() {
       : Promise.resolve();
 
     Promise.all([personalPromise, teamPromise]).finally(() => setLoading(false));
-  };
+  }, [canApprove]);
 
   useEffect(() => {
     fetchClaims();
-  }, [canApprove]);
+  }, [fetchClaims]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { eq } from "drizzle-orm";
 import { canAccessTask } from "@/lib/auth/department-scope";
+import { type SessionPayload } from "@/lib/auth";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -53,7 +54,7 @@ function computeCompletedAt(status: string | undefined, currentStatus: string | 
   return null;
 }
 
-async function handleUpdate(request: Request, session: any, context?: { params: Promise<Record<string, string>> }) {
+async function handleUpdate(request: Request, session: SessionPayload, context?: { params: Promise<Record<string, string>> }) {
   const { id } = await context!.params;
   const body = await request.json();
 

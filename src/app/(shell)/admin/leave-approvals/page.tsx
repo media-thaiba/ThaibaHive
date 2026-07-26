@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,11 +61,7 @@ export default function LeaveApprovalsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  useEffect(() => { fetchLeaves(); }, []);
-
-  useEffect(() => { fetchLeaves(); }, [activeTab, dateFrom, dateTo]);
-
-  async function fetchLeaves() {
+  const fetchLeaves = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (activeTab === "pending") params.set("status", "pending");
@@ -76,7 +72,11 @@ export default function LeaveApprovalsPage() {
     const data = await res.json();
     setLeaves(data.leaves || []);
     setLoading(false);
-  }
+  }, [activeTab, dateFrom, dateTo]);
+
+  useEffect(() => {
+    fetchLeaves();
+  }, [fetchLeaves]);
 
   function openAction(leave: LeaveRequest, action: "approved" | "rejected") {
     setActionDialog({ open: true, leave, action });

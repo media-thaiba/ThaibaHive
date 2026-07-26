@@ -1,3 +1,14 @@
+interface GoogleTokenInfoPayload {
+  email: string;
+  email_verified: string | boolean;
+  name?: string;
+  picture?: string;
+  sub: string;
+  exp: string;
+  aud: string;
+  error_description?: string;
+}
+
 export async function verifyGoogleToken(
   idToken: string,
   allowedClientIds?: string[]
@@ -18,7 +29,7 @@ export async function verifyGoogleToken(
     throw new Error(`Google token validation failed: ${response.statusText} (${errText})`);
   }
 
-  const payload = (await response.json()) as any;
+  const payload: GoogleTokenInfoPayload = await response.json();
 
 
   if (payload.error_description) {

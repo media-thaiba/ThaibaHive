@@ -12,7 +12,7 @@ import {
   financialTransactions,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, inArray, type SQL } from "drizzle-orm";
 
 function esc(val: unknown): string {
   if (val === null || val === undefined) return "";
@@ -93,7 +93,7 @@ export const GET = requireAuth(async (request: Request, session) => {
         .from(staffInstitutions)
         .where(eq(staffInstitutions.institutionId, finalInstitutionId))
         .all();
-      staffIds = staffInsts.map((s: any) => s.staffId);
+      staffIds = staffInsts.map((s) => s.staffId);
     } catch (error) {
       console.error("Failed to query institution staff:", error);
       return NextResponse.json({ error: "Failed to fetch institution details" }, { status: 500 });
@@ -106,7 +106,7 @@ export const GET = requireAuth(async (request: Request, session) => {
         .from(staffInstitutions)
         .where(inArray(staffInstitutions.institutionId, allowedInstIds))
         .all();
-      staffIds = staffInsts.map((s: any) => s.staffId);
+      staffIds = staffInsts.map((s) => s.staffId);
     } catch (error) {
       console.error("Failed to query allowed institutions staff:", error);
       return NextResponse.json({ error: "Failed to fetch institution details" }, { status: 500 });
@@ -156,13 +156,14 @@ export const GET = requireAuth(async (request: Request, session) => {
       .leftJoin(staffDepartments, eq(staff.id, staffDepartments.staffId))
       .leftJoin(departments, eq(staffDepartments.departmentId, departments.id));
 
-    const conditions: any[] = [];
+    const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(attendanceLogs.date, dateFrom));
     if (dateTo) conditions.push(lte(attendanceLogs.date, dateTo));
     if (staffIds) {
       conditions.push(inArray(attendanceLogs.staffId, staffIds));
     }
-    if (conditions.length > 0) query = query.where(and(...conditions) as any) as any;
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) query = query.where(and(...activeConditions)) as typeof query;
     const rows = await query;
     for (const r of rows) {
       const hrs = r.workedMinutes != null ? `${Math.floor(r.workedMinutes / 60)}h ${r.workedMinutes % 60}m` : "";
@@ -188,13 +189,14 @@ export const GET = requireAuth(async (request: Request, session) => {
       .innerJoin(staff, eq(leaveRequests.staffId, staff.id))
       .innerJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id));
 
-    const conditions: any[] = [];
+    const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(leaveRequests.startDate, dateFrom));
     if (dateTo) conditions.push(lte(leaveRequests.endDate, dateTo));
     if (staffIds) {
       conditions.push(inArray(leaveRequests.staffId, staffIds));
     }
-    if (conditions.length > 0) query = query.where(and(...conditions) as any) as any;
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) query = query.where(and(...activeConditions)) as typeof query;
     const rows = await query;
     for (const r of rows) {
       csv += csvRow([r.employeeId, `${r.firstName} ${r.lastName}`, r.leaveTypeName, r.startDate, r.endDate, r.daysCount, r.status, r.reason || ""]);
@@ -221,11 +223,11 @@ export const GET = requireAuth(async (request: Request, session) => {
     if (staffIds) {
       query = query
         .innerJoin(staffInstitutions, eq(staff.id, staffInstitutions.staffId))
-        .where(inArray(staff.id, staffIds)) as any;
+        .where(inArray(staff.id, staffIds)) as unknown as typeof query;
     }
 
     const rows = await query;
-    const rowStaffIds = rows.map((r: any) => r.id);
+    const rowStaffIds = rows.map((r) => r.id);
 
     if (rowStaffIds.length > 0) {
       const allDepts = await db
@@ -295,7 +297,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     if (staffIds) {
       staffQuery = staffQuery
         .innerJoin(staffInstitutions, eq(staff.id, staffInstitutions.staffId))
-        .where(inArray(staff.id, staffIds)) as any;
+        .where(inArray(staff.id, staffIds)) as unknown as typeof staffQuery;
     }
     const allStaff = await staffQuery;
 
@@ -313,7 +315,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     const rangeStart = dateFrom || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
     const rangeEnd = dateTo || new Date().toISOString().split("T")[0];
     const totalWorkingDays = getWeekdays(rangeStart, rangeEnd);
-    const allStaffIds = allStaff.map((s: any) => s.id);
+    const allStaffIds = allStaff.map((s) => s.id);
 
     const attendanceRows = await db
       .select({
@@ -404,7 +406,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       .leftJoin(staff, eq(financialTransactions.recordedById, staff.id))
       .leftJoin(institutions, eq(financialTransactions.institutionId, institutions.id));
 
-    const conditions: any[] = [];
+    const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(financialTransactions.transactionDate, dateFrom));
     if (dateTo) conditions.push(lte(financialTransactions.transactionDate, dateTo));
     if (finalInstitutionId) {
@@ -412,7 +414,8 @@ export const GET = requireAuth(async (request: Request, session) => {
     } else if (!isSystemAdmin) {
       conditions.push(inArray(financialTransactions.institutionId, allowedInstIds));
     }
-    if (conditions.length > 0) query = query.where(and(...conditions) as any) as any;
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) query = query.where(and(...activeConditions)) as typeof query;
     const rows = await query;
     for (const r of rows) {
       csv += csvRow([

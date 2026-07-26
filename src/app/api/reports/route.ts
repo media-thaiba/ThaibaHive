@@ -4,8 +4,6 @@ import {
   dailyReports,
   dailyReportTasks,
   staff,
-  staffDepartments,
-  departments,
   tasks,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
@@ -14,7 +12,7 @@ import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (request, session) => {
   const { role, staffId } = session;
-  let reports: any[] = [];
+  let reports: { id: string; date: string; summary: string | null; status: string; staffId: string; firstName: string | null; lastName: string | null; reviewerComment: string | null; reviewedAt: string | null; createdAt: string }[] = [];
 
   if (role === "super_admin" || role === "admin") {
     reports = await db
@@ -146,7 +144,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       }
     }
     const totalHours = reportTasks.reduce(
-      (sum: number, t: any) => sum + (t.hoursSpent || 0),
+      (sum: number, t: { hoursSpent?: number }) => sum + (t.hoursSpent || 0),
       0
     );
     if (totalHours > 24) {
@@ -160,7 +158,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   // Validate task ownership
   if (reportTasks?.length) {
     const taskIds = reportTasks
-      .map((t: any) => t.taskId)
+      .map((t: { taskId?: string }) => t.taskId)
       .filter(Boolean);
     if (taskIds.length > 0) {
       const ownedTasks = await db
@@ -205,7 +203,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       if (reportTasks?.length) {
         await db.insert(dailyReportTasks)
           .values(
-            reportTasks.map((t: any) => ({
+            reportTasks.map((t: { taskId?: string; description: string; hoursSpent?: number; status?: string }) => ({
               id: crypto.randomUUID(),
               reportId,
               taskId: t.taskId || null,
@@ -217,10 +215,11 @@ export const POST = requireAuth(async (request: Request, session) => {
           .run();
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     if (
-      err?.message?.includes("UNIQUE constraint failed") ||
-      err?.code === "SQLITE_CONSTRAINT_UNIQUE"
+      error.message.includes("UNIQUE constraint failed") ||
+      (err !== null && typeof err === "object" && "code" in err && (err as { code: string }).code === "SQLITE_CONSTRAINT_UNIQUE")
     ) {
       return NextResponse.json(
         { error: "A report for this date already exists." },

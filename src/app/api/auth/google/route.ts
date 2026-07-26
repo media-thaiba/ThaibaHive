@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     let payload;
     try {
       payload = await verifyGoogleToken(idToken, allowedClientIds);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Google token verification failed:", err);
       return NextResponse.json({ error: "Invalid Google token" }, { status: 401 });
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,7 +102,7 @@ export default function AccountsPage() {
       });
   };
 
-  const fetchLedgerAndSummary = () => {
+  const fetchLedgerAndSummary = useCallback(() => {
     setLoading(true);
     const queryParams = new URLSearchParams();
     if (selectedInst) queryParams.append("institutionId", selectedInst);
@@ -130,7 +130,7 @@ export default function AccountsPage() {
       });
 
     Promise.all([ledgerPromise, summaryPromise]).finally(() => setLoading(false));
-  };
+  }, [selectedInst, fromDate, toDate]);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -139,7 +139,7 @@ export default function AccountsPage() {
     } else {
       setLoading(false);
     }
-  }, [isAuthorized]);
+  }, [isAuthorized, fetchLedgerAndSummary]);
 
   // Refetch when filters change
   const handleApplyFilters = () => {

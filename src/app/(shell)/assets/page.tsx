@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,7 +113,7 @@ export default function AssetsPage() {
 
   const [sForm, setSForm] = useState<ServiceForm>({ serviceDate: new Date().toISOString().split("T")[0], description: "", cost: "", servicedBy: "", notes: "" });
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const params = new URLSearchParams();
     if (filters.type) params.set("type", filters.type);
     if (filters.status) params.set("status", filters.status);
@@ -129,7 +129,7 @@ export default function AssetsPage() {
     setStaffList(sRes.staff || []);
     setInstitutions(iRes.institutions || []);
     setStats(stRes);
-  }
+  }, [filters.type, filters.status, filters.institutionId]);
 
   async function loadStatsOnly() {
     const stRes = await fetch("/api/assets/stats").then(r => r.json());
@@ -141,7 +141,7 @@ export default function AssetsPage() {
     loadData()
       .catch(() => toast.error("Failed to load assets"))
       .finally(() => setLoading(false));
-  }, [filters.type, filters.status, filters.institutionId]);
+  }, [loadData]);
 
   useEffect(() => {
     if (!showForm && !selectedAsset) loadStatsOnly().catch(() => {});

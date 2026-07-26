@@ -4,8 +4,6 @@ import {
   dailyReports,
   dailyReportTasks,
   tasks,
-  staffDepartments,
-  departments,
   auditLog,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
@@ -92,7 +90,7 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
       }
     }
     const totalHours = reportTasks.reduce(
-      (sum: number, t: any) => sum + (t.hoursSpent || 0),
+      (sum: number, t: { hoursSpent?: number }) => sum + (t.hoursSpent || 0),
       0
     );
     if (totalHours > 24) {
@@ -106,7 +104,7 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   // Validate task ownership
   if (reportTasks?.length) {
     const taskIds = reportTasks
-      .map((t: any) => t.taskId)
+      .map((t: { taskId?: string }) => t.taskId)
       .filter(Boolean);
     if (taskIds.length > 0) {
       const ownedTasks = await db
@@ -172,7 +170,7 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
         if (reportTasks.length) {
           db.insert(dailyReportTasks)
             .values(
-              reportTasks.map((t: any) => ({
+              reportTasks.map((t: { taskId?: string; description: string; hoursSpent?: number; status?: string }) => ({
                 id: crypto.randomUUID(),
                 reportId: id,
                 taskId: t.taskId || null,
@@ -185,10 +183,11 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
         }
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     if (
-      err?.message?.includes("UNIQUE constraint failed") ||
-      err?.code === "SQLITE_CONSTRAINT_UNIQUE"
+      error.message.includes("UNIQUE constraint failed") ||
+      (err !== null && typeof err === "object" && "code" in err && (err as { code: string }).code === "SQLITE_CONSTRAINT_UNIQUE")
     ) {
       return NextResponse.json(
         { error: "A report for this date already exists." },

@@ -128,7 +128,7 @@ export default function ReportsPage() {
     setLinkedTasks(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleLinkedTaskChange = (index: number, field: keyof DailyReportTask, value: any) => {
+  const handleLinkedTaskChange = (index: number, field: keyof DailyReportTask, value: string | number | null) => {
     setLinkedTasks(prev => {
       const copy = [...prev];
       copy[index] = {
@@ -150,7 +150,7 @@ export default function ReportsPage() {
       setReportDate(report.date);
       setSummary(report.summary || "");
       setReportStatus(report.status === "draft" ? "draft" : "submitted");
-      setLinkedTasks(ensureArray(data.tasks).map((t: any) => ({
+      setLinkedTasks((ensureArray(data.tasks) as Partial<DailyReportTask>[]).map((t) => ({
         taskId: t.taskId || "",
         description: t.description || "",
         hoursSpent: t.hoursSpent || 0,

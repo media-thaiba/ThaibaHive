@@ -46,7 +46,7 @@ type Booking = {
   resourceName: string;
 };
 
-type Permissions = { role: string; permissions: string[] };
+type Permissions = { role: string; permissions: string[]; staffId?: string };
 
 const statusVariant: Record<string, "info" | "warning" | "success" | "secondary"> = {
   pending: "warning",
@@ -87,7 +87,7 @@ export default function BookingsPage() {
 
   const [permissions, setPermissions] = useState<Permissions | null>(null);
   const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("bookings:manage") ?? false);
-  const _currentStaffId = permissions?.role ? (permissions as any).staffId : null;
+  const _currentStaffId = permissions?.role ? permissions.staffId : null;
 
   const loadData = useCallback(async () => {
     try {

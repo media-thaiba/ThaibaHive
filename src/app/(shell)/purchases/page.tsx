@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,7 +85,7 @@ export default function PurchasesPage() {
   // Determine if user can approve *any* purchase stage
   const canApprove = staff ? ["super_admin", "admin", "hod", "accounts", "purchase"].includes(staff.role) : false;
 
-  const fetchPurchases = () => {
+  const fetchPurchases = useCallback(() => {
     setLoading(true);
     const personalPromise = fetch("/api/purchases?viewAll=false")
       .then((r) => {
@@ -112,11 +112,11 @@ export default function PurchasesPage() {
       : Promise.resolve();
 
     Promise.all([personalPromise, teamPromise]).finally(() => setLoading(false));
-  };
+  }, [canApprove]);
 
   useEffect(() => {
     fetchPurchases();
-  }, [canApprove]);
+  }, [fetchPurchases]);
 
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();

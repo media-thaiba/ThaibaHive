@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, staff, staffInstitutions, staffDepartments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, inArray, and, gte, lte, or, like, sql } from "drizzle-orm";
+import { eq, desc, inArray, and, gte, lte, or, like, sql, type SQL } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
@@ -69,7 +69,7 @@ export const GET = requireAuth(async (request, session) => {
     effectiveDepartmentIds = deptRows.map((r) => r.departmentId).filter(Boolean);
   }
 
-  const matchedStaffConditions: any[] = [eq(staff.isActive, true)];
+  const matchedStaffConditions: (SQL | undefined)[] = [eq(staff.isActive, true)];
 
   if (effectiveInstitutionIds.length > 0) {
     const instStaffRows = await db
@@ -109,10 +109,11 @@ export const GET = requireAuth(async (request, session) => {
     );
   }
 
+  const activeStaffConditions = matchedStaffConditions.filter((c): c is SQL => !!c);
   const matchedStaff = await db
     .select({ id: staff.id })
     .from(staff)
-    .where(and(...matchedStaffConditions))
+    .where(and(...activeStaffConditions))
     .all();
   const matchedStaffIds = matchedStaff.map((s) => s.id);
 
