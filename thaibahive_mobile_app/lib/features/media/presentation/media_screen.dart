@@ -188,7 +188,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                                                 Expanded(
                                                   child: Text(
                                                     folder.name,
-                                                    overflow: TextSpanOverflow.ellipsis,
+                                                    overflow: TextOverflow.ellipsis,
                                                     style: theme.textTheme.bodyMedium,
                                                   ),
                                                 ),

@@ -9,7 +9,7 @@ import android.net.Uri
 import android.widget.RemoteViews
 
 class AttendanceWidgetProvider : AppWidgetProvider() {
-    override function onUpdate(
+    override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
