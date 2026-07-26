@@ -37,6 +37,7 @@ class MoreScreen extends StatelessWidget {
     '/availability',
     '/accounts',
     '/admin',
+    '/media',
   };
 
   static const _communicationFeatures = [
@@ -70,6 +71,7 @@ class MoreScreen extends StatelessWidget {
     _FeatureItem(name: 'Canteen', icon: Icons.restaurant_rounded, route: '/canteen', color: Color(0xFFFF5722)),
     _FeatureItem(name: 'Timeline', icon: Icons.timeline_rounded, route: '/timeline', color: Color(0xFF1565C0)),
     _FeatureItem(name: 'Accounts', icon: Icons.account_balance_rounded, route: '/accounts', color: Color(0xFFC62828)),
+    _FeatureItem(name: 'Media Library', icon: Icons.perm_media_rounded, route: '/media', color: Color(0xFF009688)),
   ];
 
   @override

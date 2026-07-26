@@ -1,30 +1,24 @@
 {
-  "name": "ThaibaHive",
+  "name": "ThaibaHive Unified Staff Management Platform",
   "short_name": "ThaibaHive",
-  "description": "Comprehensive staff management for Thaiba Garden Group of Institutions",
-  "start_url": "/",
+  "description": "Unified Staff Management, Attendance, Media & Operations Platform",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0f172a",
   "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/Logo/thl_logo_192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/Logo/thl_logo_512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/Logo/thl_logo_maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }

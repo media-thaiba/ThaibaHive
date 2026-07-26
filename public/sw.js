@@ -1,101 +1,56 @@
-const CACHE_NAME = "thaibahive-static-v1";
-
-const PRECACHE_URLS = [
+const CACHE_NAME = "thaibahive-v1";
+const STATIC_ASSETS = [
   "/manifest.json",
-  "/Logo/thl_logo_192.png",
-  "/Logo/thl_logo_512.png",
-  "/Logo/thl_logo_apple.png",
-  "/Logo/thl_logo_maskable.png",
-  "/offline.html",
+  "/favicon.ico",
 ];
 
 self.addEventListener("install", (event) => {
-  console.log("[ServiceWorker] Installing...");
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        console.log("[ServiceWorker] Precaching core assets");
-        return cache.addAll(PRECACHE_URLS);
-      })
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS);
+    })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  console.log("[ServiceWorker] Activating...");
   event.waitUntil(
-    caches
-      .keys()
-      .then((cacheNames) =>
-        Promise.all(
-          cacheNames
-            .filter((name) => name !== CACHE_NAME)
-            .map((name) => {
-              console.log("[ServiceWorker] Deleting old cache:", name);
-              return caches.delete(name);
-            })
-        )
-      )
-      .then(() => self.clients.claim())
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
   );
+  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const url = new URL(event.request.url);
 
-  if (request.method !== "GET") return;
-
-  if (url.origin !== self.location.origin) {
-    return;
-  }
-
-  if (
-    url.pathname.startsWith("/api/") ||
-    url.pathname.startsWith("/auth/")
-  ) {
-    return;
-  }
-
-  if (url.pathname.startsWith("/_next/static/")) {
+  // Network-First strategy for API routes and dynamic navigation
+  if (url.pathname.startsWith("/api/") || event.request.mode === "navigate") {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
+      fetch(event.request).catch(() => {
+        return caches.match(event.request).then((res) => {
+          return res || Response.error();
         });
       })
     );
     return;
   }
 
-  if (
-    request.headers.get("accept")?.includes("text/html") ||
-    request.mode === "navigate"
-  ) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        console.log("[ServiceWorker] Network failure, serving offline page");
-        return caches.match("/offline.html");
-      })
-    );
-    return;
-  }
-
+  // Cache-First strategy for static assets
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        return response;
+        return networkResponse;
       });
     })
   );

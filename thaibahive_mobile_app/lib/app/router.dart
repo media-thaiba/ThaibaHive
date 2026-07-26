@@ -49,6 +49,8 @@ import '../features/admin/presentation/admin_dashboard_screen.dart';
 import '../features/grievances/presentation/grievances_screen.dart';
 import '../features/grievances/presentation/grievance_submit_screen.dart';
 import '../features/canteen/presentation/canteen_screen.dart';
+import '../features/media/presentation/media_screen.dart';
+import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/widgets/bottom_nav_bar.dart';
 import '../shared/screens/coming_soon_screen.dart';
 import '../shared/transitions/page_transitions.dart';
@@ -139,6 +141,28 @@ GoRouter buildRouter() {
             ],
           );
         }).toList(),
+      ),
+      GoRoute(
+        path: '/media',
+        name: 'media',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const MediaScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/share/:token',
+        name: 'shareLink',
+        pageBuilder: (context, state) {
+          final token = state.pathParameters['token']!;
+          return AppTransitions.slide(
+            state: state,
+            child: WebViewHandoffScreen(
+              targetPath: '/share/$token',
+              title: 'Shared File',
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/tasks/create',
