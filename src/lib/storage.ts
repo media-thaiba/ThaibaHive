@@ -139,3 +139,31 @@ export async function copySupabaseObject(
     throw new Error(`Failed to copy object in Supabase Storage: ${response.statusText} (${errText})`);
   }
 }
+
+/**
+ * Delete one or more objects from Supabase Storage
+ */
+export async function deleteFromSupabase(
+  paths: string[],
+  bucket = "uploads"
+): Promise<void> {
+  if (!isStorageConfigured) {
+    throw new Error("Supabase Storage is not configured.");
+  }
+
+  const deleteUrl = new URL(`/storage/v1/object/${bucket}`, supabaseUrl).toString();
+
+  const response = await fetch(deleteUrl, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${supabaseKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(paths),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Failed to delete from Supabase Storage: ${response.statusText} (${errText})`);
+  }
+}

@@ -222,5 +222,15 @@ export const mediaAssetCreateSchema = z.object({
   status: z.enum(["ready", "processing", "failed"]).optional().default("ready"),
   folderId: z.string().optional().nullable(),
   tags: z.array(z.string()).optional().nullable(),
-  metadata: z.record(z.string(), z.any()).optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
+export const mediaShareLinkCreateSchema = z.object({
+  assetId: z.string().optional().nullable(),
+  folderId: z.string().optional().nullable(),
+  expiresAt: z.string().datetime().optional().nullable(),
+  // min(8) — this endpoint is public and unauthenticated, so brute-force resistance matters
+  password: z.string().min(8).optional().nullable(),
+}).refine(d => !!(d.assetId || d.folderId), {
+  message: "Either assetId or folderId is required",
 });

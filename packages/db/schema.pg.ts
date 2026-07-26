@@ -1036,6 +1036,8 @@ export const mediaShareLinks = sqliteTable("media_share_links", {
   passwordHash: text("password_hash"),
   expiresAt: text("expires_at"),
   downloadCount: integer("download_count").notNull().default(0),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  lockedUntil: text("locked_until"),
   createdById: text("created_by_id").notNull().references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
