@@ -6,6 +6,7 @@ const bundleAnalyzer = withBundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   allowedDevOrigins: process.env.DEV_ORIGINS?.split(",") || [],
 
   images: {

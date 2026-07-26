@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env*.local
+.env
+*.log
+*.md
+e2e
+thaibahive_mobile_app
+dev.db
+dev.db-journal
+test-results
+coverage
+scripts
