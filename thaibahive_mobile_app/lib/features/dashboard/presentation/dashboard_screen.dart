@@ -7,6 +7,7 @@ import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 import 'package:thaibahive_mobile/features/dashboard/data/dashboard_provider.dart';
 import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
 import 'package:thaibahive_mobile/shared/widgets/update_banner.dart';
+import 'package:thaibahive_mobile/shared/widgets/failed_sync_banner.dart';
 import 'components/components.dart';
 
 /// Riverpod provider for dashboard section ordering.
@@ -240,20 +241,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          // ── Collapsible Header ──
-            SliverPersistentHeader(
-            pinned: true,
-            delegate: DashboardHeaderDelegate(
-              user: user,
-              stats: dashState.stats,
-              onAvatarTap: () => _showProfileBottomSheet(user),
-              topPadding: topPadding,
-            ),
-          ),
+slivers: [
+           // ── Collapsible Header ──
+             SliverPersistentHeader(
+             pinned: true,
+             delegate: DashboardHeaderDelegate(
+               user: user,
+               stats: dashState.stats,
+               onAvatarTap: () => _showProfileBottomSheet(user),
+               topPadding: topPadding,
+             ),
+           ),
 
-          // ── Update Banner ──
-          const SliverToBoxAdapter(child: UpdateBanner()),
+           // ── Update Banner ──
+           const SliverToBoxAdapter(child: UpdateBanner()),
+           const SliverToBoxAdapter(child: FailedSyncBanner()),
 
           // ── Loading / Error / Content ──
           if (dashState.isLoading && dashState.stats == null)

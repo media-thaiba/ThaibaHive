@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/network/api_exception.dart';
+import 'package:thaibahive_mobile/core/services/fcm_service.dart';
 import 'package:thaibahive_mobile/models/auth_response_model.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
 import 'auth_repository.dart';
@@ -85,10 +87,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+      await _onLoginSuccess();
     } on AppException catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: 'Login failed: $e');
+    }
+  }
+
+  Future<void> _onLoginSuccess() async {
+    try {
+      await FCMService().onUserLogin();
+    } catch (e) {
+      if (kDebugMode) print('[AuthNotifier] FCM onUserLogin failed: $e');
     }
   }
 
@@ -107,6 +118,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+      await _onLoginSuccess();
     } on AppException catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
@@ -130,6 +142,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+      await _onLoginSuccess();
     } on AppException catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
     } catch (e) {
@@ -146,6 +159,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: 'remember_me');
     _repository.client.options.headers.remove('Authorization');
     state = const AuthState(status: AuthStatus.unauthenticated);
+    await FCMService().onUserLogout();
   }
 
   void clearError() {

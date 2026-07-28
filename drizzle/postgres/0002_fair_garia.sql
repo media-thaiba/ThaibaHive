@@ -1,0 +1,1 @@
+ALTER TABLE "app_default_roles" ALTER COLUMN "permissions" SET DATA TYPE jsonb;

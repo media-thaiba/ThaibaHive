@@ -171,7 +171,10 @@ describe("Daily Reports API Flow", () => {
       const res = await PATCH(req, { params: Promise.resolve({ id: "rep_1" }) });
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain("A comment is required when rejecting a report");
+      expect(data.error).toContain("Invalid data");
+      expect(data.details).toBeDefined();
+      // Zod refine with path puts error in fieldErrors
+      expect(data.details.fieldErrors.reviewerComment).toContain("A comment is required when rejecting a report");
     });
   });
 });

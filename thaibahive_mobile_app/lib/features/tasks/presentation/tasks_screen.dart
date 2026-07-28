@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:thaibahive_mobile/features/tasks/data/tasks_provider.dart';
+import 'package:thaibahive_mobile/features/tasks/data/tasks_cache_provider.dart';
 import 'package:thaibahive_mobile/models/task_model.dart';
 import 'package:thaibahive_mobile/shared/widgets/app_card.dart';
 import 'package:thaibahive_mobile/shared/widgets/status_badge.dart';
 import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
+import 'package:thaibahive_mobile/shared/widgets/offline_banner.dart';
+import 'package:thaibahive_mobile/shared/widgets/failed_sync_banner.dart';
 
 class TasksScreen extends ConsumerStatefulWidget {
   const TasksScreen({super.key});
@@ -146,7 +148,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         });
                         // Apply priority filter — use first selected or 'all'
                         final pFilter = tempPriorities.isEmpty ? 'all' : tempPriorities.first;
-                        ref.read(tasksProvider.notifier).setPriorityFilter(pFilter);
+                        ref.read(cachedTasksProvider.notifier).fetchTasks(priorityFilter: pFilter);
                         Navigator.pop(ctx);
                       },
                       child: const Text('Apply Filters'),
@@ -164,8 +166,26 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final state = ref.watch(tasksProvider);
-    final taskCount = state.filteredTasks.length;
+    final asyncState = ref.watch(cachedTasksProvider);
+    final state = asyncState.value;
+    final taskCount = state?.filteredTasks.length ?? 0;
+
+    // Show snackbar when task is queued for offline sync
+    ref.listen(cachedTasksProvider, (_, next) {
+      if (next.hasValue && next.valueOrNull?.error?.contains('queued for offline sync') == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.value!.error!),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'OK',
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tasks')),
@@ -173,16 +193,18 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         heroTag: null,
         onPressed: () async {
           await context.push('/tasks/create');
-          ref.read(tasksProvider.notifier).refresh();
+          ref.read(cachedTasksProvider.notifier).refresh();
         },
         child: const Icon(Icons.add_rounded),
       ),
       body: RefreshIndicator(
         color: const Color(0xFF1a8a3e),
-        onRefresh: () => ref.read(tasksProvider.notifier).refresh(),
+        onRefresh: () => ref.read(cachedTasksProvider.notifier).refresh(),
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
+            const SliverToBoxAdapter(child: OfflineBanner()),
+            const SliverToBoxAdapter(child: FailedSyncBanner()),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -197,7 +219,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                           style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(width: 10),
-                        if (!state.isLoading)
+                        if (!asyncState.isLoading)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                             decoration: BoxDecoration(
@@ -223,14 +245,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                         Expanded(
                           child: _StatusSegmentedPill(
                             options: _statusOptions,
-                            selected: state.statusFilter,
-                            onSelected: (f) => ref.read(tasksProvider.notifier).setStatusFilter(f),
+                            selected: state?.statusFilter ?? 'all',
+                            onSelected: (f) => ref.read(cachedTasksProvider.notifier).fetchTasks(statusFilter: f),
                           ),
                         ),
                         const SizedBox(width: 10),
                         _FilterButton(
                           activeCount: _activeFilterCount,
-                          onTap: () => _showFilterBottomSheet(context, state.statusFilter),
+                          onTap: () => _showFilterBottomSheet(context, state?.statusFilter ?? 'all'),
                         ),
                       ],
                     ),
@@ -239,16 +261,16 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                 ),
               ),
             ),
-            if (state.isLoading && state.tasks.isEmpty)
+            if (asyncState.isLoading && (state?.tasks.isEmpty ?? true))
               const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-            else if (state.error != null && state.tasks.isEmpty)
+            else if (asyncState.error != null && (state?.tasks.isEmpty ?? true))
               SliverFillRemaining(
                 child: AppErrorWidget(
-                  message: state.error!,
-                  onRetry: () => ref.read(tasksProvider.notifier).refresh(),
+                  message: asyncState.error?.toString() ?? 'Unknown error',
+                  onRetry: () => ref.read(cachedTasksProvider.notifier).refresh(),
                 ),
               )
-            else if (state.filteredTasks.isEmpty)
+            else if ((state?.filteredTasks ?? const []).isEmpty)
               SliverFillRemaining(
                 child: EmptyStateWidget(
                   icon: Icons.checklist_rounded,
@@ -257,7 +279,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
                   actionLabel: 'Create Task',
                   onAction: () async {
                     await context.push('/tasks/create');
-                    ref.read(tasksProvider.notifier).refresh();
+                    ref.read(cachedTasksProvider.notifier).refresh();
                   },
                 ),
               )
@@ -265,17 +287,17 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (_, index) {
-                    final task = state.filteredTasks[index];
+                    final task = state!.filteredTasks[index];
                     return _TaskCard(
                       task: task,
                       onTap: () async {
                         await context.push('/tasks/${task.id}');
-                        ref.read(tasksProvider.notifier).refresh();
+                        ref.read(cachedTasksProvider.notifier).refresh();
                       },
-                      onDelete: () => ref.read(tasksProvider.notifier).deleteTask(task.id),
+                      onDelete: () => ref.read(cachedTasksProvider.notifier).deleteTask(task.id),
                     );
                   },
-                  childCount: state.filteredTasks.length,
+                  childCount: state?.filteredTasks.length ?? 0,
                 ),
               ),
           ],

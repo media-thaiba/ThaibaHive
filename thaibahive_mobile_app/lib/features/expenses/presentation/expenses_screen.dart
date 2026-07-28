@@ -6,9 +6,11 @@ import '../../../core/extensions.dart';
 import '../../../core/services/file_upload_service.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/error_widget.dart';
+import '../../../shared/widgets/failed_sync_banner.dart';
 import '../../../shared/widgets/file_picker_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
-import '../data/expenses_provider.dart';
+import '../../../shared/widgets/offline_banner.dart';
+import '../data/expenses_cache_provider.dart';
 
 class ExpensesScreen extends ConsumerStatefulWidget {
   const ExpensesScreen({super.key});
@@ -18,16 +20,18 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 }
 
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
+  String? _statusFilter;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(expensesProvider.notifier).loadClaims());
+    Future.microtask(() => ref.read(cachedExpensesProvider.notifier).fetchExpenses());
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(expensesProvider);
-    final notifier = ref.read(expensesProvider.notifier);
+    final state = ref.watch(cachedExpensesProvider);
+    final notifier = ref.read(cachedExpensesProvider.notifier);
     final theme = Theme.of(context);
 
     return AppScaffold(
@@ -39,10 +43,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       ),
       body: Column(
         children: [
+          const OfflineBanner(),
+          const FailedSyncBanner(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: DropdownButtonFormField<String?>(
-              value: state.statusFilter,
+              value: _statusFilter,
               decoration: const InputDecoration(
                   labelText: 'Status', isDense: true),
               items: [
@@ -56,98 +62,102 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     value: 'paid', child: Text('Paid')),
               ],
               onChanged: (v) {
-                notifier.setStatusFilter(v);
-                notifier.loadClaims();
+                setState(() => _statusFilter = v);
+                notifier.fetchExpenses(status: v);
               },
             ),
           ),
           Expanded(
-            child: state.isLoading
-                ? const ListShimmer()
-                : state.error != null
-                    ? AppErrorWidget(
-                        message: state.error!,
-                        onRetry: () => notifier.loadClaims(),
-                      )
-                    : state.claims.isEmpty
-                        ? const EmptyStateWidget(
-                            message: 'No expense claims',
-                            icon: Icons.receipt_long_rounded)
-                        : RefreshIndicator(
-                            onRefresh: () => notifier.loadClaims(),
-                            child: ListView.builder(
-                              itemCount: state.claims.length,
-                              itemBuilder: (_, i) {
-                                final c = state.claims[i];
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: _statusColor(c.status,
-                                              theme)
-                                          .withValues(alpha: 0.2),
-                                      child: Icon(Icons.receipt_rounded,
-                                          color:
-                                              _statusColor(c.status, theme),
-                                          size: 22),
-                                    ),
-                                    title: Text(c.title,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.w600)),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(c.category),
-                                        Text(
-                                            DateFormat('dd MMM yyyy')
-                                                .format(c.createdAt)),
-                                      ],
-                                    ),
-                                    trailing: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                            '\$${c.amount.toStringAsFixed(2)}',
-                                            style:
-                                                theme.textTheme.titleMedium
-                                                    ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .primary)),
-                                        Container(
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 2),
-                                          decoration: BoxDecoration(
+            child: state.when(
+              data: (data) {
+                final claims = data.claims;
+                final isOffline = data.isOffline;
+                return RefreshIndicator(
+                  onRefresh: () => notifier.fetchExpenses(status: _statusFilter),
+                  child: claims.isEmpty
+                      ? const EmptyStateWidget(
+                          message: 'No expense claims',
+                          icon: Icons.receipt_long_rounded)
+                      : ListView.builder(
+                          itemCount: claims.length,
+                          itemBuilder: (_, i) {
+                            final c = claims[i];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 4),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: _statusColor(c.status,
+                                          theme)
+                                      .withValues(alpha: 0.2),
+                                  child: Icon(Icons.receipt_rounded,
+                                      color:
+                                          _statusColor(c.status, theme),
+                                      size: 22),
+                                ),
+                                title: Text(c.title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
+                                subtitle: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(c.category),
+                                    Text(
+                                        DateFormat('dd MMM yyyy')
+                                            .format(c.createdAt)),
+                                  ],
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                        '\$${c.amount.toStringAsFixed(2)}',
+                                        style:
+                                            theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary)),
+                                    Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _statusColor(
+                                                c.status, theme)
+                                            .withValues(alpha: 0.15),
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                      ),
+                                      child: Text(c.status,
+                                          style: TextStyle(
                                             color: _statusColor(
-                                                    c.status, theme)
-                                                .withValues(alpha: 0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: Text(c.status,
-                                              style: TextStyle(
-                                                color: _statusColor(
-                                                    c.status, theme),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                              )),
-                                        ),
-                                      ],
+                                                c.status, theme),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          )),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                );
+              },
+              loading: () => const ListShimmer(),
+              error: (e, _) => AppErrorWidget(
+                message: e.toString(),
+                onRetry: () => notifier.fetchExpenses(status: _statusFilter),
+              ),
+            ),
           ),
         ],
       ),
@@ -237,15 +247,15 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     final amount = double.tryParse(amountCtrl.text);
                     if (titleCtrl.text.isEmpty || amount == null) return;
                     await ref
-                        .read(expensesProvider.notifier)
-                        .createClaim({
+                        .read(cachedExpensesProvider.notifier)
+                        .createExpense({
                           'title': titleCtrl.text,
                           'amount': amount,
                           'category': category,
                           'description': descCtrl.text,
                           if (attachments.isNotEmpty)
                             'receiptUrl': attachments.first.url,
-                        });
+                        }, context: context);
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   },
                   child: const Text('Submit Claim'),

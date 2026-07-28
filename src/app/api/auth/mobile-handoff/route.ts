@@ -73,10 +73,14 @@ export async function POST(request: Request) {
     }
 
     const expiresAt = payload.exp as number | undefined;
-    await db.insert(usedNonces).values({
-      jti,
-      expiresAt: expiresAt ? new Date(expiresAt * 1000).toISOString() : new Date(Date.now() + 60_000).toISOString(),
-    }).run();
+    try {
+      await db.insert(usedNonces).values({
+        jti,
+        expiresAt: expiresAt ? new Date(expiresAt * 1000).toISOString() : new Date(Date.now() + 60_000).toISOString(),
+      }).run();
+    } catch {
+      return redirectWithError("replay_detected", "Token has already been used.");
+    }
 
     const staffId = payload.staffId as string;
     if (!staffId) {

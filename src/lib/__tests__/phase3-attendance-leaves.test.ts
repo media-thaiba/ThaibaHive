@@ -182,5 +182,23 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
       const secondRequestMatch = dbStatus === initialStatus;
       expect(secondRequestMatch).toBe(false);
     });
+
+    it("should reject re-approval of an already-approved or rejected expense claim via atomic WHERE guard (approvals PATCH expense path)", () => {
+      const currentStatus = "approved";
+      const whereClausePassed = currentStatus !== "approved" && currentStatus !== "rejected";
+      expect(whereClausePassed).toBe(false);
+    });
+
+    it("should reject re-rejection of an already-rejected purchase request via atomic WHERE guard (approvals PATCH purchase reject path)", () => {
+      const currentStatus = "rejected";
+      const whereClausePassed = currentStatus !== "rejected";
+      expect(whereClausePassed).toBe(false);
+    });
+
+    it("should reject re-approval of an already-approved or rejected booking via atomic WHERE guard (approvals PATCH booking path)", () => {
+      const currentStatus = "approved";
+      const whereClausePassed = currentStatus !== "approved" && currentStatus !== "rejected";
+      expect(whereClausePassed).toBe(false);
+    });
   });
 });

@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:crypto/crypto.dart';
+import 'offline_cache_service.dart';
 
 /// Offline queue item status
 enum QueueStatus {
@@ -158,13 +159,13 @@ class OfflineQueue {
     await _box.delete(clientEventId);
   }
 
-  /// Mark an event as failed (will retry if under max retries)
-  Future<void> markFailed(String clientEventId, String error) async {
+  /// Mark an event as failed (will retry if under max retries, or trigger cache rollback on terminal failure)
+  Future<void> markFailed(String clientEventId, String error, {bool isTerminal = false}) async {
     final event = _box.get(clientEventId);
     if (event == null) return;
     
-    if (event.retryCount >= _maxRetries) {
-      // Move to failed state for manual review
+    if (isTerminal || event.retryCount >= _maxRetries) {
+      // Move to failed state for manual review & roll back optimistic cache
       final updated = OfflineEvent(
         clientEventId: event.clientEventId,
         type: event.type,
@@ -176,6 +177,7 @@ class OfflineQueue {
         errorMessage: error,
       );
       await _box.put(clientEventId, updated);
+      await offlineCacheService.rollbackOptimisticWrite(clientEventId);
     } else {
       // Reset to pending for retry
       final updated = OfflineEvent(
@@ -205,6 +207,39 @@ class OfflineQueue {
   List<OfflineEvent> getAllEvents() {
     if (!_initialized) return [];
     return _box.values.toList();
+  }
+
+  /// Get all failed events for manual retry
+  List<OfflineEvent> getFailedEvents() {
+    if (!_initialized) return [];
+    return _box.values
+        .where((e) => e.status == QueueStatus.failed)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  /// Get count of failed events
+  int getFailedEventsCount() {
+    if (!_initialized) return 0;
+    return _box.values.where((e) => e.status == QueueStatus.failed).length;
+  }
+
+  /// Reset a failed event back to pending for retry
+  Future<void> resetToPending(String clientEventId) async {
+    if (!_initialized) return;
+    final event = _box.get(clientEventId);
+    if (event == null || event.status != QueueStatus.failed) return;
+    
+    final updated = OfflineEvent(
+      clientEventId: event.clientEventId,
+      type: event.type,
+      payload: event.payload,
+      status: QueueStatus.pending,
+      createdAt: event.createdAt,
+      retryCount: event.retryCount,
+      errorMessage: event.errorMessage,
+    );
+    await _box.put(clientEventId, updated);
   }
 
   /// Clear all completed events

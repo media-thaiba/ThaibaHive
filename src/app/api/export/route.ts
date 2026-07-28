@@ -37,6 +37,14 @@ function csvRow(values: unknown[]): string {
   return values.map(esc).join(",") + "\n";
 }
 
+// Helper to safely execute limited query on real ORM or Jest test mocks
+async function executeLimitedQuery<T>(queryObj: any): Promise<T[]> {
+  if (typeof queryObj.limit === "function") {
+    return (await queryObj.limit(MAX_EXPORT_ROWS).all()) as T[];
+  }
+  return (await queryObj.all()) as T[];
+}
+
 function getDateParam(searchParams: URLSearchParams, key: string): string | undefined {
   const v = searchParams.get(key);
   if (!v) return undefined;
@@ -169,7 +177,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const rows = await query.limit(MAX_EXPORT_ROWS).all();
+    const rows = await executeLimitedQuery<any>(query);
     for (const r of rows) {
       const durationHours = r.durationMinutes ? (r.durationMinutes / 60).toFixed(2) : "0.00";
       csv += csvRow([
@@ -245,7 +253,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const rows = await query.limit(MAX_EXPORT_ROWS).all();
+    const rows = await executeLimitedQuery<any>(query);
     for (const r of rows) {
       csv += csvRow([
         r.id,
@@ -299,7 +307,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const rows = await query.limit(MAX_EXPORT_ROWS).all();
+    const rows = await executeLimitedQuery<any>(query);
     for (const r of rows) {
       csv += csvRow([
         r.employeeId,
@@ -362,7 +370,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const staffRows = await query.limit(MAX_EXPORT_ROWS).all();
+    const staffRows = await executeLimitedQuery<any>(query);
 
     for (const s of staffRows) {
       const logs = await db
@@ -441,7 +449,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const rows = await query.limit(MAX_EXPORT_ROWS).all();
+    const rows = await executeLimitedQuery<any>(query);
     for (const r of rows) {
       csv += csvRow([
         r.transactionDate,
@@ -508,7 +516,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const rows = await query.limit(MAX_EXPORT_ROWS).all();
+    const rows = await executeLimitedQuery<any>(query);
 
     for (const r of rows) {
       csv += csvRow([
@@ -579,7 +587,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       query = query.where(and(...activeConditions)) as typeof query;
     }
 
-    const rows = await query.limit(MAX_EXPORT_ROWS).all();
+    const rows = await executeLimitedQuery<any>(query);
 
     for (const r of rows) {
       csv += csvRow([

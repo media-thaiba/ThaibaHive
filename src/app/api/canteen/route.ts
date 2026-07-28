@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mealNotifications, staff, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { canteenCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -52,11 +53,12 @@ export const GET = requireAuth(async (request: Request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { date, mealType, status, guestCount, notes } = body;
-
-  if (!date || !mealType || !status) {
-    return NextResponse.json({ error: "Date, meal type, status required" }, { status: 400 });
+  const parsed = canteenCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid canteen parameters", details: parsed.error.format() }, { status: 400 });
   }
+
+  const { date, mealType, status, guestCount, notes } = parsed.data;
 
   const existing = await db
     .select()
@@ -65,10 +67,10 @@ export const POST = requireAuth(async (request: Request, session) => {
     .get();
 
   if (existing) {
-    await db.update(mealNotifications).set({ status, guestCount, notes }).where(eq(mealNotifications.id, existing.id)).run();
+    await db.update(mealNotifications).set({ status, guestCount: guestCount || 0, notes }).where(eq(mealNotifications.id, existing.id)).run();
   } else {
     await db.insert(mealNotifications).values({
-      id: crypto.randomUUID(), staffId: session.staffId, date, mealType, status, guestCount, notes,
+      id: crypto.randomUUID(), staffId: session.staffId, date, mealType, status, guestCount: guestCount || 0, notes,
     }).run();
   }
 

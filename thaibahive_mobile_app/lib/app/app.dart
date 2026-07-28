@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/auth/data/biometric_provider.dart';
+import '../features/auth/presentation/biometric_lock_screen.dart';
 import '../features/settings/data/settings_provider.dart';
 import '../shared/widgets/offline_banner.dart';
 import 'router.dart';
@@ -15,12 +17,13 @@ class ThaibaHiveApp extends ConsumerStatefulWidget {
   ConsumerState<ThaibaHiveApp> createState() => _ThaibaHiveAppState();
 }
 
-class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> {
+class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindingObserver {
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
       overlays: [SystemUiOverlay.bottom],
@@ -29,12 +32,22 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> {
     _router.routerDelegate.addListener(_onRouteChange);
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      ref.read(biometricLockProvider.notifier).onAppPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      ref.read(biometricLockProvider.notifier).onAppResumed();
+    }
+  }
+
   void _onRouteChange() {
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router.routerDelegate.removeListener(_onRouteChange);
     _router.dispose();
     super.dispose();
@@ -56,7 +69,6 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> {
         final isDarkMode = theme.brightness == Brightness.dark;
         final surfaceColor = theme.colorScheme.surface;
 
-        // Get current path to check if we should show the global top status bar border/divider
         String currentPath = '';
         try {
           currentPath = _router.routerDelegate.currentConfiguration.uri.path;
@@ -73,16 +85,27 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> {
           systemNavigationBarIconBrightness: (isDarkMode || isLoginPath) ? Brightness.light : Brightness.dark,
         );
 
-        return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: overlayStyle,
-          child: Column(
-            children: [
-              const OfflineBanner(),
-              Expanded(
-                child: child ?? const SizedBox.shrink(),
+        return Stack(
+          children: [
+            AnnotatedRegion<SystemUiOverlayStyle>(
+              value: overlayStyle,
+              child: Column(
+                children: [
+                  const OfflineBanner(),
+                  Expanded(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Consumer(
+              builder: (context, ref, _) {
+                final isLocked = ref.watch(biometricLockProvider.select((s) => s.isLocked));
+                if (!isLocked) return const SizedBox.shrink();
+                return const BiometricLockScreenOverlay();
+              },
+            ),
+          ],
         );
       },
     );

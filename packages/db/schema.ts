@@ -12,6 +12,8 @@ export const institutions = sqliteTable("institutions", {
   phone: text("phone"),
   email: text("email"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  allocatedBudget: real("allocated_budget").default(0),
+  fiscalYear: text("fiscal_year"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
@@ -1063,4 +1065,33 @@ export const mediaUploads = sqliteTable("media_uploads", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
+
+// ─── Auth Tokens ───
+
+export const passwordResetTokens = sqliteTable("password_reset_tokens", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── FCM Staff Device Tokens ───
+
+export const staffDeviceTokens = sqliteTable("staff_device_tokens", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id")
+    .notNull()
+    .references(() => staff.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id")
+    .notNull()
+    .references(() => institutions.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull(), // 'android' | 'ios' | 'web'
+  deviceName: text("device_name"),
+  lastUsedAt: text("last_used_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
 

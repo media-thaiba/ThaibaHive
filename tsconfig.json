@@ -23,7 +23,9 @@
       "@thaiba/db": ["./packages/db/index.ts"],
       "@thaiba/db/*": ["./packages/db/*"],
       "@thaiba/auth": ["./packages/auth/index.ts"],
-      "@thaiba/auth/*": ["./packages/auth/*"]
+      "@thaiba/auth/*": ["./packages/auth/*"],
+      "drizzle-orm": ["./node_modules/drizzle-orm"],
+      "drizzle-orm/*": ["./node_modules/drizzle-orm/*"]
     }
   },
   "include": [
@@ -34,5 +36,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "thaibahive_mobile_app"]
+  "exclude": ["node_modules", "thaibahive_mobile_app", "e2e", "scratch", "scripts"]
 }

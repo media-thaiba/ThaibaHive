@@ -7,7 +7,10 @@ import '../../../core/extensions.dart';
 import '../../../models/department_model.dart';
 import '../../../models/staff_model.dart';
 import '../../../shared/widgets/error_widget.dart';
+import '../../../shared/widgets/failed_sync_banner.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/offline_banner.dart';
+import '../data/staff_cache_provider.dart';
 import '../data/staff_provider.dart';
 
 class StaffDirectoryScreen extends ConsumerStatefulWidget {
@@ -29,20 +32,27 @@ class _StaffDirectoryScreenState extends ConsumerState<StaffDirectoryScreen> {
 
   void _onSearch(String value) {
     ref.read(staffSearchProvider.notifier).state = value;
-    ref.read(staffListProvider.notifier).refresh();
+    final department = ref.read(staffDepartmentFilterProvider);
+    ref.read(cachedStaffDirectoryProvider.notifier).fetchStaffDirectory(
+      search: value,
+      department: department.isNotEmpty ? department : null,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final staffAsync = ref.watch(staffListProvider);
+    final staffAsync = ref.watch(cachedStaffDirectoryProvider);
     final departmentsAsync = ref.watch(staffDepartmentsProvider);
     final selectedDepartment = ref.watch(staffDepartmentFilterProvider);
+    final searchQuery = ref.watch(staffSearchProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Staff Directory')),
       body: Column(
         children: [
+          const OfflineBanner(),
+          const FailedSyncBanner(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
@@ -86,7 +96,11 @@ class _StaffDirectoryScreenState extends ConsumerState<StaffDirectoryScreen> {
                         ref
                             .read(staffDepartmentFilterProvider.notifier)
                             .state = isAll ? '' : dept!.id;
-                        ref.read(staffListProvider.notifier).refresh();
+                        final newDept = isAll ? '' : dept!.id;
+                        ref.read(cachedStaffDirectoryProvider.notifier).fetchStaffDirectory(
+                          search: searchQuery,
+                          department: newDept.isNotEmpty ? newDept : null,
+                        );
                       },
                     );
                   },
@@ -102,7 +116,9 @@ class _StaffDirectoryScreenState extends ConsumerState<StaffDirectoryScreen> {
           const SizedBox(height: 8),
           Expanded(
             child: staffAsync.when(
-              data: (staff) {
+              data: (state) {
+                final staff = state.staffList.cast<StaffModel>();
+                final isOffline = state.isOffline;
                 if (staff.isEmpty) {
                   return const EmptyStateWidget(
                     icon: Icons.people_outline_rounded,
@@ -112,7 +128,10 @@ class _StaffDirectoryScreenState extends ConsumerState<StaffDirectoryScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () =>
-                      ref.read(staffListProvider.notifier).refresh(),
+                      ref.read(cachedStaffDirectoryProvider.notifier).fetchStaffDirectory(
+                            search: searchQuery,
+                            department: selectedDepartment.isNotEmpty ? selectedDepartment : null,
+                          ),
                   child: ListView.builder(
                     padding: const EdgeInsets.only(bottom: 16),
                     itemCount: staff.length,
@@ -127,7 +146,10 @@ class _StaffDirectoryScreenState extends ConsumerState<StaffDirectoryScreen> {
               error: (e, _) => AppErrorWidget(
                 message: e.toString(),
                 onRetry: () =>
-                    ref.read(staffListProvider.notifier).refresh(),
+                    ref.read(cachedStaffDirectoryProvider.notifier).fetchStaffDirectory(
+                          search: searchQuery,
+                          department: selectedDepartment.isNotEmpty ? selectedDepartment : null,
+                        ),
               ),
             ),
           ),

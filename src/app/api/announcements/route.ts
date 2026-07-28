@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { announcements, announcementReads, staff, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { announcementCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, sql, inArray } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";
+import { sendBulkPushNotifications } from "@/lib/notifications/push-service";
 import type { StaffRole } from "@/types";
 
 const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal"];
@@ -147,6 +148,22 @@ export const POST = requireAuth(async (request: Request, session) => {
     targetRole,
     targetDepartmentId,
     targetInstitutionId,
+  });
+
+  // Asynchronous FCM Bulk Push Dispatch
+  after(async () => {
+    try {
+      await sendBulkPushNotifications({
+        institutionId: targetInstitutionId || undefined,
+        title: `Announcement: ${title}`,
+        message: content.substring(0, 150) + (content.length > 150 ? "..." : ""),
+        type: "announcement",
+        referenceType: "announcement",
+        referenceId: announcement.id,
+      });
+    } catch (err) {
+      console.error("[PushNotification] Bulk announcement push failed:", err);
+    }
   });
 
   return NextResponse.json({ announcement }, { status: 201 });

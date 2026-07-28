@@ -6,7 +6,8 @@
   "types": "./index.ts",
   "exports": {
     ".": "./index.ts",
-    "./schema": "./schema.ts"
+    "./schema": "./schema.ts",
+    "./schema.pg": "./schema.pg.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

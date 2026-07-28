@@ -76,6 +76,36 @@ export function connectionCount(key: string): number {
   return sseConnections.get(key)?.size ?? 0;
 }
 
+export function broadcastDashboardEvent(
+  staffId: string,
+  channel: string,
+  data: Record<string, unknown>
+) {
+  sendToConnection(`notification-${staffId}`, channel, data);
+}
+
+export function broadcastInstitutionEvent(
+  institutionId: string,
+  channel: string,
+  data: Record<string, unknown>
+) {
+  const payload = `event: ${channel}\ndata: ${JSON.stringify(data)}\n\n`;
+  const encoded = new TextEncoder().encode(payload);
+
+  for (const [key, set] of sseConnections.entries()) {
+    if (!key.startsWith("notification-")) continue;
+    for (const conn of set) {
+      if (!conn.institutionIds || conn.institutionIds.includes(institutionId)) {
+        try {
+          conn.writer.write(encoded);
+        } catch {
+          // Handled on next write
+        }
+      }
+    }
+  }
+}
+
 // ─── Presence-aware SSE helpers ───
 
 export async function broadcastPresence(

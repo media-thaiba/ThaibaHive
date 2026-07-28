@@ -241,7 +241,7 @@ describe("Security and Regression Audits", () => {
       expect(res.status).toBe(200);
       const csvContent = await res.text();
       // Should match headers exactly and have no other rows
-      const expectedHeaders = "Employee ID,Name,Department,Date,Check In,Check Out,Status,Hours Worked\n";
+      const expectedHeaders = "\uFEFFDate,Employee ID,Employee Name,Institution,Department,Status,Check In,Check Out,Duration (Hours),Late Arrival,Early Departure\n";
       expect(csvContent).toBe(expectedHeaders);
     });
   });

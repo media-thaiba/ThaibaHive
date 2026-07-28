@@ -8,6 +8,7 @@ import '../../../models/user_model.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/tap_scale.dart';
+import '../../auth/data/biometric_provider.dart';
 import '../data/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -108,6 +109,32 @@ class SettingsScreen extends ConsumerWidget {
                   value: notificationsEnabled,
                   onChanged: (v) =>
                       ref.read(notificationsEnabledProvider.notifier).state = v,
+                ),
+                const Divider(height: 1, indent: 72),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final biometricState = ref.watch(biometricLockProvider);
+                    final isAvailable = biometricState.isHardwareAvailable;
+                    final isEnabled = biometricState.isBiometricEnabled;
+
+                    return SwitchListTile(
+                      secondary: const Icon(Icons.fingerprint_rounded),
+                      title: const Text('Biometric Security'),
+                      subtitle: Text(
+                        isAvailable
+                            ? 'Require Fingerprint / Face ID to unlock'
+                            : 'Biometrics not supported on this device',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isAvailable ? null : Colors.grey,
+                        ),
+                      ),
+                      value: isEnabled && isAvailable,
+                      onChanged: isAvailable
+                          ? (v) => ref.read(biometricLockProvider.notifier).toggleBiometricSetting(v)
+                          : null,
+                    );
+                  },
                 ),
               ],
             ),

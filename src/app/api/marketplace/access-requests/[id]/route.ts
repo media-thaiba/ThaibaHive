@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { accessRequests, userAppAssignments, appDefaultRoles, notifications, auditLog } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { sendPushNotification } from "@/lib/notifications/push-service";
 import { eq, and } from "drizzle-orm";
 
 export const PUT = requireAuth(async (request: Request, session, context) => {
@@ -35,12 +36,16 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   }
 
   if (action === "approve") {
-    const targetRoleId = roleId || accessReq.assignedRoleId;
-    const role = targetRoleId
-      ? await db.select().from(appDefaultRoles).where(eq(appDefaultRoles.id, targetRoleId)).get()
-      : await db.select().from(appDefaultRoles).where(
-          and(eq(appDefaultRoles.appId, accessReq.appId), eq(appDefaultRoles.isDefault, true))
-        ).get();
+    let role = null;
+    if (roleId) {
+      role = { id: roleId };
+    } else {
+      role = await db
+        .select()
+        .from(appDefaultRoles)
+        .where(eq(appDefaultRoles.appId, accessReq.appId))
+        .get();
+    }
 
     if (role) {
       const existingAssignment = await db
@@ -105,5 +110,22 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     details: { targetStaffId: accessReq.staffId, appId: accessReq.appId, notes },
   }).run();
 
+  after(async () => {
+    try {
+      await sendPushNotification({
+        staffId: accessReq.staffId,
+        title: action === "approve" ? "Access Request Approved" : "Access Request Rejected",
+        message: action === "approve"
+          ? "Your marketplace app access request has been approved."
+          : `Your marketplace app access request was rejected.${notes ? ` Reason: ${notes}` : ""}`,
+        type: "marketplace",
+        referenceType: "access_request",
+        referenceId: id,
+      });
+    } catch (err) {
+      console.error("[PushNotification] Access request push failed:", err);
+    }
+  });
+
   return NextResponse.json({ success: true });
-}, "attendance:read");
+}, "admin:all");

@@ -1,22 +1,43 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { purchaseRequests } from "@/db/schema";
+import { purchaseRequests, auditLog } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { isManagedBy } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 type Transition = {
   from: string;
   to: string;
   roles: string[];
   approverField?: string;
+  actionName: string;
 };
 
 const transitions: Transition[] = [
-  { from: "pending_hod", to: "pending_accounts", roles: ["super_admin", "admin", "hod"], approverField: "approvedByHodId" },
-  { from: "pending_accounts", to: "pending_purchase", roles: ["super_admin", "admin", "accounts"], approverField: "approvedByAccountsId" },
-  { from: "pending_purchase", to: "approved", roles: ["super_admin", "admin", "purchase"], approverField: "approvedByPurchaseId" },
+  { from: "pending_hod", to: "pending_accounts", roles: ["super_admin", "admin", "hod"], approverField: "approvedByHodId", actionName: "purchase_hod_approved" },
+  { from: "pending_accounts", to: "pending_purchase", roles: ["super_admin", "admin", "accounts"], approverField: "approvedByAccountsId", actionName: "purchase_accounts_approved" },
+  { from: "pending_purchase", to: "approved", roles: ["super_admin", "admin", "purchase"], approverField: "approvedByPurchaseId", actionName: "purchase_purchase_approved" },
 ];
+
+const rejectTransitions: Record<string, { actionName: string }> = {
+  pending_hod: { actionName: "purchase_hod_rejected" },
+  pending_accounts: { actionName: "purchase_accounts_rejected" },
+  pending_purchase: { actionName: "purchase_purchase_rejected" },
+  approved: { actionName: "purchase_approved_rejected" },
+};
+
+async function logActivity(staffId: string, action: string, entityType: string, entityId: string, details: Record<string, unknown>) {
+  await db.insert(auditLog).values({
+    id: randomUUID(),
+    staffId,
+    action,
+    entityType,
+    entityId,
+    details,
+    createdAt: new Date().toISOString(),
+  });
+}
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
@@ -27,12 +48,13 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (status === "rejected") {
-    const rejectTransition = transitions.find((t) => t.from === existing.status);
+    const rejectTransition = rejectTransitions[existing.status];
     if (!rejectTransition) {
       return NextResponse.json({ error: "Cannot reject from current status" }, { status: 403 });
     }
 
-    if (!rejectTransition.roles.includes(session.role)) {
+    const allowedRoles = transitions.find((t) => t.from === existing.status)?.roles ?? ["super_admin", "admin"];
+    if (!allowedRoles.includes(session.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -52,6 +74,15 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       .where(eq(purchaseRequests.id, id))
       .returning()
       .get();
+
+    await logActivity(
+      session.staffId,
+      rejectTransition.actionName,
+      "purchase_request",
+      id,
+      { previousStatus: existing.status, notes: notes || null, requesterId: existing.requesterId, itemName: existing.itemName, estimatedCost: existing.estimatedCost }
+    );
+
     return NextResponse.json({ purchase: updated });
   }
 
@@ -87,6 +118,14 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .where(eq(purchaseRequests.id, id))
     .returning()
     .get();
+
+  await logActivity(
+    session.staffId,
+    transition.actionName,
+    "purchase_request",
+    id,
+    { previousStatus: existing.status, newStatus: transition.to, notes: notes || null, requesterId: existing.requesterId, itemName: existing.itemName, estimatedCost: existing.estimatedCost }
+  );
 
   return NextResponse.json({ purchase: updated });
 }, "finance:update");

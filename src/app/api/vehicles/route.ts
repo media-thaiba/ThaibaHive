@@ -1,1 +1,57 @@
-import { NextResponse } from "next/server";import { db } from "@/db";import { vehicles, institutions } from "@/db/schema";import { requireAuth } from "@/lib/api/auth-guard";import { eq, desc } from "drizzle-orm";export const GET = requireAuth(async () => {  const all = await db    .select({      id: vehicles.id, registrationNumber: vehicles.registrationNumber,      model: vehicles.model, type: vehicles.type, capacity: vehicles.capacity,      fuelType: vehicles.fuelType, isActive: vehicles.isActive,      institutionName: institutions.name, notes: vehicles.notes,    })    .from(vehicles)    .leftJoin(institutions, eq(vehicles.institutionId, institutions.id))    .orderBy(desc(vehicles.createdAt))    .all();  return NextResponse.json({ vehicles: all });}, "vehicles:create");export const POST = requireAuth(async (request: Request) => {  const body = await request.json();  const { registrationNumber, model, type, capacity, fuelType, institutionId, notes } = body;  if (!registrationNumber || !model || !type) {    return NextResponse.json({ error: "Registration, model, type required" }, { status: 400 });  }  const vehicle = await db.insert(vehicles).values({    id: crypto.randomUUID(), registrationNumber, model, type,    capacity: capacity || 1, fuelType: fuelType || "petrol", institutionId, notes,  }).returning().get();  return NextResponse.json({ vehicle }, { status: 201 });}, "vehicles:manage");
+import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { vehicles, institutions } from "@/db/schema";
+import { requireAuth } from "@/lib/api/auth-guard";
+import { vehicleCreateSchema } from "@/lib/validation/schemas";
+import { eq, desc } from "drizzle-orm";
+
+export const GET = requireAuth(async () => {
+  const all = await db
+    .select({
+      id: vehicles.id,
+      registrationNumber: vehicles.registrationNumber,
+      model: vehicles.model,
+      type: vehicles.type,
+      capacity: vehicles.capacity,
+      fuelType: vehicles.fuelType,
+      isActive: vehicles.isActive,
+      institutionName: institutions.name,
+      notes: vehicles.notes,
+    })
+    .from(vehicles)
+    .leftJoin(institutions, eq(vehicles.institutionId, institutions.id))
+    .orderBy(desc(vehicles.createdAt))
+    .all();
+
+  return NextResponse.json({ vehicles: all });
+}, "vehicles:read");
+
+export const POST = requireAuth(async (request: Request) => {
+  const body = await request.json();
+  const parsed = vehicleCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid vehicle parameters", details: parsed.error.format() },
+      { status: 400 }
+    );
+  }
+
+  const { registrationNumber, model, type, capacity, fuelType, institutionId, notes } = parsed.data;
+
+  const vehicle = await db
+    .insert(vehicles)
+    .values({
+      id: crypto.randomUUID(),
+      registrationNumber,
+      model,
+      type,
+      capacity: capacity || 1,
+      fuelType: fuelType || "petrol",
+      institutionId: institutionId || null,
+      notes: notes || null,
+    })
+    .returning()
+    .get();
+
+  return NextResponse.json({ vehicle }, { status: 201 });
+}, "vehicles:manage");

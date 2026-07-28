@@ -57,6 +57,8 @@ const RESOURCE_COLORS: Record<string, "default" | "info" | "warning" | "success"
   event: "info",
 };
 
+import { api } from "@/lib/api/client";
+
 export default function TimelinePage() {
   const [data, setData] = useState<LogResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,16 +68,20 @@ export default function TimelinePage() {
 
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (actionFilter) params.set("action", actionFilter);
 
-    fetch(`/api/activity-logs?${params}`)
-      .then((r) => r.json())
-      .then((d: LogResponse) => {
-        setData(d);
-        setLoading(false);
+    api.get<LogResponse>("/api/activity-logs", {
+      params: {
+        page,
+        limit,
+        action: actionFilter || undefined,
+      },
+    })
+      .then((res) => {
+        if (res.ok && res.data) {
+          setData(res.data);
+        }
       })
-      .catch(() => setLoading(false));
+      .finally(() => setLoading(false));
   }, [page, actionFilter]);
 
   const totalPages = data ? Math.ceil(data.total / limit) : 0;

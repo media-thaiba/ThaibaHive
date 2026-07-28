@@ -9,6 +9,7 @@ import {
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, desc, inArray, and, or } from "drizzle-orm";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
+import { dailyReportCreateSchema } from "@/lib/validation/schemas";
 
 export const GET = requireAuth(async (request, session) => {
   const { role, staffId } = session;
@@ -121,11 +122,16 @@ export const GET = requireAuth(async (request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { date, summary, status, tasks: reportTasks } = body;
+  const result = dailyReportCreateSchema.safeParse(body);
 
-  if (!date) {
-    return NextResponse.json({ error: "Date is required" }, { status: 400 });
+  if (!result.success) {
+    return NextResponse.json(
+      { error: "Invalid data", details: result.error.flatten() },
+      { status: 400 }
+    );
   }
+
+  const { date, summary, status, tasks: reportTasks } = result.data;
 
   const reportStatus = status === "draft" ? "draft" : "submitted";
 
@@ -158,8 +164,8 @@ export const POST = requireAuth(async (request: Request, session) => {
   // Validate task ownership
   if (reportTasks?.length) {
     const taskIds = reportTasks
-      .map((t: { taskId?: string }) => t.taskId)
-      .filter(Boolean);
+      .map((t) => t.taskId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
     if (taskIds.length > 0) {
       const ownedTasks = await db
         .select({ id: tasks.id })
@@ -203,7 +209,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       if (reportTasks?.length) {
         await db.insert(dailyReportTasks)
           .values(
-            reportTasks.map((t: { taskId?: string; description: string; hoursSpent?: number; status?: string }) => ({
+            reportTasks.map((t) => ({
               id: crypto.randomUUID(),
               reportId,
               taskId: t.taskId || null,

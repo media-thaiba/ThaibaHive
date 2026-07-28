@@ -29,6 +29,8 @@ export default function LoginPage() {
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
 
   // Common UI state
   const [error, setError] = useState("");
@@ -121,16 +123,28 @@ export default function LoginPage() {
 
   async function handleForgotSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setForgotError("");
+    setForgotLoading(true);
+
     try {
-      // Simulate reset email delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setForgotError(data.error || "Failed to send reset email");
+        return;
+      }
+
       setRecoverySent(true);
     } catch {
-      setError("Recovery request failed");
+      setForgotError("An unexpected error occurred");
     } finally {
-      setLoading(false);
+      setForgotLoading(false);
     }
   }
 
@@ -530,17 +544,17 @@ export default function LoginPage() {
                         </div>
                       </div>
 
-                      {error && <Alert variant="error" className="py-2.5 px-3.5 bg-red-950/40 border-red-900/50 text-red-400 text-xs rounded-xl">{error}</Alert>}
+                      {forgotError && <Alert variant="error" className="py-2.5 px-3.5 bg-red-950/40 border-red-900/50 text-red-400 text-xs rounded-xl">{forgotError}</Alert>}
 
                       <div className="space-y-3 pt-3">
                         <button
                           type="submit"
-                          disabled={loading}
+                          disabled={forgotLoading}
                           style={{ backgroundColor: activeTheme.accent }}
                           className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md"
                         >
-                          {loading ? "Sending link..." : "Send Recovery Link"}
-                          {!loading && <ArrowRight className="w-4 h-4" />}
+                          {forgotLoading ? "Sending link..." : "Send Recovery Link"}
+                          {!forgotLoading && <ArrowRight className="w-4 h-4" />}
                         </button>
                       </div>
                     </>
@@ -563,6 +577,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => {
                         setRecoverySent(false);
+                        setForgotError("");
                         handleModeChange("signin");
                       }}
                       className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] text-zinc-300 hover:text-white font-bold rounded-full h-12 flex items-center justify-center transition-all"

@@ -4,6 +4,15 @@
 -keep class io.flutter.plugins.** { *; }
 -keep class io.flutter.embedding.** { *; }
 
+# local_auth — safety net for reflection-based biometric callbacks
+-keep class io.flutter.plugins.localauth.** { *; }
+-keep class androidx.biometric.** { *; }
+
+# Firebase Messaging — token handling, model classes, and serialization
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.iid.** { *; }
+-dontwarn com.google.firebase.**
+
 # Keep Hive classes
 -keep class com.google.gson.** { *; }
 -keep class hive.** { *; }

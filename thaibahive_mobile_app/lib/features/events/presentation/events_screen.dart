@@ -6,6 +6,8 @@ import '../../../core/extensions.dart';
 import '../../../models/event_model.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/offline_banner.dart';
+import '../data/events_cache_provider.dart';
 import '../data/events_provider.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
@@ -22,12 +24,13 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final eventsAsync = ref.watch(eventsListProvider);
+    final eventsAsync = ref.watch(cachedEventsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Events')),
       body: Column(
         children: [
+          const OfflineBanner(),
           Container(
             color: theme.colorScheme.surface,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -53,7 +56,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
           ),
           Expanded(
             child: eventsAsync.when(
-              data: (events) {
+              data: (state) {
+                final events = state.events;
                 final filtered = _selectedType == 'all'
                     ? events
                     : events.where((e) => e.eventType == _selectedType).toList();
@@ -66,7 +70,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () =>
-                      ref.read(eventsListProvider.notifier).refresh(),
+                      ref.read(cachedEventsProvider.notifier).fetchEvents(),
                   child: ListView.builder(
                     padding: const EdgeInsets.only(top: 8, bottom: 80),
                     itemCount: filtered.length,
@@ -81,7 +85,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
               error: (e, _) => AppErrorWidget(
                 message: e.toString(),
                 onRetry: () =>
-                    ref.read(eventsListProvider.notifier).refresh(),
+                    ref.read(cachedEventsProvider.notifier).fetchEvents(),
               ),
             ),
           ),
@@ -96,7 +100,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
 
   Future<void> _rsvpEvent(String id) async {
     try {
-      await ref.read(eventsListProvider.notifier).rsvp(id);
+      await ref.read(cachedEventsProvider.notifier).fetchEvents();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('RSVP confirmed!')),

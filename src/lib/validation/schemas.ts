@@ -67,12 +67,31 @@ export const assetCreateSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const expenseClaimCreateSchema = z.object({
-  amount: z.number().positive(),
-  category: z.string().min(1),
-  description: z.string().min(1),
-  receiptUrl: z.string().optional(),
-});
+export const expenseClaimCreateSchema = z
+  .object({
+    amount: z.number().positive(),
+    category: z.string().min(1),
+    description: z.string().min(1),
+    receiptUrl: z.string().optional(),
+  })
+  .refine(
+    (data) => data.amount < 1000 || (data.receiptUrl && data.receiptUrl.trim().length > 0),
+    {
+      message: "Receipt attachment is required for expense claims of ₹1,000 or more",
+      path: ["receiptUrl"],
+    }
+  );
+
+export const expenseClaimReviewSchema = z.object({
+  status: z.enum(["pending_hod", "pending_finance", "approved", "rejected"]),
+  reviewNotes: z.string().optional().nullable(),
+}).refine(
+  (data) => data.status !== "rejected" || (data.reviewNotes && data.reviewNotes.trim().length > 0),
+  {
+    message: "A comment is required when rejecting an expense claim",
+    path: ["reviewNotes"],
+  }
+);
 
 export const purchaseCreateSchema = z.object({
   itemName: z.string().min(1),
@@ -91,6 +110,16 @@ export const visitorCreateSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const vehicleCreateSchema = z.object({
+  registrationNumber: z.string().min(1),
+  model: z.string().min(1),
+  type: z.string().min(1),
+  capacity: z.number().int().positive().optional(),
+  fuelType: z.string().optional(),
+  institutionId: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
 export const circularCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
@@ -101,16 +130,6 @@ export const circularCreateSchema = z.object({
   targetRole: z.string().optional(),
   targetDepartmentId: z.string().optional(),
   targetInstitutionId: z.string().optional(),
-});
-
-export const vehicleCreateSchema = z.object({
-  registrationNumber: z.string().min(1),
-  model: z.string().min(1),
-  type: z.string().min(1),
-  capacity: z.number().int().positive().optional(),
-  fuelType: z.string().optional(),
-  institutionId: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 export const helpDeskTicketCreateSchema = z.object({
@@ -142,6 +161,7 @@ export const bookingCreateSchema = z.object({
   startTime: z.string().min(1),
   endTime: z.string().min(1),
   notes: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export const pollCreateSchema = z.object({
@@ -241,3 +261,76 @@ export const mediaBatchDownloadSchema = z.object({
   folderId: z.string().optional(),
   password: z.string().optional(),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(8),
+});
+
+export const dailyReportCreateSchema = z.object({
+  date: z.string().min(1),
+  summary: z.string().optional(),
+  status: z.enum(["draft", "submitted"]).optional(),
+  tasks: z.array(z.object({
+    taskId: z.string().optional().nullable(),
+    description: z.string().min(1),
+    hoursSpent: z.number().min(0.1).max(24),
+    status: z.enum(["completed", "in_progress"]).optional(),
+  })).optional(),
+});
+
+export const dailyReportUpdateSchema = z.object({
+  date: z.string().min(1).optional(),
+  summary: z.string().optional(),
+  status: z.enum(["draft", "submitted"]).optional(),
+  tasks: z.array(z.object({
+    taskId: z.string().optional().nullable(),
+    description: z.string().min(1),
+    hoursSpent: z.number().min(0.1).max(24),
+    status: z.enum(["completed", "in_progress"]).optional(),
+  })).optional(),
+});
+
+export const dailyReportReviewSchema = z.object({
+  status: z.enum(["reviewed", "rejected"]),
+  reviewerComment: z.string().optional().nullable(),
+}).refine(
+  (data) => data.status !== "rejected" || (data.reviewerComment && data.reviewerComment.trim().length > 0),
+  {
+    message: "A comment is required when rejecting a report",
+    path: ["reviewerComment"],
+  }
+);
+
+export const performanceReviewCreateSchema = z.object({
+  staffId: z.string().min(1),
+  period: z.string().min(1),
+  goals: z.array(z.string()).optional(),
+});
+
+export const performanceReviewUpdateSchema = z.object({
+  goals: z.array(z.string()).optional(),
+  achievements: z.string().optional(),
+  areasForImprovement: z.string().optional(),
+  managerComments: z.string().optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  status: z.enum(["draft", "submitted", "completed"]).optional(),
+});
+
+export const grievanceCreateSchema = z.object({
+  isAnonymous: z.boolean().optional().default(true),
+  category: z.enum(["workplace", "harassment", "infrastructure", "payroll", "management", "general"]).optional().default("general"),
+  subject: z.string().min(1, "Subject is required"),
+  description: z.string().min(1, "Description is required"),
+});
+
+export const grievanceUpdateSchema = z.object({
+  status: z.enum(["open", "in_review", "resolved", "dismissed"]).optional(),
+  response: z.string().optional(),
+}).refine(
+  (data) => data.status !== undefined || data.response !== undefined,
+  { message: "At least one of status or response must be provided" }
+);

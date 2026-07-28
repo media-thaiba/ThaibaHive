@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useUIStore } from "@/stores";
 
 type SidebarNavProps = {
   onSearchOpen: () => void;
@@ -18,7 +19,8 @@ type SidebarNavProps = {
 
 export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(
     navGroups.map((g) => g.label)
   );
@@ -105,7 +107,7 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
       {/* Collapse Toggle */}
       <div className="border-t p-2">
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggleSidebar}
           className="flex items-center justify-center w-full rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >

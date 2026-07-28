@@ -5,7 +5,9 @@ import '../../../core/extensions.dart';
 import '../../../models/approval_item_model.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
-import '../data/approvals_provider.dart';
+import '../../../shared/widgets/offline_banner.dart';
+import '../../../shared/widgets/failed_sync_banner.dart';
+import '../data/approvals_cache_provider.dart';
 
 class ApprovalsScreen extends ConsumerStatefulWidget {
   const ApprovalsScreen({super.key});
@@ -21,12 +23,14 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final approvalsAsync = ref.watch(approvalsListProvider);
+    final approvalsAsync = ref.watch(cachedApprovalsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Approvals')),
       body: Column(
         children: [
+          const OfflineBanner(),
+          const FailedSyncBanner(),
           Container(
             color: theme.colorScheme.surface,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -53,7 +57,8 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
           ),
           Expanded(
             child: approvalsAsync.when(
-              data: (approvals) {
+              data: (state) {
+                final approvals = state.approvals;
                 final filtered = _selectedType == 'all'
                     ? approvals
                     : approvals
@@ -68,7 +73,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () =>
-                      ref.read(approvalsListProvider.notifier).refresh(),
+                      ref.read(cachedApprovalsProvider.notifier).refresh(),
                   child: ListView.builder(
                     padding: const EdgeInsets.only(top: 8, bottom: 16),
                     itemCount: filtered.length,
@@ -86,7 +91,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
               error: (e, _) => AppErrorWidget(
                 message: e.toString(),
                 onRetry: () =>
-                    ref.read(approvalsListProvider.notifier).refresh(),
+                    ref.read(cachedApprovalsProvider.notifier).refresh(),
               ),
             ),
           ),
@@ -98,19 +103,28 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
   Future<void> _handleAction(
       ApprovalItemModel item, String status) async {
     try {
-      final notifier = ref.read(approvalsListProvider.notifier);
+      final notifier = ref.read(cachedApprovalsProvider.notifier);
       if (status == 'approved') {
         await notifier.approve(item.type, item.id);
       } else {
         await notifier.reject(item.type, item.id);
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${item.title} ${status} successfully'),
-          ),
-        );
+        // Check if offline
+        final state = ref.read(cachedApprovalsProvider);
+        final isOffline = state.valueOrNull?.isOffline ?? false;
+        final errorMsg = state.valueOrNull?.error ?? '';
+        if (isOffline || errorMsg.contains('offline sync')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved offline — queued for sync')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.title} ${status} successfully'),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

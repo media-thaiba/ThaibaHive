@@ -1,0 +1,7 @@
+# ThaibaHive Android Release Keystore Configuration Template
+# Copy this file to android/key.properties and update credentials before building release APKs
+
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+storeFile=../upload-keystore.jks

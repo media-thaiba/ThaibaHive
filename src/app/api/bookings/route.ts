@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings, bookingResources, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { bookingCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, desc, gte, lte, lt, gt } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -49,11 +50,13 @@ export const GET = requireAuth(async (request: Request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { resourceId, title, startTime, endTime, description } = body;
-
-  if (!resourceId || !title || !startTime || !endTime) {
-    return NextResponse.json({ error: "Resource, title, start and end time required" }, { status: 400 });
+  const parsed = bookingCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid booking parameters", details: parsed.error.format() }, { status: 400 });
   }
+
+  const { resourceId, title, startTime, endTime, notes, description } = parsed.data;
+  const noteText = notes || description || null;
 
   // Check for overlapping bookings on the same resource
   const overlapping = await db
@@ -79,7 +82,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     title,
     startTime,
     endTime,
-    notes: description,
+    notes: noteText,
     bookerId: session.staffId,
     status: "confirmed",
   }).returning().get();

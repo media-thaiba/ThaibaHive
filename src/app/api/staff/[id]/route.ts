@@ -4,6 +4,7 @@ import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLo
 import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { canAccessStaff } from "@/lib/auth/department-scope";
+import { autoAssignOffboardingChecklists } from "@/lib/onboarding/auto-assign";
 import { eq, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
@@ -162,6 +163,8 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
     entityId: id,
     details: { reason: reason || "Account revoked by admin", revokedBy: session.staffId },
   }).run();
+
+  autoAssignOffboardingChecklists(id, session.staffId);
 
   return NextResponse.json({ success: true, message: "Account revoked" });
 }, "staff:delete");

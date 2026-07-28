@@ -29,5 +29,8 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: true,
     timeout: 120000,
+    env: {
+      HEALTH_SECRET: "thaibahive_health_secret_token",
+    },
   },
 });

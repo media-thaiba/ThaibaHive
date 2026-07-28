@@ -7,6 +7,8 @@ import '../../../core/extensions.dart';
 import '../../../models/announcement_model.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/offline_banner.dart';
+import '../data/announcements_cache_provider.dart';
 import '../data/announcements_provider.dart';
 
 class AnnouncementsScreen extends ConsumerWidget {
@@ -17,13 +19,14 @@ class AnnouncementsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final announcementsAsync = ref.watch(announcementsListProvider);
+    final announcementsAsync = ref.watch(cachedAnnouncementsProvider);
     final selectedPriority = ref.watch(announcementPriorityProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Announcements')),
       body: Column(
         children: [
+          const OfflineBanner(),
           Container(
             color: theme.colorScheme.surface,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -52,7 +55,8 @@ class AnnouncementsScreen extends ConsumerWidget {
           ),
           Expanded(
             child: announcementsAsync.when(
-              data: (announcements) {
+              data: (state) {
+                final announcements = state.announcements;
                 if (announcements.isEmpty) {
                   return const EmptyStateWidget(
                     icon: Icons.campaign_rounded,
@@ -66,7 +70,7 @@ class AnnouncementsScreen extends ConsumerWidget {
                     announcements.where((a) => !a.isPinned).toList();
                 return RefreshIndicator(
                   onRefresh: () =>
-                      ref.read(announcementsListProvider.notifier).refresh(),
+                      ref.read(cachedAnnouncementsProvider.notifier).fetchAnnouncements(priority: selectedPriority),
                   child: ListView(
                     padding: const EdgeInsets.only(bottom: 80),
                     children: [
@@ -106,7 +110,7 @@ class AnnouncementsScreen extends ConsumerWidget {
               error: (e, _) => AppErrorWidget(
                 message: e.toString(),
                 onRetry: () =>
-                    ref.read(announcementsListProvider.notifier).refresh(),
+                    ref.read(cachedAnnouncementsProvider.notifier).fetchAnnouncements(priority: selectedPriority),
               ),
             ),
           ),

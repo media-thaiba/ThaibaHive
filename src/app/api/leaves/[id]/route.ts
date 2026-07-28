@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, leaveBalances } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
-import { eq, and } from "drizzle-orm";
+import { sendPushNotification } from "@/lib/notifications/push-service";
+import { eq, and, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -29,6 +30,13 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Cannot approve your own leave" }, { status: 403 });
   }
 
+  if (leave.status === "approved" || leave.status === "rejected") {
+    return NextResponse.json(
+      { error: `Leave request is already ${leave.status}` },
+      { status: 400 }
+    );
+  }
+
   const authorized = await isAuthorizedToViewLeave(session.staffId, session.role, leave.staffId);
   if (!authorized) {
     return NextResponse.json({ error: "You are not authorized to approve this leave request" }, { status: 403 });
@@ -46,30 +54,68 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     updates.reviewedById = session.staffId;
     updates.reviewedAt = new Date().toISOString();
     updates.reviewNotes = body.reviewNotes || null;
-
-    if (nextStatus === "approved") {
-      const existing = await db
-        .select()
-        .from(leaveBalances)
-        .where(and(eq(leaveBalances.staffId, leave.staffId), eq(leaveBalances.leaveTypeId, leave.leaveTypeId), eq(leaveBalances.year, new Date().getFullYear())))
-        .get();
-
-      if (existing) {
-        await db
-          .update(leaveBalances)
-          .set({ usedDays: existing.usedDays + leave.daysCount })
-          .where(eq(leaveBalances.id, existing.id))
-          .run();
-      }
-    }
   }
 
+  // Atomic conditional update: only update if status is not already terminal (approved or rejected)
   const updated = await db
     .update(leaveRequests)
     .set(updates)
-    .where(eq(leaveRequests.id, id))
+    .where(
+      and(
+        eq(leaveRequests.id, id),
+        ne(leaveRequests.status, "approved"),
+        ne(leaveRequests.status, "rejected")
+      )
+    )
     .returning()
     .get();
+
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Leave request is already in a terminal state (approved or rejected)" },
+      { status: 400 }
+    );
+  }
+
+  // Execute leave balance deduction ONLY after atomic state transition to 'approved'
+  if (updated.status === "approved") {
+    const existing = await db
+      .select()
+      .from(leaveBalances)
+      .where(
+        and(
+          eq(leaveBalances.staffId, leave.staffId),
+          eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+          eq(leaveBalances.year, new Date().getFullYear())
+        )
+      )
+      .get();
+
+    if (existing) {
+      await db
+        .update(leaveBalances)
+        .set({ usedDays: existing.usedDays + leave.daysCount })
+        .where(eq(leaveBalances.id, existing.id))
+        .run();
+    }
+  }
+
+  if (updated && body.status) {
+    after(async () => {
+      try {
+        await sendPushNotification({
+          staffId: updated.staffId,
+          title: `Leave Request ${updated.status.replace(/_/g, " ").toUpperCase()}`,
+          message: `Your leave request has been updated to ${updated.status}.`,
+          type: "leave",
+          referenceType: "leave",
+          referenceId: updated.id,
+        });
+      } catch (err) {
+        console.error("[PushNotification] Leave update failed:", err);
+      }
+    });
+  }
 
   return NextResponse.json({ leave: updated });
 }, "leaves:approve");
@@ -84,3 +130,4 @@ export const DELETE = requireAuth(async (_request, session, context) => {
   await db.delete(leaveRequests).where(eq(leaveRequests.id, id)).run();
   return NextResponse.json({ success: true });
 }, "leaves:delete");
+

@@ -59,6 +59,8 @@ function parseList(value: string | null): string[] {
   return value.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+import { api } from "@/lib/api/client";
+
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
@@ -76,19 +78,22 @@ export default function StaffProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/staff/${id}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`Staff fetch failed: ${r.status}`);
-        return r.json();
-      })
-      .then((data) => setStaff(data.staff))
-      .catch((e) => { if (process.env.NODE_ENV === "development") console.error(e); })
-      .finally(() => setLoading(false));
+    if (!id) return;
+    setLoading(true);
 
-    fetch(`/api/staff/${id}/timeline`)
-      .then((r) => r.json())
-      .then((data) => setTimeline(Array.isArray(data.timeline) ? data.timeline : []))
-      .catch(() => setTimeline([]));
+    Promise.all([
+      api.get<{ staff: StaffDetail }>(`/api/staff/${id}`),
+      api.get<{ timeline: TimelineEntry[] }>(`/api/staff/${id}/timeline`),
+    ])
+      .then(([staffRes, timelineRes]) => {
+        if (staffRes.ok && staffRes.data?.staff) {
+          setStaff(staffRes.data.staff);
+        }
+        if (timelineRes.ok && Array.isArray(timelineRes.data?.timeline)) {
+          setTimeline(timelineRes.data.timeline);
+        }
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div className="flex-1 space-y-6 p-6"><Skeleton className="h-8 w-64" /><Skeleton className="h-48 w-full" /></div>;
@@ -115,7 +120,10 @@ export default function StaffProfilePage() {
           <h1 className="text-2xl font-bold">{staff.firstName} {staff.lastName}</h1>
           <Badge variant={staff.isActive ? "default" : "secondary"}>{staff.isActive ? "Active" : "Inactive"}</Badge>
         </div>
-        <Link href={`/staff/${id}/edit`}><Button>Edit Profile</Button></Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/staff/${id}/timeline`}><Button variant="outline">Full Timeline</Button></Link>
+          <Link href={`/staff/${id}/edit`}><Button>Edit Profile</Button></Link>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

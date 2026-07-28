@@ -250,23 +250,32 @@ export async function validateQrCheckIn(
     throw new AttendanceValidationError("QR code has expired", 400);
   }
 
-  // Anti-replay protection
-  const usedNonce = await db
-    .select()
-    .from(usedNonces)
-    .where(eq(usedNonces.jti, payload.nonce))
-    .get();
+  // Anti-replay protection: Check and atomic insert with primary key constraint protection
+  try {
+    const usedNonce = await db
+      .select()
+      .from(usedNonces)
+      .where(eq(usedNonces.jti, payload.nonce))
+      .get();
 
-  if (usedNonce) {
-    throw new AttendanceValidationError("QR code already used", 400);
+    if (usedNonce) {
+      throw new AttendanceValidationError("QR code already used", 400);
+    }
+
+    // Record nonce usage atomically (jti is primary key)
+    await db
+      .insert(usedNonces)
+      .values({
+        jti: payload.nonce,
+        expiresAt: new Date(nowTime + 5 * 60 * 1000).toISOString(),
+      })
+      .run();
+  } catch (err: any) {
+    if (err instanceof AttendanceValidationError) throw err;
+    // Catch DB primary key constraint violation for concurrent race conditions
+    if (err?.message?.includes("UNIQUE") || err?.code === "SQLITE_CONSTRAINT" || err?.code === "23505") {
+      throw new AttendanceValidationError("QR code already used", 400);
+    }
+    throw err;
   }
-
-  // Record nonce usage
-  await db
-    .insert(usedNonces)
-    .values({
-      jti: payload.nonce,
-      expiresAt: new Date(nowTime + 5 * 60 * 1000).toISOString(),
-    })
-    .run();
 }

@@ -9,6 +9,7 @@ import '../../../models/leave_request_model.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../../shared/widgets/failed_sync_banner.dart';
 import '../data/leaves_provider.dart';
 
 class LeavesScreen extends ConsumerStatefulWidget {
@@ -70,6 +71,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
                 ),
               ),
             ),
+            const SliverToBoxAdapter(child: FailedSyncBanner()),
 
             // ── Status Segmented Filter ────────────────────────────────
             SliverToBoxAdapter(

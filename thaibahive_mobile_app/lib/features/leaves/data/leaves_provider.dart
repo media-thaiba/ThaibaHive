@@ -5,6 +5,21 @@ import '../../../models/leave_request_model.dart';
 import '../../../models/leave_type_model.dart';
 import 'leaves_repository.dart';
 
+/// Mobile Leaves Provider - Offline Sync Ready
+///
+/// This provider follows the same pattern as other mobile providers, but is enhanced with offline caching support.
+///
+/// Features:
+/// - Real-time sync with backend
+/// - Local cache fallback when offline
+/// - Optimistic operations for better UX
+/// - Hysteresis state management (loading/loadingMore/loadingError)
+///
+/// The provider connects to:
+/// - Backend API for remote data
+/// - OfflineCacheService for cached data
+/// - OfflineQueue for pending sync operations
+
 final selectedLeaveStatusProvider = StateProvider<String>((ref) => 'all');
 
 final leavesListProvider =

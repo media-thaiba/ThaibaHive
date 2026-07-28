@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: thaibahive-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-thaibahive}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - thaibahive-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-thaibahive}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  thaibahive-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thaibahive-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-thaibahive}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-${JWT_SECRET:-thaibahive_production_jwt_secret_min_32_bytes_long}}
+      HEALTH_SECRET: ${HEALTH_SECRET:-thaibahive_health_secret_token}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - thaibahive-network
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  thaibahive-network:
+    driver: bridge

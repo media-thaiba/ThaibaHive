@@ -12,6 +12,7 @@ const publicPaths = [
   "/api/auth/signup",
   "/api/auth/google",
   "/api/auth/mobile-handoff",
+  "/api/system/health",
   "/favicon.ico",
 ];
 
@@ -36,7 +37,7 @@ export function proxy(request: NextRequest) {
 
   try {
     const isPublic = publicPaths.some((p) => pathname.startsWith(p));
-    if (isPublic) return addSecurityHeaders(NextResponse.next(), pathname);
+    if (isPublic) return addSecurityHeaders(request, NextResponse.next(), pathname);
 
     let token = request.cookies.get("thaibahive_session")?.value;
     if (!token) {
@@ -49,11 +50,13 @@ export function proxy(request: NextRequest) {
     if (!token) {
       if (pathname.startsWith("/api/")) {
         return addSecurityHeaders(
+          request,
           NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
           pathname
         );
       }
       return addSecurityHeaders(
+        request,
         NextResponse.redirect(new URL("/auth/login", request.url)),
         pathname
       );
@@ -66,6 +69,7 @@ export function proxy(request: NextRequest) {
       const contentLength = request.headers.get("content-length");
       if (contentLength && parseInt(contentLength, 10) > MAX_BODY_BYTES) {
         return addSecurityHeaders(
+          request,
           NextResponse.json({ error: "Request body too large. Maximum size is 5MB." }, { status: 413 }),
           pathname
         );
@@ -75,29 +79,51 @@ export function proxy(request: NextRequest) {
       const contentType = request.headers.get("content-type");
       if (contentType && !contentType.includes("application/json") && !contentType.includes("multipart/form-data")) {
         return addSecurityHeaders(
+          request,
           NextResponse.json({ error: "Invalid content type." }, { status: 415 }),
           pathname
         );
       }
     }
 
-    return addSecurityHeaders(NextResponse.next(), pathname);
+    return addSecurityHeaders(request, NextResponse.next(), pathname);
   } catch (error) {
     console.error("Proxy error:", error);
     if (pathname.startsWith("/api/")) {
       return addSecurityHeaders(
+        request,
         NextResponse.json({ error: "Internal server error" }, { status: 500 }),
         pathname
       );
     }
     return addSecurityHeaders(
+      request,
       NextResponse.redirect(new URL("/auth/login", request.url)),
       pathname
     );
   }
 }
 
-function addSecurityHeaders(response: NextResponse, pathname: string): NextResponse {
+const ALLOWED_ORIGIN_REGEX = /^https:\/\/(?:[a-z0-9-]+\.)*thaibahive\.com$/i;
+
+function applyCorsHeaders(request: NextRequest, response: NextResponse): NextResponse {
+  const origin = request.headers.get("origin");
+  if (!origin) return response;
+
+  const isDev = process.env.NODE_ENV !== "production" && 
+    (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
+
+  if (ALLOWED_ORIGIN_REGEX.test(origin) || isDev) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    response.headers.set("Vary", "Origin");
+  }
+  return response;
+}
+
+function addSecurityHeaders(request: NextRequest, response: NextResponse, pathname: string): NextResponse {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
@@ -113,8 +139,9 @@ function addSecurityHeaders(response: NextResponse, pathname: string): NextRespo
     response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
   }
 
-  return response;
+  return applyCorsHeaders(request, response);
 }
+
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo|manifest.json|sw.js|offline.html|.*\\.svg$).*)"],

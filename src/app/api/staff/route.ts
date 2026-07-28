@@ -6,6 +6,7 @@ import { pick } from "@/lib/api/pick";
 import { hashPassword } from "@/lib/auth";
 import { staffCreateSchema } from "@/lib/validation/schemas";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
+import { autoAssignOnboardingChecklists } from "@/lib/onboarding/auto-assign";
 import { eq, and, inArray } from "drizzle-orm";
 
 const SAFE_STAFF_FIELDS = {
@@ -122,6 +123,8 @@ export const POST = requireAuth(async (request: Request, session) => {
       }))
     ).run();
   }
+
+  autoAssignOnboardingChecklists(safeStaff.id, session.staffId);
 
   return NextResponse.json({ staff: safeStaff }, { status: 201 });
 }, "staff:create");

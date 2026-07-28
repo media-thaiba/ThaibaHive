@@ -8,6 +8,7 @@ import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 export * from "./schema";
+export * from "drizzle-orm";
 
 const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
 const isPostgres = databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://");
@@ -44,7 +45,7 @@ export const db = dbInstance as ReturnType<typeof sqliteDrizzle>;
 
 // Helper to wrap PostgreSQL Drizzle client to shim SQLite's .get(), .all(), and .run() APIs
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic interception proxy bridges Node/PostgreSQL and SQLite query methods
-function wrapPgDb(pgDb: any): any {
+export function wrapPgDb(pgDb: any): any {
   return new Proxy(pgDb, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get(target: any, prop: string | symbol, receiver: any): any {
@@ -114,7 +115,7 @@ function wrapBuilder(builder: any): any {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return function(...args: any[]) {
           const result = val.apply(target, args);
-          if (result && typeof result.then === "function") {
+          if (result && (typeof result === "object" || typeof result === "function")) {
             return wrapBuilder(result);
           }
           return result;

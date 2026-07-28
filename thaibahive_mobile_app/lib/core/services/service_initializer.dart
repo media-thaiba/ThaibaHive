@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'crash_log_service.dart';
+import 'fcm_service.dart';
 import 'offline_queue.dart';
+import 'offline_cache_service.dart';
 import 'qr_anti_replay.dart';
 import 'offline_sync_service.dart';
 
@@ -35,7 +37,8 @@ class ServiceInitializer {
       
       // 2. Initialize offline queue (depends on secure storage for key)
       await offlineQueue.init();
-      debugPrint('[ServiceInitializer] Offline queue initialized');
+      await offlineCacheService.init();
+      debugPrint('[ServiceInitializer] Offline queue & encrypted cache initialized');
       
       // 3. Initialize QR anti-replay service
       await qrAntiReplay.init();
@@ -52,6 +55,14 @@ class ServiceInitializer {
       // 6. Start offline sync service
       offlineSyncService.start();
       debugPrint('[ServiceInitializer] Offline sync service started');
+
+      // 7. Initialize FCM Push Notifications service
+      try {
+        await FCMService().initialize();
+        debugPrint('[ServiceInitializer] FCM Push Notifications initialized');
+      } catch (e) {
+        debugPrint('[ServiceInitializer] FCM initialization warning: $e');
+      }
       
       _initialized = true;
       debugPrint('[ServiceInitializer] All services initialized successfully');

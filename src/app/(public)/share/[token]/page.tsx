@@ -1,6 +1,4 @@
-import { db } from "@/db";
-import { mediaShareLinks } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { db, eq, mediaShareLinks } from "@/db";
 import { notFound } from "next/navigation";
 import { SharePageClient } from "./share-page-client";
 

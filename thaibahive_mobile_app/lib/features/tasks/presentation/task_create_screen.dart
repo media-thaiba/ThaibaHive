@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:thaibahive_mobile/features/tasks/data/tasks_provider.dart';
+import 'package:thaibahive_mobile/features/tasks/data/tasks_cache_provider.dart';
 
 class TaskCreateScreen extends ConsumerStatefulWidget {
   const TaskCreateScreen({super.key});
@@ -54,11 +54,21 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
     }
 
     try {
-      await ref.read(tasksProvider.notifier).createTask(data);
+      await ref.read(cachedTasksProvider.notifier).createTask(data);
+      // Check if task was queued offline
+      final state = ref.read(cachedTasksProvider);
+      final isOffline = state.valueOrNull?.isOffline ?? false;
+      final errorMsg = state.valueOrNull?.error ?? '';
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task created successfully')),
-        );
+        if (isOffline || errorMsg.contains('offline sync')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved offline — queued for sync')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Task created successfully')),
+          );
+        }
         context.pop();
       }
     } catch (e) {
@@ -75,7 +85,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final error = ref.watch(tasksProvider).error;
+    final error = ref.watch(cachedTasksProvider).error?.toString();
 
     return Scaffold(
       appBar: AppBar(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
+import 'package:thaibahive_mobile/features/tasks/data/tasks_cache_provider.dart';
 import 'package:thaibahive_mobile/features/tasks/data/tasks_provider.dart';
 import 'package:thaibahive_mobile/features/tasks/data/tasks_repository.dart';
 import 'package:thaibahive_mobile/models/task_comment_model.dart';
@@ -43,10 +44,21 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
   Future<void> _updateStatus(String status) async {
     setState(() => _isUpdating = true);
-    await ref.read(tasksProvider.notifier).updateTask(widget.taskId, {
+    await ref.read(cachedTasksProvider.notifier).updateTask(widget.taskId, {
       'status': status,
     });
     ref.invalidate(taskDetailProvider(widget.taskId));
+    // Check if offline
+    final state = ref.read(cachedTasksProvider);
+    final isOffline = state.valueOrNull?.isOffline ?? false;
+    final errorMsg = state.valueOrNull?.error ?? '';
+    if (mounted) {
+      if (isOffline || errorMsg.contains('offline sync')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved offline — queued for sync')),
+        );
+      }
+    }
     setState(() {
       _selectedStatus = status;
       _isUpdating = false;
@@ -55,10 +67,21 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
   Future<void> _updatePriority(String priority) async {
     setState(() => _isUpdating = true);
-    await ref.read(tasksProvider.notifier).updateTask(widget.taskId, {
+    await ref.read(cachedTasksProvider.notifier).updateTask(widget.taskId, {
       'priority': priority,
     });
     ref.invalidate(taskDetailProvider(widget.taskId));
+    // Check if offline
+    final state = ref.read(cachedTasksProvider);
+    final isOffline = state.valueOrNull?.isOffline ?? false;
+    final errorMsg = state.valueOrNull?.error ?? '';
+    if (mounted) {
+      if (isOffline || errorMsg.contains('offline sync')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved offline — queued for sync')),
+        );
+      }
+    }
     setState(() {
       _selectedPriority = priority;
       _isUpdating = false;
@@ -100,7 +123,18 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       ),
     );
     if (confirmed == true) {
-      await ref.read(tasksProvider.notifier).deleteTask(widget.taskId);
+      await ref.read(cachedTasksProvider.notifier).deleteTask(widget.taskId);
+      // Check if offline
+      final state = ref.read(cachedTasksProvider);
+      final isOffline = state.valueOrNull?.isOffline ?? false;
+      final errorMsg = state.valueOrNull?.error ?? '';
+      if (mounted) {
+        if (isOffline || errorMsg.contains('offline sync')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved offline — queued for sync')),
+          );
+        }
+      }
       if (mounted) context.pop();
     }
   }

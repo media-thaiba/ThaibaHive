@@ -4,26 +4,21 @@ import { dailyReports, auditLog } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
+import { dailyReportReviewSchema } from "@/lib/validation/schemas";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
-  const { status, reviewerComment } = body;
+  const result = dailyReportReviewSchema.safeParse(body);
 
-  if (!status || !["reviewed", "rejected"].includes(status)) {
+  if (!result.success) {
     return NextResponse.json(
-      { error: "Invalid status. Must be 'reviewed' or 'rejected'." },
+      { error: "Invalid data", details: result.error.flatten() },
       { status: 400 }
     );
   }
 
-  // Mandatory comment on rejection
-  if (status === "rejected" && (!reviewerComment || !reviewerComment.trim())) {
-    return NextResponse.json(
-      { error: "A comment is required when rejecting a report." },
-      { status: 400 }
-    );
-  }
+  const { status, reviewerComment } = result.data;
 
   const report = await db
     .select()

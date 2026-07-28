@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { verifySession } from "@/lib/auth";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { staff, marketplaceApps, appDefaultRoles, userAppAssignments } from "@thaiba/db/schema";
 import { eq, and } from "drizzle-orm";
 
-export async function POST() {
-  const session = await verifySession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const POST = requireAuth(async (request, session) => {
   const now = new Date().toISOString();
 
   // Get all instant apps
@@ -62,4 +59,5 @@ export async function POST() {
     message: "Onboarding complete",
     activatedApps: instantApps.length,
   });
-}
+});
+

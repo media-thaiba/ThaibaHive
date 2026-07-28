@@ -31,18 +31,22 @@ export default function ShellLayout({
           Skip to main content
         </a>
         <div className="flex min-h-screen flex-col">
-          <header className="sticky top-0 z-[var(--z-sticky)] border-b bg-card/80 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
+          <header role="banner" className="sticky top-0 z-[var(--z-sticky)] border-b bg-card/80 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
             <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
               <ShellNav onSearchOpen={() => setCmdOpen(true)} />
             </div>
           </header>
           <div className="flex flex-1">
-            <SidebarNav onSearchOpen={() => setCmdOpen(true)} />
-            <main id="main-content" className="flex-1 pb-20 lg:pb-0">
+            <nav role="navigation" aria-label="Main navigation" className="hidden lg:block">
+              <SidebarNav onSearchOpen={() => setCmdOpen(true)} />
+            </nav>
+            <main id="main-content" role="main" className="flex-1 pb-20 lg:pb-0" tabIndex={-1}>
               {children}
             </main>
           </div>
-          <BottomNav />
+          <nav role="navigation" aria-label="Mobile navigation" className="lg:hidden">
+            <BottomNav />
+          </nav>
           <DiagnosticsButton />
           <Toaster position="top-right" richColors />
           <Suspense fallback={<CommandPaletteFallback />}>
