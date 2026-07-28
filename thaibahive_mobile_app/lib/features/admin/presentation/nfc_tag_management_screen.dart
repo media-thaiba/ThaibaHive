@@ -5,6 +5,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 import '../../../core/services/location_service.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/map_location_picker_modal.dart';
 import '../data/admin_nfc_provider.dart';
 import '../data/admin_provider.dart';
 
@@ -528,6 +529,25 @@ class _NfcTagManagementScreenState
                 const SizedBox(height: 16),
 
                 // GPS Location Section
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _openMapPicker,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.purple.shade50,
+                      foregroundColor: Colors.purple.shade900,
+                      side: BorderSide(color: Colors.purple.shade200),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.map_rounded, color: Colors.purple),
+                    label: const Text(
+                      '🗺️ Open Map Location Picker',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -617,6 +637,28 @@ class _NfcTagManagementScreenState
           ...state.locations.map((loc) => _buildLocationCard(theme, loc)),
       ],
     );
+  }
+
+  Future<void> _openMapPicker() async {
+    final lat = double.tryParse(_latController.text) ?? 11.258753;
+    final lon = double.tryParse(_lonController.text) ?? 75.780412;
+    final radius = double.tryParse(_radiusController.text) ?? 50.0;
+
+    final result = await MapLocationPickerModal.show(
+      context,
+      initialLatitude: lat,
+      initialLongitude: lon,
+      initialRadius: radius,
+      title: 'Adjust & Confirm Checkpoint Location',
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _latController.text = result.latitude.toStringAsFixed(6);
+        _lonController.text = result.longitude.toStringAsFixed(6);
+        _radiusController.text = result.radius.toInt().toString();
+      });
+    }
   }
 
   Future<void> _fetchGpsLocation() async {
@@ -808,6 +850,45 @@ class _NfcTagManagementScreenState
                     ),
                   ),
                   const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final lat = double.tryParse(editLatController.text) ?? 11.258753;
+                        final lon = double.tryParse(editLonController.text) ?? 75.780412;
+                        final radius = double.tryParse(editRadiusController.text) ?? 50.0;
+
+                        final result = await MapLocationPickerModal.show(
+                          ctx,
+                          initialLatitude: lat,
+                          initialLongitude: lon,
+                          initialRadius: radius,
+                          title: 'Adjust Geofence & Location',
+                        );
+
+                        if (result != null) {
+                          setModalState(() {
+                            editLatController.text = result.latitude.toStringAsFixed(6);
+                            editLonController.text = result.longitude.toStringAsFixed(6);
+                            editRadiusController.text = result.radius.toInt().toString();
+                          });
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade50,
+                        foregroundColor: Colors.purple.shade900,
+                        side: BorderSide(color: Colors.purple.shade200),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.map_rounded, color: Colors.purple),
+                      label: const Text(
+                        '🗺️ Adjust & Confirm on Map',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
