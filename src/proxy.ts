@@ -148,3 +148,5 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo|manifest.json|sw.js|offline.html|.*\\.svg$).*)"],
 };
+
+export default proxy;
