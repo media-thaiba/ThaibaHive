@@ -1,6 +1,72 @@
 import { validateQrCheckIn, AttendanceValidationError } from "@/lib/attendance/validation";
 import { db } from "@/db";
 
+jest.mock("@/lib/auth", () => ({
+  verifySession: jest.fn().mockResolvedValue({
+    staffId: "admin-1",
+    role: "admin",
+    email: "admin@test.com",
+  }),
+  hasPermission: jest.fn(() => true),
+}));
+
+jest.mock("@/db", () => {
+  const ok = (val: unknown) => ({ get: () => val, all: () => (val ? [val] : []), run: () => ({ changes: val ? 1 : 0 }) });
+  const chain = (val: unknown) => ({
+    where: () => ({ returning: () => ({ get: () => val }), ...ok(val) }),
+    set: () => ({ where: () => ({ returning: () => ({ get: () => val }), ...ok(val) }) }),
+  });
+  return {
+    db: {
+      select: () => ({ from: () => ({ where: () => ok(null), get: () => null, innerJoin: () => ({ where: () => ({ get: () => null, all: () => [] }) }) }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning: () => ({ get: () => null }), ...ok(null) }) }) }),
+      insert: () => ({ values: () => ({ onConflictDoUpdate: () => ({ run: () => ({ changes: 0 }) }), run: () => ({ changes: 0 }) }) }),
+    },
+    $with: () => ({}),
+    eq: () => true,
+    ne: () => true,
+    and: () => true,
+    or: () => true,
+    desc: () => true,
+    inArray: () => true,
+    sql: { raw: () => true },
+  };
+});
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PATCH } = require("@/app/api/approvals/route");
+
+function mockRequest(body: Record<string, unknown>) {
+  return new Request("http://localhost/api/approvals", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function mockDb(selectResult: unknown, updateResult: unknown) {
+  const mockUpdate = {
+    set: jest.fn().mockReturnValue({
+      where: jest.fn().mockReturnValue({
+        returning: jest.fn().mockReturnValue({ get: jest.fn().mockResolvedValue(updateResult) }),
+        get: jest.fn().mockResolvedValue(updateResult),
+        run: jest.fn().mockResolvedValue({ changes: updateResult ? 1 : 0 }),
+      }),
+    }),
+  };
+  const mockSelect = {
+    from: jest.fn().mockReturnValue({
+      where: jest.fn().mockReturnValue({
+        get: jest.fn().mockResolvedValue(selectResult),
+        all: jest.fn().mockResolvedValue(selectResult ? [selectResult] : []),
+      }),
+    }),
+  };
+  (db as any).select = jest.fn().mockReturnValue(mockSelect);
+  (db as any).update = jest.fn().mockReturnValue(mockUpdate);
+  return { mockSelect, mockUpdate };
+}
+
 describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
   describe("Attendance QR Code Single-Use Anti-Replay & TTL", () => {
     it("should throw AttendanceValidationError for malformed base64url QR payload", async () => {
@@ -38,8 +104,8 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
           where: () => ({
             get: () => {
               selectCount++;
-              if (selectCount === 1) return { id: locationId, qrSecret: secret, isActive: true, accuracy: null, latitude: null, longitude: null, wifiSsids: null }; // location
-              return { jti: nonce }; // usedNonce
+              if (selectCount === 1) return { id: locationId, qrSecret: secret, isActive: true, accuracy: null, latitude: null, longitude: null, wifiSsids: null };
+              return { jti: nonce };
             },
           }),
         }),
@@ -63,7 +129,6 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
         .update(`${nonce}:${timestamp}:${locationId}`)
         .digest("hex");
 
-      // First select returns location, second select returns null (both race requests pass select)
       let selectCount = 0;
       jest.spyOn(db, "select").mockImplementation((() => ({
         from: () => ({
@@ -77,7 +142,6 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
         }),
       })) as any);
 
-      // Insert throws DB UNIQUE constraint collision
       jest.spyOn(db, "insert").mockImplementation((() => ({
         values: () => ({
           run: () => {
@@ -128,77 +192,230 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
 
       expect(usedDays).toBe(3);
     });
+  });
 
-    it("should reject re-approval of an already-approved leave via atomic WHERE guard (approvals PATCH path)", () => {
-      const currentStatus = "approved";
-      const nextStatus = "approved";
-
-      const whereClause = [
-        { field: "id", op: "eq", value: "leave-123" },
-        { field: "status", op: "ne", value: "approved" },
-        { field: "status", op: "ne", value: "rejected" },
-      ];
-
-      const statusGuardPassed = whereClause.every((clause) => {
-        if (clause.op === "ne" && clause.field === "status") {
-          return currentStatus !== clause.value;
+  describe("Approvals PATCH — terminal state guards via real handler", () => {
+    it("should approve a pending leave request via the real PATCH handler", async () => {
+      mockDb(
+        { id: "leave-1", status: "pending", staffId: "s1", leaveTypeId: "lt1", daysCount: 2 },
+        { id: "leave-1", status: "approved" }
+      );
+      // leave balance SELECT returns existing record → triggers balance update
+      const origSelect = (db as any).select;
+      let callCount = 0;
+      (db as any).select = jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 2) {
+          // second select: leave balance lookup
+          return {
+            from: () => ({
+              where: () => ({
+                get: () => Promise.resolve({ id: "bal-1", usedDays: 3 }),
+              }),
+            }),
+          };
         }
-        return true;
+        return origSelect();
       });
 
-      expect(statusGuardPassed).toBe(false);
-
-      const mockResult = statusGuardPassed ? { id: "leave-123", status: nextStatus } : undefined;
-      expect(mockResult).toBeUndefined();
+      const response = await PATCH(mockRequest({ type: "leave", id: "leave-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ success: true });
+      expect(response.status).toBe(200);
     });
 
-    it("should reject re-approval of an already-rejected leave via atomic WHERE guard", () => {
-      const currentStatus = "rejected";
-      const whereClause = [
-        { field: "status", op: "ne", value: "approved" },
-        { field: "status", op: "ne", value: "rejected" },
-      ];
+    it("should return 400 when re-approving an already-approved leave via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "leave-1", status: "approved", staffId: "s1" },
+        undefined // UPDATE returns undefined because WHERE guard blocks it
+      );
 
-      const statusGuardPassed = whereClause.every((clause) => {
-        if (clause.op === "ne" && clause.field === "status") {
-          return currentStatus !== clause.value;
-        }
-        return true;
+      const response = await PATCH(mockRequest({ type: "leave", id: "leave-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Leave request is already in a terminal state" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should return 400 when re-rejecting an already-rejected leave via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "leave-2", status: "rejected", staffId: "s1" },
+        undefined
+      );
+
+      const response = await PATCH(mockRequest({ type: "leave", id: "leave-2", action: "reject" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Leave request is already in a terminal state" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should approve a pending expense claim via real handler", async () => {
+      mockDb(
+        { id: "exp-1", status: "pending" },
+        { id: "exp-1", status: "approved" }
+      );
+
+      const response = await PATCH(mockRequest({ type: "expense", id: "exp-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ success: true });
+      expect(response.status).toBe(200);
+    });
+
+    it("should return 400 when re-approving an already-approved expense claim via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "exp-1", status: "approved" },
+        undefined
+      );
+
+      const response = await PATCH(mockRequest({ type: "expense", id: "exp-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Expense claim is already in a terminal state" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should return 400 when re-rejecting an already-rejected expense claim via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "exp-2", status: "rejected" },
+        undefined
+      );
+
+      const response = await PATCH(mockRequest({ type: "expense", id: "exp-2", action: "reject" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Expense claim is already in a terminal state" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should advance a purchase request through multi-step state machine via real handler", async () => {
+      const mockState = { status: "pending_hod" };
+      const mockUpdate = {
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            returning: jest.fn().mockReturnValue({
+              get: jest.fn().mockImplementation(() => {
+                const newStatus = mockState.status === "pending_hod" ? "pending_accounts" : "approved";
+                mockState.status = newStatus;
+                return Promise.resolve({ id: "purch-1", status: newStatus });
+              }),
+            }),
+          }),
+        }),
+      };
+      (db as any).select = jest.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            get: () => Promise.resolve(mockState),
+          }),
+        }),
+      });
+      (db as any).update = jest.fn().mockReturnValue(mockUpdate);
+
+      const response = await PATCH(mockRequest({ type: "purchase", id: "purch-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ success: true });
+      expect(response.status).toBe(200);
+      expect(mockState.status).toBe("pending_accounts");
+    });
+
+    it("should return 409 when purchase optimistic concurrency guard detects stale status via real handler", async () => {
+      const mockState = { status: "pending_hod" };
+      (db as any).select = jest.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            get: () => Promise.resolve(mockState),
+          }),
+        }),
+      });
+      // Simulate concurrent modification: status changed between SELECT and UPDATE
+      (db as any).update = jest.fn().mockReturnValue({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            returning: jest.fn().mockReturnValue({
+              get: () => Promise.resolve(undefined), // WHERE eq(status, "pending_hod") fails because DB now has "pending_accounts"
+            }),
+          }),
+        }),
       });
 
-      expect(statusGuardPassed).toBe(false);
+      const response = await PATCH(mockRequest({ type: "purchase", id: "purch-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Purchase request status changed by concurrent request" });
+      expect(response.status).toBe(409);
     });
 
-    it("should prevent redundant concurrent purchase approvals via optimistic status equality guard", () => {
-      const initialStatus = "pending_hod";
-      let dbStatus = "pending_hod";
+    it("should return 400 when trying to approve a purchase in an invalid status via real handler", async () => {
+      (db as any).select = jest.fn().mockReturnValue({
+        from: () => ({
+          where: () => ({
+            get: () => Promise.resolve({ status: "approved" }),
+          }),
+        }),
+      });
 
-      // First request updates status from pending_hod to pending_accounts
-      const firstRequestMatch = dbStatus === initialStatus;
-      expect(firstRequestMatch).toBe(true);
-      dbStatus = "pending_accounts"; // first request commits
-
-      // Second concurrent request with stale initialStatus = pending_hod fails WHERE clause match
-      const secondRequestMatch = dbStatus === initialStatus;
-      expect(secondRequestMatch).toBe(false);
+      const response = await PATCH(mockRequest({ type: "purchase", id: "purch-2", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Cannot approve in current status" });
+      expect(response.status).toBe(400);
     });
 
-    it("should reject re-approval of an already-approved or rejected expense claim via atomic WHERE guard (approvals PATCH expense path)", () => {
-      const currentStatus = "approved";
-      const whereClausePassed = currentStatus !== "approved" && currentStatus !== "rejected";
-      expect(whereClausePassed).toBe(false);
+    it("should return 400 when re-rejecting an already-rejected purchase via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "purch-3", status: "rejected" },
+        undefined
+      );
+
+      const response = await PATCH(mockRequest({ type: "purchase", id: "purch-3", action: "reject" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Purchase request is already rejected" });
+      expect(response.status).toBe(400);
     });
 
-    it("should reject re-rejection of an already-rejected purchase request via atomic WHERE guard (approvals PATCH purchase reject path)", () => {
-      const currentStatus = "rejected";
-      const whereClausePassed = currentStatus !== "rejected";
-      expect(whereClausePassed).toBe(false);
+    it("should approve a pending booking via real handler", async () => {
+      mockDb(
+        { id: "book-1", status: "pending" },
+        { id: "book-1", status: "approved" }
+      );
+
+      const response = await PATCH(mockRequest({ type: "booking", id: "book-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ success: true });
+      expect(response.status).toBe(200);
     });
 
-    it("should reject re-approval of an already-approved or rejected booking via atomic WHERE guard (approvals PATCH booking path)", () => {
-      const currentStatus = "approved";
-      const whereClausePassed = currentStatus !== "approved" && currentStatus !== "rejected";
-      expect(whereClausePassed).toBe(false);
+    it("should return 400 when re-approving an already-approved booking via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "book-1", status: "approved" },
+        undefined
+      );
+
+      const response = await PATCH(mockRequest({ type: "booking", id: "book-1", action: "approve" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Booking is already in a terminal state" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should return 400 when re-rejecting an already-rejected booking via real handler WHERE guard", async () => {
+      mockDb(
+        { id: "book-2", status: "rejected" },
+        undefined
+      );
+
+      const response = await PATCH(mockRequest({ type: "booking", id: "book-2", action: "reject" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Booking is already in a terminal state" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should return 400 for missing required fields via real handler validation", async () => {
+      const response = await PATCH(mockRequest({ type: "leave" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Missing required fields" });
+      expect(response.status).toBe(400);
+    });
+
+    it("should return 400 for invalid action via real handler validation", async () => {
+      const response = await PATCH(mockRequest({ type: "leave", id: "l1", action: "delete" }));
+      const body = await response.json();
+      expect(body).toEqual({ error: "Invalid action" });
+      expect(response.status).toBe(400);
     });
   });
 });
