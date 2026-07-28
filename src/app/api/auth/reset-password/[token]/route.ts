@@ -34,9 +34,10 @@ export async function POST(
   const now = new Date().toISOString();
   const tokenHash = hashToken(token);
 
-  const validRecord = await db
-    .select()
-    .from(passwordResetTokens)
+  // Atomic single-use token consumption (anti-replay TOCTOU guard)
+  const consumedToken = await db
+    .update(passwordResetTokens)
+    .set({ usedAt: now })
     .where(
       and(
         eq(passwordResetTokens.tokenHash, tokenHash),
@@ -44,9 +45,10 @@ export async function POST(
         gt(passwordResetTokens.expiresAt, now)
       )
     )
+    .returning()
     .get();
 
-  if (!validRecord) {
+  if (!consumedToken) {
     return NextResponse.json(
       { error: "Invalid or expired reset token" },
       { status: 400 }
@@ -56,7 +58,7 @@ export async function POST(
   const user = await db
     .select()
     .from(staff)
-    .where(eq(staff.id, validRecord.staffId))
+    .where(eq(staff.id, consumedToken.staffId))
     .get();
 
   if (!user || !user.isActive) {
@@ -74,12 +76,7 @@ export async function POST(
       tokenVersion: sql`${staff.tokenVersion} + 1`,
       updatedAt: now,
     })
-    .where(eq(staff.id, validRecord.staffId));
-
-  await db
-    .update(passwordResetTokens)
-    .set({ usedAt: now })
-    .where(eq(passwordResetTokens.id, validRecord.id));
+    .where(eq(staff.id, consumedToken.staffId));
 
   return NextResponse.json({ success: true });
 }
