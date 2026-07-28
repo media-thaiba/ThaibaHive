@@ -101,7 +101,7 @@ class UpdateService {
 
       final baseUrl = apiBaseUrl ?? AppConstants.apiBaseUrl;
       final response = await _dio.get(
-        '$baseUrl/system/update',
+        '$baseUrl/system/update?t=${DateTime.now().millisecondsSinceEpoch}',
         options: Options(
           receiveTimeout: const Duration(seconds: 10),
           validateStatus: (status) => status != null && status < 500,
