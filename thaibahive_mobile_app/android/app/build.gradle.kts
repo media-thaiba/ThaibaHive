@@ -57,14 +57,13 @@ android {
         }
 
         release {
+            // Fall back to debug signing when key.properties is absent.
+            // This allows `flutter run` (assembleDebug) to work without a keystore.
+            // The task below enforces key.properties for actual release assemblies.
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
-                throw GradleException(
-                    "Release build requires android/key.properties with a valid signing config. " +
-                    "Debug-signed release builds are not permitted — see android/key.properties.example for " +
-                    "required format, or run a debug build instead: flutter build apk --debug"
-                )
+                signingConfigs.getByName("debug")
             }
             isMinifyEnabled = true
             isShrinkResources = true
