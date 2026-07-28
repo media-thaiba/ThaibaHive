@@ -23,9 +23,9 @@ export async function GET(request: Request) {
       );
     const configs = ensureArray(rawConfigs) as Array<{ key: string; value: string }>;
 
-    const LATEST_BUILD_VERSION = "1.0.0+9";
-    const LATEST_DOWNLOAD_URL = "https://github.com/media-thaiba/ThaibaHive/releases/download/v1.0.0+9/ThaibaHive-v1.0.0+9-release.apk";
-    const LATEST_RELEASE_NOTES = "New Hardware & Credentials Update (v1.0.0+9): Added NFC Tag Management, Location QR Checkpoints, Asset Barcode/NFC Tagging, Biometric Enrollment, BLE Beacon Pairing, and Visitor Gate Verification. Fixed keep-me-logged-in and OTA update check.";
+    const LATEST_BUILD_VERSION = "1.0.0+10";
+    const LATEST_DOWNLOAD_URL = "https://github.com/media-thaiba/ThaibaHive/releases/download/v1.0.0+10/ThaibaHive-v1.0.0+10-release.apk";
+    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+10): Added interactive Map Location Picker, drag-and-drop pin marker, live geofence radius circle overlay, and manual location confirmation.";
 
     const configMap = {
       app_latest_version: LATEST_BUILD_VERSION,
