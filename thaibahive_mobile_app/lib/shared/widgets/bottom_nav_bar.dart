@@ -20,22 +20,7 @@ class BottomNavShell extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: navigationShell,
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: UpdateBanner(),
-            ),
-          ),
-        ],
-      ),
+      body: navigationShell,
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.section,
