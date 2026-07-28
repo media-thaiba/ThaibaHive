@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -93,6 +94,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _onLoginSuccess();
     } on AppException catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
+    } on DioException catch (e) {
+      final appEx = AppException.fromDioException(e);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: 'Login failed: $e');
     }
@@ -124,6 +128,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _onLoginSuccess();
     } on AppException catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
+    } on DioException catch (e) {
+      final appEx = AppException.fromDioException(e);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: 'Google login failed: $e');
     }
@@ -148,6 +155,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _onLoginSuccess();
     } on AppException catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
+    } on DioException catch (e) {
+      final appEx = AppException.fromDioException(e);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: 'Signup failed: $e');
     }

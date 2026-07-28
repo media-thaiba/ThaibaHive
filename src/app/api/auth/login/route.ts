@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       role: staffMember.role,
       employeeId: staffMember.employeeId,
       name: `${staffMember.firstName} ${staffMember.lastName}`,
-      tokenVersion: staffMember.tokenVersion,
+      tokenVersion: staffMember.tokenVersion ?? 0,
     }, rememberMe);
 
     await logActivity({

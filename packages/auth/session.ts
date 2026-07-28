@@ -11,7 +11,7 @@ const sessionPayloadSchema = z.object({
   role: z.string(),
   employeeId: z.string(),
   name: z.string(),
-  tokenVersion: z.number(),
+  tokenVersion: z.union([z.number(), z.null(), z.undefined()]).transform((v) => v ?? 0),
 });
 
 const secret = new TextEncoder().encode(authConfig.jwtSecret);
@@ -81,7 +81,7 @@ export async function verifySession(): Promise<SessionPayload | null> {
       .get();
 
     if (!user || !user.isActive) return null;
-    if (user.tokenVersion !== session.tokenVersion) return null;
+    if ((user.tokenVersion ?? 0) !== session.tokenVersion) return null;
 
     return session;
   } catch (error: unknown) {

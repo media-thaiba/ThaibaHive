@@ -24,26 +24,26 @@ class AppException implements Exception {
         final response = e.response;
         final statusCode = response?.statusCode;
         final body = response?.data;
-        String msg = 'Something went wrong';
+        String? serverMsg;
 
         if (body is Map<String, dynamic>) {
-          msg = body['message'] as String? ??
-              body['error'] as String? ??
-              msg;
+          serverMsg = body['error'] as String? ?? body['message'] as String?;
         }
 
+        String msg = serverMsg ?? 'Something went wrong';
+
         if (statusCode == 401) {
-          msg = 'Session expired. Please login again.';
+          msg = serverMsg ?? 'Session expired. Please login again.';
         } else if (statusCode == 403) {
-          msg = 'You don\'t have permission to perform this action.';
+          msg = serverMsg ?? 'You don\'t have permission to perform this action.';
         } else if (statusCode == 404) {
-          msg = 'Resource not found.';
+          msg = serverMsg ?? 'Resource not found.';
+        } else if (statusCode == 409) {
+          msg = serverMsg ?? 'Conflict error occurred.';
         } else if (statusCode == 422) {
-          msg = body is Map<String, dynamic>
-              ? (body['message'] as String? ?? 'Validation failed.')
-              : 'Validation failed.';
+          msg = serverMsg ?? 'Validation failed.';
         } else if (statusCode == 500) {
-          msg = 'Server error. Please try again later.';
+          msg = serverMsg ?? 'Server error. Please try again later.';
         }
 
         return AppException(

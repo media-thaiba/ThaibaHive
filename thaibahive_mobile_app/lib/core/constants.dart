@@ -38,6 +38,13 @@ class AppConstants {
     return 'https://thaiba-hive.vercel.app';
   }
 
+  /// Google Web Client ID for Google Sign-In on Android/iOS
+  static String get googleWebClientId {
+    const override = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+    if (override.isNotEmpty) return override;
+    return '744655632042-7njpugg533kj5okh731c38m9ffdgpc0o.apps.googleusercontent.com';
+  }
+
   static const String storageTokenKey = 'auth_token';
   static const String storageRefreshTokenKey = 'refresh_token';
   static const String storageUserProfileKey = 'user_profile';

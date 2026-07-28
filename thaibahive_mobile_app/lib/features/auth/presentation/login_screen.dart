@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 
@@ -110,13 +111,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleGoogleLogin() async {
     try {
-      final googleSignIn = GoogleSignIn(scopes: ['email']);
+      final clientId = AppConstants.googleWebClientId;
+      final googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+        serverClientId: clientId.isNotEmpty ? clientId : null,
+      );
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
       final account = await googleSignIn.signIn();
       if (account == null) return; // User cancelled
       final authDetails = await account.authentication;
       final idToken = authDetails.idToken;
-      if (idToken == null) {
-        throw Exception('Google Sign-In failed: No ID token returned.');
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Google Sign-In failed: No ID token returned by Google Services. Please ensure Google Play Services is updated.');
       }
       await ref.read(authProvider.notifier).loginWithGoogle(idToken);
     } catch (e) {

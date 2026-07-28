@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       role: newStaff.role,
       employeeId: newStaff.employeeId,
       name: `${newStaff.firstName} ${newStaff.lastName}`,
-      tokenVersion: newStaff.tokenVersion,
+      tokenVersion: newStaff.tokenVersion ?? 0,
     });
 
     return NextResponse.json(
