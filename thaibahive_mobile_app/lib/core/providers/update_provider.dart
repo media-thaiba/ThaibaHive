@@ -53,6 +53,7 @@ class UpdateStateNotifier extends StateNotifier<UpdateDownloadState> {
     if (path != null) {
       _downloadedFilePath = path;
       state = UpdateDownloadState.downloaded;
+      await installUpdate();
     } else {
       state = UpdateDownloadState.error;
     }

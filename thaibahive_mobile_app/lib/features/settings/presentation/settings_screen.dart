@@ -4,9 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/providers/update_provider.dart';
-import '../../../models/user_model.dart';
-import '../../../shared/widgets/error_widget.dart';
-import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/tap_scale.dart';
 import '../../auth/data/biometric_provider.dart';
 import '../data/settings_provider.dart';
@@ -172,6 +169,7 @@ class SettingsScreen extends ConsumerWidget {
                     
                     try {
                       final service = ref.read(updateServiceProvider);
+                      ref.invalidate(updateInfoProvider);
                       final info = await service.checkForUpdate();
                       
                       if (context.mounted) Navigator.pop(context);
@@ -191,6 +189,9 @@ class SettingsScreen extends ConsumerWidget {
                                 FilledButton(
                                   onPressed: () {
                                     Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Downloading update v${info.latestVersion}...')),
+                                    );
                                     ref.read(updateStateProvider.notifier).downloadUpdate(info.downloadUrl);
                                   },
                                   child: const Text('Update Now'),

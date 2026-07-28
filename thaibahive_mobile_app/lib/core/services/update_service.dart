@@ -38,10 +38,9 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  final Dio _dio;
   CancelToken? _cancelToken;
 
-  UpdateService({Dio? dio}) : _dio = dio ?? Dio();
+  UpdateService({Dio? dio});
 
   /// Compares version strings. Returns true if latest > current.
   bool compareVersions(String current, String latest) {
@@ -167,7 +166,16 @@ class UpdateService {
         await file.delete();
       }
 
-      await _dio.download(
+      // Use a plain, unauthenticated Dio instance to prevent header pollution (Bearer auth token)
+      // from causing HTTP 400/403/CORS errors when GitHub Release URLs redirect to AWS S3 storage.
+      final downloadDio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(minutes: 15),
+        followRedirects: true,
+        maxRedirects: 10,
+      ));
+
+      await downloadDio.download(
         url,
         filePath,
         cancelToken: _cancelToken,

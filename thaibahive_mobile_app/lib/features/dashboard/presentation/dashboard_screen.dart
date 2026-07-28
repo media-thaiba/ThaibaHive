@@ -8,6 +8,7 @@ import 'package:thaibahive_mobile/features/dashboard/data/dashboard_provider.dar
 import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
 import 'package:thaibahive_mobile/shared/widgets/update_banner.dart';
 import 'package:thaibahive_mobile/shared/widgets/failed_sync_banner.dart';
+import '../../../core/providers/update_provider.dart';
 import 'components/components.dart';
 
 /// Riverpod provider for dashboard section ordering.
@@ -238,7 +239,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return RefreshIndicator(
       color: AppColors.primary(context),
-      onRefresh: () => ref.read(dashboardProvider.notifier).refresh(),
+      onRefresh: () async {
+        ref.invalidate(updateInfoProvider);
+        await ref.read(dashboardProvider.notifier).refresh();
+      },
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
 slivers: [
