@@ -6,6 +6,10 @@ import {
 } from "@/lib/validation/schemas";
 import crypto from "crypto";
 
+jest.mock("@thaiba/auth", () => ({
+  hashPassword: jest.fn().mockResolvedValue("mocked_hashed_password"),
+}));
+
 describe("Phase 1 Zod Validation & Crypto Verification", () => {
   describe("Zod safeParse Enforcers", () => {
     it("bookingCreateSchema should reject missing required fields", () => {
@@ -80,6 +84,76 @@ describe("Phase 1 Zod Validation & Crypto Verification", () => {
       const calc = Buffer.from(hmac, "hex");
       const isEqual = sig.length === calc.length && crypto.timingSafeEqual(sig, calc);
       expect(isEqual).toBe(false);
+    });
+  });
+
+  describe("Password Reset Token Single-Use Atomic Guard", () => {
+    it("should consume reset token atomically on first POST, and reject second replay attempt with HTTP 400", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { POST } = require("@/app/api/auth/reset-password/[token]/route");
+      const { db } = require("@/db");
+
+      const testToken = "valid-reset-token-1234567890abcdef";
+      let tokenUsed = false;
+
+      // Mock db.update for passwordResetTokens
+      const spyUpdate = jest.spyOn(db, "update").mockImplementation((table: any) => {
+        return {
+          set: (updateValues: any) => ({
+            where: () => ({
+              returning: () => ({
+                get: async () => {
+                  if (updateValues.passwordHash) {
+                    return { id: "staff-1" };
+                  }
+                  if (!tokenUsed) {
+                    tokenUsed = true;
+                    return { id: "token-1", staffId: "staff-1", tokenHash: "mockhash" };
+                  }
+                  return undefined; // Replay attempt: atomic WHERE isNull(usedAt) fails!
+                },
+              }),
+            }),
+          }),
+        } as any;
+      });
+
+      // Mock db.select for staff lookup
+      const spySelect = jest.spyOn(db, "select").mockImplementation(() => ({
+        from: () => ({
+          where: () => ({
+            get: async () => ({ id: "staff-1", isActive: true }),
+          }),
+        }),
+      }) as any);
+
+      const requestObj = new Request("http://localhost/api/auth/reset-password/" + testToken, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "NewStrongPassword123!" }),
+      });
+
+      // First consumption attempt
+      const res1 = await POST(requestObj, { params: Promise.resolve({ token: testToken }) });
+      const body1 = await res1.json();
+
+      expect(res1.status).toBe(200);
+      expect(body1).toEqual({ success: true });
+
+      // Second replay attempt with identical token
+      const requestObj2 = new Request("http://localhost/api/auth/reset-password/" + testToken, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "NewStrongPassword123!" }),
+      });
+      const res2 = await POST(requestObj2, { params: Promise.resolve({ token: testToken }) });
+      const body2 = await res2.json();
+
+      expect(res2.status).toBe(400);
+      expect(body2).toEqual({ error: "Invalid or expired reset token" });
+
+      spyUpdate.mockRestore();
+      spySelect.mockRestore();
     });
   });
 });
