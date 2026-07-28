@@ -13,6 +13,8 @@ const publicPaths = [
   "/api/auth/google",
   "/api/auth/mobile-handoff",
   "/api/system/health",
+  "/api/system/update",
+  "/downloads",
   "/favicon.ico",
 ];
 
