@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { systemConfigs } from "@/db/schema";
 import { inArray } from "drizzle-orm";
+import { ensureArray } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const configs = await db
+    const rawConfigs = await db
       .select()
       .from(systemConfigs)
       .where(
@@ -17,13 +18,13 @@ export async function GET(request: Request) {
           "app_release_notes",
           "app_force_update",
         ])
-      )
-      .all();
+      );
+    const configs = ensureArray(rawConfigs) as Array<{ key: string; value: string }>;
 
     const configMap = {
-      app_latest_version: "1.0.0+1",
-      app_download_url: "",
-      app_release_notes: "Initial release of ThaibaHive Mobile App!",
+      app_latest_version: "1.0.0+9",
+      app_download_url: "/downloads/ThaibaHive-v1.0.0+9.apk",
+      app_release_notes: "New Hardware & Credentials Update (v1.0.0+9): Added NFC Tag Management, Location QR Checkpoints, Asset Barcode/NFC Tagging, Biometric Enrollment, BLE Beacon Pairing, and Visitor Gate Verification.",
       app_force_update: "false",
     };
 
