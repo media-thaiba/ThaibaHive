@@ -36,7 +36,10 @@ class AuthRepository {
 
   Future<UserModel> getProfile() async {
     final response = await client.get('/auth/me');
-    return UserModel.fromJson(response.data);
+    final data = response.data is Map
+        ? (response.data['staff'] ?? response.data['user'] ?? response.data)
+        : response.data;
+    return UserModel.fromJson(data as Map<String, dynamic>);
   }
 
   Future<void> logout() async {

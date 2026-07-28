@@ -23,9 +23,9 @@ export async function GET(request: Request) {
       );
     const configs = ensureArray(rawConfigs) as Array<{ key: string; value: string }>;
 
-    const LATEST_BUILD_VERSION = "1.0.0+10";
-    const LATEST_DOWNLOAD_URL = "https://github.com/media-thaiba/ThaibaHive/releases/download/v1.0.0+10/ThaibaHive-v1.0.0+10-release.apk";
-    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+10): Added interactive Map Location Picker, drag-and-drop pin marker, live geofence radius circle overlay, and manual location confirmation.";
+    const LATEST_BUILD_VERSION = "1.0.0+11";
+    const LATEST_DOWNLOAD_URL = "https://github.com/media-thaiba/ThaibaHive/releases/download/v1.0.0+11/ThaibaHive-v1.0.0+11-release.apk";
+    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+11): Fixed Keep Me Signed In persistent session restoration across app restarts. Added interactive Map Location Picker.";
 
     const configMap = {
       app_latest_version: LATEST_BUILD_VERSION,

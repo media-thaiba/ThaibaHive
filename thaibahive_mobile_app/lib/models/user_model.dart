@@ -40,25 +40,32 @@ class UserModel {
     required this.updatedAt,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-        id: (json['id'] ?? '') as String,
-        email: (json['email'] ?? '') as String,
-        employeeId: (json['employee_id'] ?? json['employeeId'] ?? '') as String,
-        firstName: (json['first_name'] ?? json['firstName'] ?? '') as String,
-        lastName: (json['last_name'] ?? json['lastName'] ?? '') as String,
-        phone: json['phone'] as String?,
-        designation: json['designation'] as String?,
-        role: (json['role'] ?? '') as String,
-        avatarUrl: json['avatar_url'] as String?,
-        dateOfBirth: json['date_of_birth'] as String?,
-        dateOfJoining: json['date_of_joining'] as String?,
-        qualifications: json['qualifications'] as String?,
-        emergencyContactName: json['emergency_contact_name'] as String?,
-        emergencyContactPhone: json['emergency_contact_phone'] as String?,
-        isActive: json['is_active'] as bool? ?? true,
-        createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
-        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : DateTime.now(),
-      );
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    final data = (json['staff'] ?? json['user'] ?? json) as Map<String, dynamic>;
+    return UserModel(
+      id: (data['id'] ?? '') as String,
+      email: (data['email'] ?? '') as String,
+      employeeId: (data['employee_id'] ?? data['employeeId'] ?? '') as String,
+      firstName: (data['first_name'] ?? data['firstName'] ?? '') as String,
+      lastName: (data['last_name'] ?? data['lastName'] ?? '') as String,
+      phone: data['phone'] as String?,
+      designation: data['designation'] as String?,
+      role: (data['role'] ?? '') as String,
+      avatarUrl: (data['avatar_url'] ?? data['avatarUrl']) as String?,
+      dateOfBirth: (data['date_of_birth'] ?? data['dateOfBirth']) as String?,
+      dateOfJoining: (data['date_of_joining'] ?? data['dateOfJoining']) as String?,
+      qualifications: data['qualifications'] as String?,
+      emergencyContactName: (data['emergency_contact_name'] ?? data['emergencyContactName']) as String?,
+      emergencyContactPhone: (data['emergency_contact_phone'] ?? data['emergencyContactPhone']) as String?,
+      isActive: (data['is_active'] ?? data['isActive']) as bool? ?? true,
+      createdAt: data['created_at'] != null
+          ? DateTime.parse(data['created_at'] as String)
+          : (data['createdAt'] != null ? DateTime.parse(data['createdAt'] as String) : DateTime.now()),
+      updatedAt: data['updated_at'] != null
+          ? DateTime.parse(data['updated_at'] as String)
+          : (data['updatedAt'] != null ? DateTime.parse(data['updatedAt'] as String) : DateTime.now()),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
