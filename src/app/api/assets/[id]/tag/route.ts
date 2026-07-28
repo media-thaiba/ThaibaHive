@@ -60,11 +60,17 @@ export const POST = requireAuth(async (request: Request, _session, context) => {
     .returning()
     .get();
 
-  await logActivity(_session.staffId, "ADMIN_ASSET_TAG_BIND", "asset", id, {
-    barcode,
-    qrCode,
-    nfcTagId,
-    assetName: asset.name,
+  await logActivity({
+    staffId: _session.staffId,
+    action: "ADMIN_ASSET_TAG_BIND",
+    resourceType: "asset",
+    resourceId: id,
+    details: {
+      barcode,
+      qrCode,
+      nfcTagId,
+      assetName: asset.name,
+    },
   });
 
   return NextResponse.json({ success: true, asset: updated });

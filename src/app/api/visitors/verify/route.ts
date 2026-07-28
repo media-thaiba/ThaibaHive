@@ -100,10 +100,16 @@ export const POST = requireAuth(async (request: Request, session) => {
     .returning()
     .get();
 
-  await logActivity(session.staffId, "VISITOR_GATE_VERIFY", "visitor", visitorId, {
-    action,
-    visitorName: visitor.name,
-    verifiedBy: session.staffId,
+  await logActivity({
+    staffId: session.staffId,
+    action: "VISITOR_GATE_VERIFY",
+    resourceType: "visitor",
+    resourceId: visitorId,
+    details: {
+      action,
+      visitorName: visitor.name,
+      verifiedBy: session.staffId,
+    },
   });
 
   return NextResponse.json({

@@ -47,11 +47,17 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     .returning()
     .get();
 
-  await logActivity(session.staffId, "BIOMETRIC_ENROLL", "staff", id, {
-    enrolledBy: session.staffId,
-    staffName: `${targetStaff.firstName} ${targetStaff.lastName}`,
-    consentedAt: now,
-    policyVersion,
+  await logActivity({
+    staffId: session.staffId,
+    action: "BIOMETRIC_ENROLL",
+    resourceType: "staff",
+    resourceId: id,
+    details: {
+      enrolledBy: session.staffId,
+      staffName: `${targetStaff.firstName} ${targetStaff.lastName}`,
+      consentedAt: now,
+      policyVersion,
+    },
   });
 
   return NextResponse.json({

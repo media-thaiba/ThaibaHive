@@ -48,11 +48,17 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     .returning()
     .get();
 
-  await logActivity(session.staffId, "ADMIN_BEACON_PAIR", "location", id, {
-    uuid,
-    major,
-    minor,
-    locationName: location.name,
+  await logActivity({
+    staffId: session.staffId,
+    action: "ADMIN_BEACON_PAIR",
+    resourceType: "location",
+    resourceId: id,
+    details: {
+      uuid,
+      major,
+      minor,
+      locationName: location.name,
+    },
   });
 
   return NextResponse.json({ success: true, location: updated });
