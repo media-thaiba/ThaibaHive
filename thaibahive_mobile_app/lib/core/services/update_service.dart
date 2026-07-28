@@ -38,8 +38,10 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  final Dio _dio = Dio();
+  final Dio _dio;
   CancelToken? _cancelToken;
+
+  UpdateService({Dio? dio}) : _dio = dio ?? Dio();
 
   /// Compares version strings. Returns true if latest > current.
   bool compareVersions(String current, String latest) {
@@ -100,7 +102,10 @@ class UpdateService {
       final baseUrl = apiBaseUrl ?? AppConstants.apiBaseUrl;
       final response = await _dio.get(
         '$baseUrl/system/update',
-        options: Options(receiveTimeout: const Duration(seconds: 10)),
+        options: Options(
+          receiveTimeout: const Duration(seconds: 10),
+          validateStatus: (status) => status != null && status < 500,
+        ),
       );
 
       if (response.statusCode == 200 && response.data is Map) {
