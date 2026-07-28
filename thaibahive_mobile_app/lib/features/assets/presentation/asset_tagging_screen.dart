@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:thaibahive_mobile/core/network/providers.dart';
+import 'package:thaibahive_mobile/core/utils/nfc_helper.dart';
 
 class AssetTaggingScreen extends ConsumerStatefulWidget {
   const AssetTaggingScreen({super.key});
@@ -63,20 +64,16 @@ class _AssetTaggingScreenState extends ConsumerState<AssetTaggingScreen> {
     }
 
     NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      final tagData = tag.data;
-      String tagId = 'NFC-${DateTime.now().millisecondsSinceEpoch}';
-      if (tagData.containsKey('isodep')) {
-        final identifier = tagData['isodep']['identifier'] as List?;
-        if (identifier != null) tagId = identifier.map((e) => e.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
-      } else if (tagData.containsKey('nfca')) {
-        final identifier = tagData['nfca']['identifier'] as List?;
-        if (identifier != null) tagId = identifier.map((e) => e.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
-      }
+      final tagId = NfcHelper.extractTagId(tag);
 
-      setState(() {
-        _scannedTag = tagId;
-      });
-      NfcManager.instance.stopSession();
+      if (mounted && tagId != null) {
+        setState(() {
+          _scannedTag = tagId;
+        });
+      }
+      try {
+        await NfcManager.instance.stopSession();
+      } catch (_) {}
     });
   }
 

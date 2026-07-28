@@ -23,9 +23,9 @@ export async function GET(request: Request) {
       );
     const configs = ensureArray(rawConfigs) as Array<{ key: string; value: string }>;
 
-    const LATEST_BUILD_VERSION = "1.0.0+12";
-    const LATEST_DOWNLOAD_URL = "https://github.com/media-thaiba/ThaibaHive/releases/download/v1.0.0+12/ThaibaHive-v1.0.0+12-release.apk";
-    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+12): Added native flutter_map with ArcGIS Satellite View toggle, multi-touch pinch to zoom, locate me GPS button, and geofence radius overlay (MediaHive parity).";
+    const LATEST_BUILD_VERSION = "1.0.0+13";
+    const LATEST_DOWNLOAD_URL = "https://github.com/media-thaiba/ThaibaHive/releases/download/v1.0.0+13/ThaibaHive-v1.0.0+13-release.apk";
+    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+13): Fixed NFC Tag registration & scanning (hardware UID extraction for unformatted cards), resilient offline auth token persistence (Keep Me Signed In fix), and robust StaffModel parsing.";
 
     const configMap = {
       app_latest_version: LATEST_BUILD_VERSION,

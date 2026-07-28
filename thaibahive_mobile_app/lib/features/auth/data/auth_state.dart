@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +63,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _repository.client.options.headers['Authorization'] = 'Bearer $token';
       try {
         final user = await _repository.getProfile();
+        await _storage.write(
+          key: AppConstants.storageUserProfileKey,
+          value: jsonEncode(user.toJson()),
+        );
         state = AuthState(
           status: AuthStatus.authenticated,
           user: user,
@@ -70,10 +75,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Re-register FCM token for silently-restored sessions.
         await _onLoginSuccess();
       } catch (e) {
-        // Token is stale/expired — go to login.
-        await _storage.delete(key: AppConstants.storageTokenKey);
-        await _storage.delete(key: AppConstants.storageRefreshTokenKey);
-        state = const AuthState(status: AuthStatus.unauthenticated);
+        final isUnauthorized = e is DioException && e.response?.statusCode == 401;
+        if (isUnauthorized) {
+          // Token is explicitly rejected by backend (401 Unauthorized) — clear session.
+          await _storage.delete(key: AppConstants.storageTokenKey);
+          await _storage.delete(key: AppConstants.storageRefreshTokenKey);
+          state = const AuthState(status: AuthStatus.unauthenticated);
+        } else {
+          // Network error / timeout / 5xx error. Try loading cached user profile if available.
+          final cachedProfileJson = await _storage.read(key: AppConstants.storageUserProfileKey);
+          UserModel? cachedUser;
+          if (cachedProfileJson != null) {
+            try {
+              cachedUser = UserModel.fromJson(jsonDecode(cachedProfileJson));
+            } catch (_) {}
+          }
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: cachedUser,
+            token: token,
+          );
+        }
       }
     } else {
       state = const AuthState(status: AuthStatus.unauthenticated);
@@ -89,6 +111,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
       }
       await _storage.write(key: 'remember_me', value: rememberMe ? 'true' : 'false');
+      if (rememberMe) {
+        await _storage.write(key: 'saved_email', value: email);
+      } else {
+        await _storage.delete(key: 'saved_email');
+      }
+      await _storage.write(
+        key: AppConstants.storageUserProfileKey,
+        value: jsonEncode(response.user.toJson()),
+      );
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,

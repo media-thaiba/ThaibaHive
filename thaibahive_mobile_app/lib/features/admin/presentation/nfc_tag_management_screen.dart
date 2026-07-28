@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
 import '../../../core/services/location_service.dart';
+import '../../../core/utils/nfc_helper.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/map_location_picker_modal.dart';
 import '../data/admin_nfc_provider.dart';
 import '../data/admin_provider.dart';
@@ -27,8 +27,6 @@ class _NfcTagManagementScreenState
   // Form selections
   String? _selectedStaffId;
   String? _selectedStaffName;
-  String? _selectedLocationId;
-  String? _selectedLocationName;
   String? _selectedInstitutionId;
 
   // Location checkpoint controllers
@@ -92,18 +90,24 @@ class _NfcTagManagementScreenState
         onDiscovered: (NfcTag tag) async {
           final tagId = _extractTagId(tag);
           await NfcManager.instance.stopSession();
-          notifier.setScanning(false);
-          if (mounted && tagId != null) {
-            onTagScanned(tagId);
+          if (mounted) {
+            ref.read(adminNfcProvider.notifier).setScanning(false);
+            if (tagId != null) {
+              onTagScanned(tagId);
+            }
           }
         },
         onError: (error) async {
-          notifier.setScanning(false);
+          if (mounted) {
+            ref.read(adminNfcProvider.notifier).setScanning(false);
+          }
           debugPrint('[NFC Admin] Session error: $error');
         },
       );
     } catch (e) {
-      notifier.setScanning(false);
+      if (mounted) {
+        ref.read(adminNfcProvider.notifier).setScanning(false);
+      }
       debugPrint('[NFC Admin] Start session failed: $e');
     }
   }
@@ -112,35 +116,12 @@ class _NfcTagManagementScreenState
     try {
       await NfcManager.instance.stopSession();
     } catch (_) {}
+    if (!mounted) return;
     ref.read(adminNfcProvider.notifier).setScanning(false);
   }
 
   String? _extractTagId(NfcTag tag) {
-    try {
-      final ndef = Ndef.from(tag);
-      if (ndef != null && ndef.cachedMessage != null && ndef.cachedMessage!.records.isNotEmpty) {
-        final payload = String.fromCharCodes(ndef.cachedMessage!.records.first.payload);
-        if (payload.trim().isNotEmpty) return payload.trim();
-      }
-
-      // Fallback to raw handle or identifier
-      final data = tag.data;
-      if (data.containsKey('isodep')) {
-        final identifier = (data['isodep'] as Map)['identifier'];
-        if (identifier != null) return (identifier as List).map((e) => e.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
-      }
-      if (data.containsKey('nfca')) {
-        final identifier = (data['nfca'] as Map)['identifier'];
-        if (identifier != null) return (identifier as List).map((e) => e.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
-      }
-      if (data.containsKey('mifare')) {
-        final identifier = (data['mifare'] as Map)['identifier'];
-        if (identifier != null) return (identifier as List).map((e) => e.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
-      }
-      return tag.handle;
-    } catch (e) {
-      return tag.handle;
-    }
+    return NfcHelper.extractTagId(tag);
   }
 
   @override

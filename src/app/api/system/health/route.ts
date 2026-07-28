@@ -5,7 +5,10 @@ export async function GET(request: Request) {
   const startTime = Date.now();
   const secretHeader = request.headers.get("x-health-secret");
   const expectedSecret = process.env.HEALTH_SECRET;
-  const isAuthorized = Boolean(expectedSecret && secretHeader && secretHeader === expectedSecret);
+  
+  const crypto = require('crypto');
+  const isAuthorized = Boolean(expectedSecret && secretHeader && 
+    crypto.timingSafeEqual(Buffer.from(secretHeader), Buffer.from(expectedSecret || '')));
 
   try {
     // Perform fast database ping query

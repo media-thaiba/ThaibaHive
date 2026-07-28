@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 
+import '../utils/nfc_helper.dart';
 import 'offline_queue.dart';
-import 'qr_anti_replay.dart';
 
 /// NFC check-in result
 class NFCCheckInResult {
@@ -144,22 +144,15 @@ class NFCCheckInService {
   /// Extract data from NFC tag
   Map<String, dynamic>? _extractTagData(NfcTag tag) {
     try {
-      // Try to read NDEF message
-      final ndef = Ndef.from(tag);
-      if (ndef != null && ndef.cachedMessage != null) {
-        final message = ndef.cachedMessage!;
-        if (message.records.isNotEmpty) {
-          final record = message.records.first;
-          final payload = String.fromCharCodes(record.payload);
-          return {'type': 'ndef', 'payload': payload};
-        }
+      final tagId = NfcHelper.extractTagId(tag);
+      if (tagId == null || tagId.trim().isEmpty) {
+        debugPrint('[NFC] Unable to extract valid NFC tag ID.');
+        return null;
       }
-
-      // Fallback to raw tag data
       return {
-        'type': 'raw',
-        'id': tag.handle,
-        'techTypes': tag.data.keys.toList(),
+        'type': 'ndef_or_uid',
+        'id': tagId,
+        'payload': tagId,
       };
     } catch (e) {
       debugPrint('[NFC] Failed to extract tag data: $e');

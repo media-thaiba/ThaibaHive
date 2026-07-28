@@ -37,23 +37,25 @@ class StaffModel {
   });
 
   factory StaffModel.fromJson(Map<String, dynamic> json) => StaffModel(
-        id: json['id'] as String,
-        email: json['email'] as String,
-        employeeId: json['employee_id'] as String,
-        firstName: json['first_name'] as String,
-        lastName: json['last_name'] as String,
+        id: (json['id'] ?? '') as String,
+        email: (json['email'] ?? '') as String,
+        employeeId: (json['employee_id'] ?? json['employeeId'] ?? '') as String,
+        firstName: (json['first_name'] ?? json['firstName'] ?? '') as String,
+        lastName: (json['last_name'] ?? json['lastName'] ?? '') as String,
         phone: json['phone'] as String?,
         designation: json['designation'] as String?,
-        role: json['role'] as String,
-        avatarUrl: json['avatar_url'] as String?,
-        isActive: json['is_active'] as bool,
+        role: (json['role'] ?? 'staff') as String,
+        avatarUrl: (json['avatar_url'] ?? json['avatarUrl']) as String?,
+        isActive: (json['is_active'] ?? json['isActive'] ?? true) as bool,
         departments: (json['departments'] as List<dynamic>?)
                 ?.map((e) =>
                     DepartmentModel.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [],
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
+        createdAt: DateTime.tryParse((json['created_at'] ?? json['createdAt'])?.toString() ?? '') ??
+            DateTime.now(),
+        updatedAt: DateTime.tryParse((json['updated_at'] ?? json['updatedAt'])?.toString() ?? '') ??
+            DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {

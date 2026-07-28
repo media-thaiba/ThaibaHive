@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
@@ -48,6 +49,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _currentMode = AuthMode.forgotPassword;
     } else {
       _currentMode = AuthMode.signIn;
+    }
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    const storage = FlutterSecureStorage();
+    final savedEmail = await storage.read(key: 'saved_email');
+    final rememberMe = await storage.read(key: 'remember_me');
+    if (mounted) {
+      setState(() {
+        if (savedEmail != null && savedEmail.isNotEmpty) {
+          _emailController.text = savedEmail;
+        }
+        if (rememberMe != null) {
+          _rememberMe = rememberMe == 'true';
+        }
+      });
     }
   }
 
