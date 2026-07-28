@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/services/update_provider.dart';
 import '../../core/services/update_service.dart';
@@ -247,6 +248,16 @@ class UpdateBanner extends ConsumerWidget {
                 ),
               ),
             ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final uri = Uri.parse(info.downloadUrl);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: const Text('Browser Download'),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);

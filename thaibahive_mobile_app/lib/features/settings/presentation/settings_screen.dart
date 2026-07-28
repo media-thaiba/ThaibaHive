@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants.dart';
 import '../../../core/providers/update_provider.dart';
@@ -185,6 +186,16 @@ class SettingsScreen extends ConsumerWidget {
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx),
                                   child: const Text('Later'),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    Navigator.pop(ctx);
+                                    final uri = Uri.parse(info.downloadUrl);
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  child: const Text('Browser Download'),
                                 ),
                                 FilledButton(
                                   onPressed: () {

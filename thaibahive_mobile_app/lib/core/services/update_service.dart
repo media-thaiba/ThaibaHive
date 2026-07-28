@@ -209,19 +209,24 @@ class UpdateService {
 
   /// Triggers the Android package installer to open the downloaded APK
   Future<bool> installApk(String filePath) async {
-    logger.info('UPDATE_SERVICE: Triggering APK installation');
+    logger.info('UPDATE_SERVICE: Triggering APK installation for $filePath');
     try {
       if (Platform.isAndroid) {
-        final status = await Permission.requestInstallPackages.request();
+        var status = await Permission.requestInstallPackages.status;
+        if (!status.isGranted) {
+          status = await Permission.requestInstallPackages.request();
+        }
+
         if (status.isGranted) {
           final result = await OpenFilex.open(
             filePath,
             type: 'application/vnd.android.package-archive',
           );
-          logger.info('UPDATE_SERVICE: OpenFilex result: ${result.message}');
+          logger.info('UPDATE_SERVICE: OpenFilex result: ${result.message} (${result.type})');
           return result.type == ResultType.done;
         } else {
-          logger.warning('UPDATE_SERVICE: Install permission denied');
+          logger.warning('UPDATE_SERVICE: Install permission denied, opening app settings');
+          await openAppSettings();
           return false;
         }
       }
