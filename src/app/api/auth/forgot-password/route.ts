@@ -13,7 +13,13 @@ function hashToken(token: string): string {
 }
 
 async function dummyTimingNoop(): Promise<void> {
+  const dummyToken = crypto.randomBytes(32).toString("hex");
+  hashToken(dummyToken);
   await db.select().from(staff).where(eq(staff.id, "__nonexistent__")).get();
+  await db
+    .update(passwordResetTokens)
+    .set({ usedAt: new Date().toISOString() })
+    .where(eq(passwordResetTokens.id, "__nonexistent__"));
 }
 
 export async function POST(request: NextRequest) {
