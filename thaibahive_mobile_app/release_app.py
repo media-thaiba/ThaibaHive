@@ -37,11 +37,13 @@ SYSTEM_UPDATE_SECRET = local_env.get("SYSTEM_UPDATE_SECRET") or parent_env.get("
 API_URL = local_env.get("NEXT_PUBLIC_API_URL") or parent_env.get("NEXT_PUBLIC_API_URL") or os.environ.get("NEXT_PUBLIC_API_URL") or "https://thaiba-hive.vercel.app/api"
 
 RELEASE_NOTES = (
-    "🚀 ThaibaHive — Stable Release v1.0.0\n\n"
-    "• Initial release with smooth performance optimizations.\n"
-    "• Resolved Hero tag transitions and navigation crashes.\n"
-    "• Integrated system-wide network normalization for reliable API requests.\n"
-    "• Added support for Over-The-Air (OTA) update checking."
+    "🔔 ThaibaHive v1.0.0+8 — Push Notifications & Deep Links\n\n"
+    "• Fixed: Push notification (FCM) token now correctly re-registers after app restart with remembered login.\n"
+    "• Fixed: Cold-start notification taps now navigate to the correct screen (leave, booking, task, etc.) instead of the dashboard.\n"
+    "• Fixed: FCM registration no longer attempts backend call when login session has expired — eliminates silent 401 errors at startup.\n"
+    "• New: Device name (model) now recorded alongside FCM token in backend for easier device management.\n"
+    "• Fixed: Deep link route allowlist now covers all app screens (bookings, polls, grievances, expenses, recognition, vehicles, canteen, visitors).\n"
+    "• Chore: Firebase config files properly gitignored; setup guide added for developers."
 )
 
 # ─── 1. PARSE VERSION ─────────────────────────────────────────────────────────
