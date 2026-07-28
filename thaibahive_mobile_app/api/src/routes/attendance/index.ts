@@ -197,10 +197,17 @@ attendanceRouter.post("/check-in", async (req: AuthRequest, res) => {
         return res.status(400).json({ error: "QR code already used" });
       }
 
-      await db.insert(tables.usedNonces).values({
-        jti: payload.nonce,
-        expiresAt: new Date(nowTime + 5 * 60 * 1000).toISOString(),
-      }).run();
+      try {
+        await db.insert(tables.usedNonces).values({
+          jti: payload.nonce,
+          expiresAt: new Date(nowTime + 5 * 60 * 1000).toISOString(),
+        }).run();
+      } catch (err: any) {
+        if (err?.message?.includes("UNIQUE constraint") || err?.code === "SQLITE_CONSTRAINT") {
+          return res.status(400).json({ error: "QR code already used" });
+        }
+        throw err;
+      }
     }
 
     const existing = await db.select().from(tables.attendanceLogs).where(and(eq(tables.attendanceLogs.staffId, req.user!.id), eq(tables.attendanceLogs.date, today))).get();
@@ -221,17 +228,24 @@ attendanceRouter.post("/check-in", async (req: AuthRequest, res) => {
     }
 
     const id = uuid();
-    await db.insert(tables.attendanceLogs).values({
-      id,
-      staffId: req.user!.id,
-      date: today,
-      checkIn: now,
-      method,
-      nfcTagId: nfcTagId || null,
-      qrCode: qrCode || null,
-      status,
-      lateMinutes,
-    }).run();
+    try {
+      await db.insert(tables.attendanceLogs).values({
+        id,
+        staffId: req.user!.id,
+        date: today,
+        checkIn: now,
+        method,
+        nfcTagId: nfcTagId || null,
+        qrCode: qrCode || null,
+        status,
+        lateMinutes,
+      }).run();
+    } catch (err: any) {
+      if (err?.message?.includes("UNIQUE constraint") || err?.code === "SQLITE_CONSTRAINT") {
+        return res.status(400).json({ error: "Already checked in today" });
+      }
+      throw err;
+    }
     const record = await db.select().from(tables.attendanceLogs).where(eq(tables.attendanceLogs.id, id)).get();
     res.status(201).json(record);
   } catch (err: any) { res.status(500).json({ error: err.message }); }

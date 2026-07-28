@@ -13,7 +13,7 @@ import {
   approvalDelegations,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, or, and, inArray } from "drizzle-orm";
+import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { staffId, role } = session;
@@ -674,7 +674,7 @@ export const PATCH = requireAuth(async (request, session) => {
         nextStatus = "hod_approved";
       }
 
-      await db
+      const updated = await db
         .update(leaveRequests)
         .set({
           status: nextStatus,
@@ -683,10 +683,21 @@ export const PATCH = requireAuth(async (request, session) => {
           reviewNotes: notes || null,
           updatedAt: now,
         })
-        .where(eq(leaveRequests.id, id))
-        .run();
+        .where(
+          and(
+            eq(leaveRequests.id, id),
+            ne(leaveRequests.status, "approved"),
+            ne(leaveRequests.status, "rejected")
+          )
+        )
+        .returning()
+        .get();
 
-      if (nextStatus === "approved") {
+      if (!updated) {
+        return NextResponse.json({ error: "Leave request is already in a terminal state" }, { status: 400 });
+      }
+
+      if (updated.status === "approved") {
         const existing = await db
           .select()
           .from(leaveBalances)
@@ -708,7 +719,7 @@ export const PATCH = requireAuth(async (request, session) => {
         }
       }
     } else if (type === "expense") {
-      await db
+      const updated = await db
         .update(expenseClaims)
         .set({
           status: action === "approve" ? "approved" : "rejected",
@@ -717,19 +728,35 @@ export const PATCH = requireAuth(async (request, session) => {
           reviewNotes: notes || null,
           updatedAt: now,
         })
-        .where(eq(expenseClaims.id, id))
-        .run();
+        .where(
+          and(
+            eq(expenseClaims.id, id),
+            ne(expenseClaims.status, "approved"),
+            ne(expenseClaims.status, "rejected")
+          )
+        )
+        .returning()
+        .get();
+
+      if (!updated) {
+        return NextResponse.json({ error: "Expense claim is already in a terminal state" }, { status: 400 });
+      }
     } else if (type === "purchase") {
       if (action === "reject") {
-        await db
+        const updated = await db
           .update(purchaseRequests)
           .set({
             status: "rejected",
             notes: notes || null,
             updatedAt: now,
           })
-          .where(eq(purchaseRequests.id, id))
-          .run();
+          .where(and(eq(purchaseRequests.id, id), ne(purchaseRequests.status, "rejected")))
+          .returning()
+          .get();
+
+        if (!updated) {
+          return NextResponse.json({ error: "Purchase request is already rejected" }, { status: 400 });
+        }
       } else {
         const current = await db
           .select({ status: purchaseRequests.status })
@@ -761,14 +788,21 @@ export const PATCH = requireAuth(async (request, session) => {
             );
         }
         if (notes) updates.notes = notes;
-        await db
+
+        // Atomic optimistic concurrency guard: only update if status hasn't changed since select
+        const updated = await db
           .update(purchaseRequests)
           .set(updates)
-          .where(eq(purchaseRequests.id, id))
-          .run();
+          .where(and(eq(purchaseRequests.id, id), eq(purchaseRequests.status, current.status)))
+          .returning()
+          .get();
+
+        if (!updated) {
+          return NextResponse.json({ error: "Purchase request status changed by concurrent request" }, { status: 409 });
+        }
       }
     } else if (type === "booking") {
-      await db
+      const updated = await db
         .update(bookings)
         .set({
           status: action === "approve" ? "approved" : "rejected",
@@ -776,8 +810,19 @@ export const PATCH = requireAuth(async (request, session) => {
           notes: notes || null,
           updatedAt: now,
         })
-        .where(eq(bookings.id, id))
-        .run();
+        .where(
+          and(
+            eq(bookings.id, id),
+            ne(bookings.status, "approved"),
+            ne(bookings.status, "rejected")
+          )
+        )
+        .returning()
+        .get();
+
+      if (!updated) {
+        return NextResponse.json({ error: "Booking is already in a terminal state" }, { status: 400 });
+      }
     } else {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }

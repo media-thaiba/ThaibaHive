@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { db, tables } from "../../db";
-import { eq, and, count, gte, lte, desc } from "drizzle-orm";
+import { eq, and, ne, count, gte, lte, desc } from "drizzle-orm";
 import { authenticate, requireRole, AuthRequest } from "../../middleware/auth";
 
 export const leavesRouter = Router();
@@ -69,6 +69,9 @@ leavesRouter.put("/:id", async (req: AuthRequest, res) => {
     const { status, reviewNotes } = req.body;
     const existing = await db.select().from(tables.leaveRequests).where(eq(tables.leaveRequests.id, req.params.id)).get();
     if (!existing) return res.status(404).json({ error: "Leave request not found" });
+    if (existing.status === "approved" || existing.status === "rejected") {
+      return res.status(400).json({ error: `Leave request is already ${existing.status}` });
+    }
     const updates: any = { updatedAt: new Date().toISOString() };
     if (status) {
       updates.status = status;
@@ -76,8 +79,33 @@ leavesRouter.put("/:id", async (req: AuthRequest, res) => {
       updates.reviewedAt = new Date().toISOString();
     }
     if (reviewNotes !== undefined) updates.reviewNotes = reviewNotes;
-    await db.update(tables.leaveRequests).set(updates).where(eq(tables.leaveRequests.id, req.params.id)).run();
-    const updated = await db.select().from(tables.leaveRequests).where(eq(tables.leaveRequests.id, req.params.id)).get();
+    const updated = await db.update(tables.leaveRequests).set(updates)
+      .where(and(
+        eq(tables.leaveRequests.id, req.params.id),
+        ne(tables.leaveRequests.status, "approved"),
+        ne(tables.leaveRequests.status, "rejected"),
+      ))
+      .returning()
+      .get();
+    if (!updated) {
+      return res.status(400).json({ error: "Leave request is already in a terminal state" });
+    }
+
+    if (updated.status === "approved") {
+      const existingBalance = await db.select().from(tables.leaveBalances)
+        .where(and(
+          eq(tables.leaveBalances.staffId, existing.staffId),
+          eq(tables.leaveBalances.leaveTypeId, existing.leaveTypeId),
+          eq(tables.leaveBalances.year, new Date().getFullYear()),
+        )).get();
+      if (existingBalance) {
+        await db.update(tables.leaveBalances)
+          .set({ usedDays: existingBalance.usedDays + existing.daysCount })
+          .where(eq(tables.leaveBalances.id, existingBalance.id))
+          .run();
+      }
+    }
+
     res.json(updated);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

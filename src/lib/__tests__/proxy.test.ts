@@ -100,9 +100,19 @@ jest.mock("next/server", () => {
 
 import { proxy, config } from "@/proxy";
 
-function makeRequest(pathname: string, opts?: { cookie?: string; authorization?: string; method?: string; contentType?: string; contentLength?: string }) {
-  const url = `http://localhost${pathname}`;
-  const headers: Record<string, string> = {};
+function makeRequest(
+  path: string,
+  opts?: {
+    cookie?: string;
+    authorization?: string;
+    contentType?: string;
+    contentLength?: string;
+    method?: string;
+    headers?: Record<string, string>;
+  }
+) {
+  const url = `http://localhost${path}`;
+  const headers: Record<string, string> = { ...(opts?.headers || {}) };
   if (opts?.cookie) headers["cookie"] = opts.cookie;
   if (opts?.authorization) headers["authorization"] = opts.authorization;
   if (opts?.contentType) headers["content-type"] = opts.contentType;
@@ -265,7 +275,7 @@ describe("proxy", () => {
       expect(res.get("x-frame-options")).toBe("DENY");
       expect(res.get("x-xss-protection")).toBe("1; mode=block");
       expect(res.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
-      expect(res.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+      expect(res.get("permissions-policy")).toBe("camera=(self), microphone=(), geolocation=(self)");
     });
 
     it("should add no-store cache headers for API routes", () => {
@@ -274,6 +284,42 @@ describe("proxy", () => {
       expect(res.get("cache-control")).toBe("no-store, no-cache, must-revalidate");
     });
   });
+
+  describe("CORS Allowlist matching in proxy.ts", () => {
+    it("should allow valid single-level subdomain (tenant1.thaibahive.com)", () => {
+      const req = makeRequest("/api/auth/me", {
+        headers: { origin: "https://tenant1.thaibahive.com" },
+      });
+      const res = proxy(req as any) as any;
+      expect(res.get("access-control-allow-origin")).toBe("https://tenant1.thaibahive.com");
+      expect(res.get("access-control-allow-credentials")).toBe("true");
+    });
+
+    it("should allow valid multi-level subdomain (dept.campus.thaibahive.com)", () => {
+      const req = makeRequest("/api/auth/me", {
+        headers: { origin: "https://dept.campus.thaibahive.com" },
+      });
+      const res = proxy(req as any) as any;
+      expect(res.get("access-control-allow-origin")).toBe("https://dept.campus.thaibahive.com");
+    });
+
+    it("should reject malicious origin (evil-thaibahive.com)", () => {
+      const req = makeRequest("/api/auth/me", {
+        headers: { origin: "https://evil-thaibahive.com" },
+      });
+      const res = proxy(req as any) as any;
+      expect(res.get("access-control-allow-origin")).toBeNull();
+    });
+
+    it("should reject unauthorized external origin (hacker.com)", () => {
+      const req = makeRequest("/api/auth/me", {
+        headers: { origin: "https://hacker.com" },
+      });
+      const res = proxy(req as any) as any;
+      expect(res.get("access-control-allow-origin")).toBeNull();
+    });
+  });
+
 
   describe("config.matcher", () => {
     it("should export a matcher config", () => {

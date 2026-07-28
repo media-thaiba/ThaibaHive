@@ -31,12 +31,29 @@ export const POST = requireAuth(async (request: Request, session) => {
       .where(eq(eventRsvps.id, existing.id))
       .run();
   } else {
-    await db.insert(eventRsvps).values({
-      id: crypto.randomUUID(),
-      eventId,
-      staffId: session.staffId,
-      status,
-    }).run();
+    try {
+      await db.insert(eventRsvps).values({
+        id: crypto.randomUUID(),
+        eventId,
+        staffId: session.staffId,
+        status,
+      }).run();
+    } catch (error: unknown) {
+      if (
+        error instanceof Error && (
+          error.message.includes("UNIQUE constraint") ||
+          error.message.includes("constraint failed")
+        )
+      ) {
+        await db
+          .update(eventRsvps)
+          .set({ status, respondedAt: new Date().toISOString() })
+          .where(and(eq(eventRsvps.eventId, eventId), eq(eventRsvps.staffId, session.staffId)))
+          .run();
+      } else {
+        throw error;
+      }
+    }
   }
 
   return NextResponse.json({ success: true });

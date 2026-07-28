@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, tables } from "../../db";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, ne, desc } from "drizzle-orm";
 import { authenticate, AuthRequest } from "../../middleware/auth";
 
 export const approvalsRouter = Router();
@@ -50,9 +50,38 @@ approvalsRouter.put("/:type/:id", async (req: AuthRequest, res) => {
       case "leave": {
         const existing = await db.select().from(tables.leaveRequests).where(eq(tables.leaveRequests.id, id)).get();
         if (!existing) return res.status(404).json({ error: "Not found" });
+        if (existing.status === "approved" || existing.status === "rejected") {
+          return res.status(400).json({ error: `Leave request is already ${existing.status}` });
+        }
         const leaveUpdates: any = { status, reviewedById: req.user!.id, reviewedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         if (reviewNotes !== undefined) leaveUpdates.reviewNotes = reviewNotes;
-        await db.update(tables.leaveRequests).set(leaveUpdates).where(eq(tables.leaveRequests.id, id)).run();
+        const updated = await db.update(tables.leaveRequests).set(leaveUpdates)
+          .where(and(
+            eq(tables.leaveRequests.id, id),
+            ne(tables.leaveRequests.status, "approved"),
+            ne(tables.leaveRequests.status, "rejected"),
+          ))
+          .returning()
+          .get();
+        if (!updated) {
+          return res.status(400).json({ error: "Leave request is already in a terminal state" });
+        }
+
+        if (updated.status === "approved") {
+          const existingBalance = await db.select().from(tables.leaveBalances)
+            .where(and(
+              eq(tables.leaveBalances.staffId, existing.staffId),
+              eq(tables.leaveBalances.leaveTypeId, existing.leaveTypeId),
+              eq(tables.leaveBalances.year, new Date().getFullYear()),
+            )).get();
+          if (existingBalance) {
+            await db.update(tables.leaveBalances)
+              .set({ usedDays: existingBalance.usedDays + existing.daysCount })
+              .where(eq(tables.leaveBalances.id, existingBalance.id))
+              .run();
+          }
+        }
+
         break;
       }
       case "booking": {
