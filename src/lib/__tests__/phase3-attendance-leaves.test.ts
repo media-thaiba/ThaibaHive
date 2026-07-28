@@ -195,8 +195,12 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
   });
 
   describe("Approvals PATCH — terminal state guards via real handler", () => {
-    it("should approve a pending leave request via the real PATCH handler", async () => {
-      mockDb(
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should approve a pending leave request via the real PATCH handler and deduct leave balance (usedDays: 3 + 2 = 5)", async () => {
+      const { mockUpdate } = mockDb(
         { id: "leave-1", status: "pending", staffId: "s1", leaveTypeId: "lt1", daysCount: 2 },
         { id: "leave-1", status: "approved" }
       );
@@ -222,6 +226,9 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
       const body = await response.json();
       expect(body).toEqual({ success: true });
       expect(response.status).toBe(200);
+      expect(mockUpdate.set).toHaveBeenCalledWith(
+        expect.objectContaining({ usedDays: 5 })
+      );
     });
 
     it("should return 400 when re-approving an already-approved leave via real handler WHERE guard", async () => {
