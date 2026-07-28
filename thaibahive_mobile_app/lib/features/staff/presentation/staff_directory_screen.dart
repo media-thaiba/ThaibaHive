@@ -117,7 +117,7 @@ class _StaffDirectoryScreenState extends ConsumerState<StaffDirectoryScreen> {
           Expanded(
             child: staffAsync.when(
               data: (state) {
-                final staff = state.staffList.cast<StaffModel>();
+                final staff = state.parsedStaffList;
                 final isOffline = state.isOffline;
                 if (staff.isEmpty) {
                   return const EmptyStateWidget(

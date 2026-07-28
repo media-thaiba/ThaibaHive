@@ -3,6 +3,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/services/offline_cache_service.dart';
 import 'staff_provider.dart';
 
+import '../../../models/staff_model.dart';
+
 class CachedStaffState {
   final List<dynamic> staffList;
   final bool isOffline;
@@ -17,6 +19,15 @@ class CachedStaffState {
     this.searchQuery = '',
     this.departmentFilter = '',
   });
+
+  List<StaffModel> get parsedStaffList {
+    return staffList.map((e) {
+      if (e is StaffModel) return e;
+      if (e is Map<String, dynamic>) return StaffModel.fromJson(e);
+      if (e is Map) return StaffModel.fromJson(Map<String, dynamic>.from(e));
+      return null;
+    }).whereType<StaffModel>().toList();
+  }
 
   CachedStaffState copyWith({
     List<dynamic>? staffList,
