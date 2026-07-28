@@ -100,10 +100,17 @@ class UpdateService {
       final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
       final baseUrl = apiBaseUrl ?? AppConstants.apiBaseUrl;
-      final response = await _dio.get(
-        '$baseUrl/system/update?t=${DateTime.now().millisecondsSinceEpoch}',
+      // Use a plain, unauthenticated Dio — /system/update is a public endpoint.
+      // The shared _dio carries the auth interceptor which triggers a 401 before
+      // the user's token has been restored from secure storage on app startup.
+      final plainDio = Dio(BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ));
+      final response = await plainDio.get(
+        '/system/update?t=${DateTime.now().millisecondsSinceEpoch}',
         options: Options(
-          receiveTimeout: const Duration(seconds: 10),
           validateStatus: (status) => status != null && status < 500,
         ),
       );

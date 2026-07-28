@@ -44,8 +44,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _checkExistingToken() async {
+    // Only clear the session when the user explicitly chose NOT to be remembered.
+    // null means the key was never written (fresh install / first launch) — treat as remembered.
     final rememberMe = await _storage.read(key: 'remember_me');
     if (rememberMe == 'false') {
+      // User explicitly unchecked "Keep me logged in" — honour that and wipe the session.
       await _storage.delete(key: AppConstants.storageTokenKey);
       await _storage.delete(key: AppConstants.storageRefreshTokenKey);
       await _storage.delete(key: 'remember_me');
@@ -64,10 +67,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: user,
           token: token,
         );
-        // Re-register FCM token for silently-restored sessions
-        // (app restart with remembered login — missed before this fix)
+        // Re-register FCM token for silently-restored sessions.
         await _onLoginSuccess();
       } catch (e) {
+        // Token is stale/expired — go to login.
+        await _storage.delete(key: AppConstants.storageTokenKey);
+        await _storage.delete(key: AppConstants.storageRefreshTokenKey);
         state = const AuthState(status: AuthStatus.unauthenticated);
       }
     } else {

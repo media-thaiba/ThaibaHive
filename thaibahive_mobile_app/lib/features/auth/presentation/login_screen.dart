@@ -35,7 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   AuthMode _currentMode = AuthMode.signIn;
   bool _obscurePassword = true;
   bool _recoverySent = false;
-  bool _rememberMe = false;
+  bool _rememberMe = true; // Default to true — users expect to stay logged in
 
   @override
   void initState() {
