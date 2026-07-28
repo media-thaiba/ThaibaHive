@@ -64,6 +64,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: user,
           token: token,
         );
+        // Re-register FCM token for silently-restored sessions
+        // (app restart with remembered login — missed before this fix)
+        await _onLoginSuccess();
       } catch (e) {
         state = const AuthState(status: AuthStatus.unauthenticated);
       }

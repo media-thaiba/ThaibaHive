@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/auth/data/auth_state.dart';
 import '../features/auth/data/biometric_provider.dart';
 import '../features/auth/presentation/biometric_lock_screen.dart';
 import '../features/settings/data/settings_provider.dart';
+import '../core/services/fcm_service.dart';
 import '../shared/widgets/offline_banner.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -19,6 +21,8 @@ class ThaibaHiveApp extends ConsumerStatefulWidget {
 
 class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindingObserver {
   late final GoRouter _router;
+  bool _routeFlushed = false;
+  ProviderSubscription<AuthState>? _deepLinkAuthListener;
 
   @override
   void initState() {
@@ -30,6 +34,21 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
     );
     _router = buildRouter();
     _router.routerDelegate.addListener(_onRouteChange);
+
+    // Flush any persisted deep-link route from a cold-start notification tap.
+    // Fires once per session on first AuthStatus.authenticated transition.
+    // The nested addPostFrameCallback ensures the _authGuard redirect has
+    // already settled before we navigate to the notification target.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _deepLinkAuthListener = ref.listenManual<AuthState>(authProvider, (prev, next) {
+        if (!_routeFlushed && next.status == AuthStatus.authenticated) {
+          _routeFlushed = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            FCMService.flushBufferedRoute(_router);
+          });
+        }
+      });
+    });
   }
 
   @override
@@ -48,6 +67,7 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _deepLinkAuthListener?.close();
     _router.routerDelegate.removeListener(_onRouteChange);
     _router.dispose();
     super.dispose();

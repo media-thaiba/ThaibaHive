@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -7,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import '../../core/constants.dart';
 import '../../core/network/api_client.dart';
 
 // Top-level background message handler (must be static/top-level)
@@ -129,17 +131,54 @@ class FCMService {
   }
 
   Future<void> _registerTokenIfAuthenticated() async {
-    final token = await getDeviceToken();
-    if (token != null && !_tokenRegistered) {
-      await _registerTokenWithBackend(token);
+    final fcmToken = await getDeviceToken();
+    if (fcmToken != null && !_tokenRegistered) {
+      // Gate on JWT validity — avoids a pointless 401 at cold start when the
+      // stored token has already expired (gap 2: no auth check before registering)
+      final jwt = await _storage.read(key: AppConstants.storageTokenKey);
+      if (jwt != null && _isJwtValid(jwt)) {
+        await _registerTokenWithBackend(fcmToken);
+      }
+    }
+  }
+
+  /// Lightweight JWT expiry check — decodes exp claim without signature verification.
+  /// Only used to skip backend calls when the token is already expired.
+  bool _isJwtValid(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length != 3) return false;
+      // Dart's base64Url.decode handles unnormalized padding automatically
+      final payload = utf8.decode(base64Url.decode(parts[1]));
+      final claims = jsonDecode(payload) as Map<String, dynamic>;
+      final exp = claims['exp'];
+      if (exp == null) return true; // no expiry claim — allow
+      final expiry = DateTime.fromMillisecondsSinceEpoch((exp as int) * 1000);
+      return DateTime.now().isBefore(expiry);
+    } catch (_) {
+      return false; // malformed token — skip registration
     }
   }
 
   Future<void> _registerTokenWithBackend(String token) async {
+    // Resolve human-readable device name for the backend staff_device_tokens record
+    // (gap 3: device_name was never sent; backend column always null)
+    String? deviceName;
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        final info = await DeviceInfoPlugin().androidInfo;
+        deviceName = '${info.manufacturer} ${info.model}'.trim();
+      } else if (!kIsWeb && Platform.isIOS) {
+        final info = await DeviceInfoPlugin().iosInfo;
+        deviceName = info.name; // e.g. "Shukoor's iPhone 14"
+      }
+    } catch (_) {}
+
     try {
       await _apiClient.dio.post('/auth/fcm-token', data: {
         'fcm_token': token,
         'platform': _getPlatform(),
+        if (deviceName != null) 'device_name': deviceName,
       });
       _tokenRegistered = true;
       await _storage.write(key: _storageTokenRegisteredKey, value: 'true');
@@ -236,9 +275,17 @@ class FCMService {
     '/events',
     '/reports',
     '/assets',
-    '/marketplace',
     '/dashboard',
-    '/profile',
+    '/bookings',
+    '/notifications',
+    '/recognition',
+    '/expenses',
+    '/purchases',
+    '/visitors',
+    '/grievances',
+    '/polls',
+    '/canteen',
+    '/vehicles',
   ];
 
   /// Validate incoming route path against strict allowlist to prevent open redirects
@@ -269,19 +316,36 @@ class FCMService {
         rawRoute = id != null ? '/announcements/$id' : '/announcements';
         break;
       case 'approval':
-        rawRoute = id != null ? '/approvals/$id' : '/approvals';
+        // GoRouter has /approvals list only — no /approvals/:id detail route
+        rawRoute = '/approvals';
         break;
       case 'event':
         rawRoute = id != null ? '/events/$id' : '/events';
         break;
       case 'report':
-        rawRoute = id != null ? '/reports/$id' : '/reports';
+        // GoRouter has /reports list only — no /reports/:id detail route
+        rawRoute = '/reports';
         break;
       case 'asset':
         rawRoute = id != null ? '/assets/$id' : '/assets';
         break;
-      case 'marketplace':
-        rawRoute = '/marketplace';
+      case 'expense':
+        rawRoute = '/expenses';
+        break;
+      case 'booking':
+        rawRoute = id != null ? '/bookings/$id' : '/bookings';
+        break;
+      case 'poll':
+        rawRoute = id != null ? '/polls/$id' : '/polls';
+        break;
+      case 'grievance':
+        rawRoute = '/grievances';
+        break;
+      case 'recognition':
+        rawRoute = '/recognition';
+        break;
+      case 'purchase':
+        rawRoute = '/purchases';
         break;
       default:
         rawRoute = '/';
