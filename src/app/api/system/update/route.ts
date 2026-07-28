@@ -38,38 +38,32 @@ export async function GET(request: Request) {
       }
     }
 
-    // Auto-heal production DB if stored version is older than latest deployment build version
-    if (configMap.app_latest_version < LATEST_BUILD_VERSION || configMap.app_latest_version === "1.0.0+4" || configMap.app_latest_version === "1.0.0+1") {
-      configMap.app_latest_version = LATEST_BUILD_VERSION;
-      configMap.app_download_url = LATEST_DOWNLOAD_URL;
-      configMap.app_release_notes = LATEST_RELEASE_NOTES;
-
-      db.insert(systemConfigs)
-        .values({ key: "app_latest_version", value: LATEST_BUILD_VERSION })
-        .onConflictDoUpdate({ target: systemConfigs.key, set: { value: LATEST_BUILD_VERSION } })
-        .run()
-        .catch(() => {});
-
-      db.insert(systemConfigs)
-        .values({ key: "app_download_url", value: LATEST_DOWNLOAD_URL })
-        .onConflictDoUpdate({ target: systemConfigs.key, set: { value: LATEST_DOWNLOAD_URL } })
-        .run()
-        .catch(() => {});
-    }
+    // Always enforce at least the current deployment build version (1.0.0+9)
+    configMap.app_latest_version = LATEST_BUILD_VERSION;
+    configMap.app_download_url = LATEST_DOWNLOAD_URL;
+    configMap.app_release_notes = LATEST_RELEASE_NOTES;
 
     let downloadUrl = configMap.app_download_url;
     if (downloadUrl && downloadUrl.startsWith("/")) {
       const host = request.headers.get("host") || "localhost:3000";
-      const protocol = request.headers.get("x-forwarded-proto") || "http";
+      const protocol = request.headers.get("x-forwarded-proto") || "https";
       downloadUrl = `${protocol}://${host}${downloadUrl}`;
     }
 
-    return NextResponse.json({
-      latestVersion: configMap.app_latest_version,
-      downloadUrl: downloadUrl,
-      releaseNotes: configMap.app_release_notes,
-      forceUpdate: configMap.app_force_update === "true",
-    });
+    return NextResponse.json(
+      {
+        latestVersion: configMap.app_latest_version,
+        downloadUrl: downloadUrl,
+        releaseNotes: configMap.app_release_notes,
+        forceUpdate: configMap.app_force_update === "true",
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          Pragma: "no-cache",
+        },
+      }
+    );
   } catch (error) {
     console.error("System update check error:", error);
     return NextResponse.json(
