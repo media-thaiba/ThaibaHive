@@ -126,10 +126,10 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
   const body = await request.json().catch(() => ({}));
   const { reason } = body as { reason?: string };
 
-  // 1. Deactivate staff account
+  // 1. Deactivate staff account & release physical NFC tag and biometric avatar reference photo (PDPA retention cleanup)
   await db
     .update(staff)
-    .set({ isActive: false, updatedAt: new Date().toISOString() })
+    .set({ isActive: false, nfcTagId: null, avatarUrl: null, updatedAt: new Date().toISOString() })
     .where(eq(staff.id, id))
     .run();
 

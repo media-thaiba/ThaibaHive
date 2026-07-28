@@ -24,6 +24,9 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
   bool _routeFlushed = false;
   ProviderSubscription<AuthState>? _deepLinkAuthListener;
 
+  @visibleForTesting
+  GoRouter get router => _router;
+
   @override
   void initState() {
     super.initState();
@@ -43,11 +46,15 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
       _deepLinkAuthListener = ref.listenManual<AuthState>(authProvider, (prev, next) {
         if (!_routeFlushed && next.status == AuthStatus.authenticated) {
           _routeFlushed = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            FCMService.flushBufferedRoute(_router);
-          });
+          FCMService.flushBufferedRoute(_router);
         }
       });
+      // Catch the case where auth is ALREADY authenticated by the time we subscribe
+      // (fast local-storage restore) — listenManual won't fire for this.
+      if (!_routeFlushed && ref.read(authProvider).status == AuthStatus.authenticated) {
+        _routeFlushed = true;
+        FCMService.flushBufferedRoute(_router);
+      }
     });
   }
 

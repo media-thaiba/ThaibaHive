@@ -39,3 +39,4 @@ GoogleService-Info.plist
 android/key.properties
 *.jks
 *.keystore
+*.hive

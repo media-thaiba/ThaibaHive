@@ -46,6 +46,12 @@ import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/availability/presentation/availability_screen.dart';
 import '../features/accounts/presentation/accounts_screen.dart';
 import '../features/admin/presentation/admin_dashboard_screen.dart';
+import '../features/admin/presentation/nfc_tag_management_screen.dart';
+import '../features/admin/presentation/location_qr_management_screen.dart';
+import '../features/assets/presentation/asset_tagging_screen.dart';
+import '../features/recognition/presentation/biometric_enrollment_screen.dart';
+import '../features/admin/presentation/beacon_management_screen.dart';
+import '../features/visitors/presentation/visitor_gate_verification_screen.dart';
 import '../features/grievances/presentation/grievances_screen.dart';
 import '../features/grievances/presentation/grievance_submit_screen.dart';
 import '../features/canteen/presentation/canteen_screen.dart';
@@ -506,6 +512,54 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const AdminDashboardScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/nfc-tags',
+        name: 'adminNfcTags',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const NfcTagManagementScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/location-qr',
+        name: 'adminLocationQr',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LocationQrManagementScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/assets/tagging',
+        name: 'assetTagging',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const AssetTaggingScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/biometric/enrollment',
+        name: 'biometricEnrollment',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const BiometricEnrollmentScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/beacons',
+        name: 'adminBeacons',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const BeaconManagementScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/visitors/gate-verify',
+        name: 'visitorGateVerify',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const VisitorGateVerificationScreen(),
         ),
       ),
     ],

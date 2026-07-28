@@ -170,7 +170,10 @@ class FCMService {
         deviceName = '${info.manufacturer} ${info.model}'.trim();
       } else if (!kIsWeb && Platform.isIOS) {
         final info = await DeviceInfoPlugin().iosInfo;
-        deviceName = info.name; // e.g. "Shukoor's iPhone 14"
+        // On iOS 16+, info.name returns a generic model string (e.g. "iPhone", "iPad")
+        // unless the app has the com.apple.developer.device-information.user-assigned-device-name entitlement.
+        // This is still useful as it distinguishes platform/model even without the user-assigned name.
+        deviceName = info.name;
       }
     } catch (_) {}
 
@@ -267,6 +270,7 @@ class FCMService {
     );
   }
 
+  /// Allowed route prefixes for deep links (used by validateAndWhitelistRoute for both FCM notification payloads and custom-scheme / universal link URLs).
   static const List<String> _allowedRoutePrefixes = [
     '/leaves',
     '/tasks',

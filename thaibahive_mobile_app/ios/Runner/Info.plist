@@ -41,5 +41,7 @@
 	<array>
 		<string>applinks:thaibahive.app</string>
 	</array>
+	<key>NFCReaderUsageDescription</key>
+	<string>ThaibaHive requires NFC access to scan and register staff cards and location checkpoints.</string>
 </dict>
 </plist>

@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/network/api_exception.dart';
 import 'package:thaibahive_mobile/core/services/fcm_service.dart';
-import 'package:thaibahive_mobile/models/auth_response_model.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
 import 'auth_repository.dart';
 
@@ -186,6 +185,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final repository = ref.watch(authRepositoryProvider);
-  final storage = const FlutterSecureStorage();
+  const storage = FlutterSecureStorage();
   return AuthNotifier(repository, storage);
 });

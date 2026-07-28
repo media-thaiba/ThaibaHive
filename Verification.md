@@ -220,6 +220,18 @@ Scenario: Admin can approve booking
 5. Manager adds feedback
 6. Report status changes to "reviewed"
 
+### Scenario 5: Cold Start & Fast Auth Restore Deep Link Wiring
+1. App restart with remembered session (fast/no network latency) + pending buffered route → confirm `flushBufferedRoute()` still fires immediately upon fast auth restore.
+2. FCM Push Token Lifecycle on User Switch → user logs out, new user logs in on same device → confirm `_tokenRegistered` resets to `false` and new token is registered with backend.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **iOS Device Name Entitlement (`com.apple.developer.device-information.user-assigned-device-name`)**:
+> `DeviceInfoPlugin().iosInfo.name` returns generic model strings (e.g. "iPhone", "iPad") on iOS 16+ unless the app has Apple approval for the user-assigned device name entitlement. Will Apple entitlement approval be requested for custom device names, or are generic model names ("iPhone", "iPad") acceptable for the `staff_device_tokens.device_name` field for now?
+
 ---
 
 ## Accessibility Test Checklist
