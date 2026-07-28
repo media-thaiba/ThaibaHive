@@ -21,15 +21,40 @@ export async function GET(request: Request) {
       );
     const configs = ensureArray(rawConfigs) as Array<{ key: string; value: string }>;
 
+    const LATEST_BUILD_VERSION = "1.0.0+9";
+    const LATEST_DOWNLOAD_URL = "/downloads/ThaibaHive-v1.0.0+9.apk";
+    const LATEST_RELEASE_NOTES = "New Hardware & Credentials Update (v1.0.0+9): Added NFC Tag Management, Location QR Checkpoints, Asset Barcode/NFC Tagging, Biometric Enrollment, BLE Beacon Pairing, and Visitor Gate Verification.";
+
     const configMap = {
-      app_latest_version: "1.0.0+9",
-      app_download_url: "/downloads/ThaibaHive-v1.0.0+9.apk",
-      app_release_notes: "New Hardware & Credentials Update (v1.0.0+9): Added NFC Tag Management, Location QR Checkpoints, Asset Barcode/NFC Tagging, Biometric Enrollment, BLE Beacon Pairing, and Visitor Gate Verification.",
+      app_latest_version: LATEST_BUILD_VERSION,
+      app_download_url: LATEST_DOWNLOAD_URL,
+      app_release_notes: LATEST_RELEASE_NOTES,
       app_force_update: "false",
     };
 
     for (const item of configs) {
-      configMap[item.key as keyof typeof configMap] = item.value;
+      if (item.key && item.value) {
+        configMap[item.key as keyof typeof configMap] = item.value;
+      }
+    }
+
+    // Auto-heal production DB if stored version is older than latest deployment build version
+    if (configMap.app_latest_version < LATEST_BUILD_VERSION || configMap.app_latest_version === "1.0.0+4" || configMap.app_latest_version === "1.0.0+1") {
+      configMap.app_latest_version = LATEST_BUILD_VERSION;
+      configMap.app_download_url = LATEST_DOWNLOAD_URL;
+      configMap.app_release_notes = LATEST_RELEASE_NOTES;
+
+      db.insert(systemConfigs)
+        .values({ key: "app_latest_version", value: LATEST_BUILD_VERSION })
+        .onConflictDoUpdate({ target: systemConfigs.key, set: { value: LATEST_BUILD_VERSION } })
+        .run()
+        .catch(() => {});
+
+      db.insert(systemConfigs)
+        .values({ key: "app_download_url", value: LATEST_DOWNLOAD_URL })
+        .onConflictDoUpdate({ target: systemConfigs.key, set: { value: LATEST_DOWNLOAD_URL } })
+        .run()
+        .catch(() => {});
     }
 
     let downloadUrl = configMap.app_download_url;
