@@ -334,3 +334,20 @@ export const grievanceUpdateSchema = z.object({
   (data) => data.status !== undefined || data.response !== undefined,
   { message: "At least one of status or response must be provided" }
 );
+
+export const financialTransactionCreateSchema = z.object({
+  institutionId: z.string().min(1, "institutionId required"),
+  type: z.string().min(1, "type required"),
+  category: z.string().min(1, "category required"),
+  amount: z.number().positive("amount must be a positive number"),
+  description: z.string().optional(),
+  transactionDate: z.string().min(1, "transactionDate required"),
+  notes: z.string().optional(),
+});
+
+export const systemUpdatePostSchema = z.object({
+  version: z.string().optional(),
+  downloadUrl: z.string().url().optional(),
+  releaseNotes: z.string().optional(),
+  isForceUpdate: z.boolean().optional(),
+});

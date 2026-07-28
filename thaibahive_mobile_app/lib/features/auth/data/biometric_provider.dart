@@ -35,6 +35,8 @@ class BiometricLockState {
   }
 }
 
+enum BiometricToggleResult { success, disabled, notEnrolled, authFailed }
+
 class BiometricLockNotifier extends StateNotifier<BiometricLockState> {
   final BiometricService _service = BiometricService();
 
@@ -44,10 +46,18 @@ class BiometricLockNotifier extends StateNotifier<BiometricLockState> {
 
   Future<void> init() async {
     final available = await _service.isAvailable();
-    final enabled = await _service.isBiometricEnabled();
+    final enrolled = await _service.hasEnrolledBiometrics();
+    var enabled = await _service.isBiometricEnabled();
+
+    // Auto-clear stale setting if biometrics were removed from device
+    if (enabled && (!available || !enrolled)) {
+      await _service.setBiometricEnabled(false);
+      enabled = false;
+    }
+
     if (!mounted) return;
     state = state.copyWith(
-      isHardwareAvailable: available,
+      isHardwareAvailable: available && enrolled,
       isBiometricEnabled: enabled,
     );
   }
@@ -84,9 +94,34 @@ class BiometricLockNotifier extends StateNotifier<BiometricLockState> {
     }
   }
 
-  Future<void> toggleBiometricSetting(bool enabled) async {
-    await _service.setBiometricEnabled(enabled);
-    state = state.copyWith(isBiometricEnabled: enabled);
+  Future<void> autoDisableBiometrics() async {
+    await _service.setBiometricEnabled(false);
+    state = state.copyWith(isBiometricEnabled: false);
+  }
+
+  Future<BiometricToggleResult> toggleBiometricSetting(bool enabled) async {
+    if (!enabled) {
+      await _service.setBiometricEnabled(false);
+      state = state.copyWith(isBiometricEnabled: false);
+      return BiometricToggleResult.disabled;
+    }
+
+    final hasEnrolled = await _service.hasEnrolledBiometrics();
+    if (!hasEnrolled) {
+      return BiometricToggleResult.notEnrolled;
+    }
+
+    final authResult = await _service.authenticate(
+      localizedReason: 'Scan fingerprint or Face ID to enable Biometric Security',
+    );
+
+    if (authResult.success) {
+      await _service.setBiometricEnabled(true);
+      state = state.copyWith(isBiometricEnabled: true);
+      return BiometricToggleResult.success;
+    }
+
+    return BiometricToggleResult.authFailed;
   }
 }
 

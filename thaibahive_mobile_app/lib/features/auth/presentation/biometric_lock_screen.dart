@@ -57,7 +57,13 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
     if (result.success) {
       ref.read(biometricLockProvider.notifier).unlock(GoRouter.of(context));
     } else {
-      if (result.status == BiometricResultStatus.lockedOut) {
+      if (result.status == BiometricResultStatus.noBiometricsEnrolled) {
+        await ref.read(biometricLockProvider.notifier).autoDisableBiometrics();
+        setState(() {
+          _showPasswordFallback = true;
+          _errorMessage = 'Enrolled biometrics were removed from device. Biometric lock disabled. Please unlock with your password.';
+        });
+      } else if (result.status == BiometricResultStatus.lockedOut) {
         setState(() {
           _showPasswordFallback = true;
           _errorMessage = result.errorMessage ?? 'Biometrics locked due to multiple failed attempts. Please enter your password.';

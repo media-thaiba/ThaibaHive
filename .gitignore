@@ -47,8 +47,11 @@ uploads/
 drizzle/meta/
 drizzle/*.sql
 
-.vercel
-.env*
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.*.example
 
 # scratch and scripts
 scratch/

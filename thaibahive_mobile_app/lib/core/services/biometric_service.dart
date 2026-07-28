@@ -25,6 +25,18 @@ class BiometricService {
     }
   }
 
+  /// Check if device actually has enrolled biometrics (fingerprints or face registered)
+  Future<bool> hasEnrolledBiometrics() async {
+    try {
+      final canCheck = await _auth.canCheckBiometrics;
+      final available = await _auth.getAvailableBiometrics();
+      return canCheck && available.isNotEmpty;
+    } catch (e) {
+      if (kDebugMode) print('[BiometricService] Enrolled check error: $e');
+      return false;
+    }
+  }
+
   /// Get list of available biometric types (fingerprint, face, iris)
   Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
@@ -40,6 +52,15 @@ class BiometricService {
     String localizedReason = 'Authenticate to access your ThaibaHive account',
   }) async {
     try {
+      final enrolled = await hasEnrolledBiometrics();
+      if (!enrolled) {
+        return BiometricAuthResult(
+          success: false,
+          status: BiometricResultStatus.noBiometricsEnrolled,
+          errorMessage: 'No biometric credentials enrolled on this device. Please set up fingerprint or Face ID in system settings.',
+        );
+      }
+
       final bool authenticated = await _auth.authenticate(
         localizedReason: localizedReason,
         options: const AuthenticationOptions(
@@ -59,6 +80,13 @@ class BiometricService {
           success: false,
           status: BiometricResultStatus.lockedOut,
           errorMessage: 'Biometric authentication is locked due to multiple failed attempts. Please enter your password.',
+        );
+      }
+      if (e.code == auth_error.notEnrolled) {
+        return BiometricAuthResult(
+          success: false,
+          status: BiometricResultStatus.noBiometricsEnrolled,
+          errorMessage: 'No biometrics enrolled on this device. Please register biometrics in device settings.',
         );
       }
       return BiometricAuthResult(
@@ -87,7 +115,7 @@ class BiometricService {
   }
 }
 
-enum BiometricResultStatus { success, failed, lockedOut }
+enum BiometricResultStatus { success, failed, lockedOut, noBiometricsEnrolled }
 
 class BiometricAuthResult {
   final bool success;

@@ -7,6 +7,7 @@ import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/network/api_exception.dart';
 import 'package:thaibahive_mobile/core/services/fcm_service.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
+import 'package:thaibahive_mobile/app/router.dart';
 import 'auth_repository.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading, error }
@@ -75,14 +76,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Re-register FCM token for silently-restored sessions.
         await _onLoginSuccess();
       } catch (e) {
-        final isUnauthorized = e is DioException && e.response?.statusCode == 401;
-        if (isUnauthorized) {
-          // Token is explicitly rejected by backend (401 Unauthorized) — clear session.
-          await _storage.delete(key: AppConstants.storageTokenKey);
-          await _storage.delete(key: AppConstants.storageRefreshTokenKey);
-          state = const AuthState(status: AuthStatus.unauthenticated);
+        final isAuthFailure = (e is DioException && (e.response?.statusCode == 401 || e.response?.statusCode == 403)) ||
+                              (e is AppException && (e.message.contains('Unauthorized') || e.message.contains('Forbidden')));
+        final isGenuineOffline = e is DioException &&
+            (e.type == DioExceptionType.connectionTimeout ||
+             e.type == DioExceptionType.sendTimeout ||
+             e.type == DioExceptionType.receiveTimeout ||
+             e.type == DioExceptionType.connectionError ||
+             e.error is SocketException);
+
+        if (isAuthFailure || !isGenuineOffline) {
+          // Token explicitly rejected or revoked (or unexpected error) — clear session.
+          await logout();
         } else {
-          // Network error / timeout / 5xx error. Try loading cached user profile if available.
+          // Genuine network connection error / offline. Load cached profile.
           final cachedProfileJson = await _storage.read(key: AppConstants.storageUserProfileKey);
           UserModel? cachedUser;
           if (cachedProfileJson != null) {
@@ -206,6 +213,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.delete(key: AppConstants.storageRefreshTokenKey);
     await _storage.delete(key: 'remember_me');
     _repository.client.options.headers.remove('Authorization');
+    updateCachedAuthToken(null);
     state = const AuthState(status: AuthStatus.unauthenticated);
     await FCMService().onUserLogout();
   }

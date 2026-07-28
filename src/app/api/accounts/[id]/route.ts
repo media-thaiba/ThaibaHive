@@ -6,6 +6,10 @@ import { eq } from "drizzle-orm";
 
 export const DELETE = requireAuth(async (_request, _session, context) => {
   const { id } = await context!.params;
+  const existing = await db.select().from(financialTransactions).where(eq(financialTransactions.id, id)).get();
+  if (!existing) {
+    return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+  }
   await db.delete(financialTransactions).where(eq(financialTransactions.id, id)).run();
   return NextResponse.json({ success: true });
 }, "accounts:manage");

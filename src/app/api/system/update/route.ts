@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { systemConfigs } from "@/db/schema";
 import { inArray } from "drizzle-orm";
 import { ensureArray } from "@/lib/utils";
+import { systemUpdatePostSchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,9 +24,9 @@ export async function GET(request: Request) {
       );
     const configs = ensureArray(rawConfigs) as Array<{ key: string; value: string }>;
 
-    const LATEST_BUILD_VERSION = "1.0.0+13";
-    const LATEST_DOWNLOAD_URL = "/downloads/ThaibaHive-v1.0.0+13-release.apk";
-    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+13): Fixed NFC Tag registration & scanning (hardware UID extraction for unformatted cards), resilient offline auth token persistence (Keep Me Signed In fix), and robust StaffModel parsing.";
+    const LATEST_BUILD_VERSION = "1.0.0+14";
+    const LATEST_DOWNLOAD_URL = "/downloads/ThaibaHive-v1.0.0+14-release.apk";
+    const LATEST_RELEASE_NOTES = "New Update (v1.0.0+14): Fixed NFC tag unbind UI refresh for staff & location checkpoints, added biometric setup verification dialog, and improved resilient auth session retention.";
 
     const configMap = {
       app_latest_version: LATEST_BUILD_VERSION,
@@ -39,11 +40,6 @@ export async function GET(request: Request) {
         configMap[item.key as keyof typeof configMap] = item.value;
       }
     }
-
-    // Always enforce at least the current deployment build version (1.0.0+9)
-    configMap.app_latest_version = LATEST_BUILD_VERSION;
-    configMap.app_download_url = LATEST_DOWNLOAD_URL;
-    configMap.app_release_notes = LATEST_RELEASE_NOTES;
 
     let downloadUrl = configMap.app_download_url;
     if (downloadUrl && downloadUrl.startsWith("/")) {
@@ -89,14 +85,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { latestVersion, downloadUrl, releaseNotes, forceUpdate } = await request.json();
+    const body = await request.json();
+    const parsed = systemUpdatePostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 400 });
+    }
 
-    const updates = [
-      { key: "app_latest_version", value: latestVersion },
-      { key: "app_download_url", value: downloadUrl },
-      { key: "app_release_notes", value: releaseNotes },
-      { key: "app_force_update", value: forceUpdate ? "true" : "false" },
-    ];
+    const { version, downloadUrl, releaseNotes, isForceUpdate } = parsed.data;
+
+    const updates: Array<{ key: string; value: string }> = [];
+    if (version) updates.push({ key: "app_latest_version", value: version });
+    if (downloadUrl) updates.push({ key: "app_download_url", value: downloadUrl });
+    if (releaseNotes) updates.push({ key: "app_release_notes", value: releaseNotes });
+    if (typeof isForceUpdate === "boolean") updates.push({ key: "app_force_update", value: isForceUpdate ? "true" : "false" });
 
     for (const item of updates) {
       await db

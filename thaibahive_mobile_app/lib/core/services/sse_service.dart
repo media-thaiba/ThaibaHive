@@ -32,7 +32,10 @@ class SSEServiceState {
 class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   http.Client? _client;
+  StreamSubscription<String>? _subscription;
+  Timer? _reconnectTimer;
   bool _isDisposed = false;
+  int _retryCount = 0;
 
   SSEServiceNotifier() : super(const SSEServiceState());
 
@@ -45,6 +48,10 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
 
   void _startConnection(String token) async {
     if (_isDisposed) return;
+
+    _reconnectTimer?.cancel();
+    await _subscription?.cancel();
+    _client?.close();
     _client = http.Client();
 
     try {
@@ -57,9 +64,13 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
 
       final response = await _client!.send(request);
       if (response.statusCode == 200) {
+        _retryCount = 0;
         state = state.copyWith(isConnected: true);
 
-        response.stream.transform(utf8.decoder).transform(const LineSplitter()).listen(
+        _subscription = response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen(
           (line) {
             _parseSSELine(line);
           },
@@ -72,6 +83,9 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
             _reconnect(token);
           },
         );
+      } else {
+        state = state.copyWith(isConnected: false);
+        _reconnect(token);
       }
     } catch (e) {
       state = state.copyWith(isConnected: false);
@@ -98,7 +112,13 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
 
   void _reconnect(String token) {
     if (_isDisposed) return;
-    Future.delayed(const Duration(seconds: 5), () {
+    _reconnectTimer?.cancel();
+
+    // Exponential backoff capped at 60 seconds
+    final delaySeconds = (5 * (1 << (_retryCount < 4 ? _retryCount : 4))).clamp(5, 60);
+    _retryCount++;
+
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       if (!_isDisposed) _startConnection(token);
     });
   }
@@ -106,6 +126,8 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
   @override
   void dispose() {
     _isDisposed = true;
+    _reconnectTimer?.cancel();
+    _subscription?.cancel();
     _client?.close();
     super.dispose();
   }

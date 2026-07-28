@@ -95,7 +95,10 @@ export const staffDepartments = sqliteTable("staff_departments", {
     .notNull()
     .references(() => departments.id),
   isPrimary: boolean("is_primary").notNull().default(false),
-});
+}, (t) => ({
+  staffIdIdx: index("idx_pg_staff_departments_staff_id").on(t.staffId),
+  deptIdIdx: index("idx_pg_staff_departments_dept_id").on(t.departmentId),
+}));
 
 export const staffInstitutions = sqliteTable("staff_institutions", {
   id: text("id").primaryKey(),
@@ -105,7 +108,10 @@ export const staffInstitutions = sqliteTable("staff_institutions", {
   institutionId: text("institution_id")
     .notNull()
     .references(() => institutions.id),
-});
+}, (t) => ({
+  staffIdIdx: index("idx_pg_staff_institutions_staff_id").on(t.staffId),
+  instIdIdx: index("idx_pg_staff_institutions_inst_id").on(t.institutionId),
+}));
 
 // ─── Shifts & Attendance ───
 

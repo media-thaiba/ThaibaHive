@@ -566,6 +566,12 @@ GoRouter buildRouter() {
   );
 }
 
+String? _cachedToken;
+
+void updateCachedAuthToken(String? token) {
+  _cachedToken = token;
+}
+
 Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isAuthRoute = state.matchedLocation.startsWith('/auth');
   final isWelcomeRoute = state.matchedLocation == '/';
@@ -574,7 +580,12 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
     return null;
   }
 
-  final token = await _storage.read(key: AppConstants.storageTokenKey);
+  // Use cached token for zero-latency route transitions; fallback to storage on cold start.
+  final token = _cachedToken ?? await _storage.read(key: AppConstants.storageTokenKey);
+  if (token != null && token.isNotEmpty) {
+    _cachedToken = token;
+  }
+
   final isLoggedIn = token != null && token.isNotEmpty;
 
   if (!isLoggedIn && !isAuthRoute) {

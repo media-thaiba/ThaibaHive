@@ -138,6 +138,9 @@ class AdminNfcNotifier extends StateNotifier<AdminNfcState> {
           successMessage: 'NFC Tag successfully unbound',
           clearLookup: true,
         );
+        if (type == 'location') {
+          await fetchLocations();
+        }
         return true;
       }
 

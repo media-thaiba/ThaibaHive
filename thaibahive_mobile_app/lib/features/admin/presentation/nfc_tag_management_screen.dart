@@ -1015,7 +1015,16 @@ class _NfcTagManagementScreenState
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await ref.read(adminNfcProvider.notifier).unbindTag(type: type, targetId: targetId);
+              final success = await ref.read(adminNfcProvider.notifier).unbindTag(type: type, targetId: targetId);
+              if (success && mounted) {
+                ref.read(adminProvider.notifier).loadAll();
+                await ref.read(adminNfcProvider.notifier).fetchLocations();
+                setState(() {
+                  _scannedTagId = null;
+                  _selectedStaffId = null;
+                  _selectedStaffName = null;
+                });
+              }
             },
             child: const Text('Unbind'),
           ),

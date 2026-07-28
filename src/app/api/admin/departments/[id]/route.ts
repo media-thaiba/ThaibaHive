@@ -32,6 +32,11 @@ export const PUT = requireAuth(async (request: Request, _session, context) => {
 export const DELETE = requireAuth(async (_request, _session, context) => {
   const { id } = await context!.params;
 
+  const existing = await db.select().from(departments).where(eq(departments.id, id)).get();
+  if (!existing) {
+    return NextResponse.json({ error: "Department not found" }, { status: 404 });
+  }
+
   const subCount = await db.select().from(subDepartments).where(eq(subDepartments.departmentId, id)).all();
   if (subCount.length > 0) {
     return NextResponse.json({ error: "Remove all sub-departments first" }, { status: 400 });

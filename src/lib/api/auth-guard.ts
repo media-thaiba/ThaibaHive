@@ -40,7 +40,18 @@ export function requireAuth(
     try {
       return await handler(request, session, context);
     } catch (error) {
-      console.error("API error:", error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      console.error(
+        JSON.stringify({
+          event: "api_route_error",
+          url: request.url,
+          method: request.method,
+          error: errorMsg,
+          stack,
+          timestamp: new Date().toISOString(),
+        })
+      );
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   };

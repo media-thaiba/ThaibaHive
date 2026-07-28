@@ -62,23 +62,18 @@ export async function POST(request: Request) {
       return redirectWithError("invalid_nonce", "Token missing identifier.");
     }
 
-    const existingNonce = await db
-      .select()
-      .from(usedNonces)
-      .where(eq(usedNonces.jti, jti))
-      .get();
-
-    if (existingNonce) {
-      return redirectWithError("replay_detected", "Token has already been used.");
-    }
-
     const expiresAt = payload.exp as number | undefined;
     try {
       await db.insert(usedNonces).values({
         jti,
         expiresAt: expiresAt ? new Date(expiresAt * 1000).toISOString() : new Date(Date.now() + 60_000).toISOString(),
       }).run();
-    } catch {
+    } catch (err: unknown) {
+      console.warn("[Security Audit] Nonce replay attempt blocked - Unique constraint failure:", {
+        jti,
+        ip,
+        error: err instanceof Error ? err.message : String(err),
+      });
       return redirectWithError("replay_detected", "Token has already been used.");
     }
 

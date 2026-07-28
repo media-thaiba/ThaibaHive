@@ -93,6 +93,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Authentication or valid share token required" }, { status: 401 });
     }
 
+    const allowedAssetIds = new Set<string>();
+    let isShareTokenScoped = false;
+
     if (token) {
       const link = await db
         .select()
@@ -115,6 +118,19 @@ export async function POST(req: NextRequest) {
 
         if (!password && !hasValidCookie) {
           return NextResponse.json({ error: "Password required" }, { status: 401 });
+        }
+      }
+
+      isShareTokenScoped = true;
+
+      // Populate permitted asset scope for token
+      if (link.assetId) {
+        allowedAssetIds.add(link.assetId);
+      } else if (link.folderId) {
+        const folderAssets: ResolvedAssetItem[] = [];
+        await collectFolderAssets(link.folderId, "", folderAssets);
+        for (const fa of folderAssets) {
+          allowedAssetIds.add(fa.id);
         }
       }
     }
@@ -152,6 +168,24 @@ export async function POST(req: NextRequest) {
 
     if (itemsToPack.length === 0) {
       return NextResponse.json({ error: "No ready assets found to download" }, { status: 404 });
+    }
+
+    // Strict per-item scope verification for share tokens
+    if (isShareTokenScoped) {
+      for (const item of itemsToPack) {
+        if (!allowedAssetIds.has(item.id)) {
+          console.warn("[Security Audit] Batch download access denied - Out-of-scope asset requested:", {
+            ip,
+            token,
+            attemptedAssetId: item.id,
+            requestedFolderId: folderId,
+          });
+          return NextResponse.json(
+            { error: "Forbidden: Requested items exceed share token scope" },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     // Memory bounding sanity check

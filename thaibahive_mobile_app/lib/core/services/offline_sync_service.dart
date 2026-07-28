@@ -36,37 +36,7 @@ class OfflineSyncService {
 
       for (final event in pendingEvents) {
         await offlineQueue.markSyncing(event.clientEventId);
-        
-        try {
-          if (event.type == 'attendance_nfc_checkin') {
-            final payload = event.payload;
-            final tagData = payload['tagData']?['payload'] as String? ??
-                payload['tagData']?['id'] as String? ??
-                'unknown';
-            
-            // Sync check-in with API using ApiClient
-            final response = await _apiClient.dio.post('/attendance/check-in', data: {
-              'method': 'nfc',
-              'nfcTagId': tagData,
-              if (payload['latitude'] != null) 'latitude': payload['latitude'],
-              if (payload['longitude'] != null) 'longitude': payload['longitude'],
-            });
-
-            if (response.statusCode == 200 || response.statusCode == 201) {
-              await offlineQueue.markCompleted(event.clientEventId);
-              debugPrint('[OfflineSyncService] Sync completed for event: ${event.clientEventId}');
-            } else {
-              throw Exception('Unexpected status code: ${response.statusCode}');
-            }
-          } else {
-            // Unsupported event type, mark completed to avoid blocking the queue
-            await offlineQueue.markCompleted(event.clientEventId);
-            debugPrint('[OfflineSyncService] Dropped unsupported event type: ${event.type}');
-          }
-        } catch (e) {
-          debugPrint('[OfflineSyncService] Sync failed for event ${event.clientEventId}: $e');
-          await offlineQueue.markFailed(event.clientEventId, e.toString());
-        }
+        await _handleEvent(event, event.clientEventId);
       }
     } catch (e) {
       debugPrint('[OfflineSyncService] Error during sync: $e');

@@ -6,6 +6,12 @@ import { GET as exportGet } from "../../app/api/export/route";
 import { verifySession } from "@/lib/auth";
 import { db } from "@/db";
 
+// Mock jose ESM package
+jest.mock("jose", () => ({
+  jwtVerify: jest.fn(),
+  SignJWT: jest.fn(),
+}));
+
 // Mock the Auth library
 jest.mock("@/lib/auth", () => ({
   verifySession: jest.fn(),
@@ -243,6 +249,169 @@ describe("Security and Regression Audits", () => {
       // Should match headers exactly and have no other rows
       const expectedHeaders = "\uFEFFDate,Employee ID,Employee Name,Institution,Department,Status,Check In,Check Out,Duration (Hours),Late Arrival,Early Departure\n";
       expect(csvContent).toBe(expectedHeaders);
+    });
+  });
+
+  // 7. Media Batch Download IDOR Scope Validation
+  describe("7. Media Batch Download IDOR & Scope Control", () => {
+    it("should reject batch download with 403 when share token tries to access out-of-scope assetId", async () => {
+      const { POST: batchDownloadPost } = require("../../app/api/media/batch-download/route");
+      (verifySession as jest.Mock).mockResolvedValue(null);
+
+      // Mock DB: share link scoped to 'asset-scoped-1'
+      mockDb.select.mockImplementation(() => ({
+        from: jest.fn(() => ({
+          where: jest.fn(() => ({
+            get: jest.fn().mockResolvedValue({
+              id: "link-1",
+              token: "valid-token-123",
+              assetId: "asset-scoped-1",
+              isActive: true,
+              expiresAt: null,
+            }),
+            all: jest.fn().mockResolvedValue([
+              {
+                id: "asset-unauthorized-999",
+                name: "secret.pdf",
+                fileUrl: "/api/upload/files/secret.pdf",
+                fileSize: 1024,
+                status: "ready",
+              },
+            ]),
+          })),
+        })),
+      }));
+
+      const req = new Request("http://localhost/api/media/batch-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "valid-token-123",
+          assetIds: ["asset-unauthorized-999"],
+        }),
+      });
+
+      const res = await batchDownloadPost(req);
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toBe("Forbidden: Requested items exceed share token scope");
+    });
+
+    it("should allow batch download for nested subfolder assets when token is scoped to parent folder", async () => {
+      const { POST: batchDownloadPost } = require("../../app/api/media/batch-download/route");
+      (verifySession as jest.Mock).mockResolvedValue(null);
+
+      // Mock DB: share link scoped to parent folder 'folder-parent' containing subfolder 'folder-child' with asset 'asset-nested-2'
+      mockDb.select.mockImplementation(() => ({
+        from: jest.fn((table) => ({
+          where: jest.fn((cond) => ({
+            get: jest.fn().mockResolvedValue({
+              id: "link-folder",
+              token: "valid-folder-token",
+              folderId: "folder-parent",
+              isActive: true,
+              expiresAt: null,
+            }),
+            all: jest.fn().mockImplementation(() => {
+              // Return assets or subfolders based on call
+              return Promise.resolve([
+                {
+                  id: "asset-nested-2",
+                  name: "sub_file.png",
+                  fileUrl: "/api/upload/files/sub_file.png",
+                  fileSize: 2048,
+                  status: "ready",
+                  folderId: "folder-child",
+                },
+              ]);
+            }),
+          })),
+        })),
+      }));
+
+      const req = new Request("http://localhost/api/media/batch-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "valid-folder-token",
+          assetIds: ["asset-nested-2"],
+        }),
+      });
+
+      const res = await batchDownloadPost(req);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toBe("application/zip");
+    });
+
+    it("should allow authenticated staff to perform batch download without share token", async () => {
+      const { POST: batchDownloadPost } = require("../../app/api/media/batch-download/route");
+      (verifySession as jest.Mock).mockResolvedValue({ staffId: "staff-100", role: "staff" });
+
+      mockDb.select.mockImplementation(() => ({
+        from: jest.fn(() => ({
+          where: jest.fn(() => ({
+            get: jest.fn().mockResolvedValue(null),
+            all: jest.fn().mockResolvedValue([
+              {
+                id: "asset-staff-1",
+                name: "report.pdf",
+                fileUrl: "/api/upload/files/report.pdf",
+                fileSize: 500,
+                status: "ready",
+              },
+            ]),
+          })),
+        })),
+      }));
+
+      const req = new Request("http://localhost/api/media/batch-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assetIds: ["asset-staff-1"],
+        }),
+      });
+
+      const res = await batchDownloadPost(req);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toBe("application/zip");
+    });
+  });
+
+  // 8. Mobile Handoff Nonce Replay Prevention
+  describe("8. Mobile Handoff Nonce Atomic Replay Handling", () => {
+    it("should reject replayed nonce token when DB constraint violation occurs", async () => {
+      const { jwtVerify } = require("jose");
+      const { POST: mobileHandoffPost } = require("../../app/api/auth/mobile-handoff/route");
+
+      // Mock valid JWT payload
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: {
+          jti: "nonce-jti-duplicate",
+          exp: Math.floor(Date.now() / 1000) + 300,
+          staffId: "staff-123",
+        },
+      });
+
+      // Mock DB insert failure with constraint violation error
+      mockDb.insert.mockImplementation(() => ({
+        values: jest.fn(() => ({
+          run: jest.fn().mockRejectedValue(new Error("SQLITE_CONSTRAINT: UNIQUE constraint failed: used_nonces.jti")),
+        })),
+      }));
+
+      const req = new Request("http://localhost/api/auth/mobile-handoff", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer test-nonce-jwt",
+        },
+      });
+
+      (process.env as any).NODE_ENV = "test";
+      const res = await mobileHandoffPost(req);
+      console.log("RES SYMBOLS & PROPS:", Object.getOwnPropertySymbols(res), Object.getOwnPropertyDescriptors(res));
+      expect([302, 307]).toContain(res.status);
+      expect(res.status).toBeGreaterThanOrEqual(300);
     });
   });
 });

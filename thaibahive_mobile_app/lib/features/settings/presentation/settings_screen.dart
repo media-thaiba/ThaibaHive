@@ -128,9 +128,32 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       ),
                       value: isEnabled && isAvailable,
-                      onChanged: isAvailable
-                          ? (v) => ref.read(biometricLockProvider.notifier).toggleBiometricSetting(v)
-                          : null,
+                      onChanged: (v) async {
+                        final result = await ref.read(biometricLockProvider.notifier).toggleBiometricSetting(v);
+                        if (!context.mounted) return;
+
+                        if (result == BiometricToggleResult.notEnrolled) {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Biometrics Required'),
+                              content: const Text(
+                                'No fingerprint or Face ID enrolled on this device.\n\nPlease open your device Settings to register biometrics before enabling app lock.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else if (result == BiometricToggleResult.authFailed) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Biometric verification failed. Security setting was not enabled.')),
+                          );
+                        }
+                      },
                     );
                   },
                 ),
