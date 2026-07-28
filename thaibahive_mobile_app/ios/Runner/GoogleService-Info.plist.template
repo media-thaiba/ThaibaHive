@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEMPLATE FILE — Replace this entire file with the real GoogleService-Info.plist
+  from the Firebase console.
+
+  HOW TO GET:
+    Firebase console → ThaibaHive project → Project Settings → Your apps
+    → iOS app (com.thaiba.thaibahive) → Download GoogleService-Info.plist
+
+  PLACE AT:
+    ios/Runner/GoogleService-Info.plist
+
+  DO NOT COMMIT:
+    This file is gitignored. Never commit the real version.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>_TEMPLATE_NOTE</key>
+  <string>Replace with real GoogleService-Info.plist from Firebase console</string>
+</dict>
+</plist>

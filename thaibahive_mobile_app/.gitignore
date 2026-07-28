@@ -28,3 +28,14 @@ api/.env
 # Misc
 .DS_Store
 *.log
+
+# Firebase config files — generated per-developer from the Firebase console.
+# Never commit these. See FIREBASE_SETUP.md for setup instructions.
+google-services.json
+GoogleService-Info.plist
+
+# Android release keystore — contains private signing keys.
+# Never commit. See android/key.properties.example for format.
+android/key.properties
+*.jks
+*.keystore

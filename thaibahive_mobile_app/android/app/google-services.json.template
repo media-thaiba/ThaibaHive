@@ -1,0 +1,6 @@
+{
+  "_TEMPLATE_": "Replace this entire file with the real google-services.json from Firebase console",
+  "_HOW_TO_GET_": "Firebase console → ThaibaHive project → Project Settings → Your apps → com.thaiba.hive → Download google-services.json",
+  "_PLACE_AT_": "android/app/google-services.json",
+  "_DO_NOT_COMMIT_": "This file is gitignored. Never commit the real version."
+}
