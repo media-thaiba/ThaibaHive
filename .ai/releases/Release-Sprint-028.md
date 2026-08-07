@@ -24,19 +24,29 @@ The following files were created or modified during the execution of Sprint-028:
 - `src/lib/observability/playback-state.ts` (Modified) — Refactored client state to retrieve playback timeline events via fetch API instead of directly importing server db modules.
 
 ### API Routes / Endpoints
-- `src/app/api/admin/scheduled-jobs/route.ts` (Created) — GET endpoint for scheduled jobs query (paginated/filtered) and POST endpoint to trigger manual report jobs. Gated for `super_admin`.
-- `src/app/api/admin/scheduled-jobs/[id]/route.ts` (Created) — PATCH endpoint to transition job statuses (pause, resume, cancel). Gated for `super_admin`.
+- `src/app/api/admin/scheduled-jobs/route.ts` (Modified) — GET endpoint for scheduled jobs query and POST endpoint to trigger manual report jobs. Writes to `preference_audit_log` on manual trigger. Gated to `super_admin`.
+- `src/app/api/admin/scheduled-jobs/[id]/route.ts` (Modified) — PATCH endpoint to transition job statuses (pause, resume, cancel). Emits cancellation warning events to EventBus. Gated to `super_admin`.
 - `src/app/api/admin/swarm/queue-telemetry/route.ts` (Created) — GET endpoint returning historical queue performance averages and failure metrics. Gated for `super_admin`.
 - `src/app/api/admin/swarm/playback/route.ts` (Created) — GET endpoint querying playback events within ranges. Gated for `super_admin`.
 - `src/app/api/admin/audit-logs/route.ts` (Created) — GET endpoint querying user preference change logs. Gated for `super_admin`.
 
 ### Frontend Components & Pages
 - `src/components/admin/jobs/jobs-list-panel.tsx` (Created) — List table showing queued/processing jobs and execution runtimes with dynamic filter controls.
-- `src/components/admin/jobs/jobs-actions-panel.tsx` (Created) — Form dialogs to trigger report tasks and confirmation buttons to pause/resume/cancel tasks.
-- `src/app/(shell)/admin/scheduled-jobs/page.tsx` (Created) — Dashboard integrating the list and actions panel, fetching current jobs with 10-second status polling.
-- `src/app/(shell)/admin/swarm-intelligence/page.tsx` (Modified) — Integrated the "Queue & Worker Telemetry" tab, displaying stream status badges (`connected`, `connecting`, `disconnected`) with exponential backoff auto-reconnect logic and fallback polling.
-- `src/components/swarm/swarm-telemetry-charts.tsx` (Created) — Chart dashboards displaying AreaCharts for backlog/worker load, telemetry statistic cards, and listing recent executions.
-- `src/app/(shell)/admin/audit-logs/page.tsx` (Created) — Audit log query list viewer with search inputs and paginated table.
+- `src/components/admin/jobs/jobs-actions-panel.tsx` (Modified) — Form dialogs to trigger report tasks and confirmation buttons to pause/resume/cancel tasks. Swapped all raw HTML inputs (`<input type="radio">` and `<textarea>`) to custom UI primitives.
+- `src/app/(shell)/admin/scheduled-jobs/page.tsx` (Modified) — Dashboard page. Fully gated to the `super_admin` role with fallback authorization alerts.
+- `src/app/(shell)/admin/swarm-intelligence/page.tsx` (Modified) — Integrated the "Queue & Worker Telemetry" tab, displaying stream status badges with exponential backoff auto-reconnect logic and fallback polling.
+- `src/components/swarm/swarm-telemetry-charts.tsx` (Modified) — Chart dashboards displaying AreaCharts, worker concurrency utilization gauge, and active pipeline topology links with glowing state indicators.
+- `src/app/(shell)/admin/audit-logs/page.tsx` (Modified) — Audit log query list viewer. Fully gated to the `super_admin` role.
+
+### Documentation & Decisions (DoD Governance)
+- `docs/sprint-028-operations-guide.md` (Created) — Operations guide detailing scheduled jobs, telemetry schemas, and preference logs.
+- `.ai/08_DECISION_LOG.md` (Modified) — Appended ADR-015 and ADR-016.
+- `.ai/adr/ADR-015.md` (Created) — Decision log for Scheduled Job Management APIs.
+- `.ai/adr/ADR-016.md` (Created) — Decision log for Swarm Queue Telemetry & Observability.
+- `.ai/DECISIONS.md` (Modified) — Appended ADR-015 and ADR-016.
+- `.ai/FEATURES.md` (Modified) — Registered SPRINT-028 features.
+- `.ai/CHANGELOG.md` (Modified) — Added changelog section for version `3.12.0`.
+- `.ai/PROJECT_STATUS.md` (Modified) — Updated status to complete and released for version `3.12.0`.
 
 ---
 
@@ -47,24 +57,16 @@ The following files were created or modified during the execution of Sprint-028:
   - Returns paginated scheduled jobs list.
 - **POST** `/api/admin/scheduled-jobs`
   - Payload: `{ type: "attendance" | "finance" | "academics", format: "pdf" | "excel", options: Record<string, any>, institutionId: string }`
-  - Submits manual report compilation to background worker queue.
+  - Submits manual report compilation. Writes trigger action into `preference_audit_log`.
 
 ### 2. Scheduled Job Control
 - **PATCH** `/api/admin/scheduled-jobs/[id]`
   - Payload: `{ status: "paused" | "cancelled" | "queued" }`
-  - Updates worker task execution state.
+  - Updates worker task execution state. Emits warning cancellation event to EventBus on cancel.
 
 ### 3. Queue Performance Averages
 - **GET** `/api/admin/swarm/queue-telemetry`
   - Returns: `{ avgProcessingTime: number, completionSuccessRate: number, failedJobsTotal: number }`
-
-### 4. Swarm Playback Events
-- **GET** `/api/admin/swarm/playback?startTime=ISO_STRING&endTime=ISO_STRING`
-  - Returns: `{ events: PlaybackEvent[] }`
-
-### 5. Preference Audit Logs
-- **GET** `/api/admin/audit-logs?page=X&limit=Y&userId=U&preferenceKey=K&institutionId=I`
-  - Returns: `{ logs: AuditLog[], pagination: { total, totalPages, page, limit } }`
 
 ---
 
@@ -72,17 +74,12 @@ The following files were created or modified during the execution of Sprint-028:
 
 All automated Jest test suites were run and passed successfully.
 
-### New Test Suites Created
-- `src/app/api/admin/__tests__/scheduled-jobs.test.ts` (7 assertions) — Tests for GET query page/limits, POST job triggers, and PATCH state changes.
-- `src/app/api/admin/__tests__/audit-logs.test.ts` (2 assertions) — Tests for audit log GET filtering and page results.
-- `src/lib/__tests__/report-queue-observability.test.ts` (2 assertions) — Integration test verifying ReportQueue event and telemetry metric publishing to EventBus.
-
 ### Test Run Output Summary
 ```
 Test Suites: 202 passed, 202 total
-Tests:       867 passed, 867 total
+Tests:       873 passed, 873 total
 Snapshots:   0 total
-Time:        43.972 s
+Time:        43.079 s
 ```
 
 ---
@@ -93,24 +90,5 @@ The Next.js production build compiler successfully generated statically pre-rend
 ```
 pnpm build
 ...
-○  (Static)   prerendered as static content
-ƒ  (Dynamic)  server-rendered on demand
-
 Command exited with code 0.
 ```
-
----
-
-## Database Schema & Migrations
-
-- **Schema Check:** Existing database schemas for `scheduled_jobs`, `job_executions`, and `preference_audit_log` tables inside `packages/db/schema.ts` were checked and verified.
-- **Migration Status:** No schema modification was required for this sprint. SQLite query bindings were verified to be fully compatible with local and production staging environments.
-
----
-
-## Release Notes
-
-- **Manual Task Queueing:** Administrators can now force instantaneous execution of scheduled report compile tasks directly from the administrative UI.
-- **Observability Dashboard:** The Swarm Intelligence console includes a rich visual timeline of queue backlog size, current worker concurrency loads, and job execution retry frequencies, updated dynamically via SSE stream events.
-- **Resilient SSE Streams:** The console automatically re-establishes SSE connections with exponential backoff on stream drops. If the server stream is lost permanently, it transparently falls back to database polling.
-- **Preference Auditing:** Every user preference adjustment is tracked securely and exposed via a searchable, paginated audit dashboard.
