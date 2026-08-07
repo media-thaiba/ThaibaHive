@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { financialTransactions, institutions, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { financialTransactionCreateSchema } from "@/lib/validation/schemas";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { financialTransactionCreateSchema, paginationSchema } from "@/lib/validation/schemas";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request) => {
   const url = new URL(request.url);
@@ -12,11 +12,27 @@ export const GET = requireAuth(async (request: Request) => {
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
+  const pagination = paginationSchema.parse({
+    page: url.searchParams.get("page") || undefined,
+    limit: url.searchParams.get("limit") || undefined,
+  });
+  const { page, limit } = pagination;
+  const offset = (page - 1) * limit;
+
   const conditions = [];
   if (institutionId) conditions.push(eq(financialTransactions.institutionId, institutionId));
   if (type) conditions.push(eq(financialTransactions.type, type));
   if (from) conditions.push(gte(financialTransactions.transactionDate, from));
   if (to) conditions.push(lte(financialTransactions.transactionDate, to));
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const countResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(financialTransactions)
+    .where(whereClause)
+    .get();
+  const total = countResult?.count ?? 0;
 
   const transactions = await db
     .select({
@@ -36,11 +52,13 @@ export const GET = requireAuth(async (request: Request) => {
     .from(financialTransactions)
     .leftJoin(staff, eq(financialTransactions.recordedById, staff.id))
     .leftJoin(institutions, eq(financialTransactions.institutionId, institutions.id))
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(whereClause)
     .orderBy(desc(financialTransactions.transactionDate))
+    .limit(limit)
+    .offset(offset)
     .all();
 
-  return NextResponse.json({ transactions });
+  return NextResponse.json({ transactions, total, page, limit });
 }, "staff:read");
 
 export const POST = requireAuth(async (request: Request, session) => {

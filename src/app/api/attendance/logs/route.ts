@@ -6,8 +6,8 @@ import { eq, desc, inArray, and, gte, lte, or, like, sql, type SQL } from "drizz
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
-  const startDate = searchParams.get("startDate");
-  const endDate = searchParams.get("endDate");
+  const startDate = searchParams.get("startDate") || searchParams.get("from");
+  const endDate = searchParams.get("endDate") || searchParams.get("to");
   const departmentId = searchParams.get("departmentId");
   const institutionId = searchParams.get("institutionId");
 
@@ -53,7 +53,7 @@ export const GET = requireAuth(async (request, session) => {
   let effectiveDepartmentIds: string[] = departmentId ? [departmentId] : [];
   let effectiveInstitutionIds: string[] = institutionId ? [institutionId] : [];
 
-  if (session.role === "principal") {
+  if (["admin", "principal"].includes(session.role)) {
     const instRows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
@@ -97,7 +97,7 @@ export const GET = requireAuth(async (request, session) => {
     matchedStaffConditions.push(inArray(staff.id, deptStaffIds));
   }
 
-  // Filter staff by search pattern if provided (case-insensitive LIKE in SQLite by default)
+  // Filter staff by search pattern if provided
   if (search) {
     const searchPattern = `%${search}%`;
     matchedStaffConditions.push(

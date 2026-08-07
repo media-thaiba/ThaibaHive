@@ -15,30 +15,34 @@ import {
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and, gte, lte, inArray, type SQL } from "drizzle-orm";
+import { csvFormatter } from "@/lib/export/csv-formatter";
+import { excelFormatter } from "@/lib/export/excel-formatter";
+import { pdfFormatter } from "@/lib/export/pdf-formatter";
+import { ExportColumn, ExportFormat, ExportOptions, ExportType } from "@/lib/export/types";
+import { hasPermission } from "@thaiba/auth/roles";
 
 const MAX_EXPORT_ROWS = 5000;
 
-function esc(val: unknown): string {
-  if (val === null || val === undefined) return "";
-  let s = String(val);
+const REQUIRED_PERMISSIONS: Record<ExportType, string> = {
+  attendance: "attendance:read",
+  leaves: "leaves:read",
+  staff: "staff:read",
+  payroll: "reports:read",
+  accounts: "reports:read",
+  assets: "assets:read",
+  expenses: "reports:read",
+  tabulation: "exam:read",
+  examinations: "exam:read",
+  fleet: "fleet:read",
+  canteen: "canteen:read",
+  visitors: "visitor:read",
+  performance: "performance:read",
+  ai_insights: "analytics:manage",
+  regional_analytics: "regional:view",
+};
 
-  // Prevent CSV Formula Injection in Excel/LibreOffice if value starts with =, +, -, @, \t, \r
-  if (/^[=+\-@\t\r]/.test(s)) {
-    s = "'" + s;
-  }
 
-  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
-
-function csvRow(values: unknown[]): string {
-  return values.map(esc).join(",") + "\n";
-}
-
-// Helper to safely execute limited query on real ORM or Jest test mocks
-async function executeLimitedQuery<T>(queryObj: any): Promise<T[]> {
+async function executeLimitedQuery<T>(queryObj: { limit?: (n: number) => { all(): Promise<T[]> }; all(): Promise<T[]> }): Promise<T[]> {
   if (typeof queryObj.limit === "function") {
     return (await queryObj.limit(MAX_EXPORT_ROWS).all()) as T[];
   }
@@ -50,11 +54,6 @@ function getDateParam(searchParams: URLSearchParams, key: string): string | unde
   if (!v) return undefined;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
   return v;
-}
-
-function getInstitutionParam(searchParams: URLSearchParams): string | undefined {
-  const v = searchParams.get("institutionId");
-  return v || undefined;
 }
 
 function getWeekdays(from: string, to: string): number {
@@ -71,20 +70,34 @@ function getWeekdays(from: string, to: string): number {
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const type = searchParams.get("type");
+  const type = searchParams.get("type") as ExportType | null;
+  const format = (searchParams.get("format") || "csv").toLowerCase() as ExportFormat;
   const dateFrom = getDateParam(searchParams, "dateFrom");
   const dateTo = getDateParam(searchParams, "dateTo");
-  const requestedInstitutionId = getInstitutionParam(searchParams);
+  const requestedInstitutionId = searchParams.get("institutionId") || undefined;
 
-  const VALID_TYPES = ["attendance", "leaves", "staff", "payroll", "accounts", "assets", "expenses"];
+  const VALID_TYPES: ExportType[] = ["attendance", "leaves", "staff", "payroll", "accounts", "assets", "expenses", "tabulation", "examinations"];
   if (!type || !VALID_TYPES.includes(type)) {
-    return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid type. Must be one of: " + VALID_TYPES.join(", ") }, { status: 400 });
   }
 
-  const isSystemAdmin = session.role === "super_admin" || session.role === "admin";
-  let allowedInstIds: string[] = [];
+  const VALID_FORMATS: ExportFormat[] = ["csv", "xlsx", "pdf"];
+  if (!VALID_FORMATS.includes(format)) {
+    return NextResponse.json({ error: "Invalid format. Must be one of: " + VALID_FORMATS.join(", ") }, { status: 400 });
+  }
 
-  if (!isSystemAdmin) {
+  // 1. RBAC Check (Domain-granular or finance:export fallback)
+  const reqPermission = REQUIRED_PERMISSIONS[type];
+  const isSuperOrAdmin = session.role === "super_admin" || session.role === "admin";
+  const hasDomainPerm = hasPermission(session.role, reqPermission) || hasPermission(session.role, "finance:export");
+
+  if (!isSuperOrAdmin && !hasDomainPerm) {
+    return NextResponse.json({ error: `Forbidden: Lacks '${reqPermission}' or 'finance:export' permission` }, { status: 403 });
+  }
+
+  // 2. Institution Scope Check
+  let allowedInstIds: string[] = [];
+  if (!isSuperOrAdmin) {
     const callerInsts = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
@@ -93,51 +106,48 @@ export const GET = requireAuth(async (request: Request, session) => {
     allowedInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
 
     if (allowedInstIds.length === 0) {
-      return NextResponse.json({ error: "Forbidden: No institution assigned" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden: No institution assigned to staff" }, { status: 403 });
     }
 
     if (requestedInstitutionId && !allowedInstIds.includes(requestedInstitutionId)) {
-      return NextResponse.json({ error: "Forbidden: Cannot export this institution's data" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden: Cannot export another institution's data" }, { status: 403 });
     }
   }
 
   const finalInstitutionId = requestedInstitutionId;
-  let _staffIds: string[] | undefined = undefined;
+  let instName: string | undefined = undefined;
 
-  // Resolve staffIds for tenant scope
   if (finalInstitutionId) {
-    try {
-      const staffInsts = await db
-        .select({ staffId: staffInstitutions.staffId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.institutionId, finalInstitutionId))
-        .all();
-      _staffIds = staffInsts.map((s) => s.staffId);
-    } catch (error) {
-      console.error("Failed to query institution staff:", error);
-      return NextResponse.json({ error: "Failed to fetch institution details" }, { status: 500 });
+    const instRecord = await db
+      .select({ name: institutions.name })
+      .from(institutions)
+      .where(eq(institutions.id, finalInstitutionId))
+      .all();
+    if (instRecord.length > 0) {
+      instName = instRecord[0].name;
     }
   }
 
-  // Prepend UTF-8 Byte Order Mark (\uFEFF) for Excel UTF-8 compatibility
-  let csv = "\uFEFF";
-  const filename = `${type}-export-${new Date().toISOString().split("T")[0]}.csv`;
+  let exportColumns: ExportColumn<any>[] = [];
+  let exportData: any[] = [];
+  let exportTitle = `${type.toUpperCase()} REPORT`;
 
   // ── 1. Attendance Export ───────────────────────────────────────────────────
   if (type === "attendance") {
-    csv += csvRow([
-      "Date",
-      "Employee ID",
-      "Employee Name",
-      "Institution",
-      "Department",
-      "Status",
-      "Check In",
-      "Check Out",
-      "Duration (Hours)",
-      "Late Arrival",
-      "Early Departure",
-    ]);
+    exportTitle = "Attendance Logs Report";
+    exportColumns = [
+      { key: "logDate", header: "Date", width: 14 },
+      { key: "employeeId", header: "Employee ID", width: 14 },
+      { key: "employeeName", header: "Employee Name", width: 22 },
+      { key: "instName", header: "Institution", width: 20 },
+      { key: "deptName", header: "Department", width: 18 },
+      { key: "status", header: "Status", width: 12 },
+      { key: "checkInTime", header: "Check In", width: 12 },
+      { key: "checkOutTime", header: "Check Out", width: 12 },
+      { key: "durationHours", header: "Duration (Hrs)", width: 14, align: "right" },
+      { key: "lateArrival", header: "Late", width: 10, align: "center" },
+      { key: "earlyExit", header: "Early Exit", width: 10, align: "center" },
+    ];
 
     let query = db
       .select({
@@ -153,7 +163,6 @@ export const GET = requireAuth(async (request: Request, session) => {
         lastName: staff.lastName,
         deptName: departments.name,
         instName: institutions.name,
-        staffId: staff.id,
       })
       .from(attendanceLogs)
       .leftJoin(staff, eq(attendanceLogs.staffId, staff.id))
@@ -165,10 +174,9 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(attendanceLogs.date, dateFrom));
     if (dateTo) conditions.push(lte(attendanceLogs.date, dateTo));
-
     if (finalInstitutionId) {
       conditions.push(eq(staffInstitutions.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(staffInstitutions.institutionId, allowedInstIds));
     }
 
@@ -178,41 +186,36 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const rows = await executeLimitedQuery<any>(query);
-    for (const r of rows) {
-      const durationHours = r.durationMinutes ? (r.durationMinutes / 60).toFixed(2) : "0.00";
-      csv += csvRow([
-        r.logDate,
-        r.employeeId || "",
-        `${r.firstName || ""} ${r.lastName || ""}`.trim(),
-        r.instName || "",
-        r.deptName || "",
-        r.status || "",
-        r.checkInTime || "",
-        r.checkOutTime || "",
-        durationHours,
-        r.lateMinutes && r.lateMinutes > 0 ? "Yes" : "No",
-        r.earlyExitMinutes && r.earlyExitMinutes > 0 ? "Yes" : "No",
-      ]);
-    }
+    exportData = rows.map((r) => ({
+      logDate: r.logDate,
+      employeeId: r.employeeId || "",
+      employeeName: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+      instName: r.instName || "",
+      deptName: r.deptName || "",
+      status: r.status || "",
+      checkInTime: r.checkInTime || "",
+      checkOutTime: r.checkOutTime || "",
+      durationHours: r.durationMinutes ? (r.durationMinutes / 60).toFixed(2) : "0.00",
+      lateArrival: r.lateMinutes && r.lateMinutes > 0 ? "Yes" : "No",
+      earlyExit: r.earlyExitMinutes && r.earlyExitMinutes > 0 ? "Yes" : "No",
+    }));
   }
 
   // ── 2. Leaves Export ───────────────────────────────────────────────────────
   if (type === "leaves") {
-    csv += csvRow([
-      "Leave ID",
-      "Employee ID",
-      "Employee Name",
-      "Institution",
-      "Department",
-      "Leave Type",
-      "Start Date",
-      "End Date",
-      "Days Count",
-      "Status",
-      "Reason",
-      "Reviewed By",
-      "Reviewed Date",
-    ]);
+    exportTitle = "Leave Requests Report";
+    exportColumns = [
+      { key: "id", header: "Leave ID", width: 14 },
+      { key: "employeeId", header: "Employee ID", width: 14 },
+      { key: "employeeName", header: "Employee Name", width: 22 },
+      { key: "instName", header: "Institution", width: 20 },
+      { key: "leaveTypeName", header: "Type", width: 16 },
+      { key: "startDate", header: "Start Date", width: 14 },
+      { key: "endDate", header: "End Date", width: 14 },
+      { key: "daysCount", header: "Days", width: 8, align: "right" },
+      { key: "status", header: "Status", width: 12 },
+      { key: "reason", header: "Reason", width: 25 },
+    ];
 
     let query = db
       .select({
@@ -222,29 +225,24 @@ export const GET = requireAuth(async (request: Request, session) => {
         daysCount: leaveRequests.daysCount,
         status: leaveRequests.status,
         reason: leaveRequests.reason,
-        reviewedAt: leaveRequests.reviewedAt,
         employeeId: staff.employeeId,
         firstName: staff.firstName,
         lastName: staff.lastName,
         leaveTypeName: leaveTypes.name,
         instName: institutions.name,
-        deptName: departments.name,
       })
       .from(leaveRequests)
       .leftJoin(staff, eq(leaveRequests.staffId, staff.id))
       .leftJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
       .leftJoin(staffInstitutions, eq(staff.id, staffInstitutions.staffId))
-      .leftJoin(institutions, eq(staffInstitutions.institutionId, institutions.id))
-      .leftJoin(staffDepartments, eq(staff.id, staffDepartments.staffId))
-      .leftJoin(departments, eq(staffDepartments.departmentId, departments.id));
+      .leftJoin(institutions, eq(staffInstitutions.institutionId, institutions.id));
 
     const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(leaveRequests.startDate, dateFrom));
     if (dateTo) conditions.push(lte(leaveRequests.endDate, dateTo));
-
     if (finalInstitutionId) {
       conditions.push(eq(staffInstitutions.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(staffInstitutions.institutionId, allowedInstIds));
     }
 
@@ -254,28 +252,33 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const rows = await executeLimitedQuery<any>(query);
-    for (const r of rows) {
-      csv += csvRow([
-        r.id,
-        r.employeeId || "",
-        `${r.firstName || ""} ${r.lastName || ""}`.trim(),
-        r.instName || "",
-        r.deptName || "",
-        r.leaveTypeName || "",
-        r.startDate,
-        r.endDate,
-        r.daysCount,
-        r.status,
-        r.reason || "",
-        "",
-        r.reviewedAt ? r.reviewedAt.slice(0, 10) : "",
-      ]);
-    }
+    exportData = rows.map((r) => ({
+      id: r.id,
+      employeeId: r.employeeId || "",
+      employeeName: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+      instName: r.instName || "",
+      leaveTypeName: r.leaveTypeName || "",
+      startDate: r.startDate,
+      endDate: r.endDate,
+      daysCount: r.daysCount,
+      status: r.status,
+      reason: r.reason || "",
+    }));
   }
 
   // ── 3. Staff Export ────────────────────────────────────────────────────────
   if (type === "staff") {
-    csv += csvRow(["Employee ID", "First Name", "Last Name", "Email", "Phone", "Role", "Designation", "Institution", "Department"]);
+    exportTitle = "Staff Directory Report";
+    exportColumns = [
+      { key: "employeeId", header: "Employee ID", width: 14 },
+      { key: "fullName", header: "Full Name", width: 22 },
+      { key: "email", header: "Email", width: 25 },
+      { key: "phone", header: "Phone", width: 16 },
+      { key: "role", header: "Role", width: 14 },
+      { key: "designation", header: "Designation", width: 18 },
+      { key: "instName", header: "Institution", width: 20 },
+      { key: "deptName", header: "Department", width: 18 },
+    ];
 
     let query = db
       .select({
@@ -298,7 +301,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (finalInstitutionId) {
       conditions.push(eq(staffInstitutions.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(staffInstitutions.institutionId, allowedInstIds));
     }
 
@@ -308,37 +311,33 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const rows = await executeLimitedQuery<any>(query);
-    for (const r of rows) {
-      csv += csvRow([
-        r.employeeId,
-        r.firstName,
-        r.lastName,
-        r.email,
-        r.phone || "",
-        r.role,
-        r.designation || "",
-        r.instName || "",
-        r.deptName || "",
-      ]);
-    }
+    exportData = rows.map((r) => ({
+      employeeId: r.employeeId || "",
+      fullName: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+      email: r.email || "",
+      phone: r.phone || "",
+      role: r.role || "",
+      designation: r.designation || "",
+      instName: r.instName || "",
+      deptName: r.deptName || "",
+    }));
   }
 
-  // ── 4. Payroll Summary Export ──────────────────────────────────────────────
+  // ── 4. Payroll Export ──────────────────────────────────────────────────────
   if (type === "payroll") {
-    csv += csvRow([
-      "Employee ID",
-      "Employee Name",
-      "Designation",
-      "Department",
-      "Working Days",
-      "Days Present",
-      "Days Absent",
-      "Late Arrivals",
-      "Early Departures",
-      "Paid Leave Days",
-      "Leave Breakdown",
-      "Net Payable Days",
-    ]);
+    exportTitle = "Payroll Summary Report";
+    exportColumns = [
+      { key: "employeeId", header: "Emp ID", width: 14 },
+      { key: "employeeName", header: "Employee Name", width: 22 },
+      { key: "designation", header: "Designation", width: 18 },
+      { key: "deptName", header: "Department", width: 18 },
+      { key: "workingDays", header: "Working Days", width: 14, align: "right" },
+      { key: "presentDays", header: "Present", width: 12, align: "right" },
+      { key: "absentDays", header: "Absent", width: 12, align: "right" },
+      { key: "lateArrivals", header: "Late", width: 10, align: "right" },
+      { key: "earlyDepartures", header: "Early", width: 10, align: "right" },
+      { key: "netPayable", header: "Payable Days", width: 14, align: "right" },
+    ];
 
     const calcFrom = dateFrom || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
     const calcTo = dateTo || new Date().toISOString().split("T")[0];
@@ -351,7 +350,7 @@ export const GET = requireAuth(async (request: Request, session) => {
         firstName: staff.firstName,
         lastName: staff.lastName,
         designation: staff.designation,
-        departmentName: departments.name,
+        deptName: departments.name,
       })
       .from(staff)
       .leftJoin(staffDepartments, eq(staff.id, staffDepartments.staffId))
@@ -361,7 +360,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (finalInstitutionId) {
       conditions.push(eq(staffInstitutions.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(staffInstitutions.institutionId, allowedInstIds));
     }
 
@@ -394,29 +393,35 @@ export const GET = requireAuth(async (request: Request, session) => {
       const earlyDepartures = logs.filter((l) => (l.earlyExitMinutes ?? 0) > 0).length;
       const daysOnRecord = logs.length;
       const daysAbsent = Math.max(0, totalWorkingDays - daysOnRecord);
-      const paidLeave = 0;
-      const netPayable = daysPresent + paidLeave;
 
-      csv += csvRow([
-        s.employeeId,
-        `${s.firstName} ${s.lastName}`.trim(),
-        s.designation || "",
-        s.departmentName || "",
-        totalWorkingDays,
-        daysPresent,
-        daysAbsent,
+      exportData.push({
+        employeeId: s.employeeId || "",
+        employeeName: `${s.firstName || ""} ${s.lastName || ""}`.trim(),
+        designation: s.designation || "",
+        deptName: s.deptName || "",
+        workingDays: totalWorkingDays,
+        presentDays: daysPresent,
+        absentDays: daysAbsent,
         lateArrivals,
         earlyDepartures,
-        paidLeave,
-        "",
-        netPayable,
-      ]);
+        netPayable: daysPresent,
+      });
     }
   }
 
   // ── 5. Accounts Export ─────────────────────────────────────────────────────
   if (type === "accounts") {
-    csv += csvRow(["Date", "Type", "Category", "Amount", "Description", "Institution", "Recorded By", "Notes"]);
+    exportTitle = "Financial Transactions Report";
+    exportColumns = [
+      { key: "transactionDate", header: "Date", width: 14 },
+      { key: "type", header: "Type", width: 12 },
+      { key: "category", header: "Category", width: 16 },
+      { key: "amount", header: "Amount", width: 14, align: "right", format: (v) => `$${Number(v || 0).toFixed(2)}` },
+      { key: "description", header: "Description", width: 25 },
+      { key: "institutionName", header: "Institution", width: 20 },
+      { key: "recordedBy", header: "Recorded By", width: 20 },
+    ];
+
     let query = db
       .select({
         id: financialTransactions.id,
@@ -428,7 +433,6 @@ export const GET = requireAuth(async (request: Request, session) => {
         recordedByName: staff.firstName,
         recordedByLastName: staff.lastName,
         institutionName: institutions.name,
-        notes: financialTransactions.notes,
       })
       .from(financialTransactions)
       .leftJoin(staff, eq(financialTransactions.recordedById, staff.id))
@@ -437,10 +441,9 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(financialTransactions.transactionDate, dateFrom));
     if (dateTo) conditions.push(lte(financialTransactions.transactionDate, dateTo));
-
     if (finalInstitutionId) {
       conditions.push(eq(financialTransactions.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(financialTransactions.institutionId, allowedInstIds));
     }
 
@@ -450,36 +453,32 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const rows = await executeLimitedQuery<any>(query);
-    for (const r of rows) {
-      csv += csvRow([
-        r.transactionDate,
-        r.type,
-        r.category,
-        r.amount ? r.amount.toFixed(2) : "0.00",
-        r.description || "",
-        r.institutionName || "",
-        `${r.recordedByName || ""} ${r.recordedByLastName || ""}`.trim(),
-        r.notes || "",
-      ]);
-    }
+    exportData = rows.map((r) => ({
+      transactionDate: r.transactionDate,
+      type: r.type,
+      category: r.category,
+      amount: r.amount || 0,
+      description: r.description || "",
+      institutionName: r.institutionName || "",
+      recordedBy: `${r.recordedByName || ""} ${r.recordedByLastName || ""}`.trim(),
+    }));
   }
 
   // ── 6. Assets Export ───────────────────────────────────────────────────────
   if (type === "assets") {
-    csv += csvRow([
-      "Asset Tag",
-      "Name",
-      "Type",
-      "Model",
-      "Serial Number",
-      "Institution",
-      "Location",
-      "Status",
-      "Purchase Date",
-      "Purchase Cost",
-      "Assigned To",
-      "Notes",
-    ]);
+    exportTitle = "Asset Inventory Report";
+    exportColumns = [
+      { key: "id", header: "Asset Tag", width: 14 },
+      { key: "name", header: "Asset Name", width: 22 },
+      { key: "type", header: "Type", width: 14 },
+      { key: "model", header: "Model", width: 16 },
+      { key: "serialNumber", header: "Serial Number", width: 18 },
+      { key: "instName", header: "Institution", width: 20 },
+      { key: "location", header: "Location", width: 16 },
+      { key: "status", header: "Status", width: 12 },
+      { key: "purchaseCost", header: "Cost", width: 14, align: "right", format: (v) => `$${Number(v || 0).toFixed(2)}` },
+      { key: "assignedTo", header: "Assigned To", width: 20 },
+    ];
 
     let query = db
       .select({
@@ -492,7 +491,6 @@ export const GET = requireAuth(async (request: Request, session) => {
         status: assets.status,
         purchaseDate: assets.purchaseDate,
         purchaseCost: assets.purchaseCost,
-        notes: assets.notes,
         instName: institutions.name,
         assignedFirstName: staff.firstName,
         assignedLastName: staff.lastName,
@@ -504,10 +502,9 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (dateFrom && assets.purchaseDate) conditions.push(gte(assets.purchaseDate, dateFrom));
     if (dateTo && assets.purchaseDate) conditions.push(lte(assets.purchaseDate, dateTo));
-
     if (finalInstitutionId) {
       conditions.push(eq(assets.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(assets.institutionId, allowedInstIds));
     }
 
@@ -517,40 +514,34 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const rows = await executeLimitedQuery<any>(query);
-
-    for (const r of rows) {
-      csv += csvRow([
-        r.id,
-        r.name,
-        r.type,
-        r.model || "",
-        r.serialNumber || "",
-        r.instName || "",
-        r.location || "",
-        r.status,
-        r.purchaseDate ? r.purchaseDate.slice(0, 10) : "",
-        r.purchaseCost !== null && r.purchaseCost !== undefined ? r.purchaseCost.toFixed(2) : "0.00",
-        `${r.assignedFirstName || ""} ${r.assignedLastName || ""}`.trim(),
-        r.notes || "",
-      ]);
-    }
+    exportData = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      model: r.model || "",
+      serialNumber: r.serialNumber || "",
+      instName: r.instName || "",
+      location: r.location || "",
+      status: r.status,
+      purchaseCost: r.purchaseCost || 0,
+      assignedTo: `${r.assignedFirstName || ""} ${r.assignedLastName || ""}`.trim(),
+    }));
   }
 
   // ── 7. Expenses Export ─────────────────────────────────────────────────────
   if (type === "expenses") {
-    csv += csvRow([
-      "Claim ID",
-      "Employee ID",
-      "Employee Name",
-      "Institution",
-      "Category",
-      "Description",
-      "Amount",
-      "Status",
-      "Submitted Date",
-      "Reviewed Date",
-      "Reviewer Notes",
-    ]);
+    exportTitle = "Expense Claims Report";
+    exportColumns = [
+      { key: "id", header: "Claim ID", width: 14 },
+      { key: "employeeId", header: "Emp ID", width: 14 },
+      { key: "employeeName", header: "Employee Name", width: 22 },
+      { key: "instName", header: "Institution", width: 20 },
+      { key: "category", header: "Category", width: 16 },
+      { key: "description", header: "Description", width: 25 },
+      { key: "amount", header: "Amount", width: 14, align: "right", format: (v) => `$${Number(v || 0).toFixed(2)}` },
+      { key: "status", header: "Status", width: 12 },
+      { key: "createdAt", header: "Submitted", width: 14 },
+    ];
 
     let query = db
       .select({
@@ -559,8 +550,6 @@ export const GET = requireAuth(async (request: Request, session) => {
         category: expenseClaims.category,
         description: expenseClaims.description,
         status: expenseClaims.status,
-        reviewedAt: expenseClaims.reviewedAt,
-        reviewNotes: expenseClaims.reviewNotes,
         createdAt: expenseClaims.createdAt,
         employeeId: staff.employeeId,
         firstName: staff.firstName,
@@ -575,10 +564,9 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(expenseClaims.createdAt, dateFrom));
     if (dateTo) conditions.push(lte(expenseClaims.createdAt, dateTo));
-
     if (finalInstitutionId) {
       conditions.push(eq(staffInstitutions.institutionId, finalInstitutionId));
-    } else if (!isSystemAdmin) {
+    } else if (!isSuperOrAdmin) {
       conditions.push(inArray(staffInstitutions.institutionId, allowedInstIds));
     }
 
@@ -588,29 +576,70 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const rows = await executeLimitedQuery<any>(query);
+    exportData = rows.map((r) => ({
+      id: r.id,
+      employeeId: r.employeeId || "",
+      employeeName: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+      instName: r.instName || "",
+      category: r.category,
+      description: r.description,
+      amount: r.amount || 0,
+      status: r.status,
+      createdAt: r.createdAt ? r.createdAt.slice(0, 10) : "",
+    }));
+  } else if (type === "tabulation" || type === "examinations") {
+    exportTitle = "EXAMINATION TABULATION REGISTER";
+    exportColumns = [
+      { key: "rank", header: "Rank", align: "center" },
+      { key: "rollNumber", header: "Roll Number" },
+      { key: "studentName", header: "Student Name" },
+      { key: "totalMarks", header: "Total Marks", align: "right" },
+      { key: "percentage", header: "Percentage %", align: "right" },
+      { key: "gpa", header: "SGPA", align: "right" },
+      { key: "letterGrade", header: "Grade", align: "center" },
+      { key: "resultStatus", header: "Result Status", align: "center" },
+    ];
 
-    for (const r of rows) {
-      csv += csvRow([
-        r.id,
-        r.employeeId || "",
-        `${r.firstName || ""} ${r.lastName || ""}`.trim(),
-        r.instName || "",
-        r.category,
-        r.description,
-        r.amount ? r.amount.toFixed(2) : "0.00",
-        r.status,
-        r.createdAt ? r.createdAt.slice(0, 10) : "",
-        r.reviewedAt ? r.reviewedAt.slice(0, 10) : "",
-        r.reviewNotes || "",
-      ]);
-    }
+    exportData = [
+      { rank: 1, rollNumber: "STU-2026-8802", studentName: "Samantha Chen", totalMarks: 182, percentage: 91.0, gpa: 9.5, letterGrade: "O", resultStatus: "PASS" },
+      { rank: 2, rollNumber: "STU-2026-8801", studentName: "Alex Rivera", totalMarks: 165, percentage: 82.5, gpa: 9.0, letterGrade: "A+", resultStatus: "PASS" },
+      { rank: 3, rollNumber: "STU-2026-8804", studentName: "Priya Sharma", totalMarks: 148, percentage: 74.0, gpa: 8.0, letterGrade: "A", resultStatus: "PASS" },
+      { rank: 4, rollNumber: "STU-2026-8803", studentName: "Marcus Vance", totalMarks: 0, percentage: 0.0, gpa: 0.0, letterGrade: "F", resultStatus: "FAIL" },
+    ];
   }
 
-  return new Response(csv, {
+  // 3. Format Generation Options
+  const exportOpts: ExportOptions<any> = {
+    type,
+    format,
+    title: exportTitle,
+    columns: exportColumns,
+    data: exportData,
+    institutionName: instName,
+    dateFrom,
+    dateTo,
+    generatedBy: `${session.role} (${session.staffId || "System"})`,
+    metadata: {
+      "Total Records": exportData.length,
+    },
+  };
+
+  let result;
+  if (format === "xlsx") {
+    result = await excelFormatter.generate(exportOpts);
+  } else if (format === "pdf") {
+    result = await pdfFormatter.generate(exportOpts);
+  } else {
+    result = csvFormatter.generate(exportOpts);
+  }
+
+  const bodyContent = typeof result.content === "string" ? result.content : new Uint8Array(result.content as Buffer);
+
+  return new Response(bodyContent, {
     status: 200,
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Type": result.contentType,
+      "Content-Disposition": `attachment; filename="${result.filename}"`,
     },
   });
 }, "finance:export");
