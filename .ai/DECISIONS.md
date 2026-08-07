@@ -9,3 +9,6 @@ This register tracks all critical Architecture Decision Records (ADRs) implement
 | **ADR-003** | 2026-07-14 | **Accepted** | Drizzle ORM selection over Prisma | [adr/ADR-003.md](file:///d:/ThaibaHive/.ai/adr/ADR-003.md) |
 | **ADR-004** | 2026-07-14 | **Accepted** | Zustand for shared client state | [adr/ADR-004.md](file:///d:/ThaibaHive/.ai/adr/ADR-004.md) |
 | **ADR-005** | 2026-07-18 | **Accepted** | Jetpack Glance widgets Room DB caching | [adr/ADR-005.md](file:///d:/ThaibaHive/.ai/adr/ADR-005.md) |
+| **ADR-015** | 2026-08-07 | **Accepted** | Administrative Job Management API | [adr/ADR-015.md](file:///d:/ThaibaHive/.ai/adr/ADR-015.md) |
+| **ADR-016** | 2026-08-07 | **Accepted** | Swarm Queue Telemetry & Observability | [adr/ADR-016.md](file:///d:/ThaibaHive/.ai/adr/ADR-016.md) |
+

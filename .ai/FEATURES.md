@@ -30,5 +30,44 @@ Canonical index of the features available in ThaibaHive.
 | **Staff Directory** | `/app/(shell)/staff/` | **Complete** | Drizzle schemas | Core |
 | **Bookings & Calendar** | `/app/(shell)/bookings/` | **Complete** | Drizzle checks | Operations|
 | **Android Widgets** | `thaibahive_mobile_app/...` | **Planned** | Jetpack Glance, Room | Mobile |
-| **Media Library Pipeline** | `/app/(shell)/media-library` | **Planned** | FFmpeg, chunks upload | Media |
-| **Finance Module** | `/app/(shell)/finance/` | **Planned** | Drizzle postgres | Finance |
+| **Media Library Pipeline** | `/app/(shell)/media-library` | **Complete** | FFmpeg, chunks upload | Media |
+| **Multi-Format Export Engine** | `/api/export` & `/src/lib/export/` | **Complete** | ExcelJS, PDFKit | System |
+| **Finance Module** | `/app/(shell)/finance/` | **Complete** | Workflow Engine, Export Engine | Finance |
+| **Examination Management System** | `/app/(shell)/examinations/` | **Complete** | Grade Engine, Fee Clearance Lock, Export Engine | Academics |
+| **Mobile Companion App Integration** | `thaibahive_mobile_app/` | **Complete** | Riverpod, Hive, FCM, Nonce Handoff | Mobile |
+| **Services Module & Campus Operations** | `/app/(shell)/vehicles`, `/canteen`, `/visitors` | **Complete** | Fleet, Cashless Meal Passes, HMAC QR Visitor Passes | Operations |
+| **Admin Module Performance Reviews & MVP Staging** | `/app/(shell)/admin/performance` | **Complete** | Competency Frameworks, 360 Feedback, HR Analytics, Staging Suites | HR / Admin |
+| **Mobile Release Packaging Pipeline** | `.github/workflows/mobile-release.yml` | **Complete** | Flutter 3.24, Keystore, ExportOptions | Mobile/Ops |
+| **Real-Time Push Notification Engine** | `/api/mobile/push/register` & `push-notification-service.ts` | **Complete** | FCM, APNs, SSE Event Bus | Infrastructure |
+| **Dart Background Isolate Offline Sync** | `background_sync_isolate.dart` & `/api/mobile/sync/background-status` | **Complete** | Hive, WorkManager, BackgroundFetch | Mobile |
+| **WCAG 2.1 AA Accessibility Standards** | `src/app/(shell)/` & `accessibility-wcag.test.ts` | **Complete** | Radix UI, ARIA Landmarks, jest-axe | Web / UI |
+| **Regional Data Lakehouse ETL Engine** | `/api/admin/lakehouse/` & `src/lib/lakehouse/` | **Complete** | ParquetWriter, Apache Arrow, EtlEngine | Data/Infra |
+| **SAML 2.0 & OIDC Identity Federation** | `/api/auth/saml/` & `/api/auth/oidc/` | **Complete** | SamlService, OidcService, FederatedUserMapper | Auth/Sec |
+| **Automated DB Index Auto-Tuning Engine** | `/api/admin/database/index-tuning/` | **Complete** | IndexAnalyzer, IndexAutoTuner | Database |
+| **Enterprise MDM Deployment Certification** | `/api/mobile/mdm/` & `mdm_config_service.dart` | **Complete** | MdmConfigGenerator, Intune, Apple MDM | Enterprise |
+| **Multi-Region Data Mesh (CRDT)** | `src/lib/mesh/` & `/api/admin/mesh/` | **Complete** | CrdtResolver, VectorClockManager, SyncQueue | Infrastructure |
+| **Predictive Learning Analytics** | `src/lib/analytics/` & `/api/analytics/` | **Complete** | FeatureExtractor, PredictionEngine, LearningPathRecommender | Academics |
+| **Hybrid WebRTC/HLS Live Streaming** | `src/lib/streaming/` & `/api/streaming/` | **Complete** | WebRtcSignaler, MediaSessionManager, HlsSegmenter | Operations |
+| **PostgreSQL Cluster Health & Failover** | `src/lib/database/` & `/api/admin/database/` | **Complete** | ClusterMonitor, FailoverManager, LiveMigrator | Database |
+| **Global Edge Caching & Acceleration** | `src/lib/edge/` & `src/lib/cache/` | **Complete** | EdgeCache, InvalidationPipeline, MediaAccelerator | CDN/Ops |
+| **Federated GraphQL API Gateway** | `src/lib/federation/` & `/api/graphql/federated` | **Complete** | GatewayOrchestrator, SchemaRegistryManager, QueryPlanner | Gateway |
+| **Database Geo-Aware Routing & Pooling** | `src/lib/database/edge-router.ts` & `edge-pool.ts` | **Complete** | EdgeRouter, EdgeConnectionPool | Database |
+| **Edge Performance Observability** | `src/lib/monitoring/` & `/api/admin/edge/metrics` | **Complete** | TelemetryLogger, CacheHitRateCompiler, UsageTracker | DevOps |
+| **Intelligent Agent Orchestration Framework** | `src/lib/agents/core/` | **Complete** | AgentRegistry, AgentMessageBus, AgentScheduler, AgentStateStore, ConsensusCoordinator | Infrastructure |
+| **Self-Healing Infrastructure Engine** | `src/lib/agents/healing/` | **Complete** | DatabaseHealer, EdgeHealer, PoolHealer, StreamHealer, ApprovalGateway | Database/Infra |
+| **Predictive Model Auto-Tuning Pipeline** | `src/lib/ml/` | **Complete** | DriftDetector, RetrainingPipeline, ABTestFramework, ModelPromoter | ML/Data |
+| **Conversational Voice Copilot Extensions** | `src/lib/voice/` | **Complete** | VoiceIntentMapper, DiagnosticsHandler, VoiceFeedbackLoop | Voice/UI |
+| **Swarm Telemetry Observability & SSE** | `src/lib/observability/` & `/api/admin/swarm/` | **Complete** | EventBus, SSEManager, MetricsAggregator | DevOps / Observability |
+| **Automated Remediation Engine & Verification** | `src/lib/remediation/` & `/api/admin/remediation/` | **Complete** | RemediationEngine, HealerConnector, RollbackHandler, ApprovalGateway | Infra / Security |
+| **Visual Playback & Telemetry Compression** | `/src/components/swarm/` & `/api/admin/swarm/` | **Complete** | PlaybackController, PlaybackEventList, usePlaybackStore, CompressionStream | Observability / Performance |
+| **Mobile Network Sync Diagnostics & Compression** | `thaibahive_mobile_app/lib/core/sync/` & `/api/mobile/v1/sync/push` | **Complete** | NetworkDiagnosticsCollector, GZipCodec, EventBus, AnomalyDetector, MobileSyncDashboard | Mobile / Observability |
+| **Mobile Network-Aware Bandwidth Auto-Tuning** | `thaibahive_mobile_app/lib/core/sync/` & `/api/admin/sync-policies/` | **Complete** | Drizzle, Hive, Riverpod, CircuitBreaker | Mobile / Performance |
+| **Role-Based Intent-Driven Workspaces** | `/app/(shell)/workspace/` & `workspace_provider.dart` | **Complete** | Drizzle, Hive, Riverpod, EventSource, base64 redirection | Core / Mobile |
+| **Workspace Analytics & BI Engine** | `/app/(shell)/workspace/[role]/analytics` | **Complete** | Drizzle, SQLite/PG, PDFKit, ExcelJS, Riverpod, Hive | Core / Mobile |
+| **Workspace Queue & Compliance Auditing** | `src/lib/services/report-queue.ts` & `/api/workspaces/preferences` | **Complete** | Drizzle, SQLite/PG, Optimistic Locking, PreferenceAuditService | Core |
+| **Scheduled Job Management Console** | `/app/(shell)/admin/scheduled-jobs/` | **Complete** | Drizzle, Base UI, Zod | Core / Admin |
+| **Queue Performance Telemetry** | `/components/swarm/` & `/api/admin/swarm/` | **Complete** | EventBus, SSEManager, Recharts | DevOps / Observability |
+| **Preference Audit Log Dashboard** | `/app/(shell)/admin/audit-logs/` | **Complete** | PreferenceAuditService, Drizzle | Security / Compliance |
+
+
+

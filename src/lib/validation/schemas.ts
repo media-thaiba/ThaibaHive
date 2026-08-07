@@ -1,6 +1,22 @@
 import { z } from "zod";
 
+export const paginationSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export type PaginationInput = z.infer<typeof paginationSchema>;
+
+export const pushTokenSchema = z.object({
+  token: z.string().min(1),
+  platform: z.enum(["android", "ios", "web"]).default("android"),
+  deviceModel: z.string().optional(),
+});
+
+export type PushTokenInput = z.infer<typeof pushTokenSchema>;
+
 export const staffCreateSchema = z.object({
+
   email: z.string().email(),
   employeeId: z.string().min(1),
   firstName: z.string().min(1),
@@ -351,3 +367,540 @@ export const systemUpdatePostSchema = z.object({
   releaseNotes: z.string().optional(),
   isForceUpdate: z.boolean().optional(),
 });
+
+export const globalSearchSchema = z.object({
+  q: z.string().min(1, "Search query is required"),
+  entityTypes: z.array(z.enum(["students", "staff", "tasks", "events", "announcements", "daily-reports", "purchase-requests", "help-desk-tickets", "recognition", "asset-inventory", "circulars", "bookings", "polls", "comments", "media-assets"])).optional().default(["students", "staff", "tasks", "events"]),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const studentSearchSchema = z.object({
+  query: z.string().min(1),
+  admissionNo: z.string().optional(),
+  classId: z.string().optional(),
+  name: z.string().optional(),
+  institutionId: z.string().optional(),
+});
+
+export const staffSearchSchema = z.object({
+  query: z.string().min(1),
+  email: z.string().email().optional(),
+  employeeId: z.string().optional(),
+  departmentId: z.string().optional(),
+  institutionId: z.string().optional(),
+  role: z.enum(["super_admin", "admin", "principal", "hod", "staff"]).optional(),
+});
+
+export const taskSearchSchema = z.object({
+  query: z.string().min(1),
+  status: z.enum(["todo", "in_progress", "completed"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  assignedToId: z.string().optional(),
+  departmentId: z.string().optional(),
+  assignedById: z.string().optional(),
+});
+
+export const eventSearchSchema = z.object({
+  query: z.string().min(1),
+  eventType: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  departmentId: z.string().optional(),
+  institutionId: z.string().optional(),
+});
+
+export const departmentUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  code: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  headUserId: z.string().optional().nullable(),
+  institutionId: z.string().optional().nullable(),
+});
+
+export const institutionUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  code: z.string().min(1).optional(),
+  type: z.enum(["campus", "college", "school"]).optional(),
+  address: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+});
+
+export const examCreateSchema = z.object({
+  title: z.string().min(1),
+  academicYear: z.string().min(1),
+  term: z.string().min(1),
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+  gradeScaleId: z.string().optional(),
+  institutionId: z.string().optional(),
+});
+
+export const examScheduleCreateSchema = z.object({
+  examId: z.string().min(1),
+  courseId: z.string().optional(),
+  subjectName: z.string().min(1),
+  examDate: z.string().min(1),
+  startTime: z.string().min(1),
+  endTime: z.string().min(1),
+  durationMinutes: z.number().int().positive().default(180),
+  maxMarks: z.number().positive().default(100),
+  passMarks: z.number().positive().default(40),
+  roomNumber: z.string().optional(),
+});
+
+export const hallTicketIssueSchema = z.object({
+  examId: z.string().min(1),
+  studentId: z.string().min(1),
+  overrideFeeLock: z.boolean().optional().default(false),
+  overrideReason: z.string().optional(),
+});
+
+export const markEntryBatchSchema = z.object({
+  examScheduleId: z.string().min(1),
+  doubleBlind: z.boolean().optional().default(false),
+  entries: z.array(z.object({
+    studentId: z.string().min(1),
+    marksObtained: z.number().min(0).nullable().optional(),
+    isAbsent: z.boolean().optional().default(false),
+    remarks: z.string().optional(),
+  })).min(1),
+});
+
+// ─── Services Module Validation Schemas (Sprint-006) ───
+
+export const vehicleBookingSchema = z.object({
+  vehicleId: z.string().min(1),
+  date: z.string().min(1),
+  startTime: z.string().min(1),
+  endTime: z.string().optional(),
+  purpose: z.string().min(1),
+  destination: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const canteenItemCreateSchema = z.object({
+  name: z.string().min(1),
+  category: z.enum(["breakfast", "lunch", "snacks", "beverages"]).default("snacks"),
+  price: z.number().positive(),
+  isAvailable: z.boolean().optional().default(true),
+  dietaryFlags: z.string().optional(),
+  imageUrl: z.string().optional(),
+});
+
+export const canteenMenuPublishSchema = z.object({
+  date: z.string().min(1),
+  mealType: z.enum(["breakfast", "lunch", "snacks"]).default("lunch"),
+  itemsJson: z.string().min(1),
+});
+
+export const canteenPassCreateSchema = z.object({
+  userId: z.string().min(1),
+  passCode: z.string().min(1),
+  balance: z.number().min(0).default(0.0),
+  dailyLimit: z.number().positive().optional(),
+});
+
+export const canteenRedeemSchema = z.object({
+  passCode: z.string().min(1),
+  items: z.array(z.object({
+    itemId: z.string().min(1),
+    quantity: z.number().int().positive(),
+    unitPrice: z.number().positive(),
+  })).min(1),
+  idempotencyKey: z.string().optional(),
+});
+
+export const visitorPreRegisterSchema = z.object({
+  visitorName: z.string().min(1),
+  visitorPhone: z.string().min(1),
+  visitorEmail: z.string().email().optional().or(z.literal("")),
+  idType: z.string().optional(),
+  idNumber: z.string().optional(),
+  hostStaffId: z.string().min(1),
+  purpose: z.string().min(1),
+  expectedDate: z.string().min(1),
+  expectedTimeWindow: z.string().optional(),
+});
+
+export const visitorPassVerifySchema = z.object({
+  qrPayload: z.string().min(1),
+  gatekeeperId: z.string().optional(),
+});
+
+// ─── Performance Reviews & HR Development Schemas (Sprint-007) ───
+
+export const performanceCycleCreateSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  cycleType: z.enum(["annual", "semi_annual", "quarterly"]).default("quarterly"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  selfAssessmentDeadline: z.string().min(1, "Self assessment deadline is required"),
+  managerReviewDeadline: z.string().min(1, "Manager review deadline is required"),
+});
+
+export const competencyFrameworkCreateSchema = z.object({
+  name: z.string().min(1, "Framework name is required"),
+  departmentId: z.string().optional(),
+  roleScope: z.string().optional().default("all"),
+  metricsJson: z.string().min(1, "Metrics JSON configuration is required"),
+});
+
+export const evaluationFormCreateSchema = z.object({
+  frameworkId: z.string().min(1, "Framework ID is required"),
+  title: z.string().min(1, "Form title is required"),
+  description: z.string().optional(),
+  metricsConfigJson: z.string().min(1, "Metrics config JSON is required"),
+  ratingScale: z.string().optional().default("1-5"),
+});
+
+export const selfAssessmentSubmitSchema = z.object({
+  ratings: z.array(
+    z.object({
+      metricId: z.string().min(1),
+      score: z.number().min(1).max(5),
+      comments: z.string().optional(),
+    })
+  ).min(1, "At least one metric rating is required"),
+  selfComments: z.string().optional(),
+});
+
+export const managerEvaluationSubmitSchema = z.object({
+  ratings: z.array(
+    z.object({
+      metricId: z.string().min(1),
+      score: z.number().min(1).max(5),
+      comments: z.string().optional(),
+    })
+  ).min(1, "At least one metric rating is required"),
+  managerComments: z.string().optional(),
+  recommendedGrade: z.enum(["A+", "A", "B", "C", "D"]).optional(),
+});
+
+export const performanceGoalCreateSchema = z.object({
+  reviewId: z.string().optional(),
+  title: z.string().min(1, "Goal title is required"),
+  description: z.string().optional(),
+  targetDate: z.string().min(1, "Target date is required"),
+  progressPercentage: z.number().int().min(0).max(100).optional().default(0),
+});
+
+export const feedbackRequestCreateSchema = z.object({
+  reviewId: z.string().min(1),
+  peerStaffId: z.string().min(1),
+  feedbackText: z.string().optional(),
+  rating: z.number().min(1).max(5).optional(),
+});
+
+// ─── AI Predictive Analytics & Sync Engine Validation Schemas (Sprint-008) ───
+
+export const aiPredictionRunSchema = z.object({
+  domain: z.enum(["attendance", "fees", "academic", "operational"]),
+  targetEntityId: z.string().optional(),
+  targetEntityType: z.enum(["student", "staff", "department"]).optional(),
+  timeframeDays: z.coerce.number().int().min(7).max(365).optional().default(30),
+});
+
+export const aiAnomalyUpdateSchema = z.object({
+  status: z.enum(["unresolved", "investigating", "resolved", "dismissed"]),
+  resolutionNotes: z.string().optional(),
+});
+
+export const deltaSyncQuerySchema = z.object({
+  sinceVersion: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce.number().int().min(1).max(1000).default(500),
+  deviceId: z.string().min(1, "deviceId is required"),
+});
+
+export const syncPushPayloadSchema = z.object({
+  deviceId: z.string().min(1, "deviceId is required"),
+  clientSyncVersion: z.number().int().min(0),
+  changes: z.array(
+    z.object({
+      entityType: z.string().min(1),
+      entityId: z.string().min(1),
+      action: z.enum(["CREATE", "UPDATE", "DELETE"]),
+      data: z.record(z.string(), z.any()),
+      clientTimestamp: z.string().optional(),
+    })
+  ),
+});
+
+// ─── Multi-Campus Regional Analytics & Enterprise Data Warehouse Validation Schemas (Sprint-009) ───
+
+export const regionalGroupCreateSchema = z.object({
+  name: z.string().min(1, "Group name is required"),
+  code: z.string().min(1, "Group code is required"),
+  description: z.string().optional(),
+  regionalDirectorId: z.string().optional(),
+});
+
+export const regionalClusterAssignSchema = z.object({
+  regionalGroupId: z.string().min(1, "regionalGroupId is required"),
+  institutionId: z.string().min(1, "institutionId is required"),
+  clusterCategory: z.enum(["standard", "tier_1", "tier_2", "rural", "urban"]).default("standard"),
+});
+
+export const regionalAccessGrantSchema = z.object({
+  userId: z.string().min(1, "userId is required"),
+  regionalGroupId: z.string().min(1, "regionalGroupId is required"),
+  role: z.enum(["regional_admin", "regional_auditor"]),
+  expiresAt: z.string().optional(),
+});
+
+export const regionalBenchmarkQuerySchema = z.object({
+  regionalGroupId: z.string().min(1, "regionalGroupId is required"),
+  period: z.enum(["30d", "60d", "90d", "term", "annual"]).default("30d"),
+  metricDomain: z.enum(["attendance", "fees", "academic", "ai_risk", "all"]).default("all"),
+});
+
+export const regionalHodRankingQuerySchema = z.object({
+  regionalGroupId: z.string().min(1, "regionalGroupId is required"),
+  discipline: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export const pushAlertDispatchSchema = z.object({
+  alertId: z.string().min(1, "alertId is required"),
+  severity: z.enum(["critical", "high", "medium", "info"]).default("critical"),
+  title: z.string().min(1, "title is required"),
+  body: z.string().min(1, "body is required"),
+  targetRegionalGroupId: z.string().optional(),
+  targetRoles: z.array(z.string()).optional(),
+});
+
+export const dwEtlTriggerSchema = z.object({
+  regionalGroupId: z.string().optional(),
+  runType: z.enum(["incremental", "full"]).default("incremental"),
+});
+
+// ─── Autonomous Enterprise Operations & Self-Healing Platform Engine Validation Schemas (Sprint-010) ───
+
+export const autonomousWorkflowSchema = z.object({
+  name: z.string().min(1, "Workflow name is required"),
+  triggerType: z.enum(["anomaly_detected", "threshold_breached", "schedule"]).default("anomaly_detected"),
+  status: z.enum(["active", "paused", "disabled"]).default("active"),
+});
+
+export const remediationTicketSchema = z.object({
+  anomalyId: z.string().optional(),
+  ruleId: z.string().optional(),
+  title: z.string().min(1, "Title is required"),
+  severity: z.enum(["critical", "high", "medium", "low"]).default("high"),
+  category: z.enum(["attendance", "finance", "academics", "operations"]).default("attendance"),
+  affectedStudentId: z.string().optional(),
+  assignedStaffId: z.string().optional(),
+  autoAssign: z.boolean().optional().default(true),
+});
+
+export const financialForecastQuerySchema = z.object({
+  campusId: z.string().optional(),
+  horizonDays: z.coerce.number().int().min(7).max(365).default(90),
+  confidenceLevel: z.coerce.number().min(0.5).max(0.99).default(0.95),
+});
+
+export const complianceReportSchema = z.object({
+  frameworkCode: z.string().min(1, "frameworkCode is required"),
+  institutionId: z.string().optional(),
+  format: z.enum(["pdf", "csv", "json"]).default("pdf"),
+});
+
+// ─── Autonomous Enterprise AI Agent Swarms & Cross-Regional AI Copilots Schemas (Sprint-011) ───
+
+export const copilotQuerySchema = z.object({
+  agentType: z.enum(["academic_advisor", "financial_controller", "compliance_auditor"]).default("academic_advisor"),
+  campusId: z.string().optional(),
+  query: z.string().min(1, "query is required"),
+  contextParams: z.record(z.string(), z.any()).optional(),
+});
+
+export const copilotFeedbackSchema = z.object({
+  recommendationId: z.string().min(1, "recommendationId is required"),
+  approvalStatus: z.enum(["APPROVED", "REJECTED", "MODIFIED"]),
+  feedbackNotes: z.string().optional(),
+});
+
+export const agentConfigSchema = z.object({
+  agentType: z.enum(["academic_advisor", "financial_controller", "compliance_auditor"]),
+  name: z.string().min(1, "Name is required"),
+  isActive: z.boolean().default(true),
+  capabilities: z.array(z.string()).optional(),
+});
+
+export const timeSeriesQuerySchema = z.object({
+  campusId: z.string().optional(),
+  granularity: z.enum(["monthly", "quarterly", "weekly"]).default("monthly"),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
+
+// ─── Sprint-012: Real-Time Event Streaming & Predictive Allocation Schemas ───
+
+export const realtimeStreamQuerySchema = z.object({
+  channels: z.array(z.string()).optional(),
+  connectionType: z.enum(["websocket", "sse"]).default("websocket"),
+  lastEventId: z.string().optional(),
+});
+
+export const triggerRuleSchema = z.object({
+  ruleName: z.string().min(1, "ruleName is required"),
+  eventType: z.enum(["absenteeism", "fee_default", "grade_drop", "compliance_warning"]),
+  conditions: z.record(z.string(), z.any()),
+  actionChannel: z.enum(["sms", "push", "email", "webhook"]),
+  recipientGroup: z.enum(["parents", "staff", "hods", "principals"]),
+  priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  isActive: z.boolean().default(true),
+});
+
+export const retentionPredictionQuerySchema = z.object({
+  campusId: z.string().optional(),
+  riskThreshold: z.coerce.number().min(0).max(1).default(0.7),
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+});
+
+export const budgetSimulationSchema = z.object({
+  scenarioName: z.string().min(1, "scenarioName is required"),
+  campusIds: z.array(z.string()).optional(),
+  staffCostDelta: z.number().default(0),
+  tuitionFeeDelta: z.number().default(0),
+  facilityBudgetDelta: z.number().default(0),
+  scholarshipAllocationDelta: z.number().default(0),
+});
+
+// ─── Sprint-013: Autonomous Federated Governance & Operational Resilience Schemas ───
+
+export const federatedPolicySchema = z.object({
+  title: z.string().min(1, "title is required"),
+  category: z.string().default("general"),
+  content: z.record(z.string(), z.any()),
+  status: z.enum(["DRAFT", "PROPAGATING", "ACTIVE", "CONFLICT", "SUPERSEDED"]).default("DRAFT"),
+  effectiveDate: z.string().optional(),
+});
+
+export const crossTenantRoleMappingSchema = z.object({
+  sourceTenantId: z.string().min(1, "sourceTenantId is required"),
+  targetTenantId: z.string().min(1, "targetTenantId is required"),
+  sourceRole: z.string().min(1, "sourceRole is required"),
+  targetRole: z.string().min(1, "targetRole is required"),
+  permissions: z.array(z.string()).min(1, "At least one permission is required"),
+  isActive: z.boolean().default(true),
+});
+
+export const circuitBreakerConfigSchema = z.object({
+  serviceName: z.string().min(1, "serviceName is required"),
+  maxFailureRate: z.number().min(0.01).max(1.0).default(0.2),
+  maxMedianLatencyMs: z.number().min(50).max(10000).default(2000),
+  cooldownPeriodSec: z.number().min(5).max(3600).default(60),
+});
+
+export const offlineSyncPayloadSchema = z.object({
+  deviceId: z.string().min(1, "deviceId is required"),
+  mutations: z.array(
+    z.object({
+      id: z.string().min(1),
+      mutationType: z.enum(["CREATE", "UPDATE", "DELETE"]),
+      entityType: z.string().min(1),
+      payload: z.record(z.string(), z.any()),
+      clientTimestamp: z.string().min(1),
+    })
+  ).min(1, "At least one mutation payload is required"),
+});
+
+export const voiceQuerySchema = z.object({
+  audioStreamBase64: z.string().optional(),
+  transcriptText: z.string().optional(),
+  audioFormat: z.enum(["pcm", "wav", "webm", "mp3"]).default("pcm"),
+  language: z.string().default("en-US"),
+});
+
+export const executiveAnalyticsQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  institutionId: z.string().optional(),
+});
+
+export type ExecutiveAnalyticsQuery = z.infer<typeof executiveAnalyticsQuerySchema>;
+
+export const syncPolicyUpdateSchema = z.object({
+  minBandwidthKbps: z.number().int().min(0).max(1000000).optional(),
+  maxLatencyMs: z.number().int().min(0).max(60000).optional(),
+  batchSize: z.number().int().min(1).max(200).optional(),
+  compressionLevel: z.number().int().min(1).max(9).optional(),
+  retryBackoffMs: z.number().int().min(1000).max(120000).optional(),
+});
+
+export type SyncPolicyUpdateInput = z.infer<typeof syncPolicyUpdateSchema>;
+
+// ─── Sprint-025: Workspace Preferences ───────────────────────────────────────
+
+export const workspacePreferenceUpdateSchema = z.object({
+  workspaceType: z.enum(["principal", "teacher", "cashier", "parent"]),
+  layoutConfig: z
+    .array(
+      z.object({
+        widgetId: z.string().min(1),
+        enabled: z.boolean(),
+        order: z.number().int().min(0),
+      })
+    )
+    .min(1)
+    .max(20),
+});
+
+export type WorkspacePreferenceUpdateInput = z.infer<typeof workspacePreferenceUpdateSchema>;
+
+export const reportScheduleCreateSchema = z.object({
+  title: z.string().min(1),
+  frequency: z.enum(["daily", "weekly", "monthly"]),
+  format: z.enum(["pdf", "excel"]),
+  recipients: z.array(z.string().email()).min(1),
+  isActive: z.boolean().default(true),
+});
+
+export type ReportScheduleCreateInput = z.infer<typeof reportScheduleCreateSchema>;
+
+// ─── Sprint-028: Scheduled Jobs and Telemetry ─────────────────────────────────
+
+export const jobFilterSchema = z.object({
+  status: z.enum(["queued", "processing", "success", "failed", "paused", "cancelled"]).optional(),
+  type: z.enum(["attendance", "finance", "academics"]).optional(),
+  institutionId: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export type JobFilterInput = z.infer<typeof jobFilterSchema>;
+
+export const jobTriggerSchema = z.object({
+  type: z.enum(["attendance", "finance", "academics"]),
+  format: z.enum(["pdf", "excel"]),
+  options: z.union([
+    z.record(z.string(), z.any()),
+    z.string().refine((val) => {
+      try {
+        JSON.parse(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }, { message: "Invalid JSON options string" })
+  ]),
+  institutionId: z.string().min(1),
+});
+
+export type JobTriggerInput = z.infer<typeof jobTriggerSchema>;
+
+export const jobUpdateSchema = z.object({
+  status: z.enum(["queued", "paused", "cancelled"]),
+});
+
+export type JobUpdateInput = z.infer<typeof jobUpdateSchema>;
+
+
+
+
+
+
+
+
