@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { verifySession } from "@/lib/auth";
-import { hasPermission, type SessionPayload } from "@/lib/auth";
+import { verifySession, type SessionPayload, hasPermission } from "../../../packages/auth";
 import type { StaffRole } from "@/types";
+
+
 
 type HandlerWithSession = (
   request: Request,
@@ -13,7 +14,7 @@ export function requireAuth(
   handler: HandlerWithSession,
   requiredPermission?: string
 ) {
-  return async (request: Request, context?: { params: Promise<Record<string, string>> }) => {
+  return async (request: Request, context?: any) => {
     const session = await verifySession();
 
     if (!session) {

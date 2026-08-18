@@ -19,8 +19,9 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 const AUTH_TOKEN = __ENV.AUTH_TOKEN || '';
 
 export default function biAnalyticsTest() {
+  const institutionId = __ENV.INSTITUTION_ID || 'inst_campus_main';
   const res = http.get(
-    `${BASE_URL}/api/analytics`,
+    `${BASE_URL}/api/analytics?type=usage&institutionId=${institutionId}`,
     {
       headers: {
         'Content-Type': 'application/json',

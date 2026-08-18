@@ -1,6 +1,20 @@
 import bcrypt from "bcryptjs";
 import { db } from "./index";
-import { institutions, departments, staff, staffDepartments, staffInstitutions, marketplaceApps, appDefaultRoles } from "./schema";
+import {
+  institutions,
+  departments,
+  staff,
+  staffDepartments,
+  staffInstitutions,
+  marketplaceApps,
+  appDefaultRoles,
+  exams,
+  examSchedules,
+  students,
+  markEntries,
+  gradeScales,
+  attendanceLocations,
+} from "./schema";
 import { eq } from "drizzle-orm";
 
 
@@ -155,6 +169,9 @@ async function seed() {
   }
   console.log(`Created ${managementStaff.length} management accounts.`);
 
+  await seedMarketplace();
+  await seedAcademic();
+
   console.log("\n--- Seed Complete ---");
   console.log("Management accounts (change these passwords immediately):");
   for (const s of managementStaff) {
@@ -218,11 +235,141 @@ async function seedMarketplace() {
   console.log(`Seeded ${allApps.length} marketplace apps (${instantApps.length} instant, ${restrictedApps.length} restricted).`);
 }
 
+async function seedAcademic() {
+  console.log("Seeding academic and examination data fixtures...");
+
+  const institutionId = "inst_campus_main";
+  const existingInst = await db.select().from(institutions).where(eq(institutions.id, institutionId)).get();
+  if (!existingInst) {
+    await db.insert(institutions).values({
+      id: institutionId,
+      name: "Test Campus Main",
+      code: "TEST-E2E",
+      isActive: true,
+    }).run();
+  }
+
+  const existingScale = await db.select().from(gradeScales).where(eq(gradeScales.id, "gs_default_100")).get();
+  if (!existingScale) {
+    await db.insert(gradeScales).values({
+      id: "gs_default_100",
+      institutionId,
+      name: "Standard 10-Point Scale",
+      scaleType: "10_point",
+      rulesJson: JSON.stringify([
+        { minPercentage: 90, maxPercentage: 100, grade: "O", gpa: 10.0, description: "Outstanding" },
+        { minPercentage: 80, maxPercentage: 89.99, grade: "A+", gpa: 9.0, description: "Excellent" },
+        { minPercentage: 70, maxPercentage: 79.99, grade: "A", gpa: 8.0, description: "Very Good" },
+        { minPercentage: 60, maxPercentage: 69.99, grade: "B+", gpa: 7.0, description: "Good" },
+        { minPercentage: 50, maxPercentage: 59.99, grade: "B", gpa: 6.0, description: "Above Average" },
+        { minPercentage: 40, maxPercentage: 49.99, grade: "C", gpa: 5.0, description: "Average / Pass" },
+        { minPercentage: 0, maxPercentage: 39.99, grade: "F", gpa: 0.0, description: "Fail" },
+      ]),
+      isDefault: true,
+    }).run();
+  }
+
+  const existingExam = await db.select().from(exams).where(eq(exams.id, "exam_100")).get();
+  if (!existingExam) {
+    await db.insert(exams).values({
+      id: "exam_100",
+      institutionId,
+      title: "Term Exam 100",
+      academicYear: "2025-2026",
+      term: "Term 1",
+      startDate: "2026-09-01",
+      endDate: "2026-09-15",
+      gradeScaleId: "gs_default_100",
+      status: "evaluation",
+    }).run();
+  }
+
+  const existingSched = await db.select().from(examSchedules).where(eq(examSchedules.id, "sched_100_math")).get();
+  if (!existingSched) {
+    await db.insert(examSchedules).values({
+      id: "sched_100_math",
+      examId: "exam_100",
+      subjectName: "Advanced Mathematics",
+      examDate: "2026-09-02",
+      startTime: "09:30",
+      endTime: "12:30",
+      durationMinutes: 180,
+      maxMarks: 100,
+      passMarks: 40,
+      roomNumber: "Hall 101",
+    }).run();
+  }
+
+  const existingStud = await db.select().from(students).where(eq(students.id, "stud_01")).get();
+  if (!existingStud) {
+    await db.insert(students).values({
+      id: "stud_01",
+      admissionNo: "ADM-1001",
+      studentId: "HT-1001",
+      firstName: "Test",
+      lastName: "Student",
+      gender: "male",
+      email: "test.student@thaibahive.local",
+      institutionId,
+      isActive: true,
+    }).run();
+  }
+
+  const existingMark = await db.select().from(markEntries).where(eq(markEntries.id, "mark_100_math")).get();
+  if (!existingMark) {
+    await db.insert(markEntries).values({
+      id: "mark_100_math",
+      examScheduleId: "sched_100_math",
+      studentId: "stud_01",
+      marksObtained: 85,
+      maxMarks: 100,
+      isAbsent: false,
+      status: "approved",
+    }).run();
+  }
+
+  const existingLoc = await db.select().from(attendanceLocations).where(eq(attendanceLocations.id, "loc_main_01")).get();
+  if (!existingLoc) {
+    await db.insert(attendanceLocations).values({
+      id: "loc_main_01",
+      institutionId,
+      name: "Main Campus Gate",
+      nfcTagId: "test-nfc-tag-id-99",
+      qrSecret: "test-qr-secret-99",
+      isActive: true,
+    }).run();
+  }
+
+  const existingAdmin = await db.select().from(staff).where(eq(staff.email, "admin@thaibahive.local")).get();
+  if (!existingAdmin) {
+    const adminPasswordHash = await bcrypt.hash("AdminPassword123!", 10);
+    await db.insert(staff).values({
+      id: "34c45253-9416-4512-9fb6-179e257e346b",
+      email: "admin@thaibahive.local",
+      employeeId: "EMP001",
+      firstName: "Admin",
+      lastName: "User",
+      designation: "System Administrator",
+      role: "super_admin",
+      passwordHash: adminPasswordHash,
+      nfcTagId: "test-nfc-tag-id-99",
+      isActive: true,
+    }).run();
+  }
+
+  console.log("Academic, examination (exam_100), and attendance fixtures seeded successfully.");
+}
+
 const arg = process.argv[2];
 
 if (arg === "marketplace") {
   seedMarketplace().catch((e) => {
     console.error("Marketplace seed failed:", e);
+    process.exit(1);
+  });
+} else if (arg === "academic") {
+  seedAcademic().catch((e) => {
+    console.error("Academic seed failed:", e);
     process.exit(1);
   });
 } else {

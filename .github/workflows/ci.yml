@@ -174,8 +174,28 @@ jobs:
           # Wait for server readiness
           npx wait-on -t 30000 http://localhost:3000/api/health || sleep 5
 
-          # Generate or use test admin JWT
-          TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJzdGFmZklkIjoiMzRjNDUyNTMtOTQxNi00NTEyLTlmYjYtMTc5ZTI1N2UzNDZiIiwiZW1haWwiOiJhZG1pbkB0aGFpYmFoaXZlLmxvY2FsIiwicm9sZSI6InN1cGVyX2FkbWluIiwiZW1wbG95ZWVJZCI6IkVNUDAwMSIsIm5hbWUiOiJUZXN0IEFkbWluIiwidG9rZW5WZXJzaW9uIjowLCJleHAiOjE3ODc2NDYxNDcsImlhdCI6MTc4NzA0MTM0N30.DufQEiRtbpjNxAzMiEFrMmtqhHmaByeVSShwqTicYm8"
+          # Generate valid JWT signed with current AUTH_JWT_SECRET
+          TOKEN=$(node -e "
+            const { SignJWT } = require('jose');
+            const { createClient } = require('@libsql/client');
+            const client = createClient({ url: process.env.DATABASE_URL || 'file:./dev.db' });
+            client.execute(\"SELECT id, email, role FROM staff WHERE role = 'super_admin' LIMIT 1\").then(res => {
+              const admin = (res && res.rows && res.rows[0]) ? res.rows[0] : { id: '34c45253-9416-4512-9fb6-179e257e346b', email: 'admin@thaibahive.local', role: 'super_admin' };
+              const secretKey = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder');
+              return new SignJWT({
+                staffId: admin.id,
+                email: admin.email,
+                role: admin.role,
+                employeeId: 'EMP001',
+                name: 'Test Admin',
+                tokenVersion: 0
+              })
+              .setProtectedHeader({ alg: 'HS256' })
+              .setIssuedAt()
+              .setExpirationTime('24h')
+              .sign(secretKey);
+            }).then(t => process.stdout.write(t));
+          ")
 
           mkdir -p k6-reports
 

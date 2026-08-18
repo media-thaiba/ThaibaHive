@@ -25,8 +25,8 @@ export default function attendanceCheckInTest() {
   const res = http.post(
     `${BASE_URL}/api/attendance/check-in`,
     JSON.stringify({
-      staffId: `staff-${Math.floor(Math.random() * 100)}`,
-      method: 'manual',
+      method: 'nfc',
+      nfcTagId: 'test-nfc-tag-id-99',
     }),
     {
       headers: {

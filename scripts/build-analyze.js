@@ -10,7 +10,7 @@ process.env.NODE_ENV = "production";
 
 try {
   // Execute next build with webpack for bundle analyzer compatibility
-  execSync("npx next build", {
+  execSync("npx next build --webpack", {
     stdio: "inherit",
     env: {
       ...process.env,

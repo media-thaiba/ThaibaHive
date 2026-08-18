@@ -31,7 +31,12 @@ export function checkRateLimit(
   identifier: string,
   config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
 ): { allowed: boolean; remaining: number; resetMs: number } {
-  if (process.env.NODE_ENV !== "production") {
+  if (
+    (process.env.NODE_ENV !== "production" && process.env.ENABLE_RATE_LIMIT !== "true") ||
+    process.env.PLAYWRIGHT_TEST === "true" ||
+    process.env.CI === "true" ||
+    process.env.NODE_ENV === "test"
+  ) {
     return { allowed: true, remaining: 999, resetMs: 0 };
   }
 
