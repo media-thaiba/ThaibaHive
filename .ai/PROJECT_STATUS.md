@@ -8,9 +8,9 @@
 
 ## Current Project Phase
 
-**Phase:** Enterprise Infrastructure Hardening & QA Automation (v3.15.0 Release)  
-**Status:** ✅ Completed & Production Certified (v3.15.0)  
-**Focus:** Cross-browser Playwright matrix automation (Chromium, Firefox, WebKit), deterministic E2E assertions with zero `waitForTimeout`, automated k6 CI load testing, pre-migration scrubbing guardrails, and bundle size regression budgets.
+**Phase:** Enterprise QA Automation, Performance Hardening & Observability (v3.15.0 Released)  
+**Status:** ✅ Production Certified & Released (v3.15.0)  
+**Focus:** Cross-browser Playwright matrix automation (Chromium, Firefox, WebKit), zero-sleep deterministic E2E assertions, dynamic k6 CI load testing, pre-migration data integrity guardrails, and bundle size regression budgets.
 
 ---
 
@@ -18,7 +18,7 @@
 
 **Sprint ID:** SPRINT-031  
 **Sprint Name:** Cross-Browser E2E Hardening, CI Load Test Integration & Data Integrity Guardrails  
-**Status:** ✅ Completed & Verified — Release Notes `Release-Sprint-031.md` Filed  
+**Status:** ✅ Completed, Verified & Retrospective Filed (`Sprint-031-Retrospective.md`)  
 **Objective:** Cross-browser Playwright validation (Firefox + WebKit), replace `waitForTimeout` commit guards, commit pre-migration scrubbing hooks, integrate k6 into CI/CD pipeline, and establish bundle size budgets via `@next/bundle-analyzer`.
 
 ---
@@ -29,15 +29,15 @@
 **Sprint Name:** Cross-Browser E2E Hardening, CI Load Test Integration & Data Integrity Guardrails  
 **Release Version:** v3.15.0  
 **Release Date:** 2026-08-18  
-**Retrospective Date:** Pending  
+**Retrospective Date:** 2026-08-18 (`Sprint-031-Retrospective.md`)  
 **Status:** ✅ RELEASED & CERTIFIED  
 
 **Key Deliverables:**
 - GitHub Actions CI workflow enhanced with parallel cross-browser Playwright matrix (`[chromium, firefox, webkit]`) and per-browser HTML report artifacts.
-- 100% elimination of brittle `waitForTimeout` calls across the entire E2E test suite (0 remaining).
-- Automated CI load-testing job added to GitHub Actions with k6 installation, server warmup, and performance regression gating.
+- 100% elimination of brittle `waitForTimeout` calls across the entire E2E test suite (0 remaining repository-wide).
+- Automated CI load-testing job added to GitHub Actions with dynamic `jose` JWT generation, server warmup, and performance regression gating (p95 < 500ms).
 - Versioned, idempotent SQL and TypeScript pre-migration scrubbing hooks created (`scripts/pre-migration/mark-entries-dedup.*`) with unit tests and operational runbook.
-- Quantitative baseline measurements established at `bundle-analysis/baseline-v3.15.0.json` and size regression budgets documented in `BUNDLE_BUDGETS.md`.
+- Quantitative baseline measurements established at `bundle-analysis/baseline-v3.15.0.json` and size regression budgets (+10%) documented in `BUNDLE_BUDGETS.md`.
 
 ---
 
@@ -60,7 +60,7 @@
 **Total Jest Tests Passing:** 878 / 878 Tests (100% PASS)  
 **Playwright E2E Suites:** 28 E2E Test Suites — Cross-browser ready (`chromium`, `firefox`, `webkit`)  
 **E2E Brittle Sleeps:** 0 `waitForTimeout` calls remaining in `e2e/` (Zero-Sleep Compliant)  
-**k6 Load Tests:** 4 scripts — 8,631 requests in automated benchmark; 0% error; p95 ≤ 211ms (SLA < 500ms)  
+**k6 Load Tests:** 4 scripts — 8,024+ requests in automated benchmark; 0% error; p95 ≤ 250.10ms (SLA < 500ms)  
 **Test Stability:** Excellent  
 **Last Test Run:** 2026-08-18 (Sprint-031 certification run)  
 
@@ -68,9 +68,9 @@
 
 ## Verification Status
 
-**Verification Result:** ✅ PASSED & CERTIFIED  
+**Verification Result:** ✅ PASSED & CERTIFIED (`Release-Certificate-Sprint-031.md`)  
 **Security/RBAC Verification:** ✅ PASSED (Strict route guards and auth state isolation verified.)  
-**Performance Verification:** ✅ PASSED (k6 benchmarks pass with 0% error; p95 < 215ms across all endpoints; bundle budgets established.)  
+**Performance Verification:** ✅ PASSED (k6 benchmarks pass with 0% error; p95 < 250ms across all endpoints; bundle budgets established.)  
 **Accessibility Verification:** ✅ PASSED (0 WCAG 2.1 AA violations.)  
 **Critical Issues:** 0  
 **Rework Required:** 0  
@@ -113,7 +113,8 @@
 **High risks:** None  
 
 **Medium risks:**
-- **No production latency observability (TD-005):** Continuous real-time p50/p95/p99 query metrics in production are not yet hooked up to telemetry sinks. Target: Sprint-032.
+- **No real-time production latency observability (TD-005):** Continuous real-time p50/p95/p99 query metrics in production are not yet hooked up to telemetry sinks. Target: Sprint-032.
+- **Mobile app E2E sync CI automation (TD-007):** Flutter mobile sync integration tests need automated CI execution against backend services. Target: Sprint-032.
 
 **Low risks:** None (TD-001, TD-002, TD-003, TD-004, TD-006 fully resolved).
 
@@ -129,13 +130,17 @@
 | **TD-004** | `mark_entries` pre-migration scrubbing script not versioned | Low | Sprint-031 | ✅ Resolved |
 | **TD-005** | No real-time production latency observability (p50/p95/p99) | High | Sprint-032 | 🔵 Active |
 | **TD-006** | Bundle size delta unmeasured / no size budgets | Low | Sprint-031 | ✅ Resolved |
+| **TD-007** | Mobile app E2E sync CI automation | Medium | Sprint-032 | 🔵 Active |
+| **TD-008** | Automated staging smoke & canary verification pipeline | Medium | Sprint-032 | 🔵 Active |
 
 ---
 
 ## Next Engineering Objective
 
 **Sprint ID:** SPRINT-032  
-**Sprint Name:** Production Latency Observability & Continuous Telemetry Sinks  
+**Sprint Name:** Production Latency Observability, Mobile Sync Telemetry & Canary Staging Validation  
+**Target Release Version:** v3.16.0  
 **Priority Objectives:**
-1. Real-time query performance telemetry and p50/p95/p99 latency tracking (TD-005).
-2. Continuous metric streaming to central monitoring sinks for multi-institution deployments.
+1. Real-time query performance APM middleware and p50/p95/p99 latency metrics tracking with Prometheus `/api/system/metrics` endpoint (TD-005).
+2. Mobile offline-first sync telemetry bridge and automated CI device integration tests (TD-007).
+3. Automated post-deployment staging smoke tests and canary validation pipeline in GitHub Actions (TD-008).
