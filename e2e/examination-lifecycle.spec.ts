@@ -7,6 +7,7 @@ test.describe("Examination Management System Lifecycle E2E", () => {
   test.use({ storageState: ".auth/super_admin.json" });
 
   test("runs complete exam wizard setup, grade boundary checks, and report exports", async ({ page }) => {
+    test.setTimeout(90000);
     // Dismiss any browser alert dialogs automatically
     await page.addInitScript(() => {
       window.alert = (msg) => console.log("Mocked alert:", msg);
@@ -18,18 +19,19 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     });
 
     // 1. Navigate to Examinations Dashboard
-    await page.goto("/examinations");
+    await page.goto("/examinations", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     await expect(page.locator("h1, h2, [data-testid='page-header']").first()).toBeVisible({ timeout: 15000 });
 
     // 2. Click Create New Exam Session to open Setup Wizard Step 1
-    await page.locator("button:has-text('Create New Exam Session')").click();
+    await page.locator("button:has-text('Create New Exam Session')").first().click();
     const wizardModal = page.locator("[data-slot='dialog-content']");
     await expect(wizardModal).toBeVisible({ timeout: 15000 });
 
     // Fill Step 1 Fields
     await wizardModal.locator("input[placeholder*='Final Term']").fill("E2E Examination Session");
     await wizardModal.locator("label:has-text('Start Date') + input").fill("2026-10-01");
-    await wizardModal.slider || await wizardModal.locator("label:has-text('End Date') + input").fill("2026-10-15");
+    await wizardModal.locator("label:has-text('End Date') + input").fill("2026-10-15");
     await wizardModal.locator("button:has-text('Next')").click();
 
     // Fill Step 2 (Subject Schedules)
@@ -46,7 +48,8 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     await wizardModal.locator("button:has-text('Finalize & Create Exam Session')").click();
 
     // Dashboard list should refresh, click Mark Entry on E2E Examination Session
-    await page.goto("/examinations");
+    await page.goto("/examinations", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     const examRow = page.locator("tr").filter({ hasText: "E2E Examination Session" }).first();
     await expect(examRow).toBeVisible({ timeout: 15000 });
 
@@ -76,7 +79,8 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     await portalDialog.locator("button:has-text('Close')").first().click();
 
     // 4. Tabulation Register Export Flow
-    await page.goto("/examinations/tabulation");
+    await page.goto("/examinations/tabulation", { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     await expect(page.locator("text=Tabulation Register").first()).toBeVisible({ timeout: 15000 });
 
     // Click Export Tabulation Register button

@@ -34,8 +34,8 @@ export function checkRateLimit(
   if (
     (process.env.NODE_ENV !== "production" && process.env.ENABLE_RATE_LIMIT !== "true") ||
     process.env.PLAYWRIGHT_TEST === "true" ||
-    process.env.CI === "true" ||
-    process.env.NODE_ENV === "test"
+    (process.env.CI === "true" && process.env.ENABLE_RATE_LIMIT !== "true") ||
+    (process.env.NODE_ENV === "test" && process.env.ENABLE_RATE_LIMIT !== "true")
   ) {
     return { allowed: true, remaining: 999, resetMs: 0 };
   }
