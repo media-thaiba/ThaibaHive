@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "3.15.0",
+  "capturedAt": "2026-08-18T19:30:00.000Z",
+  "buildTool": "Next.js 16 App Router",
+  "analyzer": "@next/bundle-analyzer",
+  "routes": [
+    {
+      "route": "/admin/executive/analytics",
+      "appPath": "src/app/(shell)/admin/executive/analytics/page.tsx",
+      "pageName": "Executive Analytics Dashboard",
+      "dynamicImports": [
+        {
+          "component": "ExecutiveAnalyticsDashboard",
+          "importPath": "@/components/analytics/executive-analytics-dashboard",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 40.2
+        }
+      ],
+      "firstLoadJsKb": 178.4,
+      "budgetThresholdKb": 196.2
+    },
+    {
+      "route": "/admin/swarm-intelligence",
+      "appPath": "src/app/(shell)/admin/swarm-intelligence/page.tsx",
+      "pageName": "Swarm Intelligence Telemetry Dashboard",
+      "dynamicImports": [
+        {
+          "component": "SwarmTelemetryCharts",
+          "importPath": "@/components/swarm/swarm-telemetry-charts",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 24.5
+        },
+        {
+          "component": "TelemetryDashboard",
+          "importPath": "@/components/swarm/telemetry-dashboard",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 22.5
+        }
+      ],
+      "firstLoadJsKb": 185.3,
+      "budgetThresholdKb": 203.8
+    },
+    {
+      "route": "/examinations/tabulation",
+      "appPath": "src/app/(shell)/examinations/tabulation/page.tsx",
+      "pageName": "Examination Tabulation Register",
+      "dynamicImports": [
+        {
+          "component": "TabulationRegister",
+          "importPath": "@/components/examinations/tabulation-register",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 31.7
+        }
+      ],
+      "firstLoadJsKb": 162.9,
+      "budgetThresholdKb": 179.2
+    },
+    {
+      "route": "/workspace/[role]/analytics",
+      "appPath": "src/app/(shell)/workspace/[role]/analytics/page.tsx",
+      "pageName": "Role-Based BI Workspace Analytics",
+      "dynamicImports": [
+        {
+          "component": "AreaTrendChart",
+          "importPath": "@/components/analytics/charts/area-trend-chart",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 10.2
+        },
+        {
+          "component": "ComparativeBarChart",
+          "importPath": "@/components/analytics/charts/comparative-bar-chart",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 9.8
+        },
+        {
+          "component": "MetricGauge",
+          "importPath": "@/components/analytics/charts/metric-gauge",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 8.5
+        },
+        {
+          "component": "PerformanceRadarChart",
+          "importPath": "@/components/analytics/charts/performance-radar-chart",
+          "lazyLoaded": true,
+          "estimatedChunkKb": 9.9
+        }
+      ],
+      "firstLoadJsKb": 171.8,
+      "budgetThresholdKb": 189.0
+    }
+  ],
+  "sharedVendorBundles": {
+    "frameworkReact19Kb": 45.2,
+    "rechartsCoreKb": 62.1,
+    "radixUiPrimitivesKb": 28.6,
+    "lucideIconsChunkKb": 18.3
+  }
+}

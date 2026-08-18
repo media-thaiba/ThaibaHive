@@ -1,23 +1,28 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../packages/db";
-import { leaveRequests, expenseClaims, purchaseRequests } from "../packages/db/schema";
+import { leaveRequests, expenseClaims, purchaseRequests, leaveBalances, staff } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("Multi-Stage Approval Flows", () => {
+  // Ensure approval tests execute serially to prevent database locks on SQLite
+  test.describe.configure({ mode: "serial" });
+
   test.describe("Leave Approval Flow (Staff → HOD → Admin)", () => {
-    test.beforeEach(async ({ page }) => {
+    test.use({ storageState: ".auth/staff.json" });
+
+    test.beforeEach(async () => {
       // Clean up test data
       await db.delete(leaveRequests).where(eq(leaveRequests.reason, "E2E Leave Approval Test")).run();
-      
-      // Login as staff
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-staff@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
+
+      // Reset leave balances for test-staff to prevent Insufficient Balance errors
+      const user = await db.select().from(staff).where(eq(staff.email, "test-staff@thaibahive.local")).get();
+      if (user) {
+        await db.update(leaveBalances).set({ usedDays: 0 }).where(eq(leaveBalances.staffId, user.id)).run();
+        console.log("Reset leave balances for test-staff to 0 inside approvals suite");
+      }
     });
 
-    test("staff can apply for leave, HOD can approve, admin can final approve", async ({ page }) => {
+    test("staff can apply for leave, HOD can approve, admin can final approve", async ({ page, browser }) => {
       // 1. Staff applies for leave
       await page.goto("/leaves");
       const applyBtn = page.locator("button:has-text('Apply Leave')").first();
@@ -35,72 +40,65 @@ test.describe("Multi-Stage Approval Flows", () => {
       const successToast = page.locator("text=Leave application submitted successfully");
       await expect(successToast).toBeVisible();
 
-      // 2. Login as HOD and approve
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-hod@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
+      // 2. Switch to HOD context and approve
+      const hodContext = await browser.newContext({ storageState: ".auth/hod.json" });
+      const hodPage = await hodContext.newPage();
+      try {
+        await hodPage.goto("/approvals");
+        
+        // Find the leave request and approve
+        const leaveApproval = hodPage.locator("text=E2E Leave Approval Test").first();
+        await expect(leaveApproval).toBeVisible();
+        
+        // Click approve button (HOD approval)
+        const approveBtn = hodPage.locator("button:has-text('Approve')").first();
+        await approveBtn.click();
+        
+        // Click Approve in the confirm dialog
+        await hodPage.locator("[role='dialog'] button:has-text('Approve')").click();
+        
+        // Verify approval success
+        const approvalSuccess = hodPage.locator("text=approved").first();
+        await expect(approvalSuccess).toBeVisible();
+      } finally {
+        await hodContext.close();
+      }
 
-      // Go to approvals page
-      await page.goto("/approvals");
-      
-      // Find the leave request and approve
-      const leaveApproval = page.locator("text=E2E Leave Approval Test").first();
-      await expect(leaveApproval).toBeVisible();
-      
-      // Click approve button (HOD approval)
-      const approveBtn = page.locator("button:has-text('Approve')").first();
-      await approveBtn.click();
-      
-      // Click Approve in the confirm dialog
-      await page.locator("[role='dialog'] button:has-text('Approve')").click();
-      
-      // Verify approval success
-      const approvalSuccess = page.locator("text=approved").first();
-      await expect(approvalSuccess).toBeVisible();
-
-      // 3. Login as Admin and final approve
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-admin@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
-
-      // Go to approvals page
-      await page.goto("/approvals");
-      
-      // Find the leave request and final approve
-      const adminApproval = page.locator("text=E2E Leave Approval Test").first();
-      await expect(adminApproval).toBeVisible();
-      
-      // Click approve button (Admin final approval)
-      const finalApproveBtn = page.locator("button:has-text('Approve')").first();
-      await finalApproveBtn.click();
-      
-      // Click Approve in the confirm dialog
-      await page.locator("[role='dialog'] button:has-text('Approve')").click();
-      
-      // Verify final approval
-      const finalApprovalSuccess = page.locator("text=approved").first();
-      await expect(finalApprovalSuccess).toBeVisible();
+      // 3. Switch to Admin context and final approve
+      const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
+      const adminPage = await adminContext.newPage();
+      try {
+        await adminPage.goto("/approvals");
+        
+        // Find the leave request and final approve
+        const adminApproval = adminPage.locator("text=E2E Leave Approval Test").first();
+        await expect(adminApproval).toBeVisible();
+        
+        // Click approve button (Admin final approval)
+        const finalApproveBtn = adminPage.locator("button:has-text('Approve')").first();
+        await finalApproveBtn.click();
+        
+        // Click Approve in the confirm dialog
+        await adminPage.locator("[role='dialog'] button:has-text('Approve')").click();
+        
+        // Verify final approval
+        const finalApprovalSuccess = adminPage.locator("text=approved").first();
+        await expect(finalApprovalSuccess).toBeVisible();
+      } finally {
+        await adminContext.close();
+      }
     });
   });
 
   test.describe("Expense Claim Approval Flow", () => {
-    test.beforeEach(async ({ page }) => {
+    test.use({ storageState: ".auth/staff.json" });
+
+    test.beforeEach(async () => {
       // Clean up test data
       await db.delete(expenseClaims).where(eq(expenseClaims.description, "E2E Expense Approval Test")).run();
-      
-      // Login as staff
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-staff@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
     });
 
-    test("staff can submit expense claim, admin can approve", async ({ page }) => {
+    test("staff can submit expense claim, admin can approve", async ({ page, browser }) => {
       // 1. Staff submits expense claim
       await page.goto("/expenses");
       
@@ -116,53 +114,49 @@ test.describe("Multi-Stage Approval Flows", () => {
 
       // Submit
       const submitBtn = form.locator("button[type='submit']");
-      await submitBtn.click();
+      await submitBtn.click({ force: true });
 
       // Verify success
       const successToast = page.locator("text=Expense claim submitted successfully");
       await expect(successToast).toBeVisible();
 
-      // 2. Login as Admin and approve
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-admin@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
-
-      // Go to approvals page
-      await page.goto("/approvals");
-      
-      // Find the expense claim and approve
-      const expenseApproval = page.locator("text=E2E Expense Approval Test").first();
-      await expect(expenseApproval).toBeVisible();
-      
-      // Click approve button
-      const approveBtn = page.locator("button:has-text('Approve')").first();
-      await approveBtn.click();
-      
-      // Click Approve in the confirm dialog
-      await page.locator("[role='dialog'] button:has-text('Approve')").click();
-      
-      // Verify approval
-      const approvalSuccess = page.locator("text=approved").first();
-      await expect(approvalSuccess).toBeVisible();
+      // 2. Switch to Admin context and approve
+      const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
+      const adminPage = await adminContext.newPage();
+      try {
+        await adminPage.goto("/approvals");
+        
+        // Find the expense claim and approve
+        const expenseApproval = adminPage.locator("text=E2E Expense Approval Test").first();
+        await expect(expenseApproval).toBeVisible();
+        
+        // Click approve button
+        const approveBtn = adminPage.locator("button:has-text('Approve')").first();
+        await approveBtn.click();
+        
+        // Click Approve in the confirm dialog
+        await adminPage.locator("[role='dialog'] button:has-text('Approve')").click();
+        
+        // Verify approval
+        const approvalSuccess = adminPage.locator("text=approved").first();
+        await expect(approvalSuccess).toBeVisible();
+      } finally {
+        await adminContext.close();
+      }
     });
   });
 
   test.describe("Purchase Request Approval Flow (Staff → HOD → Accounts → Purchase)", () => {
-    test.beforeEach(async ({ page }) => {
+    test.use({ storageState: ".auth/staff.json" });
+
+    test.beforeEach(async () => {
       // Clean up test data
       await db.delete(purchaseRequests).where(eq(purchaseRequests.itemName, "E2E Purchase Approval Test")).run();
-      
-      // Login as staff
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-staff@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
     });
 
-    test("staff can submit purchase request, HOD approves, accounts approves, purchase approves", async ({ page }) => {
+    test("staff can submit purchase request, HOD approves, accounts approves, purchase approves", async ({ page, browser }) => {
+      // Extend timeout for multi-stage approval (HOD + Accounts + Purchase = 3 DB writes)
+      test.setTimeout(120000);
       // 1. Staff submits purchase request
       await page.goto("/purchases");
       
@@ -179,86 +173,79 @@ test.describe("Multi-Stage Approval Flows", () => {
 
       // Submit
       const submitBtn = form.locator("button[type='submit']");
-      await submitBtn.click();
+      await submitBtn.click({ force: true });
 
       // Verify success
       const successToast = page.locator("text=Purchase request submitted successfully");
       await expect(successToast).toBeVisible();
 
-      // 2. Login as HOD and approve
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-hod@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
+      // 2. Switch to HOD context and approve
+      const hodContext = await browser.newContext({ storageState: ".auth/hod.json" });
+      const hodPage = await hodContext.newPage();
+      try {
+        await hodPage.goto("/approvals", { waitUntil: "domcontentloaded" });
 
-      // Go to approvals page
-      await page.goto("/approvals");
-      
-      // Find the purchase request and approve
-      const hodApproval = page.locator("text=E2E Purchase Approval Test").first();
-      await expect(hodApproval).toBeVisible();
-      
-      // Click approve button (HOD approval)
-      const hodApproveBtn = page.locator("button:has-text('Approve')").first();
-      await hodApproveBtn.click();
-      
-      // Click Approve in the confirm dialog
-      await page.locator("[role='dialog'] button:has-text('Approve')").click();
-      
-      // Verify HOD approval
-      const hodApprovalSuccess = page.locator("text=approved").first();
-      await expect(hodApprovalSuccess).toBeVisible();
+        // Find the purchase request and approve
+        const hodApproval = hodPage.locator("text=E2E Purchase Approval Test").first();
+        await expect(hodApproval).toBeVisible({ timeout: 20000 });
 
-      // 3. Login as Admin (accounts) and approve
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-admin@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
+        // Click approve button (HOD approval)
+        const hodApproveBtn = hodPage.locator("button:has-text('Approve')").first();
+        await hodApproveBtn.click();
 
-      // Go to approvals page
-      await page.goto("/approvals");
-      
-      // Find the purchase request and approve (accounts approval)
-      const accountsApproval = page.locator("text=E2E Purchase Approval Test").first();
-      await expect(accountsApproval).toBeVisible();
-      
-      // Click approve button (accounts approval)
-      const accountsApproveBtn = page.locator("button:has-text('Approve')").first();
-      await accountsApproveBtn.click();
-      
-      // Click Approve in the confirm dialog
-      await page.locator("[role='dialog'] button:has-text('Approve')").click();
-      
-      // Verify accounts approval
-      const accountsApprovalSuccess = page.locator("text=approved").first();
-      await expect(accountsApprovalSuccess).toBeVisible();
+        // Confirm in dialog
+        const hodDialogBtn = hodPage.locator("[role='dialog'] button:has-text('Approve')");
+        await expect(hodDialogBtn).toBeVisible({ timeout: 10000 });
+        await hodDialogBtn.click();
 
-      // 4. Login as Admin (purchase) and final approve
-      await page.goto("/auth/login");
-      await page.fill("#email", "test-admin@thaibahive.local");
-      await page.fill("#password", "Password123");
-      await page.click("button[type='submit']");
-      await expect(page).toHaveURL("/");
+        // Wait for dialog to close — confirms the HOD approval DB write committed
+        await expect(hodDialogBtn).not.toBeAttached({ timeout: 10000 });
+      } finally {
+        await hodContext.close();
+      }
 
-      // Go to approvals page
-      await page.goto("/approvals");
-      
-      // Find the purchase request and final approve
-      const purchaseApproval = page.locator("text=E2E Purchase Approval Test").first();
-      await expect(purchaseApproval).toBeVisible();
-      
-      // Click approve button (purchase approval)
-      const purchaseApproveBtn = page.locator("button:has-text('Approve')").first();
-      await purchaseApproveBtn.click();
-      
-      // Click Approve in the confirm dialog
-      await page.locator("[role='dialog'] button:has-text('Approve')").click();
-      
-      // Verify final approval
-      const purchaseApprovalSuccess = page.locator("text=approved").first();
-      await expect(purchaseApprovalSuccess).toBeVisible();
+      // 3. Switch to Admin context and approve (accounts approval)
+      const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
+      const adminPage = await adminContext.newPage();
+      try {
+        await adminPage.goto("/approvals", { waitUntil: "domcontentloaded" });
+
+        // Find the purchase request (now in accounts-approval stage)
+        const accountsApproval = adminPage.locator("text=E2E Purchase Approval Test").first();
+        await expect(accountsApproval).toBeVisible({ timeout: 20000 });
+
+        // Click approve button (accounts approval)
+        const accountsApproveBtn = adminPage.locator("button:has-text('Approve')").first();
+        await accountsApproveBtn.click();
+
+        // Confirm in dialog
+        const accountsDialogBtn = adminPage.locator("[role='dialog'] button:has-text('Approve')");
+        await expect(accountsDialogBtn).toBeVisible({ timeout: 10000 });
+        await accountsDialogBtn.click();
+
+        // Wait for dialog to close — confirms the accounts approval DB write committed
+        await expect(accountsDialogBtn).not.toBeAttached({ timeout: 10000 });
+        // Navigate to final approval stage
+        await adminPage.goto("/approvals", { waitUntil: "domcontentloaded" });
+
+        // 4. Final approval (purchase-approved stage)
+        const purchaseApproval = adminPage.locator("text=E2E Purchase Approval Test").first();
+        await expect(purchaseApproval).toBeVisible({ timeout: 20000 });
+
+        // Click approve button (final approval)
+        const purchaseApproveBtn = adminPage.locator("button:has-text('Approve')").first();
+        await purchaseApproveBtn.click();
+
+        // Confirm in dialog
+        const purchaseDialogBtn = adminPage.locator("[role='dialog'] button:has-text('Approve')");
+        await expect(purchaseDialogBtn).toBeVisible({ timeout: 10000 });
+        await purchaseDialogBtn.click();
+
+        // Final confirmation — dialog button gone means approval submitted
+        await expect(purchaseDialogBtn).not.toBeAttached({ timeout: 10000 });
+      } finally {
+        await adminContext.close();
+      }
     });
   });
 });

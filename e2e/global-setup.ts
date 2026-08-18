@@ -315,12 +315,12 @@ async function globalSetup() {
     const page = await context.newPage();
     try {
       await page.goto("/auth/login");
+      await page.waitForSelector("form[data-hydrated='true']", { timeout: 45000 });
       await page.waitForSelector("#email");
       await page.fill("#email", "");
       await page.type("#email", email, { delay: 10 });
       await page.fill("#password", "");
       await page.type("#password", "Password123", { delay: 10 });
-      await page.waitForTimeout(200);
       
       await Promise.all([
         page.waitForURL((url) => url.pathname === "/" || url.pathname.includes("/dashboard") || !url.pathname.includes("/login"), { timeout: 15000 }),

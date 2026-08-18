@@ -2,6 +2,43 @@
 
 All notable changes to the ThaibaHive ecosystem are documented here.
 
+## [3.15.0] - 2026-08-18
+### Added
+- **Cross-Browser CI Matrix Automation:** Configured parallel matrix jobs for Chromium, Firefox, and WebKit in GitHub Actions with isolated artifact retention per browser.
+- **Automated CI Load Testing Gate:** Added automated `load-tests` GitHub Actions job running k6 stress tests against standalone production builds with p95 < 500ms and failure rate < 5% assertions.
+- **Pre-Migration Data Scrubbing Framework:** Authored idempotent SQL (`mark-entries-dedup.sql`) and TypeScript (`mark-entries-dedup.ts`) scrubbing hooks with unit tests to ensure safe migrations across databases with legacy duplicate records.
+- **Bundle Size Budgets & Observability:** Integrated `@next/bundle-analyzer`, committed canonical bundle baselines (`baseline-v3.15.0.json`), and established `BUNDLE_BUDGETS.md` with +10% regression limits.
+- **New NPM Scripts:** Added `build:analyze`, `test:load`, and `premigrate` commands to `package.json`.
+
+### Fixed
+- **Deterministic E2E Test Execution:** Eliminated all brittle `waitForTimeout()` calls across the entire E2E test suite (`approvals.spec.ts`, `attendance-workflow.spec.ts`, `auth.spec.ts`, `global-setup.ts`, `auth-helper.ts`), replacing them with auto-retrying assertions and DOM attachment state signals.
+
+## [3.14.0] - 2026-08-18
+### Added
+- **Database Query Index Optimization:** Added secondary indexes on `attendance_logs`, `mark_entries`, `financial_transactions`, and `preference_audit_log` tables to optimize read operations and queries. Added composite unique constraint on `mark_entries` table.
+- **Concurrent DB Write Handling:** Configured `PRAGMA busy_timeout = 15000;` on SQLite connection to mitigate database write lock contention under load.
+- **Next.js Dynamic Import Code-Splitting:** Configured dynamic imports (`ssr: false` widgets) on telemetry dashboards and BI analytics screens, reducing initial page payloads and TTI.
+- **k6 Load Stress Testing Harness:** Developed and ran authenticated concurrent stress load scripts verifying sub-500ms p95 latencies under 100+ virtual users.
+- **100% E2E Playwright Spec Modernization:** Refactored the remaining 24 legacy spec files to eliminate redundant UI logins, caching session cookies, and isolating testing data parameters.
+
+### Fixed
+- **File Upload Layout Collision:** Fixed a CSS layout bug in `ExpenseClaimFormDialog` where absolute dropzone input elements overflowed modal bounds and blocked clicks.
+- **Kanban Board Pagination Refresh:** Hardened TanStack Query invalidation and router reloads on task creation forms to avoid pagination display delays.
+
+## [3.13.0] - 2026-08-07
+### Added
+- **Multi-Browser Playwright E2E Automation:** Configured Firefox, WebKit, and Chromium browser engines with dynamically restricted concurrent workers to support parallel local and CI/CD runs.
+- **Role-Based Auth Caching Pipelines:** Developed global test user seeding and session caching (`.auth/*.json`) to bypass redundant manual UI logins during test execution.
+- **Attendance & Scanners E2E Specs:** Automates staff check-in/check-out UI transitions, NFC card scanner modals, and telemetry attendance logs verification.
+- **Examination Lifecycle E2E Specs:** Covers Term Exam grade entries, max/negative validations, tabulation register reports, and grade sheet exports.
+- **Finance Approval & Expenses E2E Specs:** Tests multi-stage expense claims transitions (pending -> pending_hod -> approved), receipt attachments validation, and admin CSV data exports.
+- **Admin Operations & RBAC E2E Specs:** Automates scheduled jobs triggering, telemetry view verification, preference audit logs queries, and role-based redirect validations.
+- **Architectural Import Boundary Rules:** Configured ESLint custom `no-restricted-imports` rules blocking direct database client/schema imports inside client component and hooks files.
+- **CI/CD Pipeline Integration:** Integrated multi-browser E2E verification in GitHub Actions CI with a 15-minute timeout safety gate.
+
+### Fixed
+- **ESLint Purity & Syntax Debt:** Resolved React render Date.now purity errors, prefer-const declarations, missing exhaustive-deps callbacks, and redundant eslint-disable directives.
+
 ## [3.12.0] - 2026-08-07
 ### Added
 - **Scheduled Job Management APIs:** Built REST API endpoints under `/api/admin/scheduled-jobs` supporting paginated query filtering, manual report enqueuing, and status updates (Pause/Resume/Cancel) gated with `super_admin` checks.

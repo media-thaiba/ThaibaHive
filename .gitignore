@@ -5,6 +5,7 @@ node_modules/
 
 # testing
 coverage/
+.auth/
 
 # next.js
 .next/
@@ -53,10 +54,13 @@ drizzle/*.sql
 !.env.example
 !.env.*.example
 
-# scratch and scripts
+# scratch
 scratch/
-scripts/
 
 # APK binaries
 *.apk
+
+# build outputs and backups
+api/dist/
+*.bak
 

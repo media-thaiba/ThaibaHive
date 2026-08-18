@@ -58,9 +58,8 @@ test.describe("Attendance Check-In & Verification Workflow", () => {
     await expect(searchInput).toBeVisible({ timeout: 15000 });
     await searchInput.click();
     await searchInput.pressSequentially("TEST-STAFF-99", { delay: 100 });
-    await principalPage.waitForTimeout(1000); // Wait for React debouncing
 
-    // Verify "Test Staff" row appears in team logs list
+    // Verify "Test Staff" row appears in team logs list (auto-retries while React debounces filter)
     const staffRow = principalPage.locator("tr, div").filter({ hasText: "Test Staff" }).first();
     await expect(staffRow).toBeVisible({ timeout: 15000 });
     await principalContext.close();
