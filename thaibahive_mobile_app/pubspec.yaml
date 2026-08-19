@@ -1,6 +1,6 @@
 name: thaibahive_mobile
 description: ThaibaHive - Unified Staff Management Platform
-version: 1.0.0+14
+version: 3.20.0+15
 environment:
   sdk: '>=3.2.0 <4.0.0'
 

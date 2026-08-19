@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-08-19T17:21:11.665Z",
+  "isCompleted": true,
+  "engine": "sqlite_libsql",
+  "tablesProcessed": [
+    {
+      "tableName": "users",
+      "actionTaken": "optimized",
+      "deadTuplesDetected": 0,
+      "liveTuples": 100,
+      "bloatRatioPercent": 0,
+      "reindexRecommended": false,
+      "durationMs": 2
+    },
+    {
+      "tableName": "institutions",
+      "actionTaken": "optimized",
+      "deadTuplesDetected": 0,
+      "liveTuples": 100,
+      "bloatRatioPercent": 0,
+      "reindexRecommended": false,
+      "durationMs": 0
+    },
+    {
+      "tableName": "financeTransactions",
+      "actionTaken": "optimized",
+      "deadTuplesDetected": 0,
+      "liveTuples": 100,
+      "bloatRatioPercent": 0,
+      "reindexRecommended": false,
+      "durationMs": 1
+    },
+    {
+      "tableName": "auditLogs",
+      "actionTaken": "optimized",
+      "deadTuplesDetected": 0,
+      "liveTuples": 100,
+      "bloatRatioPercent": 0,
+      "reindexRecommended": false,
+      "durationMs": 0
+    },
+    {
+      "tableName": "staff",
+      "actionTaken": "optimized",
+      "deadTuplesDetected": 0,
+      "liveTuples": 100,
+      "bloatRatioPercent": 0,
+      "reindexRecommended": false,
+      "durationMs": 1
+    }
+  ],
+  "reindexRecommendations": [],
+  "walStatus": {
+    "checkpointTriggered": true,
+    "freelistPagesReclaimed": 0
+  },
+  "totalDurationMs": 7
+}

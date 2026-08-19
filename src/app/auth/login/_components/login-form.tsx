@@ -8,6 +8,10 @@ import { Alert } from "@/components/ui/alert";
 import { ArrowRight, Lock, Mail, User, ShieldCheck, Fingerprint } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { AuthMode } from "./login-header";
+import { DeviceFingerprintCollector } from "@/components/auth/device-fingerprint-collector";
+import { StepUpChallengeDialog } from "@/components/auth/stepup-challenge-dialog";
+import { useDPoP } from "@/lib/hooks/use-dpop";
+import type { DeviceFingerprint } from "@/lib/identity/device-fingerprint";
 
 type LoginFormProps = {
   mode: AuthMode;
@@ -50,6 +54,19 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [fingerprint, setFingerprint] = useState<DeviceFingerprint | null>(null);
+  const [stepUpState, setStepUpState] = useState<{
+    isOpen: boolean;
+    riskLevel: "low" | "medium" | "high" | "critical";
+    challengeId?: string;
+    challenge?: string;
+    stepUpToken?: string;
+    staffId?: string;
+  }>({
+    isOpen: false,
+    riskLevel: "high",
+  });
+  const { attachDPoP } = useDPoP();
 
   async function handlePasskeyLogin() {
     setPasskeyLoading(true);
@@ -115,7 +132,22 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
     setError("");
     setLoading(true);
     try {
-      await login(email, password, rememberMe);
+      const dpopProof = await attachDPoP("/api/auth/login", "POST");
+      const res = await login(email, password, rememberMe, {
+        deviceFingerprint: fingerprint,
+        dpopProof: dpopProof || undefined,
+      });
+
+      if (res?.stepUpRequired) {
+        setStepUpState({
+          isOpen: true,
+          riskLevel: res.riskLevel || "high",
+          challengeId: res.challengeId,
+          challenge: res.challenge,
+          stepUpToken: res.stepUpToken,
+          staffId: res.staffId,
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -529,6 +561,24 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
           </form>
         )}
       </motion.div>
+
+      <DeviceFingerprintCollector onFingerprint={setFingerprint} />
+      <StepUpChallengeDialog
+        isOpen={stepUpState.isOpen}
+        riskLevel={stepUpState.riskLevel}
+        challengeId={stepUpState.challengeId}
+        challenge={stepUpState.challenge}
+        stepUpToken={stepUpState.stepUpToken}
+        staffId={stepUpState.staffId}
+        onSuccess={() => {
+          setStepUpState((prev) => ({ ...prev, isOpen: false }));
+          window.location.href = "/";
+        }}
+        onFailure={() => {
+          setStepUpState((prev) => ({ ...prev, isOpen: false }));
+          setError("Step-up authentication failed. Please try again.");
+        }}
+      />
     </AnimatePresence>
   );
 }

@@ -10,6 +10,10 @@ jest.mock("../_components/latency-trend-chart", () => ({
   ),
 }));
 
+jest.mock("../_components/cache-sync-card", () => ({
+  CacheSyncCard: () => <div data-testid="cache-sync-card">Cache Sync Card</div>,
+}));
+
 import { LatencySummaryCards } from "../_components/latency-summary-cards";
 import { RouteLatencyTable } from "../_components/route-latency-table";
 import { LatencyTrendChart } from "../_components/latency-trend-chart";

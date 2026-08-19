@@ -11,6 +11,14 @@ const customJestConfig = {
   testPathIgnorePatterns: ["/node_modules/", "<rootDir>/e2e/"],
   modulePathIgnorePatterns: ["<rootDir>/.next/"],
   maxWorkers: 1,
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 75,
+      lines: 75,
+      statements: 75,
+    },
+  },
 };
 
 module.exports = async () => {

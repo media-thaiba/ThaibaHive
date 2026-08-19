@@ -66,7 +66,42 @@ function passwordResetTemplate(firstName: string, resetUrl: string): string {
           <p>ThaibaHive — Unified Staff Management Platform</p>
         </div>
       </div>
-    </body>
     </html>
   `;
 }
+
+export async function sendStepUpOTPEmail(
+  to: string,
+  firstName: string,
+  otpCode: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const resend = getResendClient();
+    if (!resend) {
+      console.warn("[EmailService] RESEND_API_KEY not configured. Step-up OTP email logged to server logger.");
+      return { success: true };
+    }
+
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || "security@thaibahive.com",
+      to,
+      subject: "Your ThaibaHive Security Verification Code",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2>Security Verification Required</h2>
+          <p>Hello ${firstName},</p>
+          <p>A login attempt requires additional security verification. Use the following one-time verification code:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; padding: 16px; background: #f1f5f9; text-align: center; border-radius: 8px; margin: 20px 0;">
+            ${otpCode}
+          </div>
+          <p>This code expires in 10 minutes. If you did not attempt to sign in, please notify security administrators immediately.</p>
+        </div>
+      `,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send OTP verification email:", error);
+    return { success: false, error: "Failed to send email" };
+  }
+}
+

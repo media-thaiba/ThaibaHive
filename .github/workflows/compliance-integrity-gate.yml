@@ -1,0 +1,35 @@
+name: Compliance Integrity & Audit Coverage Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  compliance-audit-scan:
+    name: Compliance Integrity & Coverage Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Execute Mutation Audit Coverage Scanner
+        run: pnpm compliance:scan
+
+      - name: Execute Cryptographic Audit Chain Verification
+        run: pnpm compliance:verify

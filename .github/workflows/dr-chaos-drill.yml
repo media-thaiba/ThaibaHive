@@ -1,0 +1,78 @@
+name: Automated Disaster Recovery Chaos Drill & Failover Verification
+
+on:
+  schedule:
+    # Run every Sunday at 03:00 UTC
+    - cron: '0 3 * * 0'
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'DR Drill Scenario to Execute'
+        required: true
+        default: 'PRIMARY_OUTAGE'
+        type: choice
+        options:
+          - PRIMARY_OUTAGE
+          - REGIONAL_PARTITION
+          - CACHE_DESYNC
+          - MULTI_TENANT_ISOLATION_DRILL
+      dry_run:
+        description: 'Dry run execution only'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  dr-chaos-drill:
+    name: Execute Disaster Recovery Drill & Verify Failover
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js & pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Cross-Tenant Isolation Scanner
+        run: pnpm security:tenants
+
+      - name: Execute Automated Failover Verification
+        env:
+          DR_CHAOS_ENABLED: 'true'
+          DB_READ_REPLICAS_ENABLED: 'true'
+        run: pnpm dr:verify:failover
+
+      - name: Execute Automated Rollback & Parity Verification
+        run: pnpm dr:verify:rollback
+
+      - name: Evaluate DR Staging Canary Gate
+        run: npx tsx scripts/staging/dr-canary-evaluator.ts
+
+      - name: Notify Engineering Channel on DR Evaluation
+        if: always()
+        run: |
+          echo "Disaster Recovery drill completed with status: ${{ job.status }}"
+
+      - name: Upload Disaster Recovery Verification Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dr-verification-reports
+          path: reports/
+          retention-days: 30

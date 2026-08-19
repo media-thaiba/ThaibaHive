@@ -73,6 +73,34 @@ Canonical index of the features available in ThaibaHive.
 | **Database Secondary Query Index Tuning** | `packages/db/schema.ts` & `schema.pg.ts` | **Complete** | Drizzle schema indexes mapping | Database / Performance |
 | **Next.js Dynamic Import Bundle Optimization** | `src/app/(shell)/` routes | **Complete** | next/dynamic imports, react suspense / skeletons | Core / Frontend |
 | **k6 Concurrency Baseline Load Testing** | `load-tests/` | **Complete** | k6 runner, authenticated endpoint mapping | QA / Stress Testing |
+| **DPoP Cryptographic Session Binding** | `src/lib/identity/dpop-*` | **Complete** | Web Crypto, jose, Next.js Middleware | Security / Auth |
+| **Risk-Based Authentication Engine (RBA)** | `src/lib/identity/risk-*` | **Complete** | GeoIP, Device Fingerprinting, EventBus | Security / Auth |
+| **WebAuthn Step-Up Authentication** | `/api/auth/webauthn/*` | **Complete** | Hardware Keys, OTP Fallback, React Dialog | Security / Auth |
+| **Edge Revocation Mesh** | `src/lib/identity/revocation-*` | **Complete** | EventBus, Bloom Filters, In-Memory Sets | Core / Auth |
+| **Identity Admin Radar Dashboard** | `/app/(shell)/admin/security/identity` | **Complete** | Recharts, Metrics, Polling | Security / Admin |
+| **Distributed Adaptive Rate Limiting** | `src/lib/security/rate-limiter*` | **Complete** | Redis, Sliding Window, Token Bucket, Fallback | Security / Gateway |
+| **Automated IP Reputation & Subnet Quarantine** | `src/lib/security/quarantine-*` | **Complete** | CIDR Subnets, Bloom Filters, EventBus Mesh | Security / Gateway |
+| **Edge WAF Synchronization & Webhooks** | `src/lib/security/edge-firewall-*` | **Complete** | Cloudflare WAF, AWS WAF, HMAC Webhooks | Security / Edge |
+| **Synthetic Canary Health Probes & Circuit Breaker** | `src/lib/security/circuit-breaker*` | **Complete** | Probes, Degraded Mode Shedding, k6 Harness | Reliability / Gateway |
+| **Admin Threat Shield Radar Dashboard** | `/app/(shell)/admin/security/gateway` | **Complete** | Real-time Polling, Manual Bans, Breaker Override | Security / Admin |
+| **Enterprise Threat Intelligence Federation (STIX/TAXII)** | `src/lib/security/threat-intel/` | **Complete** | STIX 2.1, TAXII 2.1, Federation API, Auto-Quarantine | Security / Threat Intel |
+| **Redis PubSub Quarantine Mesh Transport** | `src/lib/security/quarantine-pubsub.ts` | **Complete** | Redis PubSub, Deduplication Window, Latency Tracking | Security / Mesh |
+| **Dual-Store Database Quarantine Persistence** | `src/lib/security/quarantine-db-store.ts` | **Complete** | SQLite/PostgreSQL Dual-Write, Cold Cache Warming | Security / Database |
+| **Strict RFC 8594 Legacy Token Sunset Engine** | `src/lib/identity/legacy-token-deprecation.ts` | **Complete** | Deprecation/Sunset Headers, 401 Soft/Strict Rejection | Security / Auth |
+| **AWS SigV4 WAF Client & Retry Engine** | `src/lib/security/aws-sigv4-signer.ts` | **Complete** | SigV4 HMAC-SHA256, Jittered Exponential Backoff | Security / Cloud |
+| **TypeScript AST Security Coverage Scanner** | `scripts/security/gateway-coverage-scanner.ts` | **Complete** | TypeScript Compiler API, CallExpression Visitor | Security / Tooling |
+| **Autonomous Security Orchestration & Playbook Engine (SOAR)** | `src/lib/security/soar/` | **Complete** | ActionRegistry, Orchestrator, ConditionEvaluator, SAGA Compensation | Security / SOAR |
+| **Threat Confidence Thresholding & Human-in-the-Loop Approvals** | `src/lib/security/soar/confidence-gate.ts` & `approval-queue.ts` | **Complete** | Multi-Tier Thresholding, TTL Expiration, Event Bus | Security / SOAR |
+| **Canonical Security Playbook Library (10 Playbooks)** | `src/lib/security/soar/playbooks/definitions.ts` | **Complete** | Network, Identity, Edge, Webhook Containment | Security / SOAR |
+| **Dual-Store SOAR Database Persistence & Merkle Audit** | `packages/db/schema.ts` & `src/lib/security/soar/soar-db-store.ts` | **Complete** | SQLite/PG Drizzle Tables, SHA-256 Merkle Chain | Security / Database |
+| **Admin Security Orchestration Radar & Killswitch Console** | `/app/(shell)/admin/security/orchestration` | **Complete** | Live Execution Feed, Approval Queue, Killswitch Card | Security / Admin |
+| **Internal PKI & Continuous mTLS Mesh Engine** | `src/lib/security/pki/` & `src/lib/security/mesh/` | **Complete** | RFC 5280 X.509, CaEngine, MtlsAuthenticator, 30d Grace Rotation | Security / Mesh |
+| **Multi-Factor Device Trust Scoring & Behavioral Anomaly Engine** | `src/lib/security/trust/` | **Complete** | 0-100 Scoring, Impossible Travel, Auth Storms, TTL Overrides | Security / Trust |
+| **Dynamic Micro-Segmentation & Campus VLAN Steering** | `src/lib/security/segmentation/` | **Complete** | Priority Default-Deny, VLAN 10/20/30/99, Switch Adapters | Security / Network |
+| **Automated CycloneDX & SPDX SBOM Vulnerability Scanner** | `src/lib/security/sbom/` | **Complete** | CycloneDX 1.5, SPDX 2.3, CVE Matcher, License Compliance | Security / Supply Chain |
+| **Autonomous Forensic Root-Cause Copilot (DAG Graph)** | `src/lib/security/forensics/` | **Complete** | Multi-Stage MITRE ATT&CK, Event Timeline, RootCauseGraph | Security / Forensics |
+| **Admin Zero-Trust Security Mesh Radar (4 Tabs)** | `/app/(shell)/admin/security/zero-trust` | **Complete** | Device Posture, Micro-Segmentation, PKI Mesh, Forensics | Security / Admin |
+| **Zero-Trust E2E Simulation CLI & Test Harness** | `scripts/security/zasm-simulation-runner.ts` | **Complete** | `pnpm zasm:simulate`, 6-Phase Pipeline Validation | Security / Tooling |
 
 
 

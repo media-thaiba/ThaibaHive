@@ -1,0 +1,25 @@
+{
+  "certificateId": "cert_ddos_1787151376000",
+  "timestamp": "2026-08-19T14:56:16.000Z",
+  "version": "3.23.0",
+  "executionMode": "high-concurrency-http-harness",
+  "targetUrl": "http://127.0.0.1:57062/api/system/metrics",
+  "totalRequestsExecuted": 1000,
+  "successfulRequests": 175,
+  "rateLimited429Requests": 73,
+  "quarantined403Requests": 752,
+  "unhandled500Errors": 0,
+  "measuredDurationMs": 281,
+  "measuredRps": 3559,
+  "latencyMetrics": {
+    "minMs": 4,
+    "p50Ms": 7,
+    "p90Ms": 15,
+    "p95Ms": 26,
+    "p99Ms": 39,
+    "maxMs": 44
+  },
+  "circuitBreakerVerified": true,
+  "activeQuarantinesCount": 3,
+  "certificationStatus": "CERTIFIED"
+}

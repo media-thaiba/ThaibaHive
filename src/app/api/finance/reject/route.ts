@@ -1,7 +1,7 @@
-import {  } from "next/server";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { POST as approveHandler } from "../approve/route";
 
-export const POST = async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   const body = await request.json();
   const modifiedBody = { ...body, action: "reject" };
   const fakeReq = new Request(request.url, {
@@ -9,5 +9,5 @@ export const POST = async (request: Request) => {
     headers: request.headers,
     body: JSON.stringify(modifiedBody),
   });
-  return approveHandler(fakeReq);
-};
+  return approveHandler(fakeReq, session);
+});

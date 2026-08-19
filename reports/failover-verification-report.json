@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-08-19T08:23:32.969Z",
+  "verificationId": "verify_failover_1787127812969",
+  "scenario": "PRIMARY_FAILOVER_E2E",
+  "status": "VERIFIED",
+  "metrics": {
+    "mttrMs": 1,
+    "mttrSeconds": 0,
+    "mttrSlaPassed": true,
+    "rpoLostTransactions": 0,
+    "rpoSlaPassed": true,
+    "preFailureTxCount": 20,
+    "postFailoverTxCount": 21,
+    "electedCandidate": "replica-1"
+  },
+  "steps": [
+    {
+      "step": "Pre-failure Canary Transaction Batch (20 tx)",
+      "durationMs": 0,
+      "passed": true
+    },
+    {
+      "step": "Inject Primary Database Failure",
+      "durationMs": 0,
+      "passed": true
+    },
+    {
+      "step": "Automated Failure Probe & Candidate Election",
+      "durationMs": 1,
+      "passed": true,
+      "detail": "Circuit: OPEN, Elected Candidate: replica-1"
+    },
+    {
+      "step": "Post-Failover Canary Write & Hash Verification",
+      "durationMs": 0,
+      "passed": true,
+      "detail": "Verified 21/21 canary transactions"
+    }
+  ]
+}

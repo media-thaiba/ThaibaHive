@@ -1,0 +1,49 @@
+name: Dependency Security & Supply Chain Audit
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # Daily at 04:00 UTC
+  pull_request:
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "packages/**/package.json"
+      - ".ai/security-allowlist.json"
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    name: Dependency Vulnerability & License Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Dependency Vulnerability Scan
+        run: npx tsx scripts/security/vuln-scanner.ts
+
+      - name: Run License Compliance Checker
+        run: npx tsx scripts/security/license-compliance-check.ts
+
+      - name: Upload Security Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-security-reports
+          path: reports/
+          retention-days: 30

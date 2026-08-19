@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-08-19T17:22:01.752Z",
+  "filesScanned": 815,
+  "totalFindings": 0,
+  "criticalCount": 0,
+  "highCount": 0,
+  "warningCount": 0,
+  "passed": true,
+  "findings": []
+}

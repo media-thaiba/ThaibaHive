@@ -12,6 +12,7 @@ const sessionPayloadSchema = z.object({
   employeeId: z.string(),
   name: z.string(),
   tokenVersion: z.union([z.number(), z.null(), z.undefined()]).transform((v) => v ?? 0),
+  dpopEnabled: z.boolean().optional().default(false),
 });
 
 const secret = new TextEncoder().encode(authConfig.jwtSecret);
@@ -23,6 +24,11 @@ export type SessionPayload = {
   employeeId: string;
   name: string;
   tokenVersion: number;
+  dpopEnabled?: boolean;
+};
+
+export type DPoPSessionPayload = SessionPayload & {
+  cnfJkt?: string;
 };
 
 export async function createSession(payload: SessionPayload, extendSession = false) {
@@ -53,6 +59,39 @@ export async function createSession(payload: SessionPayload, extendSession = fal
 
   return token;
 }
+
+export async function createDPoPSession(payload: SessionPayload, dpopThumbprint: string, extendSession = false) {
+  const enhancedPayload: DPoPSessionPayload = {
+    ...payload,
+    dpopEnabled: true,
+  };
+
+  const token = await new SignJWT({ ...enhancedPayload, cnf: { jkt: dpopThumbprint } })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("10m") // Access token TTL: 10 minutes for DPoP sessions
+    .setIssuedAt()
+    .sign(secret);
+
+  const cookieStore = await cookies();
+  const maxAge = 10 * 60; // 10 minutes
+
+  const cookieOptions: Record<string, unknown> = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" && process.env.PLAYWRIGHT_TEST !== "true",
+    sameSite: "lax",
+    path: "/",
+    maxAge,
+  };
+
+  if (process.env.COOKIE_DOMAIN) {
+    cookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+
+  cookieStore.set(authConfig.cookieName, token, cookieOptions);
+
+  return token;
+}
+
 
 export async function verifySession(): Promise<SessionPayload | null> {
   let token: string | undefined;
@@ -115,6 +154,16 @@ export async function verifySession(): Promise<SessionPayload | null> {
     if (!user || !user.isActive) return null;
     if ((user.tokenVersion ?? 0) !== session.tokenVersion) return null;
 
+    // Fast revocation check
+    try {
+      const { revocationStore } = await import("@/lib/identity/revocation-store");
+      if (session.staffId && revocationStore.isRevoked(session.staffId)) {
+        return null;
+      }
+    } catch {
+      // Identity module not loaded
+    }
+
     return session;
   } catch (error: unknown) {
     console.error("[Auth] Session verification failed:", error instanceof Error ? error.message : error);
@@ -125,4 +174,27 @@ export async function verifySession(): Promise<SessionPayload | null> {
 export async function destroySession() {
   const cookieStore = await cookies();
   cookieStore.delete(authConfig.cookieName);
+}
+
+export async function createStepUpToken(staffId: string, challengeId: string): Promise<string> {
+  return await new SignJWT({ staffId, challengeId, stepUpPending: true })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(secret);
+}
+
+export async function verifyStepUpToken(token: string): Promise<{ staffId: string; challengeId?: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.staffId && typeof payload.staffId === "string" && payload.stepUpPending === true) {
+      return {
+        staffId: payload.staffId,
+        challengeId: typeof payload.challengeId === "string" ? payload.challengeId : undefined,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }

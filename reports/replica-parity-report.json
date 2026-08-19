@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-08-19T17:21:17.968Z",
+  "isParityValid": true,
+  "primaryNode": "primary",
+  "totalReplicasChecked": 0,
+  "tablesVerified": [
+    "users",
+    "institutions",
+    "financeTransactions",
+    "auditLogs"
+  ],
+  "rowCounts": {
+    "users": {
+      "primary": 0,
+      "replicaCounts": {},
+      "replicaMatches": true
+    },
+    "institutions": {
+      "primary": 32,
+      "replicaCounts": {},
+      "replicaMatches": true
+    },
+    "financeTransactions": {
+      "primary": 0,
+      "replicaCounts": {},
+      "replicaMatches": true
+    },
+    "auditLogs": {
+      "primary": 0,
+      "replicaCounts": {},
+      "replicaMatches": true
+    }
+  },
+  "checksumComparison": {
+    "primaryChecksum": "a462d5662fb09672",
+    "replicaChecksums": {},
+    "replicasMatching": true
+  },
+  "mismatches": [],
+  "durationMs": 3
+}

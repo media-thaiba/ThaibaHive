@@ -108,10 +108,72 @@ export function formatPrometheusMetrics(snapshot: ClusterMetricsSnapshot): strin
     lines.push(`thaibahive_mobile_sync_duration_seconds_count ${mSnap.count}`);
   } catch {}
 
+  // 6. Multi-Region Edge Cache Telemetry (Sprint-034 / EDG-004)
+  try {
+    const { EdgeCacheTelemetry } = require("./edge-telemetry");
+    const edgeSummary = EdgeCacheTelemetry.getInstance().getSummary();
+
+    lines.push("# HELP thaibahive_edge_cache_hits_total Total number of edge cache hits.");
+    lines.push("# TYPE thaibahive_edge_cache_hits_total counter");
+    lines.push(`thaibahive_edge_cache_hits_total ${edgeSummary.cacheHits}`);
+
+    lines.push("# HELP thaibahive_edge_cache_misses_total Total number of edge cache misses.");
+    lines.push("# TYPE thaibahive_edge_cache_misses_total counter");
+    lines.push(`thaibahive_edge_cache_misses_total ${edgeSummary.cacheMisses}`);
+
+    lines.push("# HELP thaibahive_edge_cache_purges_total Total number of edge purge events.");
+    lines.push("# TYPE thaibahive_edge_cache_purges_total counter");
+    lines.push(`thaibahive_edge_cache_purges_total ${edgeSummary.purgeEvents}`);
+
+    lines.push("# HELP thaibahive_edge_cache_hit_ratio_percent Percentage of requests served from edge cache.");
+    lines.push("# TYPE thaibahive_edge_cache_hit_ratio_percent gauge");
+    lines.push(`thaibahive_edge_cache_hit_ratio_percent ${edgeSummary.hitRatioPercent}`);
+  } catch {}
+
+  // 7. Cross-Region Cache Sync Telemetry (Sprint-035 / CAC-003)
+  try {
+    const { CacheSyncTelemetry } = require("./cache-sync-telemetry");
+    const cacheMetrics = CacheSyncTelemetry.getMetrics();
+    const statusVal = cacheMetrics.meshStatus === "healthy" ? 1 : cacheMetrics.meshStatus === "degraded" ? 0.5 : 0;
+
+    lines.push("# HELP thaibahive_cache_sync_mesh_status Health state of cross-region cache mesh (1=healthy, 0.5=degraded, 0=partitioned)");
+    lines.push("# TYPE thaibahive_cache_sync_mesh_status gauge");
+    lines.push(`thaibahive_cache_sync_mesh_status ${statusVal}`);
+
+    lines.push("# HELP thaibahive_cache_sync_latency_ms Average cross-region cache sync latency in milliseconds");
+    lines.push("# TYPE thaibahive_cache_sync_latency_ms gauge");
+    lines.push(`thaibahive_cache_sync_latency_ms ${cacheMetrics.averageLatencyMs}`);
+
+    lines.push("# HELP thaibahive_cache_sync_events_total Total cross-region cache invalidation events broadcast");
+    lines.push("# TYPE thaibahive_cache_sync_events_total counter");
+    lines.push(`thaibahive_cache_sync_events_total ${cacheMetrics.totalEventsBroadcast}`);
+
+    lines.push("# HELP thaibahive_cache_conflicts_total Total vector clock conflicts resolved via LWW");
+    lines.push("# TYPE thaibahive_cache_conflicts_total counter");
+    lines.push(`thaibahive_cache_conflicts_total ${cacheMetrics.totalConflictsResolved}`);
+  } catch {}
+
+  // 8. Identity Security & DPoP Telemetry (Sprint-037 / IDP-011)
+  try {
+    const { getIdentityMetricsText } = require("../identity/identity-metrics");
+    const idText = getIdentityMetricsText();
+    if (idText) {
+      lines.push(idText);
+    }
+  } catch {}
+
+  // 9. Edge Revocation Mesh Telemetry (Sprint-037 / IDP-010)
+  try {
+    const { getRevocationMetricsText } = require("../identity/revocation-metrics");
+    const revText = getRevocationMetricsText();
+    if (revText) {
+      lines.push(revText);
+    }
+  } catch {}
+
   return lines.join("\n") + "\n";
 }
 
 function escapeLabelValue(val: string): string {
   return val.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
-

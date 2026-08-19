@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { LatencySummaryCards } from "./_components/latency-summary-cards";
+import { EdgeCacheCard } from "./_components/edge-cache-card";
+import { CacheSyncCard } from "./_components/cache-sync-card";
 import { RouteLatencyTable } from "./_components/route-latency-table";
 import { LatencyTrendChart } from "./_components/latency-trend-chart";
 import { Button } from "@/components/ui/button";
@@ -73,7 +75,7 @@ export default function AdminObservabilityPage() {
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Real-time APM telemetry, route-level latency percentiles, and SLA threshold monitoring.
+            Real-time APM telemetry, route-level latency percentiles, multi-region edge caching, and SLA threshold monitoring.
           </p>
         </div>
 
@@ -137,6 +139,12 @@ export default function AdminObservabilityPage() {
 
       {/* KPI Cards */}
       <LatencySummaryCards snapshot={snapshot} isLoading={isLoading} />
+
+      {/* Multi-Region Edge Caching Card (Sprint-034 / EDG-004) */}
+      <EdgeCacheCard isLoading={isLoading} />
+
+      {/* Cross-Region Cache Synchronization Mesh Card (Sprint-035 / CAC-003) */}
+      <CacheSyncCard isLoading={isLoading} />
 
       {/* Trend Charts */}
       <LatencyTrendChart routes={snapshot?.routes || []} isLoading={isLoading} />

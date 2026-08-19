@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-08-19T17:21:10.199Z",
+  "isSuccess": true,
+  "retentionDays": 3650,
+  "cutoffDate": "2016-08-21T17:21:10.197Z",
+  "totalRecordsArchived": 0,
+  "batchesProcessed": 0,
+  "integrityVerified": true,
+  "durationMs": 2
+}

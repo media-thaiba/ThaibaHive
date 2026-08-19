@@ -1,0 +1,6 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Documented security risk allowlist for known CVEs with accepted risk and expiration dates",
+  "allowlist": []
+}

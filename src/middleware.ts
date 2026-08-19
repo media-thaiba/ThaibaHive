@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-telemetry";
+import { applyTenantRegionHeaders } from "./middleware/tenant-region";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -190,14 +191,22 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
     `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';`
   );
 
-  if (pathname.startsWith("/api/")) {
-    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  // Multi-Region Edge Caching integration (Sprint-034 / EDG-001)
+  const { applyEdgeCaching } = require("./lib/edge/cache-control");
+
+  if (pathname.startsWith("/_next/static/") || pathname.startsWith("/Logo") || pathname.endsWith(".png") || pathname.endsWith(".jpg")) {
+    applyEdgeCaching(response, "PUBLIC_IMMUTABLE", { tags: ["static-assets"] });
+  } else if (pathname === "/api/departments" || pathname === "/api/institutions" || pathname === "/api/canteen/menu") {
+    applyEdgeCaching(response, "PUBLIC_SEMI_STATIC", { tags: ["catalog-data", "public-api"] });
+  } else if (pathname.startsWith("/api/media/share-links/") || pathname.startsWith("/api/media/edge/")) {
+    applyEdgeCaching(response, "PUBLIC_MEDIA_THUMBNAIL", { tags: ["media-edge"] });
+  } else if (pathname.startsWith("/api/")) {
+    applyEdgeCaching(response, "PRIVATE_DYNAMIC");
     response.headers.set("Pragma", "no-cache");
   }
 
-  if (pathname.startsWith("/_next/static/")) {
-    response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
-  }
+  // Multi-Region Tenant Geo-Affinity Header Injection (Sprint-035 / TEN-001)
+  applyTenantRegionHeaders(response, request);
 
   return applyCorsHeaders(request, response);
 }

@@ -2813,10 +2813,342 @@ export const preferenceAuditLog = sqliteTable("preference_audit_log", {
   timestampIdx: index("idx_pg_pref_audit_timestamp").on(t.timestamp),
 }));
 
+// ─── Compliance & Cryptographic Audit Tables ───
 
+export const auditMerkleRoots = sqliteTable("audit_merkle_roots", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default("default"),
+  rootHash: text("root_hash").notNull(),
+  startAuditId: text("start_audit_id"),
+  endAuditId: text("end_audit_id"),
+  leafCount: integer("leaf_count").notNull().default(0),
+  treeDepth: integer("tree_depth").notNull().default(0),
+  signature: text("signature"),
+  metadata: text("metadata"), // JSON string
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  tenantIdx: index("idx_pg_audit_merkle_roots_tenant").on(t.tenantId),
+  rootHashIdx: index("idx_pg_audit_merkle_roots_hash").on(t.rootHash),
+  createdAtIdx: index("idx_pg_audit_merkle_roots_created_at").on(t.createdAt),
+}));
 
+export const auditLogs = sqliteTable("audit_logs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default("default"),
+  userId: text("user_id"),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id"),
+  payload: text("payload"), // JSON payload or diff
+  previousHash: text("previous_hash"),
+  currentHash: text("current_hash").notNull(),
+  merkleRootId: text("merkle_root_id").references(() => auditMerkleRoots.id, { onDelete: "set null" }),
+  merkleProof: text("merkle_proof"), // JSON array of proof hashes
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  tenantIdx: index("idx_pg_audit_logs_tenant").on(t.tenantId),
+  actionIdx: index("idx_pg_audit_logs_action").on(t.action),
+  entityIdx: index("idx_pg_audit_logs_entity").on(t.entityType, t.entityId),
+  currentHashIdx: index("idx_pg_audit_logs_hash").on(t.currentHash),
+  merkleRootIdx: index("idx_pg_audit_logs_merkle_root").on(t.merkleRootId),
+  timestampIdx: index("idx_pg_audit_logs_timestamp").on(t.timestamp),
+}));
 
+export const complianceViolations = sqliteTable("compliance_violations", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default("default"),
+  ruleId: text("rule_id").notNull(),
+  severity: text("severity").notNull().default("MEDIUM"), // LOW, MEDIUM, HIGH, CRITICAL
+  actorId: text("actor_id"),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  details: text("details"), // JSON string
+  status: text("status").notNull().default("OPEN"), // OPEN, ACKNOWLEDGED, RESOLVED, FALSE_POSITIVE
+  resolutionNotes: text("resolution_notes"),
+  resolvedBy: text("resolved_by"),
+  resolvedAt: text("resolved_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  tenantIdx: index("idx_pg_compliance_violations_tenant").on(t.tenantId),
+  ruleIdx: index("idx_pg_compliance_violations_rule").on(t.ruleId),
+  severityIdx: index("idx_pg_compliance_violations_severity").on(t.severity),
+  statusIdx: index("idx_pg_compliance_violations_status").on(t.status),
+  createdAtIdx: index("idx_pg_compliance_violations_created_at").on(t.createdAt),
+}));
 
+export const forensicSnapshots = sqliteTable("forensic_snapshots", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default("default"),
+  snapshotType: text("snapshot_type").notNull().default("SCHEDULED"), // SCHEDULED, MANUAL, PRE_INCIDENT, AUDIT
+  storageUri: text("storage_uri").notNull(),
+  checksumSha256: text("checksum_sha256").notNull(),
+  signature: text("signature"),
+  signerPublicKey: text("signer_public_key"),
+  entityCounts: text("entity_counts"), // JSON string
+  metadata: text("metadata"), // JSON string
+  status: text("status").notNull().default("ACTIVE"), // ACTIVE, ARCHIVED, RESTORED, CORRUPTED
+  retentionTier: text("retention_tier").notNull().default("HOT"), // HOT, WARM, COLD
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  tenantIdx: index("idx_pg_forensic_snapshots_tenant").on(t.tenantId),
+  statusIdx: index("idx_pg_forensic_snapshots_status").on(t.status),
+  retentionTierIdx: index("idx_pg_forensic_snapshots_tier").on(t.retentionTier),
+  createdAtIdx: index("idx_pg_forensic_snapshots_created_at").on(t.createdAt),
+}));
 
+export const identity_sessions = sqliteTable("identity_sessions", {
+  id: text("id").primaryKey(),
+  staff_id: text("staff_id").notNull(),
+  dpop_thumbprint: text("dpop_thumbprint"),
+  dpop_migrated: boolean("dpop_migrated").notNull().default(false),
+  created_at: text("created_at").notNull().default(sql`(current_timestamp)`),
+  expires_at: text("expires_at").notNull(),
+});
 
+export const device_fingerprints = sqliteTable("device_fingerprints", {
+  id: text("id").primaryKey(),
+  staff_id: text("staff_id").notNull(),
+  institution_id: text("institution_id"),
+  composite_hash: text("composite_hash").notNull(),
+  attributes: text("attributes").notNull(), // JSON
+  trust_score: integer("trust_score").notNull(),
+  created_at: text("created_at").notNull().default(sql`(current_timestamp)`),
+  last_seen: text("last_seen").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── API Gateway Security & IP Quarantine Tables (Sprint-038) ───
+
+export const ipQuarantines = sqliteTable("ip_quarantines", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default("default"),
+  ipAddress: text("ip_address").notNull(),
+  cidrMask: text("cidr_mask").default("/32"),
+  isSubnet: boolean("is_subnet").notNull().default(false),
+  reason: text("reason").notNull(),
+  threatScore: integer("threat_score").notNull().default(100),
+  bannedBy: text("banned_by").notNull().default("system"),
+  expiresAt: text("expires_at").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  tenantIdx: index("idx_pg_ip_quarantines_tenant").on(t.tenantId),
+  ipIdx: index("idx_pg_ip_quarantines_ip").on(t.ipAddress),
+  expiresIdx: index("idx_pg_ip_quarantines_expires").on(t.expiresAt),
+  isActiveIdx: index("idx_pg_ip_quarantines_active").on(t.isActive),
+}));
+
+export const ipAllowlist = sqliteTable("ip_allowlist", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().default("default"),
+  ipAddress: text("ip_address").notNull(),
+  description: text("description"),
+  addedBy: text("added_by").notNull().default("admin"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  tenantIdx: index("idx_pg_ip_allowlist_tenant").on(t.tenantId),
+  ipIdx: index("idx_pg_ip_allowlist_ip").on(t.ipAddress),
+}));
+
+// ─── SOAR Security Orchestration Tables (Sprint-040) ───
+
+export const soarPlaybooks = sqliteTable("soar_playbooks", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  version: text("version").notNull().default("1.0.0"),
+  description: text("description"),
+  category: text("category").notNull().default("NETWORK"),
+  enabled: boolean("enabled").notNull().default(true),
+  autoExecute: boolean("auto_execute").notNull().default(true),
+  minConfidence: integer("min_confidence").notNull().default(80),
+  highImpact: boolean("high_impact").notNull().default(false),
+  definition: text("definition").notNull(), // JSON
+  rollbackStrategy: text("rollback_strategy").default("COMPENSATE"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  nameIdx: index("idx_pg_soar_playbooks_name").on(t.name),
+  categoryIdx: index("idx_pg_soar_playbooks_category").on(t.category),
+  enabledIdx: index("idx_pg_soar_playbooks_enabled").on(t.enabled),
+}));
+
+export const soarExecutions = sqliteTable("soar_executions", {
+  id: text("id").primaryKey(),
+  playbookId: text("playbook_id").notNull(),
+  playbookName: text("playbook_name").notNull(),
+  targetType: text("target_type").notNull(),
+  targetValue: text("target_value").notNull(),
+  state: text("state").notNull().default("RUNNING"),
+  triggerPayload: text("trigger_payload"), // JSON
+  tenantId: text("tenant_id").default("default"),
+  actorId: text("actor_id"),
+  approvalId: text("approval_id"),
+  error: text("error"),
+  compensationStatus: text("compensation_status").default("NONE"),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+}, (t) => ({
+  playbookIdx: index("idx_pg_soar_executions_playbook").on(t.playbookId),
+  stateIdx: index("idx_pg_soar_executions_state").on(t.state),
+  targetIdx: index("idx_pg_soar_executions_target").on(t.targetType, t.targetValue),
+  startedAtIdx: index("idx_pg_soar_executions_started_at").on(t.startedAt),
+}));
+
+export const soarExecutionSteps = sqliteTable("soar_execution_steps", {
+  id: text("id").primaryKey(),
+  executionId: text("execution_id").notNull(),
+  stepId: text("step_id").notNull(),
+  name: text("name").notNull(),
+  action: text("action").notNull(),
+  state: text("state").notNull().default("RUNNING"),
+  inputParams: text("input_params"), // JSON
+  output: text("output"), // JSON
+  error: text("error"),
+  compensated: boolean("compensated").notNull().default(false),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+}, (t) => ({
+  executionIdx: index("idx_pg_soar_steps_execution").on(t.executionId),
+  stepIdx: index("idx_pg_soar_steps_step").on(t.stepId),
+  stateIdx: index("idx_pg_soar_steps_state").on(t.state),
+}));
+
+export const soarApprovals = sqliteTable("soar_approvals", {
+  id: text("id").primaryKey(),
+  executionId: text("execution_id").notNull(),
+  playbookId: text("playbook_id").notNull(),
+  playbookName: text("playbook_name").notNull(),
+  targetType: text("target_type").notNull(),
+  targetValue: text("target_value").notNull(),
+  confidenceScore: integer("confidence_score").notNull(),
+  triggerPayload: text("trigger_payload"), // JSON
+  status: text("status").notNull().default("PENDING"),
+  reason: text("reason"),
+  resolvedBy: text("resolved_by"),
+  requestedAt: text("requested_at").notNull().default(sql`(current_timestamp)`),
+  expiresAt: text("expires_at").notNull(),
+  resolvedAt: text("resolved_at"),
+}, (t) => ({
+  statusIdx: index("idx_pg_soar_approvals_status").on(t.status),
+  executionIdx: index("idx_pg_soar_approvals_execution").on(t.executionId),
+  expiresIdx: index("idx_pg_soar_approvals_expires").on(t.expiresAt),
+}));
+
+// ─── Zero-Trust Autonomous Security Mesh & Dynamic Micro-Segmentation (Sprint-041 ZASM) ───
+
+export const zasmDeviceTrust = sqliteTable("zasm_device_trust", {
+  id: text("id").primaryKey(),
+  deviceId: text("device_id").notNull(),
+  tenantId: text("tenant_id").notNull().default("global"),
+  score: integer("score").notNull(),
+  tier: text("tier").notNull(),
+  factorBreakdown: text("factor_breakdown"), // JSON
+  penalties: text("penalties"), // JSON
+  isOverridden: boolean("is_overridden").notNull().default(false),
+  overrideReason: text("override_reason"),
+  evaluatedAt: text("evaluated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  deviceIdx: index("idx_pg_zasm_device_trust_device").on(t.deviceId),
+  tierIdx: index("idx_pg_zasm_device_trust_tier").on(t.tier),
+  tenantIdx: index("idx_pg_zasm_device_trust_tenant").on(t.tenantId),
+}));
+
+export const zasmSegmentationPolicies = sqliteTable("zasm_segmentation_policies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  priority: integer("priority").notNull().default(100),
+  action: text("action").notNull().default("ALLOW"),
+  targetTrustTiers: text("target_trust_tiers").notNull(), // JSON array
+  sourceSubnets: text("source_subnets"), // JSON
+  destServices: text("dest_services"), // JSON
+  protocols: text("protocols"), // JSON
+  destPorts: text("dest_ports"), // JSON
+  vlanTag: integer("vlan_tag"),
+  enabled: boolean("enabled").notNull().default(true),
+  tenantId: text("tenant_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  priorityIdx: index("idx_pg_zasm_policies_priority").on(t.priority),
+  actionIdx: index("idx_pg_zasm_policies_action").on(t.action),
+  enabledIdx: index("idx_pg_zasm_policies_enabled").on(t.enabled),
+}));
+
+export const zasmCertificates = sqliteTable("zasm_certificates", {
+  id: text("id").primaryKey(),
+  serialNumber: text("serial_number").notNull().unique(),
+  serviceName: text("service_name").notNull(),
+  type: text("type").notNull(),
+  certificatePem: text("certificate_pem").notNull(),
+  publicKeyPem: text("public_key_pem").notNull(),
+  fingerprintSha256: text("fingerprint_sha256").notNull(),
+  sanList: text("san_list"), // JSON
+  validFrom: text("valid_from").notNull(),
+  validTo: text("valid_to").notNull(),
+  isRevoked: boolean("is_revoked").notNull().default(false),
+  revocationReason: text("revocation_reason"),
+  revokedAt: text("revoked_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  serialIdx: index("idx_pg_zasm_certs_serial").on(t.serialNumber),
+  serviceIdx: index("idx_pg_zasm_certs_service").on(t.serviceName),
+  validToIdx: index("idx_pg_zasm_certs_valid_to").on(t.validTo),
+}));
+
+export const zasmSbomPackages = sqliteTable("zasm_sbom_packages", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  version: text("version").notNull(),
+  purl: text("purl").notNull(),
+  license: text("license"),
+  sha256: text("sha256"),
+  isDirect: boolean("is_direct").notNull().default(true),
+  dependencies: text("dependencies"), // JSON
+  lastScannedAt: text("last_scanned_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  nameIdx: index("idx_pg_zasm_sbom_pkg_name").on(t.name),
+  purlIdx: index("idx_pg_zasm_sbom_pkg_purl").on(t.purl),
+}));
+
+export const zasmSbomVulnerabilities = sqliteTable("zasm_sbom_vulnerabilities", {
+  id: text("id").primaryKey(),
+  cveId: text("cve_id").notNull(),
+  packageName: text("package_name").notNull(),
+  affectedVersions: text("affected_versions").notNull(),
+  patchedVersion: text("patched_version"),
+  severity: text("severity").notNull(),
+  cvssScore: real("cvss_score"),
+  summary: text("summary"),
+  publishedAt: text("published_at"),
+  advisoryUrl: text("advisory_url"),
+  status: text("status").notNull().default("OPEN"),
+  detectedAt: text("detected_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  cveIdx: index("idx_pg_zasm_vuln_cve").on(t.cveId),
+  pkgIdx: index("idx_pg_zasm_vuln_pkg").on(t.packageName),
+  severityIdx: index("idx_pg_zasm_vuln_severity").on(t.severity),
+}));
+
+export const zasmForensicReports = sqliteTable("zasm_forensic_reports", {
+  id: text("id").primaryKey(),
+  incidentId: text("incident_id").notNull(),
+  primaryActor: text("primary_actor").notNull(),
+  executiveSummary: text("executive_summary").notNull(),
+  technicalDetails: text("technical_details"),
+  timeline: text("timeline"), // JSON
+  rootCauseGraph: text("root_cause_graph"), // JSON
+  durationMs: integer("duration_ms").notNull().default(0),
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  actorIdx: index("idx_pg_zasm_forensic_actor").on(t.primaryActor),
+  incidentIdx: index("idx_pg_zasm_forensic_incident").on(t.incidentId),
+}));
 

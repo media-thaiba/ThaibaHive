@@ -1,0 +1,59 @@
+{
+  "result": {
+    "drillId": "drill_primary_outage_1787127808794",
+    "scenario": "PRIMARY_OUTAGE",
+    "status": "COMPLETED",
+    "startedAt": "2026-08-19T08:23:28.794Z",
+    "completedAt": "2026-08-19T08:23:28.796Z",
+    "durationMs": 2,
+    "mttrMs": 1,
+    "rpoLostTransactions": 0,
+    "parityVerified": true,
+    "slaPassed": true,
+    "stepsExecuted": [
+      {
+        "stepName": "Pre-drill Cluster Health Check",
+        "durationMs": 1,
+        "success": true
+      },
+      {
+        "stepName": "Inject Primary Database Outage",
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stepName": "Evaluate Automated Failover Circuit Breaker",
+        "durationMs": 1,
+        "success": true
+      },
+      {
+        "stepName": "Verify Promotion Candidate Election",
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stepName": "Restore Primary & Reset Circuit Breaker",
+        "durationMs": 0,
+        "success": true
+      }
+    ]
+  },
+  "analysis": {
+    "drillId": "drill_primary_outage_1787127808794",
+    "scenario": "PRIMARY_OUTAGE",
+    "mttrMs": 1,
+    "mttrSeconds": 0,
+    "mttrPassed": true,
+    "rpoLostTransactions": 0,
+    "rpoPassed": true,
+    "stepSuccessCount": 5,
+    "totalSteps": 5,
+    "stepSuccessRatio": 1,
+    "stepsPassed": true,
+    "overallPassed": true,
+    "recommendations": [
+      "All DR SLAs satisfied: Zero data loss (RPO = 0s) and recovery completed in 0s (MTTR < 30s)."
+    ]
+  },
+  "generatedAt": "2026-08-19T08:23:28.797Z"
+}

@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-08-19T08:23:36.142Z",
+  "verificationId": "verify_rollback_1787127816142",
+  "scenario": "ROLLBACK_AND_DEMOTION_PARITY",
+  "status": "VERIFIED",
+  "parityResults": {
+    "schemaAligned": true,
+    "rowCountsMatched": true,
+    "checksumMatched": true,
+    "demotedNodeId": "node-primary-original",
+    "targetPrimaryId": "node-primary-current"
+  },
+  "steps": [
+    {
+      "step": "Demote Former Primary to Follower/Replica Mode",
+      "durationMs": 15,
+      "passed": true
+    },
+    {
+      "step": "Catch Up WAL Replay Offsets",
+      "durationMs": 45,
+      "passed": true
+    },
+    {
+      "step": "Cross-Node Table Checksum & Schema Parity Check",
+      "durationMs": 400,
+      "passed": true
+    },
+    {
+      "step": "Controlled Graceful Switchback & Routing Realignment",
+      "durationMs": 25,
+      "passed": true
+    }
+  ]
+}

@@ -28,7 +28,7 @@ type StaffUser = {
 type AuthContextType = {
   staff: StaffUser | null;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean, extra?: { deviceFingerprint?: any; dpopProof?: string }) => Promise<any>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -66,19 +66,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string, rememberMe = false) => {
+    async (email: string, password: string, rememberMe = false, extra?: { deviceFingerprint?: any; dpopProof?: string }) => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (extra?.dpopProof) {
+        headers["dpop"] = extra.dpopProof;
+      }
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, rememberMe }),
+        headers,
+        body: JSON.stringify({ email, password, rememberMe, deviceFingerprint: extra?.deviceFingerprint }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Login failed");
       }
 
+      if (data.stepUpRequired) {
+        return data;
+      }
+
       window.location.href = "/";
+      return data;
     },
     []
   );

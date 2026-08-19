@@ -1,13 +1,83 @@
+# Enterprise Multi-Region Dependabot Configuration
+# Part of Sprint-034: Enterprise Multi-Region Infrastructure & Automated Dependency Security
 version: 2
 updates:
+  # 1. Immediate Daily Security Advisories & Patches
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+      time: "04:00"
+      timezone: "UTC"
     open-pull-requests-limit: 10
+    target-branch: "main"
+    labels:
+      - "security"
+      - "dependencies"
+      - "automated-pr"
+      - "priority-security"
 
+  # 2. Root Application Routine Dependencies (Grouped Monthly)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "03:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    target-branch: "main"
+    labels:
+      - "dependencies"
+      - "automated-pr"
+    groups:
+      production-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@types/*"
+          - "eslint*"
+          - "jest*"
+          - "playwright*"
+          - "typescript"
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "jest*"
+          - "playwright*"
+          - "typescript*"
+          - "tailwindcss*"
+
+  # 3. Database Package (@thaiba/db)
+  - package-ecosystem: "npm"
+    directory: "/packages/db"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "packages/db"
+      - "automated-pr"
+
+  # 4. Auth Package (@thaiba/auth)
+  - package-ecosystem: "npm"
+    directory: "/packages/auth"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "packages/auth"
+      - "automated-pr"
+
+  # 5. CI/CD GitHub Actions Workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci-cd"
+      - "automated-pr"
