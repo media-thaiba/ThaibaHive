@@ -65,7 +65,11 @@ export async function GET(request: Request) {
     prometheusResponse = cached.prometheusBody;
   } else {
     const snapshot = SlidingWindowAggregator.getInstance().getMetricsSnapshot(windowPeriod);
-    jsonResponse = JSON.stringify(snapshot);
+    const { MobileSyncTelemetryAggregator } = require("@/lib/observability/mobile-sync-telemetry-aggregator");
+    const mobileSync = MobileSyncTelemetryAggregator.getInstance().getSummary();
+    const enrichedSnapshot = { ...snapshot, mobileSync };
+
+    jsonResponse = JSON.stringify(enrichedSnapshot);
     prometheusResponse = formatPrometheusMetrics(snapshot);
 
     metricsResponseCache.set(windowPeriod, {

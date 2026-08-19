@@ -2,6 +2,17 @@
 
 All notable changes to the ThaibaHive ecosystem are documented here.
 
+## [3.17.0] - 2026-08-19
+### Added
+- **Flutter Mobile Sync E2E CI Automation:** Delivered automated Flutter integration test harness (`thaibahive_mobile_app/integration_test/`) covering encrypted Hive persistence, 401 Unauthorized nonce exchange token refresh, and Last-Write-Wins (LWW) conflict resolution, integrated into `.github/workflows/flutter-ci.yml` and `ci.yml` (resolving TD-007).
+- **Mobile Sync Mock Server & Driver:** Implemented `MockSyncServer` and `MockSyncHttpClient` enabling deterministic network failure, latency delay, and batch mutation rejection simulations in CI.
+- **Mobile Sync Telemetry & APM Bridge:** Authored Flutter client `MobileSyncTelemetry` and backend route `POST /api/mobile/v1/telemetry`, routing client sync duration percentiles, mutation batch sizes, error rates, and conflict counters directly into the APM sliding window aggregation engine.
+- **Admin Observability Mobile Sync KPIs:** Extended `/admin/observability` and `/api/system/metrics` to expose live Mobile Sync KPIs (success rate %, p95 sync latency with SLA badges, conflict rate %, and network type breakdowns) and Prometheus metrics (`thaibahive_mobile_sync_*`).
+- **Automated Staging Smoke Test Suite:** Authored standalone TypeScript smoke test runner (`scripts/staging/staging-smoke-runner.ts`) with modular validators for deep health, database ping (<250ms SLA), migration schema parity, critical business APIs, and RBAC security boundaries, generating structured JSON summary reports in < 60s (resolving TD-008).
+- **GitHub Actions Canary Promotion Gate:** Created `.github/workflows/staging-canary-gate.yml` and evaluator `scripts/staging/canary-promotion-gate.ts` to automatically validate staging deployments and block production promotion on smoke check failures or >20% p95 latency degradations.
+- **NPM Staging Command:** Added `"test:staging:smoke"` script to `package.json`.
+- **Operational Runbooks:** Authored `docs/mobile-sync-testing-runbook.md` and `docs/staging-canary-runbook.md`.
+
 ## [3.16.0] - 2026-08-19
 ### Added
 - **In-Memory Percentile Calculation Engine:** Implemented `LatencyHistogram` and `SlidingWindowAggregator` (`src/lib/observability/`) tracking rolling request durations (`1m`, `5m`, `15m`, `1h`) with exact p50, p90, p95, and p99 percentiles, bounded memory (<50MB), and LRU route eviction (TD-005).

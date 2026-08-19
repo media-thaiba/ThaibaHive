@@ -903,6 +903,30 @@ export const jobUpdateSchema = z.object({
 
 export type JobUpdateInput = z.infer<typeof jobUpdateSchema>;
 
+// ─── Sprint-033: Mobile Sync Telemetry ───────────────────────────────────────
+
+export const mobileSyncTelemetryEventSchema = z.object({
+  id: z.string().min(1),
+  batchSize: z.number().int().nonnegative(),
+  syncDurationMs: z.number().nonnegative(),
+  networkType: z.enum(["wifi", "cellular", "ethernet", "offline", "unknown"]).default("unknown"),
+  retryCount: z.number().int().nonnegative().default(0),
+  conflictCount: z.number().int().nonnegative().default(0),
+  success: z.boolean().default(true),
+  errorCode: z.string().optional().nullable(),
+  timestamp: z.string().optional(),
+});
+
+export const mobileSyncTelemetryBatchSchema = z.object({
+  deviceId: z.string().min(1),
+  appVersion: z.string().optional().default("1.0.0"),
+  reportedAt: z.string().optional(),
+  events: z.array(mobileSyncTelemetryEventSchema).min(1).max(100),
+});
+
+export type MobileSyncTelemetryBatchInput = z.infer<typeof mobileSyncTelemetryBatchSchema>;
+
+
 
 
 

@@ -244,7 +244,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x'
+          flutter-version: '3.24.x'
           channel: 'stable'
           cache: true
 
@@ -262,6 +262,13 @@ jobs:
         run: |
           cd thaibahive_mobile_app
           flutter test
+
+      - name: Run mobile sync E2E integration tests (TD-007)
+        run: |
+          cd thaibahive_mobile_app
+          flutter test integration_test/sync_queue_persistence_test.dart
+          flutter test integration_test/sync_auth_nonce_test.dart
+          flutter test integration_test/sync_conflict_resolution_test.dart
 
       - name: Build release APK
         run: |

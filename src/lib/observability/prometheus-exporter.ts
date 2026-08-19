@@ -76,9 +76,42 @@ export function formatPrometheusMetrics(snapshot: ClusterMetricsSnapshot): strin
     lines.push(`thaibahive_http_request_duration_seconds_count{route="${cleanRoute}",method="${method}"} ${snap.count}`);
   }
 
+  // 5. Mobile Sync Telemetry (Sprint-033 / TD-007)
+  try {
+    const { MobileSyncTelemetryAggregator } = require("./mobile-sync-telemetry-aggregator");
+    const mobileSummary = MobileSyncTelemetryAggregator.getInstance().getSummary();
+
+    lines.push("# HELP thaibahive_mobile_sync_total Total number of mobile sync batches processed.");
+    lines.push("# TYPE thaibahive_mobile_sync_total counter");
+    lines.push(`thaibahive_mobile_sync_total ${mobileSummary.totalBatches}`);
+
+    lines.push("# HELP thaibahive_mobile_sync_errors_total Total number of failed mobile sync batches.");
+    lines.push("# TYPE thaibahive_mobile_sync_errors_total counter");
+    lines.push(`thaibahive_mobile_sync_errors_total ${mobileSummary.totalErrors}`);
+
+    lines.push("# HELP thaibahive_mobile_sync_conflicts_total Total number of mobile sync conflict events.");
+    lines.push("# TYPE thaibahive_mobile_sync_conflicts_total counter");
+    lines.push(`thaibahive_mobile_sync_conflicts_total ${mobileSummary.totalConflicts}`);
+
+    lines.push("# HELP thaibahive_mobile_sync_mutations_total Total number of mobile mutations processed.");
+    lines.push("# TYPE thaibahive_mobile_sync_mutations_total counter");
+    lines.push(`thaibahive_mobile_sync_mutations_total ${mobileSummary.totalMutations}`);
+
+    const mSnap = mobileSummary.latency;
+    lines.push("# HELP thaibahive_mobile_sync_duration_seconds Mobile sync latency quantiles in seconds.");
+    lines.push("# TYPE thaibahive_mobile_sync_duration_seconds summary");
+    lines.push(`thaibahive_mobile_sync_duration_seconds{quantile="0.5"} ${(mSnap.p50 / 1000).toFixed(4)}`);
+    lines.push(`thaibahive_mobile_sync_duration_seconds{quantile="0.9"} ${(mSnap.p90 / 1000).toFixed(4)}`);
+    lines.push(`thaibahive_mobile_sync_duration_seconds{quantile="0.95"} ${(mSnap.p95 / 1000).toFixed(4)}`);
+    lines.push(`thaibahive_mobile_sync_duration_seconds{quantile="0.99"} ${(mSnap.p99 / 1000).toFixed(4)}`);
+    lines.push(`thaibahive_mobile_sync_duration_seconds_sum ${(mSnap.sum / 1000).toFixed(4)}`);
+    lines.push(`thaibahive_mobile_sync_duration_seconds_count ${mSnap.count}`);
+  } catch {}
+
   return lines.join("\n") + "\n";
 }
 
 function escapeLabelValue(val: string): string {
   return val.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
+

@@ -1,5 +1,6 @@
 class SignJWT {
   setProtectedHeader() { return this; }
+  setIssuedAt() { return this; }
   setExpirationTime() { return this; }
   sign() { return Promise.resolve("mock.jwt.token"); }
 }

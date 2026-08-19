@@ -41,6 +41,12 @@ jobs:
       - name: Run Flutter Unit Tests
         run: flutter test --coverage
 
+      - name: Run Mobile Sync E2E Integration Tests (TD-007)
+        run: |
+          flutter test integration_test/sync_queue_persistence_test.dart
+          flutter test integration_test/sync_auth_nonce_test.dart
+          flutter test integration_test/sync_conflict_resolution_test.dart
+
       - name: Build Debug APK Quality Check
         run: flutter build apk --debug
 

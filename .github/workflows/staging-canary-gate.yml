@@ -1,0 +1,62 @@
+name: Staging Canary Verification & Promotion Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_url:
+        description: 'Staging Environment Base URL'
+        required: true
+        default: 'http://localhost:3000'
+      baseline_p95_ms:
+        description: 'Baseline p95 latency threshold in ms'
+        required: false
+        default: '250'
+  push:
+    branches: [ staging, release/* ]
+
+jobs:
+  canary-validation:
+    name: Staging Smoke & Canary Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      promotion_allowed: ${{ steps.gate.outputs.promotion_allowed }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Staging Smoke Test Suite (TD-008)
+        run: |
+          pnpm test:staging:smoke -- --url="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" --secret="${{ secrets.HEALTH_SECRET || '' }}" --jwt-secret="${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}"
+        env:
+          NODE_ENV: production
+
+      - name: Evaluate Canary Promotion Gate
+        id: gate
+        run: |
+          npx tsx scripts/staging/canary-promotion-gate.ts --baseline-p95="${{ github.event.inputs.baseline_p95_ms || 250 }}"
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+
+      - name: Upload Staging Smoke Test Report Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-smoke-report
+          path: staging-reports/
+          retention-days: 30

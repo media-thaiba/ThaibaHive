@@ -12,6 +12,7 @@
     "test": "jest --passWithNoTests",
     "test:e2e": "playwright test",
     "test:load": "node load-tests/run-local-benchmark.js",
+    "test:staging:smoke": "tsx scripts/staging/staging-smoke-runner.ts",
     "build:analyze": "node scripts/build-analyze.js",
     "premigrate": "tsx scripts/pre-migration/mark-entries-dedup.ts",
     "db:generate": "drizzle-kit generate",
