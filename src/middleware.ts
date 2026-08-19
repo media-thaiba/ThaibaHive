@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-telemetry";
 
-const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
 
 const publicPaths = [

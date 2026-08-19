@@ -7,8 +7,9 @@ import { logActivity } from "@/lib/api/activity-log";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { serverLogger } from "@/lib/server-logger";
 import { eq } from "drizzle-orm";
+import { withPublicApm } from "@/lib/api/public-apm";
 
-export async function POST(request: Request) {
+export const POST = withPublicApm(async function POST(request: Request) {
   try {
     const ip = extractIp(request);
     const rl = checkRateLimit(ip, "auth");
@@ -98,4 +99,4 @@ export async function POST(request: Request) {
     serverLogger.error("Login error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

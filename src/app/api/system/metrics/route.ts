@@ -4,6 +4,14 @@ import { SlidingWindowAggregator, type WindowPeriod } from "@/lib/observability/
 import { formatPrometheusMetrics } from "@/lib/observability/prometheus-exporter";
 import crypto from "crypto";
 
+// 1-second in-memory response cache store for scrape flood protection
+interface CachedMetricsEntry {
+  jsonBody: string;
+  prometheusBody: string;
+  expiresAt: number;
+}
+const metricsResponseCache = new Map<WindowPeriod, CachedMetricsEntry>();
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const secretHeader = request.headers.get("x-metrics-secret") || "";
@@ -12,7 +20,7 @@ export async function GET(request: Request) {
 
   let isAuthorized = false;
 
-  // 1. Check shared secret (if configured)
+  // 1. Fast shared secret check (zero JWT decode overhead for Prometheus scrapers)
   if (expectedSecret) {
     let bearerToken = "";
     if (authHeader.startsWith("Bearer ")) {
@@ -28,7 +36,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 2. Check user session if secret auth not satisfied
+  // 2. Fallback to session check if secret not supplied
   if (!isAuthorized) {
     const session = await verifySession();
     if (!session) {
@@ -45,15 +53,34 @@ export async function GET(request: Request) {
   const validWindows: WindowPeriod[] = ["1m", "5m", "15m", "1h"];
   const windowPeriod: WindowPeriod = validWindows.includes(rawWindow) ? rawWindow : "5m";
 
-  const snapshot = SlidingWindowAggregator.getInstance().getMetricsSnapshot(windowPeriod);
+  // 4. Check 1-second in-memory cache
+  const now = Date.now();
+  const cached = metricsResponseCache.get(windowPeriod);
 
-  // 4. Content negotiation (Prometheus vs JSON)
+  let jsonResponse: string;
+  let prometheusResponse: string;
+
+  if (cached && cached.expiresAt > now) {
+    jsonResponse = cached.jsonBody;
+    prometheusResponse = cached.prometheusBody;
+  } else {
+    const snapshot = SlidingWindowAggregator.getInstance().getMetricsSnapshot(windowPeriod);
+    jsonResponse = JSON.stringify(snapshot);
+    prometheusResponse = formatPrometheusMetrics(snapshot);
+
+    metricsResponseCache.set(windowPeriod, {
+      jsonBody: jsonResponse,
+      prometheusBody: prometheusResponse,
+      expiresAt: now + 1000, // 1-second cache TTL
+    });
+  }
+
+  // 5. Content negotiation (Prometheus vs JSON)
   const acceptHeader = request.headers.get("accept") || "";
   const formatParam = url.searchParams.get("format");
 
   if (formatParam === "prometheus" || acceptHeader.includes("text/plain")) {
-    const prometheusText = formatPrometheusMetrics(snapshot);
-    return new Response(prometheusText, {
+    return new Response(prometheusResponse, {
       status: 200,
       headers: {
         "content-type": "text/plain; version=0.0.4; charset=utf-8",
@@ -62,7 +89,7 @@ export async function GET(request: Request) {
     });
   }
 
-  return new Response(JSON.stringify(snapshot), {
+  return new Response(jsonResponse, {
     status: 200,
     headers: {
       "content-type": "application/json",

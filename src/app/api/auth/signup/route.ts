@@ -5,8 +5,9 @@ import { hashPassword, createSession } from "@/lib/auth";
 import { signupSchema } from "@/lib/auth/schemas";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq } from "drizzle-orm";
+import { withPublicApm } from "@/lib/api/public-apm";
 
-export async function POST(request: Request) {
+export const POST = withPublicApm(async function POST(request: Request) {
   try {
     const ip = extractIp(request);
     const rl = checkRateLimit(ip, "auth-signup");
@@ -106,4 +107,4 @@ export async function POST(request: Request) {
     console.error("Signup error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
