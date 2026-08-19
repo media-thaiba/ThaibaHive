@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+/**
+ * Leaves Page
+ * Migrated to TanStack Query (P2-46) and Central API Client (P2-47).
+ */
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,16 +29,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2, Calendar } from "lucide-react";
 import { formatDate, formatDateRange } from "@/lib/utils";
-
-type LeaveRequest = {
-  id: string; leaveTypeId: string; startDate: string; endDate: string;
-  daysCount: number; reason: string | null; status: string; appliedAt: string;
-};
-type LeaveType = { id: string; name: string; code: string; daysAllowed: number };
-type LeaveBalance = {
-  id: string; leaveTypeId: string; totalDays: number; usedDays: number;
-  leaveTypeName: string | null; leaveTypeCode: string | null;
-};
+import {
+  useLeaves,
+  useLeaveTypes,
+  useLeaveBalances,
+  useCreateLeave,
+  useCancelLeave,
+  type LeaveRequest,
+} from "@/lib/hooks/use-leaves";
 
 const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
   approved: "success",
@@ -43,34 +46,27 @@ const statusVariant: Record<string, "success" | "warning" | "destructive" | "sec
 };
 
 export default function LeavesPage() {
-  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
-  const [balances, setBalances] = useState<LeaveBalance[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({ leaveTypeId: "", startDate: today, endDate: today, daysCount: 1, reason: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/leaves").then((r) => r.json()),
-      fetch("/api/leaves/types").then((r) => r.json()),
-      fetch("/api/leaves/balances").then((r) => r.json()),
-    ]).then(([leaveData, typeData, balanceData]) => {
-      setLeaves(Array.isArray(leaveData.leaves) ? leaveData.leaves : []);
-      setLeaveTypes(Array.isArray(typeData.leaveTypes) ? typeData.leaveTypes : []);
-      setBalances(Array.isArray(balanceData.balances) ? balanceData.balances : []);
-      if (typeData.leaveTypes?.length > 0) {
-        setForm((prev) => ({ ...prev, leaveTypeId: typeData.leaveTypes[0].id }));
-      }
-      setLoading(false);
-    });
-  }, []);
+  // TanStack Query Hooks
+  const { data: leaves = [], isLoading: loadingLeaves } = useLeaves({ dateFrom, dateTo });
+  const { data: leaveTypes = [], isLoading: loadingTypes } = useLeaveTypes();
+  const { data: balances = [] } = useLeaveBalances();
+
+  const createMutation = useCreateLeave();
+  const cancelMutation = useCancelLeave();
+
+  const loading = loadingLeaves || loadingTypes;
+
+  // Auto-select first leave type if form doesn't have one selected
+  if (leaveTypes.length > 0 && !form.leaveTypeId) {
+    setForm((prev) => ({ ...prev, leaveTypeId: leaveTypes[0].id }));
+  }
 
   function calcDays(start: string, end: string) {
     if (!start || !end) return 0;
@@ -79,32 +75,25 @@ export default function LeavesPage() {
   }
 
   async function applyLeave(e: React.FormEvent) {
-    e.preventDefault(); setSubmitting(true);
-    const res = await fetch("/api/leaves", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
+    e.preventDefault();
+    try {
+      await createMutation.mutateAsync(form);
       setShowForm(false);
       setForm({ leaveTypeId: form.leaveTypeId, startDate: today, endDate: today, daysCount: 1, reason: "" });
       toast.success("Leave application submitted successfully. Your HOD will review it.");
-      const data = await fetch("/api/leaves").then((r) => r.json());
-      setLeaves(Array.isArray(data.leaves) ? data.leaves : []);
-    } else {
-      const d = await res.json();
-      toast.error(d.error || "Failed to submit leave application. Please try again.");
+    } catch {
+      toast.error("Failed to submit leave application. Please try again.");
     }
-    setSubmitting(false);
   }
 
-  async function cancelLeave(id: string) {
-    setCancellingId(id);
-    await fetch(`/api/leaves/${id}`, { method: "DELETE" });
-    toast.success("Leave application cancelled.");
-    const data = await fetch("/api/leaves").then((r) => r.json());
-    setLeaves(Array.isArray(data.leaves) ? data.leaves : []);
-    setCancellingId(null);
-    setConfirmDeleteId(null);
+  async function handleCancelLeave(id: string) {
+    try {
+      await cancelMutation.mutateAsync(id);
+      toast.success("Leave application cancelled.");
+      setConfirmDeleteId(null);
+    } catch {
+      toast.error("Failed to cancel leave application.");
+    }
   }
 
   const days = calcDays(form.startDate, form.endDate);
@@ -202,8 +191,8 @@ export default function LeavesPage() {
                 <label className="text-xs font-medium text-muted-foreground">Reason (optional)</label>
                 <Textarea placeholder="Reason for leave" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} />
               </div>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Submitting..." : `Apply for ${days} day${days > 1 ? "s" : ""}`}
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Submitting..." : `Apply for ${days} day${days > 1 ? "s" : ""}`}
               </Button>
               <p className="text-xs text-muted-foreground">Your HOD will review this request. You will be notified once it is approved or rejected.</p>
             </form>
@@ -226,7 +215,7 @@ export default function LeavesPage() {
             />
           ) : (
             <div className="space-y-2">
-              {leaves.map((l) => (
+              {leaves.map((l: LeaveRequest) => (
                 <div key={l.id} className="flex items-center justify-between rounded-xl border p-3.5 hover:bg-muted/30 transition-colors">
                   <div>
                     <p className="text-sm font-medium">{formatDateRange(l.startDate, l.endDate)} ({l.daysCount} day{l.daysCount > 1 ? "s" : ""})</p>
@@ -235,7 +224,7 @@ export default function LeavesPage() {
                   <div className="flex items-center gap-2">
                     <Badge variant={statusVariant[l.status] || "secondary"} className="capitalize">{l.status}</Badge>
                     {l.status === "pending" && (
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(l.id)} disabled={cancellingId === l.id}>
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(l.id)} disabled={cancelMutation.isPending && cancelMutation.variables === l.id}>
                         <Trash2 className="h-3.5 w-3.5 mr-1" />
                         Cancel
                       </Button>
@@ -262,7 +251,7 @@ export default function LeavesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Request</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => confirmDeleteId && cancelLeave(confirmDeleteId)}
+              onClick={() => confirmDeleteId && handleCancelLeave(confirmDeleteId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Yes, Cancel Leave

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
-import { Alert } from "@/components/ui/alert";
+import {  } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/label";

@@ -12,17 +12,31 @@ import { eq } from "drizzle-orm";
  * When queued offline scans sync to the server, duplicate check-in requests are rejected with 400 Bad Request
  * and flagged in activityLogs for security audit reconciliation.
  */
+import { VisitorQrPassService } from "@/lib/visitors/qr-pass-service";
+
 export const GET = requireAuth(async (request: Request) => {
   const { searchParams } = new URL(request.url);
-  const passToken = searchParams.get("passToken") || searchParams.get("id");
+  const passToken = searchParams.get("passToken") || searchParams.get("id") || searchParams.get("qrPayload");
 
   if (!passToken) {
     return NextResponse.json({ error: "passToken or visitor id is required" }, { status: 400 });
   }
 
+  if (passToken.startsWith("VIS|")) {
+    const verification = VisitorQrPassService.verifyPassPayload(passToken);
+    if (!verification.valid) {
+      return NextResponse.json({ error: verification.reason || "Invalid QR pass" }, { status: 400 });
+    }
+    return NextResponse.json({
+      valid: true,
+      status: "APPROVED",
+      payload: verification.payload,
+      verifiedAt: new Date().toISOString(),
+    });
+  }
+
   let visitorId = passToken;
   try {
-    // If passToken is base64 JSON payload
     const decoded = Buffer.from(passToken, "base64url").toString("utf-8");
     const parsed = JSON.parse(decoded);
     if (parsed.visitorId) visitorId = parsed.visitorId;
@@ -64,7 +78,8 @@ export const GET = requireAuth(async (request: Request) => {
     verificationStatus,
     verifiedAt: now,
   });
-}, "staff:read");
+}, "visitor:read");
+
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json().catch(() => ({}));

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "ai_rules", "label": "100 Non-Negotiable AI Rules", "file_type": "document", "source_file": ".ai/05_AI_RULES.md"}], "edges": [{"source": "thaibahive_os", "target": "ai_rules", "relation": "governed_by", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": ".ai/05_AI_RULES.md"}], "hyperedges": []}

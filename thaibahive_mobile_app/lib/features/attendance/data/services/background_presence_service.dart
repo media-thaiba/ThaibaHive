@@ -29,22 +29,19 @@ class BackgroundPresenceService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   Dio _getDio() {
-    final dio = Dio(BaseOptions(
-      baseUrl: AppConstants.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-    ));
-    if (kDebugMode) {
-      dio.httpClientAdapter = IOHttpClientAdapter(
-        createHttpClient: () {
-          final client = HttpClient();
-          client.badCertificateCallback =
-              (X509Certificate cert, String host, int port) => true;
-          return client;
-        },
-      );
-    }
-    return dio;
+  final dio = Dio(BaseOptions(
+    baseUrl: AppConstants.apiBaseUrl,
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
+  ));
+  if (kDebugMode) {
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        return HttpClient();
+      },
+    );
+  }
+  return dio;
   }
 
   // State

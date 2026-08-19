@@ -1,0 +1,1 @@
+{"nodes": [{"id": "design_system", "label": "Design System & Visual Specs", "file_type": "document", "source_file": ".ai/07_DESIGN_SYSTEM.md"}], "edges": [{"source": "design_system", "target": "tailwind", "relation": "extends", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": ".ai/07_DESIGN_SYSTEM.md"}], "hyperedges": []}

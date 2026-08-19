@@ -10,7 +10,7 @@ import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-lim
 export const runtime = "nodejs";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
-const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MIME_TO_EXTENSIONS: Record<string, string[]> = {
   "image/jpeg": ["jpg", "jpeg"],
   "image/png": ["png"],

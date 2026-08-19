@@ -4,6 +4,8 @@ import {
   CalendarCheck, Briefcase, Settings, HelpCircle, Truck, Coffee,
   DoorOpen, MessageSquare, Award, CircleDot, LayoutDashboard,
   Store, FolderOpen, ClipboardCheck,
+  GraduationCap, Users as UsersIcon, Layers, CalendarDays,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,6 +53,18 @@ export const navGroups: NavGroup[] = [
       { href: "/assets", label: "Assets", desc: "Track institutional assets and equipment assignments", icon: Briefcase },
       { href: "/reviews", label: "Reviews", desc: "View performance reviews and submit self-evaluations", icon: ClipboardCheck },
       { href: "/settings", label: "Settings", desc: "Update your profile, password, and notification preferences", icon: Settings },
+      { href: "/admin/nfc", label: "NFC Cards", desc: "Manage NFC card inventory and assignments", icon: Smartphone },
+      { href: "/admin/executive/analytics", label: "Executive Analytics", desc: "Unified governance, resilience, and mobile intelligence dashboard", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Academics",
+    items: [
+      { href: "/academic", label: "Academic Dashboard", desc: "Overview of students, classes, and attendance", icon: GraduationCap },
+      { href: "/examinations", label: "Examinations", desc: "Manage examination sessions, hall tickets, and tabulation registers", icon: GraduationCap },
+      { href: "/academic/students", label: "Students", desc: "Manage student records and profiles", icon: UsersIcon },
+      { href: "/academic/classes", label: "Classes", desc: "Manage class sections and rosters", icon: Layers },
+      { href: "/academic/academic-years", label: "Academic Years", desc: "Configure academic year periods", icon: CalendarDays },
     ],
   },
   {
@@ -100,11 +114,27 @@ const ENABLED_PATHS = new Set([
   "/help-desk",
   "/marketplace",
   "/media",
+  "/media-library",
+  "/api/media",
+  "/api/media/assets",
+  "/api/media/folders",
+  "/api/media/upload",
+  "/api/media/share-links",
+  "/api/media/batch-download",
+  "/api/media/reconcile",
   "/reviews",
   "/canteen",
+  "/academic",
+  "/academic/students",
+  "/academic/classes",
+  "/academic/academic-years",
+  "/admin/nfc",
+  "/admin/executive/analytics",
+  "/admin",
 ]);
 
 export function isPhaseOnePath(href: string): boolean {
+  if (href.startsWith("/api/media")) return true;
   return ENABLED_PATHS.has(href);
 }
 

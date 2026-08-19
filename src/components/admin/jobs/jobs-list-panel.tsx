@@ -61,6 +61,15 @@ export function JobsListPanel({
     return () => clearTimeout(timer);
   }, [searchInst, filters, onFilterChange]);
 
+  const [now, setNow] = React.useState(() => Date.now());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "queued":
@@ -82,7 +91,7 @@ export function JobsListPanel({
     if (!job.executions || job.executions.length === 0) return "-";
     const latest = job.executions[0];
     const start = new Date(latest.startedAt).getTime();
-    const end = latest.completedAt ? new Date(latest.completedAt).getTime() : Date.now();
+    const end = latest.completedAt ? new Date(latest.completedAt).getTime() : now;
     const diffMs = end - start;
     if (diffMs < 0) return "0s";
     const secs = Math.floor(diffMs / 1000);

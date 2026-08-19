@@ -16,6 +16,7 @@ if (typeof global.Request === "undefined") {
     body: string;
     headers: { get: (key: string) => string | null; forEach: (cb: any) => void };
     constructor(input: string, init?: any) {
+      Object.defineProperty(this, "url", { value: input, writable: true, configurable: true });
       this.url = input;
       this.method = init?.method || "GET";
       this.body = init?.body || "";
@@ -35,10 +36,14 @@ if (typeof global.Request === "undefined") {
       };
     }
     async json() {
-      return JSON.parse(this.body);
+      return typeof this.body === "string" ? JSON.parse(this.body) : this.body;
+    }
+    async text() {
+      return typeof this.body === "string" ? this.body : JSON.stringify(this.body || {});
     }
   } as any;
 }
+
 
 if (typeof global.Response === "undefined") {
   global.Response = class MockResponse {

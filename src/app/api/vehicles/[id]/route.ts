@@ -6,8 +6,14 @@ import { eq } from "drizzle-orm";
 
 export const DELETE = requireAuth(async (_request, _session, context) => {
   const { id } = await context!.params;
+  const existing = await db.select().from(vehicles).where(eq(vehicles.id, id)).get();
+  if (!existing) {
+    return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
+  }
+
   await db.delete(vehicleLogs).where(eq(vehicleLogs.vehicleId, id)).run();
   await db.delete(vehicleBookings).where(eq(vehicleBookings.vehicleId, id)).run();
   await db.delete(vehicles).where(eq(vehicles.id, id)).run();
   return NextResponse.json({ success: true });
 }, "vehicles:manage");
+

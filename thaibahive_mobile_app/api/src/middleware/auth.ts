@@ -16,9 +16,9 @@ export interface AuthRequest extends Request {
   user?: AuthUser;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.AUTH_JWT_SECRET;
 if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is required");
+  throw new Error("AUTH_JWT_SECRET environment variable is required");
 }
 const SECRET_KEY = new TextEncoder().encode(JWT_SECRET);
 

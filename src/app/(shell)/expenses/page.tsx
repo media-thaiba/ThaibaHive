@@ -6,12 +6,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Plus, Download } from "lucide-react";
+import { Plus,  } from "lucide-react";
 import { ensureArray } from "@/lib/utils";
 import { ExpenseSummaryCards } from "@/components/expenses/expense-summary-cards";
 import { ExpenseClaimList } from "@/components/expenses/expense-claim-list";
 import { ExpenseClaimFormDialog } from "@/components/expenses/expense-claim-form-dialog";
 import { ExpenseReviewDialog } from "@/components/expenses/expense-review-dialog";
+
+import { ExportButton } from "@/components/export-button";
 
 type ExpenseClaim = {
   id: string; staffId: string; amount: number; category: string; description: string;
@@ -70,7 +72,7 @@ export default function ExpensesPage() {
         title="Expense Claims"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.open("/api/export?type=expenses", "_blank")} className="gap-1.5"><Download className="h-4 w-4" /> Export CSV</Button>
+            <ExportButton type="expenses" />
             <Button onClick={() => setShowForm(true)} className="gap-1.5"><Plus className="h-4 w-4" /> Submit Claim</Button>
           </div>
         }

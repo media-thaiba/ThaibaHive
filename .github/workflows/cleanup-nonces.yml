@@ -1,0 +1,25 @@
+name: Nonce Cleanup
+
+on:
+  schedule:
+    # Run daily at 02:00 UTC (7:30 IST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  cleanup-nonces:
+    name: Purge Expired Nonces
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke nonce cleanup endpoint
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/system/cleanup-nonces" \
+            -H "Content-Type: application/json" \
+            -H "Cookie: thaibahive_session=${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}")
+
+          if [ "$RESPONSE" != "200" ]; then
+            echo "❌ Nonce cleanup failed with HTTP $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Nonce cleanup completed successfully (HTTP $RESPONSE)"

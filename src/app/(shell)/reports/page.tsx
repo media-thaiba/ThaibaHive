@@ -6,10 +6,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Plus, Download } from "lucide-react";
+import { Plus,  } from "lucide-react";
 import { ensureArray } from "@/lib/utils";
 import { ReportList } from "@/components/reports/report-list";
 import { ReportFormDialog } from "@/components/reports/report-form-dialog";
+import { ExportButton } from "@/components/export-button";
 import { ReportDetailDialog } from "@/components/reports/report-detail-dialog";
 
 type DailyReport = {
@@ -64,9 +65,7 @@ export default function ReportsPage() {
         title="Daily Activity Logs"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.open("/api/export?type=staff", "_blank")} className="gap-1.5">
-              <Download className="h-4 w-4" /> Export CSV
-            </Button>
+            <ExportButton type="staff" label="Export Logs" />
             <Button onClick={() => { setEditingReport(null); setShowForm(true); }} className="gap-1.5">
               <Plus className="h-4 w-4" /> New Report
             </Button>

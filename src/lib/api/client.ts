@@ -1,15 +1,19 @@
 import { toast } from "sonner";
 
-type RequestOptions = {
+export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   params?: Record<string, string | number | boolean | undefined | null>;
   headers?: Record<string, string>;
   toast?: boolean;
   errorMessage?: string;
+  onLoading?: (loading: boolean) => void;
+  retries?: number;
+  retryDelayMs?: number;
+  credentials?: RequestCredentials;
 };
 
-type ApiResponse<T = unknown> = {
+export type ApiResponse<T = unknown> = {
   data: T;
   error?: string;
   ok: boolean;
@@ -27,6 +31,8 @@ function buildQueryString(
   return "?" + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
 }
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function request<T = unknown>(
   url: string,
   options: RequestOptions = {}
@@ -38,6 +44,10 @@ async function request<T = unknown>(
     headers: customHeaders,
     toast: showToast = true,
     errorMessage,
+    onLoading,
+    retries = method === "GET" ? 1 : 0,
+    retryDelayMs = 1000,
+    credentials = "same-origin",
   } = options;
 
   const queryString = buildQueryString(params);
@@ -47,24 +57,96 @@ async function request<T = unknown>(
     ...customHeaders,
   };
 
-  if (body !== undefined) {
+  if (body !== undefined && !(body instanceof FormData) && !(body instanceof Blob) && !(body instanceof ArrayBuffer)) {
     headers["Content-Type"] = "application/json";
   }
 
-  try {
-    const res = await fetch(fullUrl, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[API ${method}] ${fullUrl}`);
+  }
 
-    if (res.status === 401) {
-      if (showToast) toast.error("Session expired. Please log in again.");
-      window.location.href = "/auth/login";
-      return { data: null as T, ok: false, status: 401 };
+  onLoading?.(true);
+
+  let attempt = 0;
+  let lastError: unknown;
+  let res: Response | null = null;
+
+  while (attempt <= retries) {
+    try {
+      let reqBody: BodyInit | undefined;
+      if (body !== undefined) {
+        if (body instanceof FormData || body instanceof Blob || body instanceof ArrayBuffer || typeof body === "string") {
+          reqBody = body as BodyInit;
+        } else {
+          reqBody = JSON.stringify(body);
+        }
+      }
+
+      res = await fetch(fullUrl, {
+        method,
+        headers,
+        body: reqBody,
+        credentials,
+      });
+
+      // If server error (5xx) and we have retries remaining, retry
+      if (res.status >= 500 && attempt < retries) {
+        attempt++;
+        await delay(retryDelayMs * Math.pow(2, attempt - 1));
+        continue;
+      }
+
+      break;
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        attempt++;
+        await delay(retryDelayMs * Math.pow(2, attempt - 1));
+        continue;
+      }
+      break;
+    }
+  }
+
+  try {
+    if (!res) {
+      const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+      const msg = errorMessage || (isOffline 
+        ? "You are offline. Please check your internet connection."
+        : "Network error or timeout. Please check your connection and try again.");
+      if (showToast) toast.error(msg);
+      return { data: null as T, error: msg, ok: false, status: 0 };
     }
 
-    const contentType = res.headers.get("content-type") || "";
+    if (res.status === 401) {
+      const msg = errorMessage || "Session expired. Please log in again.";
+      if (showToast) toast.error(msg);
+      if (typeof window !== "undefined" && window.location.pathname !== "/auth/login") {
+        try {
+          window.location.href = "/auth/login";
+        } catch {
+          // Ignore navigation error in test environment (jsdom)
+        }
+      }
+      return { data: null as T, error: msg, ok: false, status: 401 };
+    }
+
+    if (res.status === 403) {
+      const msg = errorMessage || "Access denied. You do not have permission to perform this action.";
+      if (showToast) toast.error(msg);
+      return { data: null as T, error: msg, ok: false, status: 403 };
+    }
+
+    if (res.status === 429) {
+      const retryAfter = res.headers ? res.headers.get("retry-after") : null;
+      const msg = errorMessage || (retryAfter
+        ? `Rate limit exceeded. Please try again in ${retryAfter} seconds.`
+        : "Rate limit exceeded. Please try again later.");
+      if (showToast) toast.error(msg);
+      return { data: null as T, error: msg, ok: false, status: 429 };
+    }
+
+    const contentType = res.headers ? (res.headers.get("content-type") || "") : "";
     let data: T;
 
     if (contentType.includes("application/json")) {
@@ -82,14 +164,12 @@ async function request<T = unknown>(
           ? String((data as { error: unknown }).error)
           : `Request failed (${res.status})`);
       if (showToast) toast.error(msg);
-      return { data, ok: false, status: res.status };
+      return { data, error: msg, ok: false, status: res.status };
     }
 
     return { data, ok: true, status: res.status };
-  } catch (err) {
-    const msg = errorMessage || "Network error. Please try again.";
-    if (showToast) toast.error(msg);
-    return { data: null as T, ok: false, status: 0 };
+  } finally {
+    onLoading?.(false);
   }
 }
 
@@ -134,43 +214,20 @@ export const api = {
 
   upload<T = unknown>(
     url: string,
-    file: File,
-    opts?: { params?: Record<string, string>; headers?: Record<string, string>; toast?: boolean; errorMessage?: string }
+    file: File | Blob,
+    opts?: { params?: Record<string, string>; headers?: Record<string, string>; toast?: boolean; errorMessage?: string; onLoading?: (loading: boolean) => void }
   ) {
-    const { params, headers: customHeaders, toast: showToast = true, errorMessage } = opts || {};
-    const queryString = buildQueryString(params);
-    const fullUrl = url + queryString;
-
-    return (async (): Promise<ApiResponse<T>> => {
-      try {
-        const res = await fetch(fullUrl, {
-          method: "POST",
-          headers: { ...customHeaders },
-          body: file,
-        });
-
-        if (res.status === 401) {
-          if (showToast) toast.error("Session expired. Please log in again.");
-          window.location.href = "/auth/login";
-          return { data: null as T, ok: false, status: 401 };
-        }
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          const msg = errorMessage || data.error || `Upload failed (${res.status})`;
-          if (showToast) toast.error(msg);
-          return { data, ok: false, status: res.status };
-        }
-
-        return { data, ok: true, status: res.status };
-      } catch {
-        const msg = errorMessage || "Upload failed. Please try again.";
-        if (showToast) toast.error(msg);
-        return { data: null as T, ok: false, status: 0 };
-      }
-    })();
+    return request<T>(url, {
+      ...opts,
+      method: "POST",
+      body: file,
+    });
   },
 
-  download: request<Blob>,
+  download(
+    url: string,
+    opts?: RequestOptions
+  ) {
+    return request<Blob>(url, { method: "GET", ...opts });
+  },
 };

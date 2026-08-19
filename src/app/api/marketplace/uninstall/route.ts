@@ -53,4 +53,4 @@ export const DELETE = requireAuth(async (request: Request, session) => {
     .get();
 
   return NextResponse.json({ success: true, message: `${app?.name ?? "App"} removed` });
-}, "attendance:read");
+}, "marketplace:uninstall");

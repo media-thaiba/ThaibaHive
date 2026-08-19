@@ -118,7 +118,7 @@ async function patchHandler(
       `job_status_change:${id}`,
       JSON.stringify({ status: oldStatus }),
       JSON.stringify({ status }),
-      session.institutionId || "",
+      session.institutionId || null,
       request.headers.get("x-forwarded-for") || "127.0.0.1"
     );
 

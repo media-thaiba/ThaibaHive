@@ -93,6 +93,9 @@ export default function StaffProfilePage() {
           setTimeline(timelineRes.data.timeline);
         }
       })
+      .catch(() => {
+        setStaff(null);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 

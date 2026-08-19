@@ -1,11 +1,12 @@
 import { requireAuth } from "@/lib/api/auth-guard";
-import { verifySession, hasPermission } from "@/lib/auth";
+import { verifySession, hasPermission } from "@thaiba/auth";
 import { NextResponse } from "next/server";
 
-jest.mock("@/lib/auth", () => ({
+jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(),
 }));
+
 
 describe("requireAuth middleware", () => {
   let mockHandler: jest.Mock;

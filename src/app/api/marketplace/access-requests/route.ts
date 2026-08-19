@@ -25,7 +25,7 @@ export const GET = requireAuth(async (_request, session) => {
     .all();
 
   return NextResponse.json({ requests });
-}, "attendance:read");
+}, "marketplace:install");
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
@@ -96,4 +96,4 @@ export const POST = requireAuth(async (request: Request, session) => {
   }).returning().get();
 
   return NextResponse.json({ request: accessRequest }, { status: 201 });
-}, "attendance:read");
+}, "marketplace:install");

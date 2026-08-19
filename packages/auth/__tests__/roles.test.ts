@@ -35,6 +35,17 @@ describe("Roles and Permissions", () => {
       expect(hasPermission("staff", "staff:create")).toBe(false);
       expect(hasPermission("staff", "leaves:approve")).toBe(false);
     });
+
+    it("should reject invalid or unknown roles and issue a security warning", () => {
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      expect(hasPermission("invalid_role", "staff:read")).toBe(false);
+      expect(hasPermission("hacker_admin", "*")).toBe(false);
+      expect(hasPermission("", "staff:read")).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Invalid role attempted in RBAC check")
+      );
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("getRolePermissions", () => {

@@ -66,7 +66,7 @@ export default function ShiftsPage() {
     effectiveTo: "",
   });
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData().catch(() => {}); }, []);
 
   async function fetchData() {
     const [shiftsRes, assignmentsRes, staffRes] = await Promise.all([

@@ -11,8 +11,11 @@ export interface RealtimeDashboardEvent {
 export function useRealtimeDashboard(
   onEvent?: (event: RealtimeDashboardEvent) => void
 ) {
-  const onEventRef = useRef(onEvent);
-  onEventRef.current = onEvent;
+  const onEventRef = useRef<((event: RealtimeDashboardEvent) => void) | undefined>(onEvent);
+
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   useEffect(() => {
     let eventSource: EventSource | null = null;

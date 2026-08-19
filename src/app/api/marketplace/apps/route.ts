@@ -47,4 +47,4 @@ export const GET = requireAuth(async (_request, session) => {
   });
 
   return NextResponse.json({ apps: enriched });
-}, "attendance:read");
+}, "marketplace:install");

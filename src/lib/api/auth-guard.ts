@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { verifySession, type SessionPayload, hasPermission } from "../../../packages/auth";
 import type { StaffRole } from "@/types";
-
-
+import { normalizeRoutePath } from "../observability/route-normalizer";
+import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
+import { EventBus } from "../observability/event-bus";
 
 type HandlerWithSession = (
   request: Request,
@@ -15,9 +16,37 @@ export function requireAuth(
   requiredPermission?: string
 ) {
   return async (request: Request, context?: any) => {
+    const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const urlObj = new URL(request.url);
+    const normalizedPath = normalizeRoutePath(urlObj.pathname);
+    const method = request.method || "GET";
+
+    const recordApm = (statusCode: number) => {
+      if (process.env.APM_TELEMETRY_ENABLED === "false") return;
+      const durationMs = Number(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startTime).toFixed(2));
+      try {
+        SlidingWindowAggregator.getInstance().recordRequest(
+          normalizedPath,
+          method,
+          statusCode,
+          durationMs
+        );
+        if (durationMs > 1000) {
+          EventBus.getInstance().publishEvent({
+            eventSource: "api_route_apm",
+            severity: "warning",
+            message: `High latency detected on ${method} ${normalizedPath}: ${durationMs}ms (status: ${statusCode})`,
+          });
+        }
+      } catch {
+        // Suppress telemetry errors
+      }
+    };
+
     const session = await verifySession();
 
     if (!session) {
+      recordApm(401);
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -34,13 +63,17 @@ export function requireAuth(
             timestamp: new Date().toISOString(),
           })
         );
+        recordApm(403);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
 
     try {
-      return await handler(request, session, context);
+      const response = await handler(request, session, context);
+      recordApm(response.status || 200);
+      return response;
     } catch (error) {
+      recordApm(500);
       const errorMsg = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
       console.error(

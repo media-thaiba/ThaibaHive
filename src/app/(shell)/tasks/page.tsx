@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+/**
+ * Tasks Page
+ * Migrated to TanStack Query (P2-46) and Central API Client (P2-47).
+ */
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -33,19 +37,7 @@ import {
   GripVertical,
   Calendar,
 } from "lucide-react";
-
-type Task = {
-  id: string;
-  title: string;
-  description: string | null;
-  status: string;
-  priority: string;
-  assignedToId: string | null;
-  dueDate: string | null;
-  sortOrder: number;
-  createdAt: string;
-  assignee?: { firstName: string; lastName: string } | null;
-};
+import { useTasks, useReorderTasks, type Task } from "@/lib/hooks/use-tasks";
 
 const columns = ["todo", "in_progress", "review", "completed"] as const;
 const columnLabels: Record<string, string> = {
@@ -182,12 +174,17 @@ function TaskCardOverlay({ task }: { task: Task }) {
 }
 
 export default function TasksPage() {
-  const { staff: _staff } = useAuth();
+  const [scope, setScope] = useState<"all" | "my" | "department">("all");
+  const { data: remoteTasks = [], isLoading } = useTasks(scope);
+  const reorderMutation = useReorderTasks();
+
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [mobileColumn, setMobileColumn] = useState<string>("todo");
-  const [scope, setScope] = useState<"all" | "my" | "department">("all");
+
+  useEffect(() => {
+    setTasks(remoteTasks);
+  }, [remoteTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -195,37 +192,13 @@ export default function TasksPage() {
     useSensor(TouchSensor)
   );
 
-  const fetchTasks = useCallback(async (s: "all" | "my" | "department") => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/tasks?scope=${s}`);
-      const d = await res.json();
-      setTasks(Array.isArray(d.tasks) ? d.tasks : []);
-    } catch {
-      toast.error("Failed to load tasks");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTasks(scope);
-  }, [scope, fetchTasks]);
-
   async function saveTasksOrder(updates: { id: string; status: string; sortOrder: number }[]) {
     try {
-      const res = await fetch("/api/tasks/reorder", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks: updates }),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to persist task reorder");
-      }
+      await reorderMutation.mutateAsync(updates);
     } catch (err) {
       console.error(err);
       toast.error("Couldn't save task order \u2014 reverted");
-      fetchTasks(scope);
+      setTasks(remoteTasks);
     }
   }
 
@@ -321,7 +294,7 @@ export default function TasksPage() {
     saveTasksOrder(dbUpdates);
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex-1 p-6 lg:p-8">
         <Skeleton className="h-8 w-48" />

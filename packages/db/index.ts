@@ -10,10 +10,15 @@ import { Pool } from "pg";
 export * from "./schema";
 export * from "drizzle-orm";
 
-const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
-const isPostgres = databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://");
+export const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
+export const isPostgres = databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://");
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function logSlowQuery(op: string, durationMs: number) {
+  if (durationMs > 500) {
+    console.warn(`[SLOW_QUERY] ${op} took ${durationMs.toFixed(2)}ms (>500ms threshold)`);
+  }
+}
+
 let dbInstance: any;
 
 if (isPostgres) {
@@ -37,6 +42,7 @@ if (isPostgres) {
     authToken: process.env.DATABASE_AUTH_TOKEN,
   });
   client.execute("PRAGMA foreign_keys = ON;").catch((e) => console.error("Failed to enable foreign keys:", e));
+  client.execute("PRAGMA busy_timeout = 15000;").catch((e) => console.error("Failed to set busy timeout:", e));
   dbInstance = sqliteDrizzle(client, { schema: sqliteSchema });
 }
 
@@ -44,15 +50,12 @@ if (isPostgres) {
 export const db = dbInstance as ReturnType<typeof sqliteDrizzle>;
 
 // Helper to wrap PostgreSQL Drizzle client to shim SQLite's .get(), .all(), and .run() APIs
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic interception proxy bridges Node/PostgreSQL and SQLite query methods
 export function wrapPgDb(pgDb: any): any {
   return new Proxy(pgDb, {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get(target: any, prop: string | symbol, receiver: any): any {
       const val = Reflect.get(target, prop, receiver);
 
       if (typeof val === "function" && ["select", "insert", "update", "delete"].includes(prop as string)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return function(...args: any[]) {
           const builder = val.apply(target, args);
           return wrapBuilder(builder);
@@ -60,9 +63,7 @@ export function wrapPgDb(pgDb: any): any {
       }
 
       if (prop === "transaction") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return function(callback: (tx: any) => Promise<any>, config: any) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return val.call(target, async (tx: any) => {
             const wrappedTx = wrapPgDb(tx);
             return callback(wrappedTx);
@@ -75,14 +76,11 @@ export function wrapPgDb(pgDb: any): any {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic interception proxy bridges Node/PostgreSQL and SQLite query methods
 function wrapBuilder(builder: any): any {
   return new Proxy(builder, {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get(target: any, prop: string | symbol, receiver: any): any {
       if (prop === "get") {
         return function() {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return target.then((res: any) => {
             return Array.isArray(res) ? res[0] : (res?.rows ? res.rows[0] : undefined);
           });
@@ -91,7 +89,6 @@ function wrapBuilder(builder: any): any {
 
       if (prop === "all") {
         return function() {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return target.then((res: any) => {
             return Array.isArray(res) ? res : (res?.rows ? res.rows : []);
           });
@@ -100,7 +97,6 @@ function wrapBuilder(builder: any): any {
 
       if (prop === "run") {
         return function() {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           return target.then((res: any) => {
             return {
               changes: res?.rowCount ?? 0,
@@ -112,7 +108,6 @@ function wrapBuilder(builder: any): any {
 
       const val = Reflect.get(target, prop, receiver);
       if (typeof val === "function") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return function(...args: any[]) {
           const result = val.apply(target, args);
           if (result && (typeof result === "object" || typeof result === "function")) {

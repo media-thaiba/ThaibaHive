@@ -31,12 +31,14 @@ describe("Unified API Client Wrapper", () => {
 
     const res = await api.get<{ id: number; name: string }>("/api/test", {
       params: { search: "test", page: 1 },
+      retries: 0,
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/test?search=test&page=1",
       expect.objectContaining({
         method: "GET",
+        credentials: "same-origin",
       })
     );
     expect(res.ok).toBe(true);
@@ -54,7 +56,7 @@ describe("Unified API Client Wrapper", () => {
     });
 
     const payload = { title: "New Task", priority: "high" };
-    const res = await api.post("/api/tasks", payload);
+    const res = await api.post("/api/tasks", payload, { retries: 0 });
 
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/tasks",
@@ -78,36 +80,67 @@ describe("Unified API Client Wrapper", () => {
       json: async () => ({ error: "Unauthorized" }),
     });
 
-    const res = await api.get("/api/protected");
+    const res = await api.get("/api/protected", { retries: 0 });
 
     expect(res.ok).toBe(false);
     expect(res.status).toBe(401);
     expect(toast.error).toHaveBeenCalledWith("Session expired. Please log in again.");
   });
 
-  it("should trigger toast error on API failure response", async () => {
-    const errorResponse = { error: "Validation failed" };
+  it("should trigger toast error on 403 Forbidden", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
-      status: 400,
+      status: 403,
       headers: new Headers({ "content-type": "application/json" }),
-      json: async () => errorResponse,
+      json: async () => ({ error: "Forbidden" }),
     });
 
-    const res = await api.post("/api/expenses", { amount: -50 });
+    const res = await api.get("/api/admin-only", { retries: 0 });
 
     expect(res.ok).toBe(false);
-    expect(res.status).toBe(400);
-    expect(toast.error).toHaveBeenCalledWith("Validation failed");
+    expect(res.status).toBe(403);
+    expect(toast.error).toHaveBeenCalledWith("Access denied. You do not have permission to perform this action.");
+  });
+
+  it("should trigger toast error on 429 Rate Limit", async () => {
+    const headers = new Headers({ "content-type": "application/json", "retry-after": "60" });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers,
+      json: async () => ({ error: "Rate limit exceeded" }),
+    });
+
+    const res = await api.get("/api/rate-limited", { retries: 0 });
+
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(429);
+    expect(toast.error).toHaveBeenCalledWith("Rate limit exceeded. Please try again in 60 seconds.");
+  });
+
+  it("should track loading state via onLoading callback", async () => {
+    const mockData = { ok: true };
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => mockData,
+    });
+
+    const onLoading = jest.fn();
+    await api.get("/api/test", { onLoading, retries: 0 });
+
+    expect(onLoading).toHaveBeenNthCalledWith(1, true);
+    expect(onLoading).toHaveBeenNthCalledWith(2, false);
   });
 
   it("should handle network failure gracefully with fallback error message", async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error("Network disconnect"));
 
-    const res = await api.get("/api/reports");
+    const res = await api.get("/api/reports", { retries: 0 });
 
     expect(res.ok).toBe(false);
     expect(res.status).toBe(0);
-    expect(toast.error).toHaveBeenCalledWith("Network error. Please try again.");
+    expect(toast.error).toHaveBeenCalledWith("Network error or timeout. Please check your connection and try again.");
   });
 });

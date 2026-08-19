@@ -84,7 +84,18 @@ export function ReportFormDialog({ open, onOpenChange, editingReport, onSubmitte
   const addTask = () => setLinkedTasks(prev => [...prev, { taskId: null, description: "", hoursSpent: 1, status: "completed" }]);
   const removeTask = (i: number) => setLinkedTasks(prev => prev.filter((_, idx) => idx !== i));
   const updateTask = (i: number, field: keyof DailyReportTask, value: string | number | null) => {
-    setLinkedTasks(prev => { const c = [...prev]; c[i] = { ...c[i], [field]: value }; return c; });
+    setLinkedTasks(prev => {
+      const c = [...prev];
+      const updated = { ...c[i], [field]: value };
+      if (field === "taskId" && value) {
+        const found = assignedTasks.find(t => t.id === value);
+        if (found && !updated.description) {
+          updated.description = found.title;
+        }
+      }
+      c[i] = updated;
+      return c;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

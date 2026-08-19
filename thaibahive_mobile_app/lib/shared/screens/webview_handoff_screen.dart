@@ -19,10 +19,7 @@ final _webDioProvider = Provider<Dio>((ref) {
   if (kDebugMode) {
     dio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
-        final client = HttpClient();
-        client.badCertificateCallback =
-            (cert, host, port) => true;
-        return client;
+        return HttpClient();
       },
     );
   }
@@ -60,7 +57,18 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
   Future<void> _initHandoff() async {
     try {
       final mobileDio = ref.read(dioProvider);
-      final nonceResponse = await mobileDio.post('/auth/mobile-handoff/nonce');
+      Response nonceResponse;
+      int attempts = 0;
+      while (true) {
+        try {
+          attempts++;
+          nonceResponse = await mobileDio.post('/auth/mobile-handoff/nonce');
+          break;
+        } catch (e) {
+          if (attempts >= 2) rethrow;
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
       final nonce = nonceResponse.data['nonce'] as String;
 
       final webDio = ref.read(_webDioProvider);

@@ -2,6 +2,15 @@
 
 All notable changes to the ThaibaHive ecosystem are documented here.
 
+## [3.16.0] - 2026-08-19
+### Added
+- **In-Memory Percentile Calculation Engine:** Implemented `LatencyHistogram` and `SlidingWindowAggregator` (`src/lib/observability/`) tracking rolling request durations (`1m`, `5m`, `15m`, `1h`) with exact p50, p90, p95, and p99 percentiles, bounded memory (<50MB), and LRU route eviction (TD-005).
+- **Next.js APM Telemetry Middleware:** Embedded request-scoped monotonic timing (`performance.now()`) and route path normalization (`/api/students/:id`) into `src/middleware.ts`, injecting `x-response-time` headers on all API responses with zero-overhead bypass (`APM_TELEMETRY_ENABLED=false`).
+- **Prometheus & JSON Metrics Endpoint:** Created `/api/system/metrics` with content negotiation (`text/plain` OpenMetrics v0.0.4 format and `application/json`), guarded by `super_admin` RBAC and timing-safe shared secret authentication.
+- **Admin Observability Dashboard:** Built interactive dashboard at `/admin/observability` with 5 KPI summary cards, Recharts percentile trend lines, sortable route latency breakdown table, and 10-second live auto-polling.
+- **APM Overhead Benchmark & CI Verification:** Authored `load-tests/apm-overhead-benchmark.js` and updated local load test runner, verifying <1% CPU overhead delta and <2ms latency penalty under concurrent load.
+- **Operational Runbook:** Authored `docs/observability-latency-runbook.md` with SLA threshold matrices, diagnostic workflows, and Prometheus scrape configuration.
+
 ## [3.15.0] - 2026-08-18
 ### Added
 - **Cross-Browser CI Matrix Automation:** Configured parallel matrix jobs for Chromium, Firefox, and WebKit in GitHub Actions with isolated artifact retention per browser.

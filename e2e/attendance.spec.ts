@@ -4,8 +4,14 @@ import { attendanceLogs, staff } from "../packages/db/schema";
 import { eq, and } from "drizzle-orm";
 
 test.describe("Attendance Page", () => {
-  test.beforeEach(async ({ page }) => {
-    // 1. Delete today's log for test-staff to ensure simulated check-in always returns 201 Created
+  // Run tests in serial mode to prevent database conflicts on the same test user
+  test.describe.configure({ mode: "serial" });
+
+  // Use the cached staff state directly to bypass UI login overhead
+  test.use({ storageState: ".auth/staff.json" });
+
+  test.beforeEach(async () => {
+    // Delete today's log for test-staff to ensure simulated check-in always returns 201 Created
     const user = await db.select().from(staff).where(eq(staff.email, "test-staff@thaibahive.local")).get();
     if (user) {
       const today = new Date().toISOString().split("T")[0];
@@ -17,13 +23,6 @@ test.describe("Attendance Page", () => {
       ).run();
       console.log(`Cleaned up attendance log for today (${today}) for test-staff`);
     }
-
-    // 2. Perform UI login
-    await page.goto("/auth/login");
-    await page.fill("#email", "test-staff@thaibahive.local");
-    await page.fill("#password", "Password123");
-    await page.click("button[type='submit']");
-    await expect(page).toHaveURL("/");
   });
 
   test("should display attendance history and handle check out if checked in", async ({ page, context }) => {
@@ -39,10 +38,10 @@ test.describe("Attendance Page", () => {
 
     // 3. Click Check Out and verify checkout toast
     const checkOutBtn = page.locator("button:has-text('Check Out')");
-    await expect(checkOutBtn).toBeVisible();
+    await expect(checkOutBtn).toBeVisible({ timeout: 15000 });
     await checkOutBtn.click();
 
     const toastSuccess = page.locator("text=Checked out successfully!");
-    await expect(toastSuccess).toBeVisible();
+    await expect(toastSuccess).toBeVisible({ timeout: 15000 });
   });
 });

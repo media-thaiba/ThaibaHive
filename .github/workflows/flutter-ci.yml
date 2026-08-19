@@ -1,0 +1,76 @@
+name: Flutter Mobile CI Quality Gate
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  analyze-and-test:
+    name: Flutter Analyze & Test (Android)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: thaibahive_mobile_app
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Static Analysis
+        run: flutter analyze
+
+      - name: Run Flutter Unit Tests
+        run: flutter test --coverage
+
+      - name: Build Debug APK Quality Check
+        run: flutter build apk --debug
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: thaibahive_mobile_app/coverage/
+
+  ios-release-check:
+    name: Flutter iOS Simulator Check (Release Only)
+    if: startsWith(github.ref, 'refs/heads/release/')
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: thaibahive_mobile_app
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS No-Codesign Quality Check
+        run: flutter build ios --no-codesign --debug

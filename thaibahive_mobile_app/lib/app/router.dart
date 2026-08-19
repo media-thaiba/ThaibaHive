@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../core/constants.dart';
 import '../features/approvals/presentation/approvals_screen.dart';
 import '../features/announcements/presentation/announcements_screen.dart';
+import '../features/announcements/presentation/announcement_detail_screen.dart';
 import '../features/attendance/presentation/attendance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
 import '../features/dashboard/presentation/more_screen.dart';
 import '../features/events/presentation/events_screen.dart';
+import '../features/events/presentation/event_detail_screen.dart';
 import '../features/leaves/presentation/leave_apply_screen.dart';
 import '../features/leaves/presentation/leave_balance_screen.dart';
 import '../features/leaves/presentation/leave_detail_screen.dart';
@@ -245,9 +247,8 @@ GoRouter buildRouter() {
         name: 'announcementDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Announcements',
-            icon: Icons.campaign_rounded,
+          child: AnnouncementDetailScreen(
+            id: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -264,7 +265,9 @@ GoRouter buildRouter() {
         name: 'eventDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const EventsScreen(),
+          child: EventDetailScreen(
+            id: state.pathParameters['id']!,
+          ),
         ),
       ),
       GoRoute(
@@ -572,6 +575,10 @@ void updateCachedAuthToken(String? token) {
   _cachedToken = token;
 }
 
+void clearCachedAuthToken() {
+  _cachedToken = null;
+}
+
 Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isAuthRoute = state.matchedLocation.startsWith('/auth');
   final isWelcomeRoute = state.matchedLocation == '/';
@@ -584,6 +591,8 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final token = _cachedToken ?? await _storage.read(key: AppConstants.storageTokenKey);
   if (token != null && token.isNotEmpty) {
     _cachedToken = token;
+  } else {
+    _cachedToken = null;
   }
 
   final isLoggedIn = token != null && token.isNotEmpty;

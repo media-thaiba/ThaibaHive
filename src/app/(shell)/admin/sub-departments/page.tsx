@@ -15,7 +15,7 @@ export default function SubDepartmentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", departmentId: "", headOfSubDepartment: "" });
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData().catch(() => setLoading(false)); }, []);
 
   async function fetchData() {
     const res = await fetch("/api/admin/sub-departments");

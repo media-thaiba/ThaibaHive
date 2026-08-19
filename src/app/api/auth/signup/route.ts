@@ -12,6 +12,27 @@ export async function POST(request: Request) {
     const rl = checkRateLimit(ip, "auth-signup");
     if (!rl.allowed) return rateLimitResponse(rl.resetMs);
     const body = await request.json();
+    
+    // Gate public signup: require invitation token unless explicit dev override is set
+    const allowPublicSignup = process.env.ALLOW_PUBLIC_SIGNUP === "true";
+    const invitationToken = body?.invitationToken || body?.invitationCode;
+
+    if (!allowPublicSignup && !invitationToken) {
+      return NextResponse.json(
+        { error: "Public registration is disabled. Account creation requires an invitation token or administrator provisioning." },
+        { status: 403 }
+      );
+    }
+
+    if (invitationToken && process.env.INVITATION_SECRET) {
+      if (invitationToken !== process.env.INVITATION_SECRET) {
+        return NextResponse.json(
+          { error: "Invalid or expired invitation token." },
+          { status: 403 }
+        );
+      }
+    }
+
     const parsed = signupSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

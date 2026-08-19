@@ -1,8 +1,24 @@
-export type StaffRole = "super_admin" | "admin" | "principal" | "hod" | "staff" | "accounts" | "purchase";
+export type StaffRole = "super_admin" | "admin" | "principal" | "hod" | "staff" | "accounts" | "purchase" | "regional_admin" | "regional_auditor";
 type Permission = string;
 
 const rolePermissions: Record<StaffRole, Permission[]> = {
   super_admin: ["*"],
+  regional_admin: [
+    "regional:view", "regional:manage", "warehouse:export", "alerts:push_configure",
+    "analytics:predict", "analytics:manage", "reports:read", "reports:review", "staff:read",
+    "autonomy:view", "autonomy:manage", "compliance:audit", "financial:forecast",
+    "copilot:view", "copilot:interact", "agent:manage", "analytics:timeseries",
+    "realtime:stream", "triggers:manage", "predictive:retention", "simulation:budget",
+    "federated:policies", "federated:audit", "resilience:manage", "voice:copilot", "executive:analytics",
+    "workspaces:read", "workspaces:write",
+  ],
+  regional_auditor: [
+    "regional:view", "warehouse:export", "reports:read", "staff:read",
+    "autonomy:view", "compliance:audit",
+    "copilot:view", "copilot:interact", "analytics:timeseries",
+    "realtime:stream", "predictive:retention",
+    "federated:policies", "federated:audit", "voice:copilot"
+  ],
   admin: [
     "staff:read", "staff:create", "staff:update", "staff:delete",
     "attendance:read", "attendance:manage",
@@ -18,17 +34,27 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "assets:read", "assets:create", "assets:update", "assets:delete",
     "finance:create", "finance:update", "finance:delete", "finance:export",
     "recognition:create",
-    "canteen:create", "canteen:delete",
+    "canteen:create", "canteen:delete", "canteen:read", "canteen:manage", "canteen:redeem",
     "checklists:update",
     "notifications:update",
-    "vehicles:create", "vehicles:update", "vehicles:delete",
-    "visitors:create", "visitors:update",
+    "vehicles:create", "vehicles:update", "vehicles:delete", "fleet:read", "fleet:manage", "fleet:book",
+    "visitors:create", "visitors:update", "visitor:read", "visitor:issue", "visitor:verify",
     "system:telemetry",
     "org:manage",
     "grievances:read",
     "chat:read", "chat:manage",
     "availability:write",
     "media:read", "media:create", "media:manage", "media:share",
+     "nfc:admin", "nfc:assign",
+    "marketplace:install", "marketplace:uninstall",
+    "performance:read", "performance:manage", "performance:evaluate", "performance:self",
+    "analytics:predict", "analytics:manage", "sync:manage", "sync:device",
+    "regional:view", "regional:manage", "warehouse:export", "alerts:push_configure",
+    "autonomy:view", "autonomy:manage", "compliance:audit", "financial:forecast",
+    "copilot:view", "copilot:interact", "agent:manage", "analytics:timeseries",
+    "realtime:stream", "triggers:manage", "predictive:retention", "simulation:budget",
+    "federated:policies", "federated:audit", "resilience:manage", "voice:copilot",
+    "workspaces:read", "workspaces:write",
   ],
   principal: [
     "staff:read", "staff:create", "staff:update",
@@ -45,14 +71,31 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "assets:read", "assets:create", "assets:update",
     "finance:create", "finance:update", "finance:export",
     "recognition:create",
-    "canteen:create",
+    "canteen:create", "canteen:read", "canteen:manage", "canteen:redeem",
     "checklists:update",
     "notifications:update",
-    "visitors:create", "visitors:update",
+    "visitors:create", "visitors:update", "visitor:read", "visitor:issue", "visitor:verify",
+    "fleet:read", "fleet:manage", "fleet:book",
     "grievances:read",
     "chat:read", "chat:manage",
     "availability:write",
     "media:read", "media:create", "media:share",
+    "nfc:admin", "nfc:assign",
+    "webauthn:manage",
+    "marketplace:install", "marketplace:uninstall",
+    "students:read", "students:create", "students:update", "students:delete",
+    "classes:read", "classes:create", "classes:update", "classes:delete",
+    "academic_years:manage",
+    "student_attendance:read", "student_attendance:manage",
+    "biometric:enroll", "biometric:admin",
+    "performance:read", "performance:manage", "performance:evaluate", "performance:self",
+    "analytics:predict", "analytics:manage", "sync:manage", "sync:device",
+    "regional:view", "warehouse:export",
+    "autonomy:view", "autonomy:manage", "compliance:audit", "financial:forecast",
+    "copilot:view", "copilot:interact", "agent:manage", "analytics:timeseries",
+    "realtime:stream", "triggers:manage", "predictive:retention", "simulation:budget",
+    "federated:policies", "federated:audit", "resilience:manage", "voice:copilot",
+    "workspaces:read", "workspaces:write",
   ],
   hod: [
     "staff:read",
@@ -74,6 +117,14 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "chat:read", "chat:manage",
     "availability:write",
     "media:read", "media:create", "media:share",
+    "students:read", "classes:read", "student_attendance:read",
+    "performance:read", "performance:evaluate", "performance:self",
+    "analytics:predict",
+    "regional:view",
+    "autonomy:view", "autonomy:manage",
+    "copilot:view", "copilot:interact",
+    "federated:policies", "voice:copilot",
+    "workspaces:read", "workspaces:write",
   ],
   staff: [
     "staff:read",
@@ -95,6 +146,14 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "chat:read", "chat:manage",
     "finance:create",
     "media:read", "media:create", "media:share",
+    "performance:read", "performance:self",
+    "sync:device",
+
+
+     "webauthn:manage",
+    "marketplace:install", "marketplace:uninstall",
+    "biometric:enroll",
+    "workspaces:read", "workspaces:write",
   ],
   accounts: [
     "staff:read",
@@ -116,6 +175,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "chat:read", "chat:manage",
     "finance:create", "finance:update", "finance:export",
     "media:read", "media:create", "media:share",
+    "workspaces:read", "workspaces:write",
   ],
   purchase: [
     "staff:read",
@@ -137,14 +197,38 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "chat:read", "chat:manage",
     "finance:create", "finance:update",
     "media:read", "media:create", "media:share",
+    "workspaces:read", "workspaces:write",
   ],
 };
 
-export function hasPermission(role: StaffRole, permission: Permission) {
+export const VALID_STAFF_ROLES: StaffRole[] = [
+  "super_admin",
+  "admin",
+  "principal",
+  "hod",
+  "staff",
+  "accounts",
+  "purchase",
+  "regional_admin",
+  "regional_auditor",
+];
+
+export function isValidRole(role: string): role is StaffRole {
+  return VALID_STAFF_ROLES.includes(role as StaffRole);
+}
+
+export function hasPermission(role: string, permission: Permission) {
+  if (!isValidRole(role)) {
+    console.warn(`[Security Alert] Invalid role attempted in RBAC check: "${role}"`);
+    return false;
+  }
   if (role === "super_admin") return true;
   return rolePermissions[role]?.includes(permission) ?? false;
 }
 
-export function getRolePermissions(role: StaffRole) {
+export function getRolePermissions(role: string) {
+  if (!isValidRole(role)) {
+    return [];
+  }
   return rolePermissions[role] ?? [];
 }

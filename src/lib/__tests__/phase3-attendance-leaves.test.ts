@@ -33,7 +33,7 @@ jest.mock("@/db", () => {
   };
 });
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const { PATCH } = require("@/app/api/approvals/route");
 
 function mockRequest(body: Record<string, unknown>) {

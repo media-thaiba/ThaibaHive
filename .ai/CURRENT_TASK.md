@@ -1,38 +1,30 @@
 # Current Task & Sprint Status
 
 ## Current Sprint
-- **Track B Phase M1**: Setup and implement Flutter companion application shell integration, PWA, and mobile optimizations.
+- **MOBILE-NETWORK-AUTO-TUNING-024**: Mobile Network-Aware Bandwidth Auto-Tuning
+- **Status**: ✅ Completed & Released (v3.8.0)
 
 ## Active Goal
-- **Track B Phase M1 (Mobile Platform)**: Set up Riverpod, GoRouter shell, auth handoff configurations, and optimize screen layouts.
+- **Sprint-024 Integration**: Auto-tune batch sizes, compression levels, and retry backoffs based on active client network parameters. Secure settings admin APIs and render visual settings forms in the Swarm console.
 
 ## Status Breakdown
 
 ### Completed
-- [x] Create `MACHINE_README.md` onboarding card
-- [x] Create `PROJECT_STATE.json` metadata file
-- [x] Create `VERSION.md` specification
-- [x] Create `START_HERE.md` workflow file
-- [x] Create `CONTEXT_INDEX.md` route-mapping index
-- [x] Create `PROJECT_MEMORY.md` permanent memory file
-- [x] Create `SESSION_MEMORY.md` temporary session logs file
-- [x] Create `CURRENT_TASK.md`, `DECISIONS.md`, `ARCHITECTURE.md`, `TODOS.md`, `CHANGELOG.md`, `HANDOFF.md`
-- [x] Create `SYSTEM_GUARDRAILS.md`, `TERMINOLOGY.md`, `AI_CHECKLIST.md`, `AI_COMMANDS.md`, `AI_HISTORY.md`
-- [x] Create `rules/` and `prompts/` directories and guidelines
-- [x] Create `AI_CONTRACT.md`, `AI_MODELS.md`, `AIOS_GUIDE.md`, `MEMORY_SUMMARY.md`, `METRICS.md`, `RECOVERY.md`, `SESSION_TEMPLATE.md`
-- [x] Create `maps/` directory (frontend, backend, database, mobile)
-- [x] Create `adr/` directory (ADR-001 through ADR-005)
-- [x] Create `archives/` directory (2026-Q2)
-- [x] Create `FEATURES.md` feature registry
-- [x] **Track A Phase 4 (Finance & Reports)**: Implement expense claims, purchase requests, institutional accounts ledger, daily reports, tax overrides, and accounts CSV exports.
+- [x] Create `adaptive_sync_decision_engine.dart` containing evaluation algorithms
+- [x] Integrate parameter bindings inside isolates and background managers
+- [x] Add database schemas, migrations, and default seeds for wifi, cellular, and default connection environments
+- [x] Implement REST CRUD APIs under `/api/admin/sync-policies`
+- [x] Set up local client handshake cache box and Riverpod provider with 2h circuit breaker
+- [x] Ingest metrics to EventBus and render visualization forms in `MobileSyncDashboard.tsx`
+- [x] Write Jest integration test suites and E2E Playwright specs
+- [x] Run complete suite of 195 Jest suites (all 842 tests passing)
+- [x] Document runbooks, release certificate, and execution logs
 
 ### In Progress
-- (None — Phase 4 complete, transitioning to Mobile Platform)
+- (None — Sprint-024 complete, transitioning to Sprint-025)
 
 ### Next Tasks (Up Next)
-- **Track B Phase M1 (Mobile Platform)**: Flutter companion application shell optimization.
-- **Track C Phase MD1 (Media Platform)**: Setup FFmpeg pipeline and Supabase upload chunks.
-- **Track A Phase 5 (Services & Specialized)**: Implement fleet tracking, canteen skip/preferences, pre-registering visitors, and staff kudos recognition.
+- **Sprint-025**: Analyze and structure next sprint engineering technical contracts.
 
 ### Blocked
 - *None*

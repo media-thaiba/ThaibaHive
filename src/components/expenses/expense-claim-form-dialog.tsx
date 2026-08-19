@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Upload, CheckCircle2, AlertCircle, File, X } from "lucide-react";
+import { Upload, File, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 
@@ -65,6 +65,7 @@ export function ExpenseClaimFormDialog({ open, onOpenChange, onSubmitted }: Prop
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) { toast.error("Please enter a valid amount"); return; }
+    if (Number(amount) >= 1000 && !receiptUrl) { toast.error("A receipt attachment is required for expense claims of ₹1,000 or more."); return; }
     if (!description.trim()) { toast.error("Please enter a description"); return; }
     setSubmitting(true);
     try {
@@ -116,7 +117,7 @@ export function ExpenseClaimFormDialog({ open, onOpenChange, onSubmitted }: Prop
                 </Button>
               </div>
             ) : (
-              <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
+              <div className="relative border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg,.webp"

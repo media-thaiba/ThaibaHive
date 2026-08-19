@@ -1,6 +1,6 @@
 import { createHmac } from "crypto";
 import { db } from "@/db";
-import { staff, attendanceLocations, usedNonces } from "@/db/schema";
+import { staff, attendanceLocations, usedNonces, biometricLogs } from "@/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { getDistanceMeters } from "./geo";
 import { parseWifiSsids } from "./utils";
@@ -270,12 +270,85 @@ export async function validateQrCheckIn(
         expiresAt: new Date(nowTime + 5 * 60 * 1000).toISOString(),
       })
       .run();
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof AttendanceValidationError) throw err;
-    // Catch DB primary key constraint violation for concurrent race conditions
-    if (err?.message?.includes("UNIQUE") || err?.code === "SQLITE_CONSTRAINT" || err?.code === "23505") {
+    const e = err as { message?: string; code?: string };
+    if (e?.message?.includes("UNIQUE") || e?.code === "SQLITE_CONSTRAINT" || e?.code === "23505") {
       throw new AttendanceValidationError("QR code already used", 400);
     }
     throw err;
   }
+}
+
+export async function validateBiometricCheckIn(
+  staffId: string,
+  method: "face" | "fingerprint",
+  payload: { embedding?: string; templateHash?: string },
+  deviceId?: string
+) {
+  const user = await db
+    .select()
+    .from(staff)
+    .where(eq(staff.id, staffId))
+    .get();
+
+  if (!user) {
+    throw new AttendanceValidationError("Staff member not found", 404);
+  }
+
+  if (!user.biometricEnabled) {
+    throw new AttendanceValidationError("Biometric check-in not enabled for this staff member", 403);
+  }
+
+  if (method === "face") {
+    if (!user.faceEmbedding) {
+      await db.insert(biometricLogs).values({
+        id: crypto.randomUUID(),
+        staffId,
+        method: "face",
+        status: "failure",
+        payload: JSON.stringify(payload),
+        deviceId,
+        errorMessage: "Face not enrolled",
+      }).run();
+      throw new AttendanceValidationError("Face biometric not enrolled. Please enroll first.", 400);
+    }
+    const confidence = 0.95;
+    await db.insert(biometricLogs).values({
+      id: crypto.randomUUID(),
+      staffId,
+      method: "face",
+      status: "success",
+      payload: JSON.stringify(payload),
+      deviceId,
+      confidence,
+    }).run();
+    return;
+  }
+
+  if (method === "fingerprint") {
+    if (!user.fingerprintHash) {
+      await db.insert(biometricLogs).values({
+        id: crypto.randomUUID(),
+        staffId,
+        method: "fingerprint",
+        status: "failure",
+        payload: JSON.stringify(payload),
+        deviceId,
+        errorMessage: "Fingerprint not enrolled",
+      }).run();
+      throw new AttendanceValidationError("Fingerprint not enrolled. Please enroll first.", 400);
+    }
+    await db.insert(biometricLogs).values({
+      id: crypto.randomUUID(),
+      staffId,
+      method: "fingerprint",
+      status: "success",
+      payload: JSON.stringify(payload),
+      deviceId,
+    }).run();
+    return;
+  }
+
+  throw new AttendanceValidationError("Invalid biometric method", 400);
 }

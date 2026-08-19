@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { db } from "@/db";
+import { db, isPostgres } from "@/db";
 import { announcements, announcementReads, staff, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { announcementCreateSchema } from "@/lib/validation/schemas";
@@ -9,6 +9,12 @@ import { sendBulkPushNotifications } from "@/lib/notifications/push-service";
 import type { StaffRole } from "@/types";
 
 const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal"];
+
+function pinnedUntilOrderSql() {
+  return isPostgres
+    ? sql`CASE WHEN ${announcements.pinnedUntil} IS NOT NULL AND ${announcements.pinnedUntil}::timestamptz > CURRENT_TIMESTAMP THEN 1 ELSE 0 END`
+    : sql`CASE WHEN ${announcements.pinnedUntil} IS NOT NULL AND datetime(${announcements.pinnedUntil}) > datetime('now') THEN 1 ELSE 0 END`;
+}
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
@@ -40,7 +46,7 @@ export const GET = requireAuth(async (request, session) => {
       .leftJoin(staff, eq(announcements.createdById, staff.id))
       .where(includeInactive ? sql`1=1` : eq(announcements.isActive, true))
       .orderBy(
-        desc(sql`CASE WHEN ${announcements.pinnedUntil} IS NOT NULL AND datetime(${announcements.pinnedUntil}) > datetime('now') THEN 1 ELSE 0 END`),
+        desc(pinnedUntilOrderSql()),
         desc(announcements.createdAt)
       )
       .all();
@@ -107,7 +113,7 @@ export const GET = requireAuth(async (request, session) => {
       )
     )
     .orderBy(
-      desc(sql`CASE WHEN ${announcements.pinnedUntil} IS NOT NULL AND datetime(${announcements.pinnedUntil}) > datetime('now') THEN 1 ELSE 0 END`),
+      desc(pinnedUntilOrderSql()),
       desc(announcements.createdAt)
     )
     .all();

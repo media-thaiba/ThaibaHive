@@ -219,6 +219,15 @@ export const POST = requireAuth(async (request: Request, session) => {
             }))
           )
           .run();
+
+        for (const t of reportTasks) {
+          if (t.taskId && t.status === "completed") {
+            await db.update(tasks)
+              .set({ status: "completed", completedAt: now, updatedAt: now })
+              .where(eq(tasks.id, t.taskId))
+              .run();
+          }
+        }
       }
     });
   } catch (err: unknown) {

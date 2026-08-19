@@ -39,10 +39,19 @@ class AppConstants {
   }
 
   /// Google Web Client ID for Google Sign-In on Android/iOS
+  /// Must be provided via --dart-define=GOOGLE_WEB_CLIENT_ID=... at build time.
   static String get googleWebClientId {
     const override = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
     if (override.isNotEmpty) return override;
-    return '744655632042-7njpugg533kj5okh731c38m9ffdgpc0o.apps.googleusercontent.com';
+
+    if (kDebugMode) {
+      return '';
+    }
+
+    throw StateError(
+      'GOOGLE_WEB_CLIENT_ID must be provided via --dart-define at build time in release builds. '
+      'Example: flutter build apk --dart-define=GOOGLE_WEB_CLIENT_ID=your-client-id.apps.googleusercontent.com',
+    );
   }
 
   static const String storageTokenKey = 'auth_token';

@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/constants.dart';
 import '../../../models/user_model.dart';
+import '../../../app/router.dart';
 import 'settings_repository.dart';
 
 final _storage = const FlutterSecureStorage();
@@ -38,6 +39,7 @@ class CurrentUserNotifier extends StateNotifier<UserModel?> {
     await _storage.delete(key: AppConstants.storageUserProfileKey);
     await _storage.delete(key: AppConstants.storageTokenKey);
     await _storage.delete(key: AppConstants.storageRefreshTokenKey);
+    updateCachedAuthToken(null);
   }
 }
 

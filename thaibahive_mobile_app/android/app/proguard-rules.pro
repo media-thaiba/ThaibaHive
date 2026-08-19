@@ -34,8 +34,13 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# WorkManager & Background Fetch rules
+-keep class androidx.work.** { *; }
+-keep class com.transistorsoft.tsbackgroundfetch.** { *; }
+
 # Suppress warnings/errors for optional Play Core Split Install classes
 -dontwarn com.google.android.play.core.**
 -dontwarn com.google.android.play.core.tasks.**
 -dontwarn com.google.android.play.core.splitinstall.**
 -dontwarn com.google.android.play.core.splitcompat.**
+

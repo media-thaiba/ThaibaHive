@@ -43,5 +43,11 @@
 	</array>
 	<key>NFCReaderUsageDescription</key>
 	<string>ThaibaHive requires NFC access to scan and register staff cards and location checkpoints.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>
+

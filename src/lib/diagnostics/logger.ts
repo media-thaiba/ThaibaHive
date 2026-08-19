@@ -72,8 +72,8 @@ function addEntry(level: LogEntry["level"], message: string, data?: unknown) {
 // Console patching
 // ---------------------------------------------------------------------------
 
-// Bind original console methods directly (since console is not enumerable)
-const origConsole = {
+// Save references to initial console methods
+const rawConsole = {
   log: typeof console !== "undefined" ? console.log.bind(console) : () => {},
   warn: typeof console !== "undefined" ? console.warn.bind(console) : () => {},
   error: typeof console !== "undefined" ? console.error.bind(console) : () => {},
@@ -94,19 +94,19 @@ function patchConsole() {
   (window as unknown as Record<string, unknown>).__telemetryPatched = true;
 
   console.log = (...args) => {
-    origConsole.log(...args);
+    rawConsole.log(...args);
     addEntry("info", args.map(serializeArg).join(" "));
   };
   console.warn = (...args) => {
-    origConsole.warn(...args);
+    rawConsole.warn(...args);
     addEntry("warn", args.map(serializeArg).join(" "));
   };
   console.error = (...args) => {
-    origConsole.error(...args);
+    rawConsole.error(...args);
     addEntry("error", args.map(serializeArg).join(" "));
   };
   console.debug = (...args) => {
-    origConsole.debug(...args);
+    rawConsole.debug(...args);
     addEntry("debug", args.map(serializeArg).join(" "));
   };
 
@@ -123,7 +123,7 @@ function patchConsole() {
 // ---------------------------------------------------------------------------
 
 function patchFetch() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || typeof window.fetch !== "function") return;
   if ((window as unknown as Record<string, unknown>).__telemetryFetchPatched) return;
   (window as unknown as Record<string, unknown>).__telemetryFetchPatched = true;
 
@@ -236,3 +236,123 @@ export const telemetry = {
     return lines.join("\n");
   },
 };
+
+// ---------------------------------------------------------------------------
+// Structured Logging Engine (Server & Client Compatible)
+// ---------------------------------------------------------------------------
+
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+};
+
+const SENSITIVE_KEYS = /password|token|secret|authorization|cookie|creditcard/i;
+
+function maskSensitiveData(value: unknown, seen = new WeakSet()): unknown {
+  if (value === null || value === undefined) return value;
+
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+    };
+  }
+
+  if (typeof value === "bigint") return value.toString();
+
+  if (typeof value === "object") {
+    if (seen.has(value)) return "[Circular]";
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      return value.map((item) => maskSensitiveData(item, seen));
+    }
+
+    const sanitized: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (SENSITIVE_KEYS.test(k)) {
+        sanitized[k] = "[REDACTED]";
+      } else {
+        sanitized[k] = maskSensitiveData(v, seen);
+      }
+    }
+    return sanitized;
+  }
+
+  return value;
+}
+
+export interface StructuredLogPayload {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: unknown;
+}
+
+function safeJsonStringify(obj: unknown): string {
+  try {
+    const masked = maskSensitiveData(obj);
+    return JSON.stringify(masked);
+  } catch {
+    return String(obj);
+  }
+}
+
+export const logger = {
+  info(message: string, data?: unknown) {
+    this._log("info", message, data);
+  },
+  warn(message: string, data?: unknown) {
+    this._log("warn", message, data);
+  },
+  error(message: string, data?: unknown) {
+    this._log("error", message, data);
+  },
+  debug(message: string, data?: unknown) {
+    this._log("debug", message, data);
+  },
+
+  _log(level: LogLevel, message: string, data?: unknown) {
+    const isProd = process.env.NODE_ENV === "production" || process.env.LOG_FORMAT === "json";
+    const minLevel: LogLevel = isProd && process.env.DEBUG !== "true" ? "info" : "debug";
+
+    if (LOG_LEVEL_PRIORITY[level] < LOG_LEVEL_PRIORITY[minLevel]) {
+      return;
+    }
+
+    const payload: StructuredLogPayload = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      ...(data !== undefined ? { data: maskSensitiveData(data) } : {}),
+    };
+
+    if (isProd) {
+      const output = safeJsonStringify(payload);
+      if (level === "error") {
+        console.error(output);
+      } else if (level === "warn") {
+        console.warn(output);
+      } else {
+        console.log(output);
+      }
+    } else {
+      const prefix = `[${payload.timestamp}] [${level.toUpperCase()}]`;
+      if (level === "error") {
+        console.error(prefix, message, data ?? "");
+      } else if (level === "warn") {
+        console.warn(prefix, message, data ?? "");
+      } else if (level === "debug") {
+        console.debug(prefix, message, data ?? "");
+      } else {
+        console.log(prefix, message, data ?? "");
+      }
+    }
+  },
+};
+

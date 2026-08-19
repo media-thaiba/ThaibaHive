@@ -39,7 +39,7 @@ export default function LeaveTypesPage() {
     requiresApproval: true,
   });
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData().catch(() => {}); }, []);
 
   async function fetchData() {
     const res = await fetch("/api/admin/leave-types");

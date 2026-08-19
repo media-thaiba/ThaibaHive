@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QrScannerModal } from "./qr-scanner-modal";
-import { NfcScannerModal } from "./nfc-scanner-modal";
+import NfcScannerModal from "@/components/nfc/nfc-scanner-modal";
 import { ScanLineIcon, NfcIcon } from "lucide-react";
 
 type CheckInPanelProps = {
@@ -16,6 +16,20 @@ type CheckInPanelProps = {
 export function CheckInPanel({ staff, onCheckInComplete }: CheckInPanelProps) {
   const [qrOpen, setQrOpen] = useState(false);
   const [nfcOpen, setNfcOpen] = useState(false);
+
+  async function handleNfcScan(tagId: string) {
+    // Submit check-in via NFC tag
+    try {
+      await fetch("/api/attendance/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffId: staff?.id, nfcTagId: tagId, method: "nfc" }),
+      });
+    } finally {
+      setNfcOpen(false);
+      onCheckInComplete();
+    }
+  }
 
   return (
     <>
@@ -66,9 +80,9 @@ export function CheckInPanel({ staff, onCheckInComplete }: CheckInPanelProps) {
 
       <NfcScannerModal
         open={nfcOpen}
-        onOpenChange={setNfcOpen}
-        onSuccess={onCheckInComplete}
-        staff={staff}
+        mode="check-in"
+        onScan={handleNfcScan}
+        onClose={() => setNfcOpen(false)}
       />
     </>
   );

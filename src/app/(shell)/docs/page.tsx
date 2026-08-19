@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Head from "next/head";
 
 export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
@@ -14,13 +13,10 @@ export default function ApiDocsPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 p-4">
-      <Head>
-        <title>ThaibaHive API Documentation (OpenAPI 3.1)</title>
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css"
-        />
-      </Head>
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css"
+      />
 
       <header className="max-w-7xl mx-auto mb-6 flex items-center justify-between border-b border-slate-800 pb-4">
         <div>

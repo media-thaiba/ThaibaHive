@@ -89,7 +89,7 @@ describe("Phase 1 Zod Validation & Crypto Verification", () => {
 
   describe("Password Reset Token Single-Use Atomic Guard", () => {
     it("should consume reset token atomically on first POST, and reject second replay attempt with HTTP 400", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+       
       const { POST } = require("@/app/api/auth/reset-password/[token]/route");
       const { db } = require("@/db");
 

@@ -103,7 +103,7 @@ export const POST = requireAuth(async (request, session) => {
       staffId,
       reviewerId: session.staffId,
       period,
-      goals: goals || null,
+      goals: goals ? JSON.stringify(goals) : null,
       status: "draft",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

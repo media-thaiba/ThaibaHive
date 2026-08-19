@@ -1,6 +1,6 @@
 library leaves_model;
 
-typealias LeavesHTTPResponse = Map<String, dynamic>;
+typedef LeavesHTTPResponse = Map<String, dynamic>;
 
 class LeaveRequestModel {
   final String id;
@@ -98,5 +98,6 @@ class LeaveRequestModel {
       reviewerComment: reviewerComment ?? this.reviewerComment,
       institutionName: institutionName ?? this.institutionName,
       staffName: staffName ?? this.staffName,
-    );n  }
+    );
+  }
 }

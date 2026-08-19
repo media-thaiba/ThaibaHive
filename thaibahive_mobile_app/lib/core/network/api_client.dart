@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants.dart';
 import '../services/logger_service.dart';
 import 'api_exception.dart';
+import '../../app/router.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -34,10 +35,7 @@ class ApiClient {
     if (kDebugMode) {
       _dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
-          final client = HttpClient();
-          client.badCertificateCallback =
-              (X509Certificate cert, String host, int port) => true;
-          return client;
+          return HttpClient();
         },
       );
     }
@@ -162,6 +160,7 @@ class ApiClient {
     await _storage.delete(key: AppConstants.storageTokenKey);
     await _storage.delete(key: AppConstants.storageRefreshTokenKey);
     await _storage.delete(key: AppConstants.storageUserProfileKey);
+    updateCachedAuthToken(null);
   }
 
   InterceptorsWrapper _normalizationInterceptor() {

@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { NfcTapToPairButton } from "@/components/nfc/nfc-tap-to-pair-button";
+import { NfcCardStatusBadge } from "@/components/nfc/nfc-card-status-badge";
 
 type StaffForm = {
   firstName: string;
@@ -261,7 +263,28 @@ export default function EditStaffPage() {
             <Field label="PAN" value={form.pan} onChange={(v) => setField("pan", v)} />
             <Field label="Bank Account" value={form.bankAccount} onChange={(v) => setField("bankAccount", v)} />
             <Field label="IFSC Code" value={form.ifscCode} onChange={(v) => setField("ifscCode", v)} />
-            <Field label="NFC Card ID" value={form.nfcTagId} onChange={(v) => setField("nfcTagId", v)} placeholder="e.g. AABBCCDD" />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">NFC Card</label>
+              {form.nfcTagId ? (
+                <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
+                  <span className="font-mono text-sm flex-1">{form.nfcTagId}</span>
+                  <NfcCardStatusBadge status="assigned" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setField("nfcTagId", "")}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <NfcTapToPairButton
+                  onCardScanned={(tagId) => setField("nfcTagId", tagId)}
+                  onError={(err) => toast.error(err)}
+                />
+              )}
+            </div>
           </CardContent>
         </Card>
 

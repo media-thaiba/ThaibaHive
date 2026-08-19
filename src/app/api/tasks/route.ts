@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { tasks, staff, staffDepartments, departments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { taskCreateSchema } from "@/lib/validation/schemas";
+import { taskCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { sendPushNotification } from "@/lib/notifications/push-service";
 import { desc, eq, and, or, inArray, asc, sql } from "drizzle-orm";
@@ -10,6 +10,13 @@ import { desc, eq, and, or, inArray, asc, sql } from "drizzle-orm";
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
   const scope = searchParams.get("scope") || "all";
+
+  const pagination = paginationSchema.parse({
+    page: searchParams.get("page"),
+    limit: searchParams.get("limit"),
+  });
+  const { page, limit } = pagination;
+  const offset = (page - 1) * limit;
 
   let query = db
     .select({
@@ -120,12 +127,20 @@ export const GET = requireAuth(async (request, session) => {
     }
   }
 
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as typeof query;
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const countResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(tasks)
+    .where(whereClause)
+    .get();
+  const total = countResult?.count ?? 0;
+
+  if (whereClause) {
+    query = query.where(whereClause) as typeof query;
   }
 
-
-  const rows = await query.all();
+  const rows = await query.limit(limit).offset(offset).all();
   const all = rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -145,7 +160,7 @@ export const GET = requireAuth(async (request, session) => {
       : null,
   }));
 
-  return NextResponse.json({ tasks: all });
+  return NextResponse.json({ tasks: all, total, page, limit });
 }, "tasks:read");
 
 export const POST = requireAuth(async (request: Request, session) => {

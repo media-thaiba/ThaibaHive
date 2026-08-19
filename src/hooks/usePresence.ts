@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api/client";
 import { subscribePresence, type PresenceEvent } from "@/lib/realtime/presence";
 
-type PresenceEntry = {
+export type PresenceEntry = {
   staffId: string;
   online: boolean;
   lastSeenAt: string;
@@ -18,24 +20,30 @@ export function usePresence() {
   const [presenceMap, setPresenceMap] = useState<Map<string, PresenceEntry>>(
     new Map()
   );
-  const [loaded, setLoaded] = useState(false);
 
-  // Initial fetch
+  // TanStack Query for initial fetch & caching
+  const { data: initialPresence = [], isSuccess } = useQuery({
+    queryKey: ["presence"],
+    queryFn: async () => {
+      const { data, ok } = await api.get<PresenceEntry[]>("/api/presence");
+      if (!ok) return [];
+      return data ?? [];
+    },
+    staleTime: 30 * 1000,
+  });
+
+  // Populate map when query resolves
   useEffect(() => {
-    fetch("/api/presence")
-      .then((r) => r.json())
-      .then((data: PresenceEntry[]) => {
-        const map = new Map<string, PresenceEntry>();
-        for (const entry of data) {
-          map.set(entry.staffId, entry);
-        }
-        setPresenceMap(map);
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, []);
+    if (isSuccess && initialPresence.length > 0) {
+      const map = new Map<string, PresenceEntry>();
+      for (const entry of initialPresence) {
+        map.set(entry.staffId, entry);
+      }
+      setPresenceMap(map);
+    }
+  }, [initialPresence, isSuccess]);
 
-  // SSE subscription
+  // Realtime SSE updates overlaid on query data
   useEffect(() => {
     const unsub = subscribePresence((event: PresenceEvent) => {
       setPresenceMap((prev) => {
@@ -72,5 +80,5 @@ export function usePresence() {
     [presenceMap]
   );
 
-  return { presenceMap, getPresence, loaded };
+  return { presenceMap, getPresence, loaded: isSuccess };
 }

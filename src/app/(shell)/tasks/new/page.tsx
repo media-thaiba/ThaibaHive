@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
 
 export default function NewTaskPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { staff } = useAuth();
   const [staffList, setStaffList] = useState<
     { id: string; firstName: string; lastName: string }[]
@@ -79,6 +81,8 @@ export default function NewTaskPage() {
         return;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      router.refresh();
       router.push("/tasks");
     } catch {
       setError("Network error. Please try again.");

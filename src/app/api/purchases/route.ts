@@ -2,14 +2,20 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { purchaseRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { purchaseCreateSchema } from "@/lib/validation/schemas";
+import { purchaseCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const viewAll = searchParams.get("viewAll");
+  const pagination = paginationSchema.parse({
+    page: searchParams.get("page"),
+    limit: searchParams.get("limit"),
+  });
+  const { page, limit } = pagination;
+  const offset = (page - 1) * limit;
 
   const conditions = [];
 
@@ -17,7 +23,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     const managedIds = await getManagedStaffIds(session.staffId, session.role);
     if (managedIds !== null) {
       if (managedIds.length === 0) {
-        return NextResponse.json({ purchases: [] });
+        return NextResponse.json({ purchases: [], total: 0, page, limit });
       }
       conditions.push(inArray(purchaseRequests.requesterId, managedIds));
     }
@@ -29,14 +35,23 @@ export const GET = requireAuth(async (request: Request, session) => {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+  const countResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(purchaseRequests)
+    .where(whereClause)
+    .get();
+  const total = countResult?.count ?? 0;
+
   const purchases = await db
     .select()
     .from(purchaseRequests)
     .where(whereClause)
     .orderBy(desc(purchaseRequests.createdAt))
+    .limit(limit)
+    .offset(offset)
     .all();
 
-  return NextResponse.json({ purchases });
+  return NextResponse.json({ purchases, total, page, limit });
 }, "finance:create");
 
 export const POST = requireAuth(async (request: Request, session) => {

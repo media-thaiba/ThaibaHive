@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SwarmTopology, TopologyNode } from "@/components/swarm/SwarmTopology";
 import { NegotiationTracker, NegotiationSession } from "@/components/swarm/NegotiationTracker";
-import { TelemetryDashboard, MetricPoint } from "@/components/swarm/TelemetryDashboard";
+import type { MetricPoint } from "@/components/swarm/TelemetryDashboard";
 import { ComplianceMonitor, ComplianceFinding } from "@/components/swarm/ComplianceMonitor";
 import { RemediationHistory, RemediationRecord } from "@/components/swarm/RemediationHistory";
 import { SwarmDashboardSkeleton } from "@/components/swarm/SwarmDashboardSkeleton";
@@ -15,7 +17,22 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MobileSyncDashboard } from "@/components/swarm/MobileSyncDashboard";
 import { Badge } from "@/components/ui/badge";
-import { SwarmTelemetryCharts } from "@/components/swarm/swarm-telemetry-charts";
+
+const TelemetryDashboard = dynamic(
+  () => import("@/components/swarm/TelemetryDashboard").then((m) => m.TelemetryDashboard),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[250px] w-full" />,
+  }
+);
+
+const SwarmTelemetryCharts = dynamic(
+  () => import("@/components/swarm/swarm-telemetry-charts").then((m) => m.SwarmTelemetryCharts),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[300px] w-full" />,
+  }
+);
 
 // State Reconstruction Helpers
 function getPlaybackNodes(baseNodes: TopologyNode[], events: PlaybackEvent[], currentIndex: number): TopologyNode[] {

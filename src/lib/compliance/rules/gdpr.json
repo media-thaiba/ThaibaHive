@@ -1,0 +1,46 @@
+{
+  "framework": "gdpr",
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "gdpr-01",
+      "description": "Data Handling",
+      "dataSource": "db",
+      "predicate": "has_encryption",
+      "severity": "high",
+      "remediationGuidance": "Encrypt data at rest"
+    },
+    {
+      "id": "gdpr-02",
+      "description": "Access Control",
+      "dataSource": "iam",
+      "predicate": "has_mfa",
+      "severity": "critical",
+      "remediationGuidance": "Enable MFA"
+    },
+    {
+      "id": "gdpr-03",
+      "description": "Audit Logging",
+      "dataSource": "logs",
+      "predicate": "log_retention > 90",
+      "severity": "medium",
+      "remediationGuidance": "Increase log retention"
+    },
+    {
+      "id": "gdpr-04",
+      "description": "Retention Policy",
+      "dataSource": "db",
+      "predicate": "retention_period <= max_allowed",
+      "severity": "low",
+      "remediationGuidance": "Update retention policy"
+    },
+    {
+      "id": "gdpr-05",
+      "description": "Breach Notification",
+      "dataSource": "policy",
+      "predicate": "has_notification_plan",
+      "severity": "high",
+      "remediationGuidance": "Create a breach notification plan"
+    }
+  ]
+}

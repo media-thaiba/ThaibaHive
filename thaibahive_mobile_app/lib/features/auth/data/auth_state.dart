@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,6 +55,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _storage.delete(key: AppConstants.storageTokenKey);
       await _storage.delete(key: AppConstants.storageRefreshTokenKey);
       await _storage.delete(key: 'remember_me');
+      updateCachedAuthToken(null);
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
     }

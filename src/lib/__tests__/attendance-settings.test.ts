@@ -1,7 +1,8 @@
 import { GET, PUT } from "@/app/api/attendance/settings/route";
-import { verifySession, hasPermission } from "@/lib/auth";
+import { verifySession, hasPermission } from "@thaiba/auth";
 
 const mockGet = jest.fn();
+
 const mockAll = jest.fn();
 const mockRun = jest.fn();
 const mockReturning = jest.fn();
@@ -75,10 +76,11 @@ jest.mock("@/db", () => ({
   },
 }));
 
-jest.mock("@/lib/auth", () => ({
+jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(),
 }));
+
 
 jest.mock("@/lib/api/activity-log", () => ({
   logActivity: jest.fn().mockResolvedValue(undefined),

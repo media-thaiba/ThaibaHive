@@ -115,3 +115,36 @@ packages/db/         → DB package (Drizzle schema)
 - Always provide pull-to-refresh capabilities on dashboard and lists.
 - Optimize network image rendering by using `cached_network_image` instead of default Image providers.
 <!-- END:thaibahive-conventions -->
+
+<!-- BEGIN:issue-fixes -->
+## Issue Fixes
+
+### 2026-07-29: Linting and TypeScript Fixes
+
+#### Fixed Issues:
+
+**Issue 1: Navigation Component Lint Error**
+- File: `src/app/(shell)/page.tsx:189-194`
+- Problem: `<a>` tag used for navigation instead of `<Link>`
+- Solution: Replaced `<a>` with Next.js `<Link>` component for proper navigation
+- Status: ✅ Fixed
+
+**Issue 2: React Hook Ref Mutation**
+- File: `src/lib/hooks/use-realtime-dashboard.ts:14-16`
+- Problem: `onEventRef.current = onEvent` mutation during render 
+- Solution: Moved ref assignment into `useEffect` with dependency array `[onEvent]` to comply with React Hook rules
+- Status: ✅ Fixed
+
+**Issue 3: TypeScript NODE_ENV Mutation**
+- File: `src/lib/__tests__/security-audits.test.ts:410`
+- Problem: `process.env.NODE_ENV` assignment causing type errors
+- Solution: Used `Object.defineProperty` with `writable: true` instead of type casting
+- Status: ✅ Fixed
+
+**Verification:**
+- Lint: ✅ All 2 errors resolved, 46 warnings remain (unrelated pre-existing)
+- TypeScript: ✅ tsc --noEmit passes without errors
+- Tests: ✅ All 22 test suites pass (231/231 tests passing)
+- Fix Method: Manual code edits without automatic --fix where available
+
+<!-- END:issue-fixes -->

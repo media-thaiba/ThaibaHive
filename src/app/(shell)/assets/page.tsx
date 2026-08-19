@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Download } from "lucide-react";
+import {  } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ExportButton } from "@/components/export-button";
 import { toast } from "sonner";
 
 const ASSET_TYPES = ["laptop", "camera", "projector", "furniture", "vehicle", "equipment", "other"];
@@ -261,14 +262,7 @@ export default function AssetsPage() {
           <p className="text-sm text-muted-foreground mt-0.5">{assets.length} total</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.open("/api/export?type=assets", "_blank")}
-            className="gap-1.5"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <ExportButton type="assets" />
           <Button onClick={openAddForm}>
             Add Asset
           </Button>

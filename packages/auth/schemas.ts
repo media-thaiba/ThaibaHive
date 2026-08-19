@@ -12,6 +12,7 @@ export const signupSchema = z.object({
   employeeId: z.string().min(1, "Employee ID is required"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  invitationToken: z.string().optional(),
 });
 
 export const passwordChangeSchema = z.object({
@@ -32,5 +33,9 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1, "Token is required"),
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+});
+
+export const invitationSchema = z.object({
+  token: z.string().min(1, "Invitation token is required"),
 });

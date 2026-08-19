@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings, Building2, Layers, Clock, MapPin, Calendar, ClipboardCheck } from "lucide-react";
+import { Settings, Building2, Layers, Clock, MapPin, Calendar, ClipboardCheck, Activity } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -50,8 +50,15 @@ export default function AdminLayout({
           <AdminLink href="/admin/checklists" icon={<ClipboardCheck className="h-4 w-4" />}>
             Templates
           </AdminLink>
-          <AdminLink href="/admin/checklists/assignments" icon={<ClipboardCheck className="h-4 w-4" />}>
-            Assignments
+          <div className="my-3 border-t" />
+          <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            Intelligence
+          </p>
+          <AdminLink href="/admin/observability" icon={<Activity className="h-4 w-4" />}>
+            Observability
+          </AdminLink>
+          <AdminLink href="/admin/executive/analytics" icon={<Settings className="h-4 w-4" />}>
+            Executive Analytics
           </AdminLink>
         </nav>
       </aside>

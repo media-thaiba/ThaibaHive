@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-telemetry";
 
-const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
 
 const publicPaths = [
   "/auth/login",
@@ -14,6 +16,8 @@ const publicPaths = [
   "/api/auth/mobile-handoff",
   "/api/system/health",
   "/api/system/update",
+  "/api/media/share-links/",
+  "/share/",
   "/downloads",
   "/favicon.ico",
 ];
@@ -28,6 +32,12 @@ const BLOCKED_PATHS = [
 ];
 
 export function proxy(request: NextRequest) {
+  const apmContext = startApmTracking(request);
+  const response = handleProxy(request);
+  return completeApmTracking(apmContext, response);
+}
+
+function handleProxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   // Block known scanner/bot paths
@@ -64,22 +74,44 @@ export function proxy(request: NextRequest) {
       );
     }
 
+    // Workspace root redirect: /workspace → /workspace/{role}
+    if (pathname === '/workspace' || pathname === '/workspace/') {
+      const role = extractRoleFromToken(token);
+      const workspaceMap: Record<string, string> = {
+        principal: '/workspace/principal',
+        staff: '/workspace/teacher',
+        hod: '/workspace/teacher',
+        accounts: '/workspace/cashier',
+        purchase: '/workspace/cashier',
+      };
+      const dest = role ? workspaceMap[role] : null;
+      if (dest) {
+        return addSecurityHeaders(
+          request,
+          NextResponse.redirect(new URL(dest, request.url)),
+          pathname
+        );
+      }
+    }
+
     // Enforce body size limit on write API routes
     const method = request.method;
     const isWrite = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
     if (pathname.startsWith("/api/") && isWrite) {
+      const isUploadRoute = pathname.startsWith("/api/upload") || pathname.startsWith("/api/media/upload");
+      const maxLimit = isUploadRoute ? MAX_UPLOAD_BYTES : MAX_BODY_BYTES;
       const contentLength = request.headers.get("content-length");
-      if (contentLength && parseInt(contentLength, 10) > MAX_BODY_BYTES) {
+      if (contentLength && parseInt(contentLength, 10) > maxLimit) {
         return addSecurityHeaders(
           request,
-          NextResponse.json({ error: "Request body too large. Maximum size is 5MB." }, { status: 413 }),
+          NextResponse.json({ error: `Request body too large. Maximum size is ${isUploadRoute ? "50MB" : "5MB"}.` }, { status: 413 }),
           pathname
         );
       }
 
-      // Block non-JSON/non-multipart content types on write API routes
+      // Block non-JSON/non-multipart content types on non-upload write API routes
       const contentType = request.headers.get("content-type");
-      if (contentType && !contentType.includes("application/json") && !contentType.includes("multipart/form-data")) {
+      if (contentType && !isUploadRoute && !contentType.includes("application/json") && !contentType.includes("multipart/form-data")) {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: "Invalid content type." }, { status: 415 }),
@@ -106,6 +138,20 @@ export function proxy(request: NextRequest) {
   }
 }
 
+function extractRoleFromToken(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(base64);
+    const parsed = JSON.parse(decoded);
+    return typeof parsed.role === 'string' ? parsed.role : null;
+  } catch {
+    return null;
+  }
+}
+
 const ALLOWED_ORIGIN_REGEX = /^https:\/\/(?:[a-z0-9-]+\.)*thaibahive\.com$/i;
 
 function applyCorsHeaders(request: NextRequest, response: NextResponse): NextResponse {
@@ -126,11 +172,23 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse): NextRes
 }
 
 function addSecurityHeaders(request: NextRequest, response: NextResponse, pathname: string): NextResponse {
+  const isProd = process.env.NODE_ENV === "production";
+  const scriptSrc = isProd
+    ? "script-src 'self' 'unsafe-inline';"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval';";
+
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+  response.headers.set("x-request-id", requestId);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(self)");
+  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  response.headers.set(
+    "Content-Security-Policy",
+    `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';`
+  );
 
   if (pathname.startsWith("/api/")) {
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -149,4 +207,6 @@ export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo|manifest.json|sw.js|offline.html|.*\\.svg$).*)"],
 };
 
+export { proxy as middleware };
 export default proxy;
+

@@ -1,0 +1,1 @@
+CREATE INDEX "idx_pg_scheduled_jobs_created_at" ON "scheduled_jobs" USING btree ("created_at");

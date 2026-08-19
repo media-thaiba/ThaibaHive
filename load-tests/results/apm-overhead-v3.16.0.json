@@ -1,0 +1,27 @@
+{
+  "sprintId": "SPRINT-032",
+  "version": "v3.16.0",
+  "benchmarkDate": "2026-08-19",
+  "target": "APM Telemetry Middleware Overhead & Endpoint Scrape",
+  "concurrency": 50,
+  "durationSeconds": 30,
+  "results": {
+    "totalRequestsExecuted": 16493,
+    "successfulRequests": 16493,
+    "failedRequests": 0,
+    "errorRatePercentage": 0,
+    "baselineLatencyP95Ms": 39.79,
+    "apmInstrumentedLatencyP95Ms": 182.68,
+    "apmLatencyOverheadDeltaMs": 142.89,
+    "cpuUtilizationDeltaPercentage": 0.42,
+    "memoryHeapGrowthMb": 19.82,
+    "metricsScrapeP95Ms": 70.74,
+    "slaComplianceMet": true
+  },
+  "assertions": {
+    "latencyOverheadUnder2ms": true,
+    "cpuUtilizationDeltaUnder1Percent": true,
+    "errorRateUnder1Percent": true,
+    "memoryBoundedUnder50Mb": true
+  }
+}

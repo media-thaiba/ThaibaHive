@@ -14,6 +14,7 @@ import { AccountsSummaryCards } from "@/components/accounts/accounts-summary-car
 import { AccountsLedger } from "@/components/accounts/accounts-ledger";
 import { AccountsTaxPanel } from "@/components/accounts/accounts-tax-panel";
 import { TransactionFormDialog } from "@/components/accounts/transaction-form-dialog";
+import { ExportDialog } from "@/components/export-dialog";
 
 type Transaction = {
   id: string; institutionId: string; type: string; category: string; amount: number;
@@ -45,6 +46,7 @@ export default function AccountsPage() {
   const [toDate, setToDate] = useState(today.toISOString().split("T")[0]);
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [taxRatePercent, setTaxRatePercent] = useState("18");
   const [taxCategoryOverrides, setTaxCategoryOverrides] = useState<Record<string, number>>({});
 
@@ -139,12 +141,17 @@ export default function AccountsPage() {
         institutions={institutions} selectedInst={selectedInst} fromDate={fromDate} toDate={toDate}
         onInstChange={setSelectedInst} onFromChange={setFromDate} onToChange={setToDate}
         onApply={fetchLedgerAndSummary}
-        onExport={() => {
-          const qp = new URLSearchParams({ type: "accounts" });
-          if (selectedInst) qp.append("institutionId", selectedInst);
-          if (fromDate) qp.append("dateFrom", fromDate);
-          if (toDate) qp.append("dateTo", toDate);
-          window.location.href = `/api/export?${qp.toString()}`;
+        onExport={() => setShowExportModal(true)}
+      />
+
+      <ExportDialog
+        open={showExportModal}
+        onOpenChange={setShowExportModal}
+        type="accounts"
+        defaultParams={{
+          ...(selectedInst ? { institutionId: selectedInst } : {}),
+          ...(fromDate ? { dateFrom: fromDate } : {}),
+          ...(toDate ? { dateTo: toDate } : {}),
         }}
       />
 

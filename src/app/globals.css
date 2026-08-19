@@ -2,7 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===========================================================================
+ * THEME COMPLIANCE: All component colors MUST use CSS custom properties from
+ * the :root definition below. Do NOT use raw hex values (#RRGGBB) in component
+ * styles or Tailwind classes. Use hsl(var(--*)) patterns instead.
+ * =========================================================================== */
+
 @layer base {
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   :root {
     /* Background & Foreground */
     --background: 150 10% 97%;

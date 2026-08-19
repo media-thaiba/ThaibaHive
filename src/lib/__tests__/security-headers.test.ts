@@ -1,5 +1,3 @@
-import { type NextConfig } from 'next';
-import { resolve, dirname } from 'path';
 
 describe('Security Headers Configuration', () => {
   const headersConfig = [
@@ -22,7 +20,7 @@ describe('Security Headers Configuration', () => {
         { key: "X-Frame-Options", value: "DENY" },
         { key: "X-XSS-Protection", value: "1; mode=block" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';" },
         { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
       ],
@@ -121,5 +119,20 @@ describe('Security Headers Configuration', () => {
     const headers = getSecurityHeaders();
     const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
     expect(cspHeader?.value).toContain('wss:');
+  });
+
+  test('CSP should omit unsafe-eval in production mode', () => {
+    const isProd = true;
+    const scriptSrc = isProd
+      ? "script-src 'self' 'unsafe-inline';"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval';";
+
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+  });
+
+  test('CSP should not contain unsafe-eval', () => {
+    const headers = getSecurityHeaders();
+    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
+    expect(cspHeader?.value).not.toContain("'unsafe-eval'");
   });
 });

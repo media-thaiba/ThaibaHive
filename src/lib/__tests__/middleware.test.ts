@@ -98,7 +98,7 @@ jest.mock("next/server", () => {
   };
 });
 
-import { proxy, config } from "@/proxy";
+import { proxy, config } from "@/middleware";
 
 function makeRequest(
   path: string,
@@ -199,8 +199,8 @@ describe("proxy", () => {
   });
 
   describe("write request body size limit", () => {
-    it("should reject POST requests exceeding 5MB", () => {
-      const size = 5 * 1024 * 1024 + 1;
+    it("should reject POST requests exceeding 50MB", () => {
+      const size = 50 * 1024 * 1024 + 1;
       const req = makeRequest("/api/tasks", {
         method: "POST",
         cookie: "thaibahive_session=token",
@@ -211,8 +211,8 @@ describe("proxy", () => {
       expect(res.status).toBe(413);
     });
 
-    it("should reject PUT requests exceeding 5MB", () => {
-      const size = 10 * 1024 * 1024;
+    it("should reject PUT requests exceeding 50MB", () => {
+      const size = 55 * 1024 * 1024;
       const req = makeRequest("/api/tasks/1", {
         method: "PUT",
         cookie: "thaibahive_session=token",
@@ -223,7 +223,7 @@ describe("proxy", () => {
       expect(res.status).toBe(413);
     });
 
-    it("should allow POST requests under 5MB", () => {
+    it("should allow POST requests under 50MB", () => {
       const req = makeRequest("/api/tasks", {
         method: "POST",
         cookie: "thaibahive_session=token",

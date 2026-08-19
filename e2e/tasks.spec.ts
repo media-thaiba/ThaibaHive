@@ -4,17 +4,12 @@ import { tasks } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("Tasks Kanban Board", () => {
-  test.beforeEach(async ({ page }) => {
-    // 1. Clean up any tasks left over from previous test runs to prevent duplicate match errors
-    await db.delete(tasks).where(eq(tasks.title, "E2E Tasks Board Test")).run();
-    console.log("Cleaned up tasks with title 'E2E Tasks Board Test' from database");
+  test.use({ storageState: ".auth/admin.json" });
 
-    // 2. Perform UI login as test-admin (who has tasks:create permission)
-    await page.goto("/auth/login");
-    await page.fill("#email", "test-admin@thaibahive.local");
-    await page.fill("#password", "Password123");
-    await page.click("button[type='submit']");
-    await expect(page).toHaveURL("/");
+  test.beforeEach(async () => {
+    // 1. Clean up tasks from the database to prevent pagination overflow on the Kanban board
+    await db.delete(tasks).run();
+    console.log("Cleared all tasks from database for E2E clean slate");
   });
 
   test("should allow creating a new task, showing it on Kanban, and viewing details", async ({ page }) => {
@@ -41,7 +36,7 @@ test.describe("Tasks Kanban Board", () => {
     // Click on the task link to view details
     await page.locator("a:has-text('E2E Tasks Board Test')").click();
 
-    // Verify redirected to details page (uses async matching to wait for navigation)
+    // Verify redirected to details page
     await expect(page).toHaveURL(/\/tasks\/.+/);
     
     // Details page heading should show the task title

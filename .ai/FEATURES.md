@@ -68,6 +68,11 @@ Canonical index of the features available in ThaibaHive.
 | **Scheduled Job Management Console** | `/app/(shell)/admin/scheduled-jobs/` | **Complete** | Drizzle, Base UI, Zod | Core / Admin |
 | **Queue Performance Telemetry** | `/components/swarm/` & `/api/admin/swarm/` | **Complete** | EventBus, SSEManager, Recharts | DevOps / Observability |
 | **Preference Audit Log Dashboard** | `/app/(shell)/admin/audit-logs/` | **Complete** | PreferenceAuditService, Drizzle | Security / Compliance |
+| **Multi-Browser Playwright E2E Automation** | `/e2e/` & `playwright.config.ts` | **Stable** | Firefox, WebKit, Chromium, Axe-Playwright | QA / Ops |
+| **Client-Side DB Import Restriction Linting** | `eslint.config.mjs` | **Stable** | ESLint `no-restricted-imports` rules | Security / Architecture |
+| **Database Secondary Query Index Tuning** | `packages/db/schema.ts` & `schema.pg.ts` | **Complete** | Drizzle schema indexes mapping | Database / Performance |
+| **Next.js Dynamic Import Bundle Optimization** | `src/app/(shell)/` routes | **Complete** | next/dynamic imports, react suspense / skeletons | Core / Frontend |
+| **k6 Concurrency Baseline Load Testing** | `load-tests/` | **Complete** | k6 runner, authenticated endpoint mapping | QA / Stress Testing |
 
 
 

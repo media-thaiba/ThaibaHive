@@ -1,20 +1,22 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../packages/db";
-import { leaveRequests } from "../packages/db/schema";
+import { leaveRequests, leaveBalances, staff } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("Leaves Page", () => {
-  test.beforeEach(async ({ page }) => {
+  test.use({ storageState: ".auth/staff.json" });
+
+  test.beforeEach(async () => {
     // 1. Clean up any leaves left over from previous test runs to prevent duplicate match errors
     await db.delete(leaveRequests).where(eq(leaveRequests.reason, "E2E Test Leave")).run();
     console.log("Cleaned up leave requests with reason 'E2E Test Leave' from database");
 
-    // 2. Perform UI login
-    await page.goto("/auth/login");
-    await page.fill("#email", "test-staff@thaibahive.local");
-    await page.fill("#password", "Password123");
-    await page.click("button[type='submit']");
-    await expect(page).toHaveURL("/");
+    // 2. Reset leave balances for test-staff to ensure enough remaining days
+    const user = await db.select().from(staff).where(eq(staff.email, "test-staff@thaibahive.local")).get();
+    if (user) {
+      await db.update(leaveBalances).set({ usedDays: 0 }).where(eq(leaveBalances.staffId, user.id)).run();
+      console.log("Reset leave balances for test-staff to 0");
+    }
   });
 
   test("should allow applying for leaves and verify request in history", async ({ page }) => {
@@ -29,7 +31,6 @@ test.describe("Leaves Page", () => {
     await form.locator("input[type='date']").nth(0).fill("2026-08-01");
     await form.locator("input[type='date']").nth(1).fill("2026-08-03");
     await form.locator("textarea[placeholder='Reason for leave']").fill("E2E Test Leave");
-
 
     // Click Submit
     const submitBtn = form.locator("button[type='submit']");

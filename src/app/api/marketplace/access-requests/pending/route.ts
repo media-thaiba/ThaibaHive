@@ -32,4 +32,4 @@ export const GET = requireAuth(async (_request, session) => {
     .all();
 
   return NextResponse.json({ requests });
-}, "attendance:read");
+}, "marketplace:install");

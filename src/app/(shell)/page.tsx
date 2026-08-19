@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -186,8 +187,8 @@ export default function DashboardPage() {
                   <h3 className="text-sm font-semibold">Welcome to ThaibaHive</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Let&apos;s get you set up. Mark your attendance or complete your personal details.</p>
                   <div className="flex gap-2 mt-3">
-                    <a href="/attendance"><Button size="sm">Mark Attendance</Button></a>
-                    <a href="/staff"><Button variant="outline" size="sm">Complete Profile</Button></a>
+                    <Link href="/attendance"><Button size="sm">Mark Attendance</Button></Link>
+                    <Link href="/staff"><Button variant="outline" size="sm">Complete Profile</Button></Link>
                   </div>
                 </div>
               </CardContent>

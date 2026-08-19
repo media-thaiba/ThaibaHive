@@ -3,13 +3,14 @@ import { POST as assetTagHandler } from "@/app/api/assets/[id]/tag/route";
 import { POST as faceEnrollHandler } from "@/app/api/staff/[id]/enroll-face/route";
 import { POST as beaconPairHandler } from "@/app/api/admin/attendance-locations/[id]/beacon/route";
 import { GET as visitorVerifyHandler, POST as visitorCheckInHandler } from "@/app/api/visitors/verify/route";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 import { db } from "@/db";
 
-jest.mock("@/lib/auth", () => ({
+jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(() => true),
 }));
+
 
 jest.mock("@/lib/api/activity-log", () => ({
   logActivity: jest.fn().mockResolvedValue(undefined),
@@ -136,7 +137,14 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
       (db.select as jest.Mock).mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
-            get: jest.fn().mockResolvedValue({ id: "staff-self", firstName: "Jane", lastName: "Doe" }),
+            get: jest.fn().mockReturnValue({ id: "staff-self", firstName: "Jane", lastName: "Doe" }),
+          }),
+        }),
+      });
+      (db.update as jest.Mock).mockReturnValueOnce({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            run: jest.fn().mockReturnValue({ changes: 1 }),
           }),
         }),
       });
@@ -144,7 +152,7 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
       const req = new Request("http://localhost/api/staff/staff-self/enroll-face", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoDataUrl: "data:image/jpeg;base64,VGhpcyBpcyBhIHRlc3Q=" }),
+        body: JSON.stringify({ image: "data:image/jpeg;base64,VGhpcyBpcyBhIHRlc3Q=" }),
       });
       const context = { params: Promise.resolve({ id: "staff-self" }) };
       const res = await faceEnrollHandler(req, context);
@@ -172,7 +180,17 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
       (db.select as jest.Mock).mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
-            get: jest.fn().mockResolvedValue({ id: "loc-1", name: "Library Entrance" }),
+            get: jest.fn().mockReturnValue({ id: "loc-1", name: "Library Entrance" }),
+          }),
+        }),
+      });
+      (db.update as jest.Mock).mockReturnValueOnce({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            run: jest.fn().mockReturnValue({ changes: 1 }),
+            returning: jest.fn().mockReturnValue({
+              get: jest.fn().mockReturnValue({ id: "loc-1" }),
+            }),
           }),
         }),
       });
@@ -201,7 +219,7 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
         .mockReturnValueOnce({
           from: jest.fn().mockReturnValue({
             where: jest.fn().mockReturnValue({
-              get: jest.fn().mockResolvedValue({
+              get: jest.fn().mockReturnValue({
                 id: "vis-123",
                 name: "John Visitor",
                 purpose: "Interview",
@@ -214,7 +232,7 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
         .mockReturnValueOnce({
           from: jest.fn().mockReturnValue({
             where: jest.fn().mockReturnValue({
-              get: jest.fn().mockResolvedValue({ firstName: "Host", lastName: "Admin" }),
+              get: jest.fn().mockReturnValue({ firstName: "Host", lastName: "Admin" }),
             }),
           }),
         });
@@ -232,7 +250,17 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
       (db.select as jest.Mock).mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
-            get: jest.fn().mockResolvedValue({ id: "vis-123", name: "John Visitor", status: "approved" }),
+            get: jest.fn().mockReturnValue({ id: "vis-123", name: "John Visitor", status: "approved" }),
+          }),
+        }),
+      });
+      (db.update as jest.Mock).mockReturnValueOnce({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            run: jest.fn().mockReturnValue({ changes: 1 }),
+            returning: jest.fn().mockReturnValue({
+              get: jest.fn().mockReturnValue({ id: "vis-123" }),
+            }),
           }),
         }),
       });

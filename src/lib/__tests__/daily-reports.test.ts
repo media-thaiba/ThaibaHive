@@ -1,7 +1,13 @@
 import { GET, POST } from "@/app/api/reports/route";
 import { GET as getDetail } from "@/app/api/reports/[id]/route";
 import { PATCH } from "@/app/api/reports/[id]/review/route";
-import { verifySession, hasPermission } from "@/lib/auth";
+import { verifySession, hasPermission } from "@thaiba/auth";
+
+jest.mock("@thaiba/auth", () => ({
+  verifySession: jest.fn(),
+  hasPermission: jest.fn(),
+}));
+
 
 const mockGet = jest.fn();
 const mockAll = jest.fn();

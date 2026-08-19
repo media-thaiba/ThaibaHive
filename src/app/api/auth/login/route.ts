@@ -5,6 +5,7 @@ import { verifyPassword, createSession } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth/schemas";
 import { logActivity } from "@/lib/api/activity-log";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
+import { serverLogger } from "@/lib/server-logger";
 import { eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
     }
     const { email, password, rememberMe } = parsed.data;
 
+    const emailRl = checkRateLimit(`login-email:${email.toLowerCase()}`, "auth");
+    if (!emailRl.allowed) return rateLimitResponse(emailRl.resetMs);
+
     const staffMember = await db
       .select()
       .from(staff)
@@ -30,7 +34,7 @@ export async function POST(request: Request) {
       .get();
 
     if (!staffMember || !staffMember.passwordHash) {
-      console.warn(`[Auth] Login failed: User ${email} not found in database.`);
+      serverLogger.warn("Login failed: user not found", { email });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
     const valid = await verifyPassword(password, staffMember.passwordHash);
 
     if (!valid) {
-      console.warn(`[Auth] Login failed: Password mismatch for ${email}.`);
+      serverLogger.warn("Login failed: password mismatch", { email });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     if (!staffMember.isActive) {
-      console.warn(`[Auth] Login failed: User ${email} is inactive.`);
+      serverLogger.warn("Login failed: user inactive", { email });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -91,7 +95,7 @@ export async function POST(request: Request) {
       },
     });
 } catch (error: unknown) {
-    console.error("Login error:", error);
+    serverLogger.error("Login error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

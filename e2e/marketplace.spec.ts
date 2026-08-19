@@ -1,13 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Marketplace Apps & Access Requests Page Smoke & API Flow", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/auth/login");
-    await page.fill("#email", "test-staff@thaibahive.local");
-    await page.fill("#password", "Password123");
-    await page.click("button[type='submit']");
-    await page.waitForURL("/");
-  });
+  test.use({ storageState: ".auth/staff.json" });
 
   test("should render Marketplace Directory page and app cards container", async ({ page }) => {
     await page.goto("/marketplace");

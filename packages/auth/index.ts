@@ -5,6 +5,6 @@ export { hasPermission, getRolePermissions } from "./roles";
 export type { StaffRole } from "./roles";
 export { getUserInstitutionScope } from "./institution-scope";
 export { authConfig } from "./config";
-export { loginSchema, signupSchema, passwordChangeSchema, profileUpdateSchema } from "./schemas";
+export { loginSchema, signupSchema, passwordChangeSchema, profileUpdateSchema, invitationSchema, resetPasswordSchema } from "./schemas";
 export { verifyGoogleToken } from "./google";
 

@@ -269,3 +269,142 @@ None of these are functional bugs. They're code cleanliness issues that don't bl
 ---
 
 *This file is a living document. Continue adding findings as the audit progresses.*
+
+---
+
+## OPEN PROVISIONAL & PROVISIONING GAPS (Items 18–21)
+
+## 18. Biometric Authentication — Photo Storage Only, No Verification Path
+
+**Category:** Missing Prerequisite / Provisioning Gap
+**Severity:** High
+**Status:** Verified (file/line-cited, code-comment confirmed)
+
+**Finding:**
+`src/app/api/staff/[id]/enroll-face/route.ts` (L11, L42-44) stores the incoming
+face capture as a raw base64 photo directly to `staff.avatarUrl`
+(`.set({ avatarUrl: photoDataUrl })`). No facial embedding vector is extracted
+or persisted. The route's own code comment states explicitly:
+
+> "Does NOT perform automated vector embedding extraction or persistent face
+> biometric indexing."
+
+Mobile app biometrics (`thaibahive_mobile_app/lib/core/services/biometric_service.dart`,
+L4, L64-71) use the `local_auth` package for on-device unlock only — this
+never touches the server and cannot be used to verify identity for
+attendance purposes.
+
+`src/app/api/attendance/check-in/route.ts` (L26, L32, L50) and the
+`attendanceLogs` schema (`packages/db/schema.ts`, L144-164) only accept
+`"nfc"` and `"qr"` as check-in methods. There is no server-side biometric
+verification endpoint anywhere in the codebase.
+
+**Note on prior conflicting report:** an earlier audit pass claimed biometric
++ fingerprint attendance authentication was already implemented. That claim
+is confirmed false by direct file inspection and should be discarded.
+
+**Recommended Fix:**
+- Add `faceEmbedding` (vector) and `biometricEnrolledAt` columns to `staff`.
+- Extend `enroll-face` to run embedding extraction and store the vector
+  instead of (or alongside) the reference photo.
+- Add a real verification endpoint (e.g. `POST /api/attendance/biometric`)
+  and extend the check-in method enum to include `"biometric"`.
+- Decide fingerprint scope explicitly — currently zero fingerprint support
+  exists at any layer (schema, API, or mobile capture).
+
+---
+
+## 19. NFC Admin Enrollment Endpoints — Orphaned, Zero Production Callers
+
+**Category:** Missing Prerequisite / Provisioning Gap
+**Severity:** High
+**Status:** Verified (file/line-cited)
+
+**Finding:**
+`src/app/(shell)/staff/[id]/edit/page.tsx` (L264) renders the NFC tag field
+as a plain text input (`<Input placeholder="e.g. AABBCCDD" />`) — no tap-to-
+pair, no lookup-on-blur, no collision check.
+
+A full search confirms zero frontend files call
+`/api/admin/nfc/assign`, `/api/admin/nfc/unbind`, or `/api/admin/nfc/lookup`.
+The only caller of these routes anywhere in the repo is the test file
+`src/lib/__tests__/nfc-tag-management.test.ts` (L1-3) — these are fully
+built, tested backend routes with no UI path to reach them in production.
+
+`src/components/attendance/nfc-scanner-modal.tsx` (L72-78) exists and is
+functional, but exclusively supports attendance check-in
+(`/api/attendance/check-in`) — it has no enrollment/assignment mode. Its
+presence should not be read as covering the enrollment gap; it solves a
+different problem (scanning a known tag) than the one that's missing
+(registering a new tag).
+
+**Recommended Fix:**
+- Build the NFC pairing UI component (`nfc-pairing-modal.tsx`) that calls
+  the existing `assign`/`unbind`/`lookup` routes — no backend work needed,
+  this is purely a missing frontend consumer of already-built endpoints.
+- Replace the plain text field in `staff/[id]/edit/page.tsx` with this
+  component.
+- Add a card status/lifecycle model (`active`/`revoked`/`lost`) if lost-card
+  replacement is in scope — current schema only supports a single
+  `nfcTagId` string with no status or history.
+
+---
+
+## 20. Students / Guardians Entity — Completely Absent From Schema
+
+**Category:** Missing Data Model / Structural Gap
+**Severity:** High (blocking dependency for several other provisioning items)
+**Status:** Verified (schema search, both SQLite and Postgres)
+
+**Finding:**
+`students`, `student_guardians`, `class_sections`, and `academic_years`
+tables do not exist in either `packages/db/schema.ts` or
+`packages/db/schema.pg.ts`. This isn't a partial implementation — there is
+no student entity in the data model at all.
+
+**Why this matters beyond itself:** several other recommended provisioning
+flows (student personal QR codes, student NFC gate access, visitor/student
+pass verification) implicitly assume a `students` table to attach
+`nfcTagId`/`qrCode` fields to. Building those features before this table
+exists would mean reworking the schema mid-implementation.
+
+**Recommended Fix:**
+- Add `students` table with `nfcTagId`, `qrCode` fields from the start
+  (matching the pattern already used on `staff`), rather than retrofitting
+  later.
+- Sequence this ahead of any student-facing NFC/QR provisioning work —
+  it's a prerequisite, not a parallel task.
+
+---
+
+## 21. WebAuthn / FIDO2 — Zero Implementation
+
+**Category:** Missing Prerequisite / Provisioning Gap
+**Severity:** High
+**Status:** Verified (full search, no matches)
+
+**Finding:**
+No matches for `webauthn`, `fido2`, or `passkey` anywhere across schema,
+API routes, or settings UI. This is a complete absence, not a partial
+build — there's no database table, no registration/verification routes,
+and no UI entry point.
+
+**Recommended Fix:**
+- Add `webauthn_credentials` table (`staffId`, `credentialId`, `publicKey`,
+  `counter`, `transports`, `deviceName`, timestamps).
+- Add `/api/auth/webauthn/register/options` and
+  `/api/auth/webauthn/register/verify` routes.
+- Add passkey enrollment UI under Settings → Security.
+- Lower relative priority if passwordless login isn't an immediate product
+  requirement — unlike items 18-20, this doesn't block other work, it's a
+  standalone addition.
+
+---
+
+**Sequencing note:** Recommend item 20 (students schema) first since items
+18/19's student-facing extensions and doc 1's student QR/NFC
+recommendations depend on it. Items 18, 19, and 21 can proceed in parallel
+once 20 lands, with 18 (biometrics) and 19 (NFC) taking priority over 21
+(WebAuthn) given their higher operational impact (attendance fraud/security
+risk vs. a nice-to-have login method).
+

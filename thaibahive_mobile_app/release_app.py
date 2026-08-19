@@ -31,7 +31,13 @@ local_env = load_env(ENV_PATH)
 parent_env = load_env(PARENT_ENV_PATH)
 
 GITHUB_TOKEN = local_env.get("GITHUB_TOKEN") or parent_env.get("GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN")
-SYSTEM_UPDATE_SECRET = local_env.get("SYSTEM_UPDATE_SECRET") or parent_env.get("SYSTEM_UPDATE_SECRET") or os.environ.get("SYSTEM_UPDATE_SECRET") or "fallback-secret-key-123456"
+SYSTEM_UPDATE_SECRET = local_env.get("SYSTEM_UPDATE_SECRET") or parent_env.get("SYSTEM_UPDATE_SECRET") or os.environ.get("SYSTEM_UPDATE_SECRET")
+if not SYSTEM_UPDATE_SECRET:
+    raise RuntimeError("SYSTEM_UPDATE_SECRET environment variable is required. Set it in your .env file or environment.")
+
+GOOGLE_WEB_CLIENT_ID = local_env.get("GOOGLE_WEB_CLIENT_ID") or parent_env.get("GOOGLE_WEB_CLIENT_ID") or os.environ.get("GOOGLE_WEB_CLIENT_ID")
+if not GOOGLE_WEB_CLIENT_ID:
+    raise RuntimeError("GOOGLE_WEB_CLIENT_ID environment variable is required. Set it in your .env file or environment.")
 
 # Get base api url
 API_URL = local_env.get("NEXT_PUBLIC_API_URL") or parent_env.get("NEXT_PUBLIC_API_URL") or os.environ.get("NEXT_PUBLIC_API_URL") or "https://thaiba-hive.vercel.app/api"
@@ -80,7 +86,8 @@ try:
     
     subprocess.run([
         flutter_bin, "build", "apk", "--release", 
-        "--split-per-abi", "--target-platform", "android-arm64"
+        "--split-per-abi", "--target-platform", "android-arm64",
+        f"--dart-define=GOOGLE_WEB_CLIENT_ID={GOOGLE_WEB_CLIENT_ID}",
     ], check=True)
 except Exception as e:
     print("[ERROR] Flutter compilation failed:", e)

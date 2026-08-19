@@ -1,0 +1,46 @@
+name: Automated Database Backup
+
+on:
+  schedule:
+    # Runs daily at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Skip S3 upload (dry run)"
+        required: false
+        default: "false"
+
+jobs:
+  db-backup:
+    name: Backup PostgreSQL Database
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pg_dump
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y postgresql-client
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Run database backup
+        if: inputs.dry_run != 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_PREFIX: db-backups
+          BACKUP_RETENTION_DAYS: 30
+        run: chmod +x scripts/db-backup.sh && bash scripts/db-backup.sh
+
+      - name: Dry run check
+        if: inputs.dry_run == 'true'
+        run: echo "Dry run — skipping backup upload"

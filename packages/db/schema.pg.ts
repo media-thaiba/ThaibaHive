@@ -80,6 +80,13 @@ export const staff = sqliteTable("staff", {
   onboardingCompletedAt: text("onboarding_completed_at"),
   passwordHash: text("password_hash"),
   nfcTagId: text("nfc_tag_id").unique(),
+  faceEmbedding: text("face_embedding"),
+  faceRegisteredAt: text("face_registered_at"),
+  fingerprintHash: text("fingerprint_hash"),
+  fingerprintRegisteredAt: text("fingerprint_registered_at"),
+  biometricEnabled: boolean("biometric_enabled").notNull().default(false),
+  modelVersion: text("model_version").default("facenet-512d-v1"),
+  biometricStatus: text("biometric_status").default("active"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
@@ -90,10 +97,10 @@ export const staffDepartments = sqliteTable("staff_departments", {
   id: text("id").primaryKey(),
   staffId: text("staff_id")
     .notNull()
-    .references(() => staff.id),
+    .references(() => staff.id, { onDelete: "cascade" }),
   departmentId: text("department_id")
     .notNull()
-    .references(() => departments.id),
+    .references(() => departments.id, { onDelete: "cascade" }),
   isPrimary: boolean("is_primary").notNull().default(false),
 }, (t) => ({
   staffIdIdx: index("idx_pg_staff_departments_staff_id").on(t.staffId),
@@ -104,13 +111,143 @@ export const staffInstitutions = sqliteTable("staff_institutions", {
   id: text("id").primaryKey(),
   staffId: text("staff_id")
     .notNull()
-    .references(() => staff.id),
+    .references(() => staff.id, { onDelete: "cascade" }),
   institutionId: text("institution_id")
     .notNull()
-    .references(() => institutions.id),
+    .references(() => institutions.id, { onDelete: "cascade" }),
 }, (t) => ({
   staffIdIdx: index("idx_pg_staff_institutions_staff_id").on(t.staffId),
   instIdIdx: index("idx_pg_staff_institutions_inst_id").on(t.institutionId),
+}));
+
+export const academicYears = sqliteTable("academic_years", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").references(() => institutions.id),
+  name: text("name").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const classes = sqliteTable("classes", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").references(() => institutions.id),
+  departmentId: text("department_id").references(() => departments.id),
+  name: text("name").notNull(),
+  section: text("section"),
+  academicYearId: text("academic_year_id").references(() => academicYears.id),
+  teacherId: text("teacher_id").references(() => staff.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const students = sqliteTable("students", {
+  id: text("id").primaryKey(),
+  admissionNo: text("admission_no").notNull(),
+  studentId: text("student_id"), // Roll or ID alias
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  dateOfBirth: text("date_of_birth"),
+  gender: text("gender"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  avatarUrl: text("avatar_url"),
+  bloodGroup: text("blood_group"),
+  classId: text("class_id").references(() => classes.id),
+  academicYearId: text("academic_year_id").references(() => academicYears.id),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  nfcTagId: text("nfc_tag_id"),
+  qrCode: text("qr_code"),
+  faceEmbedding: text("face_embedding"), // AES-256-GCM encrypted "iv:authTag:ciphertext"
+  modelVersion: text("model_version").default("facenet-512d-v1"),
+  biometricEnrolledAt: text("biometric_enrolled_at"),
+  biometricStatus: text("biometric_status").default("active"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  classIdx: index("idx_students_class").on(t.classId),
+  instIdx: index("idx_students_institution").on(t.institutionId),
+  instStudentUniq: uniqueIndex("idx_students_inst_admission_no").on(t.institutionId, t.admissionNo),
+  nfcTagIdx: index("idx_students_nfc_tag").on(t.nfcTagId),
+}));
+
+export const guardians = sqliteTable("guardians", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  relation: text("relation").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  address: text("address"),
+  occupation: text("occupation"),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const studentGuardians = sqliteTable("student_guardians", {
+  id: text("id").primaryKey(),
+  studentId: text("student_id").notNull().references(() => students.id),
+  guardianId: text("guardian_id").notNull().references(() => guardians.id),
+  relationship: text("relationship"),
+  canPickup: boolean("can_pickup").notNull().default(false),
+  isEmergencyContact: boolean("is_emergency_contact").notNull().default(false),
+}, (t) => ({
+  studentGuardianUniq: uniqueIndex("idx_student_guardians_uniq").on(t.studentId, t.guardianId),
+}));
+
+export const studentAttendanceLogs = sqliteTable("student_attendance_logs", {
+  id: text("id").primaryKey(),
+  studentId: text("student_id").notNull().references(() => students.id),
+  classId: text("class_id").notNull().references(() => classes.id),
+  date: text("date").notNull(),
+  status: text("status").notNull().default("present"),
+  period: text("period"),
+  checkIn: text("check_in"),
+  checkOut: text("check_out"),
+  markedById: text("marked_by_id").references(() => staff.id),
+  method: text("method").notNull().default("manual"),
+  reason: text("reason"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  studentDateIdx: uniqueIndex("idx_student_attendance_student_date").on(t.studentId, t.date),
+}));
+
+export const attendanceRegister = sqliteTable("attendance_register", {
+  id: text("id").primaryKey(),
+  classId: text("class_id").notNull().references(() => classes.id),
+  date: text("date").notNull(),
+  totalStudents: integer("total_students"),
+  presentCount: integer("present_count"),
+  absentCount: integer("absent_count"),
+  lateCount: integer("late_count"),
+  locked: boolean("locked").notNull().default(false),
+  lockedAt: text("locked_at"),
+  lockedById: text("locked_by_id").references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  classDateIdx: uniqueIndex("idx_attendance_register_class_date").on(t.classId, t.date),
+}));
+
+export const biometricLogs = sqliteTable("biometric_logs", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  method: text("method").notNull(),
+  status: text("status").notNull(),
+  payload: text("payload"),
+  deviceId: text("device_id"),
+  confidence: real("confidence"),
+  errorMessage: text("error_message"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  staffIdIdx: index("idx_biometric_logs_staff_id").on(t.staffId),
 }));
 
 // ─── Shifts & Attendance ───
@@ -166,6 +303,9 @@ export const attendanceLogs = sqliteTable("attendance_logs", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   staffDateIdx: uniqueIndex("idx_attendance_staff_date").on(t.staffId, t.date),
+  dateIdx: index("idx_pg_attendance_date").on(t.date),
+  statusIdx: index("idx_pg_attendance_status").on(t.status),
+  methodIdx: index("idx_pg_attendance_method").on(t.method),
 }));
 
 export const attendanceLocations = sqliteTable("attendance_locations", {
@@ -222,22 +362,25 @@ export const leaveRequests = sqliteTable("leave_requests", {
   id: text("id").primaryKey(),
   staffId: text("staff_id")
     .notNull()
-    .references(() => staff.id),
+    .references(() => staff.id, { onDelete: "cascade" }),
   leaveTypeId: text("leave_type_id")
     .notNull()
-    .references(() => leaveTypes.id),
+    .references(() => leaveTypes.id, { onDelete: "restrict" }),
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   daysCount: real("days_count").notNull(),
   reason: text("reason"),
   status: text("status").notNull().default("pending"),
   appliedAt: text("applied_at").notNull().default(sql`(current_timestamp)`),
-  reviewedById: text("reviewed_by_id").references(() => staff.id),
+  reviewedById: text("reviewed_by_id").references(() => staff.id, { onDelete: "set null" }),
   reviewedAt: text("reviewed_at"),
   reviewNotes: text("review_notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffCreatedAtIdx: index("idx_leave_requests_staff_created").on(t.staffId, t.createdAt),
+  statusIdx: index("idx_leave_requests_status").on(t.status),
+}));
 
 // ─── Tasks ───
 
@@ -247,24 +390,27 @@ export const tasks = sqliteTable("tasks", {
   description: text("description"),
   status: text("status").notNull().default("todo"),
   priority: text("priority").notNull().default("medium"),
-  assignedToId: text("assigned_to_id").references(() => staff.id),
-  assignedById: text("assigned_by_id").references(() => staff.id),
-  departmentId: text("department_id").references(() => departments.id),
+  assignedToId: text("assigned_to_id").references(() => staff.id, { onDelete: "set null" }),
+  assignedById: text("assigned_by_id").references(() => staff.id, { onDelete: "set null" }),
+  departmentId: text("department_id").references(() => departments.id, { onDelete: "set null" }),
   dueDate: text("due_date"),
   completedAt: text("completed_at"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assignedToStatusIdx: index("idx_tasks_assigned_to_status").on(t.assignedToId, t.status),
+  departmentIdx: index("idx_tasks_department").on(t.departmentId),
+}));
 
 export const taskComments = sqliteTable("task_comments", {
   id: text("id").primaryKey(),
   taskId: text("task_id")
     .notNull()
-    .references(() => tasks.id),
+    .references(() => tasks.id, { onDelete: "cascade" }),
   staffId: text("staff_id")
     .notNull()
-    .references(() => staff.id),
+    .references(() => staff.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
@@ -521,7 +667,10 @@ export const notifications = sqliteTable("notifications", {
   referenceId: text("reference_id"),
   isRead: boolean("is_read").notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffCreatedAtIdx: index("idx_notifications_staff_created").on(t.staffId, t.createdAt),
+  staffIsReadIdx: index("idx_notifications_staff_is_read").on(t.staffId, t.isRead),
+}));
 
 // ─── Staff Recognition ───
 
@@ -604,7 +753,10 @@ export const purchaseRequests = sqliteTable("purchase_requests", {
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  requesterStatusIdx: index("idx_purchase_requests_requester_status").on(t.requesterId, t.status),
+  statusIdx: index("idx_purchase_requests_status").on(t.status),
+}));
 
 // ─── Visitor Management ───
 
@@ -653,15 +805,28 @@ export const staffAvailability = sqliteTable("staff_availability", {
 
 export const performanceReviews = sqliteTable("performance_reviews", {
   id: text("id").primaryKey(),
+  institutionId: text("institution_id").references(() => institutions.id),
+  cycleId: text("cycle_id").references(() => performanceCycles.id),
   staffId: text("staff_id").notNull().references(() => staff.id),
-  reviewerId: text("reviewer_id").notNull().references(() => staff.id),
-  period: text("period").notNull(),
-  rating: integer("rating"),
-  goals: jsonb("goals").$type<string[]>(),
+  evaluatorStaffId: text("evaluator_staff_id").references(() => staff.id),
+  reviewerId: text("reviewer_id").references(() => staff.id),
+  formTemplateId: text("form_template_id").references(() => evaluationForms.id),
+  period: text("period"),
+  rating: real("rating"),
+  selfScore: real("self_score"),
+  managerScore: real("manager_score"),
+  finalScore: real("final_score"),
+  grade: text("grade"),
+  status: text("status").notNull().default("self_assessment"),
+  selfComments: text("self_comments"),
+  managerComments: text("manager_comments"),
+  hrComments: text("hr_comments"),
   achievements: text("achievements"),
   areasForImprovement: text("areas_for_improvement"),
-  managerComments: text("manager_comments"),
-  status: text("status").notNull().default("draft"),
+  goals: text("goals"),
+  ratingsJson: text("ratings_json"),
+  submittedAt: text("submitted_at"),
+  approvedAt: text("approved_at"),
   completedAt: text("completed_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -693,7 +858,12 @@ export const financialTransactions = sqliteTable("financial_transactions", {
   recordedById: text("recorded_by_id").notNull().references(() => staff.id),
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instDateIdx: index("idx_pg_financial_tx_inst_date").on(t.institutionId, t.transactionDate),
+  recordedByIdx: index("idx_pg_financial_tx_recorded_by").on(t.recordedById),
+  typeIdx: index("idx_pg_financial_tx_type").on(t.type),
+  categoryIdx: index("idx_pg_financial_tx_category").on(t.category),
+}));
 
 // ─── Vehicle Management ───
 
@@ -854,6 +1024,41 @@ export const userAppAssignments = sqliteTable("user_app_assignments", {
   staffAppIdx: uniqueIndex("idx_user_app_assignments_staff_app").on(t.staffId, t.appId),
 }));
 
+// ─── NFC Card Management ───
+
+export const nfcCards = sqliteTable("nfc_cards", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  tagId: text("tag_id").notNull().unique(), // Normalized uppercase hex e.g. "04A2B3C4"
+  serialNumber: text("serial_number"),
+  ownerType: text("owner_type").notNull().default("staff"), // "staff" | "student"
+  ownerId: text("owner_id"),
+  status: text("status").notNull().default("available"), // "available" | "assigned" | "revoked" | "lost"
+  issuedById: text("issued_by_id").references(() => staff.id),
+  issuedAt: text("issued_at"),
+  lastCheckedAt: text("last_checked_at"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  statusIdx: index("idx_nfc_cards_status").on(t.status),
+  ownerIdx: index("idx_nfc_cards_owner").on(t.ownerType, t.ownerId),
+}));
+
+export const nfcCardHistory = sqliteTable("nfc_card_history", {
+  id: text("id").primaryKey(),
+  cardId: text("card_id").notNull().references(() => nfcCards.id),
+  action: text("action").notNull(),
+  actorId: text("actor_id").references(() => staff.id),
+  targetStaffId: text("target_staff_id").references(() => staff.id),
+  oldStatus: text("old_status"),
+  newStatus: text("new_status"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  cardIdIdx: index("idx_nfc_card_history_card_id").on(t.cardId),
+}));
+
 // ─── WebView Auth Handoff (nonce replay protection) ───
 
 export const usedNonces = sqliteTable("used_nonces", {
@@ -1008,7 +1213,6 @@ export const systemConfigs = sqliteTable("system_configs", {
 export const mediaFolders = sqliteTable("media_folders", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parentId: text("parent_id").references((): any => mediaFolders.id, { onDelete: "cascade" }),
   departmentId: text("department_id").references(() => departments.id, { onDelete: "cascade" }),
   createdById: text("created_by_id").notNull().references(() => staff.id),
@@ -1086,6 +1290,36 @@ export const passwordResetTokens = sqliteTable("password_reset_tokens", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
+// ─── WebAuthn / FIDO2 ───
+
+export const webauthnCredentials = sqliteTable("webauthn_credentials", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  credentialId: text("credential_id").notNull().unique(),
+  publicKey: text("public_key").notNull(),
+  algorithm: integer("algorithm").notNull(),
+  transports: text("transports").notNull().default(""),
+  counter: integer("counter").notNull().default(0),
+  backupEligible: boolean("backup_eligible").notNull().default(false),
+  backupState: boolean("backup_state").notNull().default(false),
+  deviceName: text("device_name"),
+  lastUsedAt: text("last_used_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  staffIdIdx: index("idx_webauthn_staff_id").on(t.staffId),
+}));
+
+export const credentialChallenges = sqliteTable("credential_challenges", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").references(() => staff.id),
+  challenge: text("challenge").notNull(),
+  type: text("type").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  expiresIdx: index("idx_credential_challenges_expires").on(t.expiresAt),
+}));
+
 // ─── FCM Staff Device Tokens ───
 
 export const staffDeviceTokens = sqliteTable("staff_device_tokens", {
@@ -1102,5 +1336,1487 @@ export const staffDeviceTokens = sqliteTable("staff_device_tokens", {
   lastUsedAt: text("last_used_at").notNull().default(sql`(current_timestamp)`),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
+
+// ─── Tenant Encryption Keys (Crypto-Shredding) ───
+
+export const institutionEncryptionKeys = sqliteTable("institution_encryption_keys", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().unique().references(() => institutions.id, { onDelete: "cascade" }),
+  encryptedKey: text("encrypted_key").notNull(), // Random 32-byte AES-256 key wrapped by APP_MASTER_SECRET
+  algorithm: text("algorithm").notNull().default("AES-GCM-256"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const classSections = sqliteTable("class_sections", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  academicYearId: text("academic_year_id").notNull().references(() => academicYears.id),
+  name: text("name").notNull(), // e.g. "Grade 10-A"
+  gradeLevel: integer("grade_level").notNull(),
+  capacity: integer("capacity").notNull().default(40),
+  roomNumber: text("room_number"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const studentBiometricConsents = sqliteTable("student_biometric_consents", {
+  id: text("id").primaryKey(),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  guardianId: text("guardian_id").references(() => studentGuardians.id),
+  recordedByStaffId: text("recorded_by_staff_id").references(() => staff.id),
+  consentMethod: text("consent_method").notNull().default("signed_paper_form"), // "signed_paper_form" | "guardian_portal_otp"
+  consentedAt: text("consented_at").notNull().default(sql`(current_timestamp)`),
+  policyVersion: text("policy_version").notNull().default("1.0"),
+  revokedAt: text("revoked_at"),
+});
+
+// ─── Examination Management ───
+
+export const gradeScales = sqliteTable("grade_scales", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  scaleType: text("scale_type").notNull().default("10_point"),
+  rulesJson: text("rules_json").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const exams = sqliteTable("exams", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  academicYear: text("academic_year").notNull(),
+  term: text("term").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  gradeScaleId: text("grade_scale_id").references(() => gradeScales.id),
+  status: text("status").notNull().default("draft"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const examSchedules = sqliteTable("exam_schedules", {
+  id: text("id").primaryKey(),
+  examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+  courseId: text("course_id"),
+  subjectName: text("subject_name").notNull(),
+  examDate: text("exam_date").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  durationMinutes: integer("duration_minutes").notNull().default(180),
+  maxMarks: real("max_marks").notNull().default(100),
+  passMarks: real("pass_marks").notNull().default(40),
+  roomNumber: text("room_number"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const hallTickets = sqliteTable("hall_tickets", {
+  id: text("id").primaryKey(),
+  examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  ticketNumber: text("ticket_number").notNull().unique(),
+  feeCleared: boolean("fee_cleared").notNull().default(false),
+  overrideFeeLock: boolean("override_fee_lock").notNull().default(false),
+  overrideReason: text("override_reason"),
+  overrideByStaffId: text("override_by_staff_id").references(() => staff.id),
+  qrPayload: text("qr_payload").notNull(),
+  status: text("status").notNull().default("issued"),
+  issuedAt: text("issued_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const markEntries = sqliteTable("mark_entries", {
+  id: text("id").primaryKey(),
+  examScheduleId: text("exam_schedule_id").notNull().references(() => examSchedules.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  marksObtained: real("marks_obtained"),
+  maxMarks: real("max_marks").notNull().default(100),
+  isAbsent: boolean("is_absent").notNull().default(false),
+  evaluatorToken: text("evaluator_token"),
+  doubleBlind: boolean("double_blind").notNull().default(false),
+  remarks: text("remarks"),
+  status: text("status").notNull().default("draft"),
+  enteredByStaffId: text("entered_by_staff_id").references(() => staff.id),
+  moderatedByStaffId: text("moderated_by_staff_id").references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  examScheduleIdx: index("idx_pg_mark_entries_exam_schedule").on(t.examScheduleId),
+  studentIdx: index("idx_pg_mark_entries_student").on(t.studentId),
+  scheduleStudentUniq: uniqueIndex("idx_pg_mark_entries_schedule_student_uniq").on(t.examScheduleId, t.studentId),
+}));
+
+export const tabulationRegisters = sqliteTable("tabulation_registers", {
+  id: text("id").primaryKey(),
+  examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  totalMarks: real("total_marks").notNull().default(0),
+  percentage: real("percentage").notNull().default(0),
+  gpa: real("gpa").notNull().default(0),
+  letterGrade: text("letter_grade").notNull().default("F"),
+  resultStatus: text("result_status").notNull().default("pending"),
+  rank: integer("rank"),
+  publishedAt: text("published_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const examAuditLogs = sqliteTable("exam_audit_logs", {
+  id: text("id").primaryKey(),
+  examId: text("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  action: text("action").notNull(),
+  performedByStaffId: text("performed_by_staff_id").references(() => staff.id),
+  previousState: text("previous_state"),
+  newState: text("new_state"),
+  reason: text("reason"),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Services Module & Campus Operations (Sprint-006) ───
+
+export const fleetRoutes = sqliteTable("fleet_routes", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  name: text("name").notNull(),
+  startLocation: text("start_location").notNull(),
+  endLocation: text("end_location").notNull(),
+  stopsJson: text("stops_json"),
+  driverId: text("driver_id").references(() => staff.id),
+  vehicleId: text("vehicle_id").references(() => vehicles.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const fleetMaintenanceLogs = sqliteTable("fleet_maintenance_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  vehicleId: text("vehicle_id").notNull().references(() => vehicles.id),
+  maintenanceDate: text("maintenance_date").notNull(),
+  serviceType: text("service_type").notNull(), // oil_change | tire_replacement | engine_check | general
+  cost: real("cost").notNull().default(0.0),
+  odometerReading: integer("odometer_reading"),
+  description: text("description"),
+  performedBy: text("performed_by"),
+  status: text("status").notNull().default("completed"), // scheduled | in_progress | completed
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const canteenItems = sqliteTable("canteen_items", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("snacks"), // breakfast | lunch | snacks | beverages
+  price: real("price").notNull(),
+  isAvailable: boolean("is_available").notNull().default(true),
+  dietaryFlags: text("dietary_flags"), // vegetarian | nut_free | gluten_free | vegan
+  imageUrl: text("image_url"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const canteenMenus = sqliteTable("canteen_menus", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  date: text("date").notNull(),
+  mealType: text("meal_type").notNull(), // breakfast | lunch | snacks
+  itemsJson: text("items_json").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const canteenMealPasses = sqliteTable("canteen_meal_passes", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  userId: text("user_id").notNull(),
+  passCode: text("pass_code").notNull().unique(),
+  balance: real("balance").notNull().default(0.0),
+  currency: text("currency").notNull().default("INR"),
+  status: text("status").notNull().default("active"), // active | suspended | blocked
+  dailyLimit: real("daily_limit"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const canteenTransactions = sqliteTable("canteen_transactions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  passId: text("pass_id").notNull().references(() => canteenMealPasses.id),
+  passCode: text("pass_code").notNull(),
+  userId: text("user_id").notNull(),
+  itemsJson: text("items_json").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  idempotencyKey: text("idempotency_key").unique(),
+  cashierStaffId: text("cashier_staff_id").references(() => staff.id),
+  status: text("status").notNull().default("completed"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const visitorRequests = sqliteTable("visitor_requests", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  visitorName: text("visitor_name").notNull(),
+  visitorPhone: text("visitor_phone").notNull(),
+  visitorEmail: text("visitor_email"),
+  idType: text("id_type"),
+  idNumber: text("id_number"),
+  hostStaffId: text("host_staff_id").notNull().references(() => staff.id),
+  purpose: text("purpose").notNull(),
+  expectedDate: text("expected_date").notNull(),
+  expectedTimeWindow: text("expected_time_window"),
+  status: text("status").notNull().default("pending"), // pending | approved | rejected | cancelled
+  rejectionReason: text("rejection_reason"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const visitorPasses = sqliteTable("visitor_passes", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  requestId: text("request_id").references(() => visitorRequests.id),
+  visitorName: text("visitor_name").notNull(),
+  visitorPhone: text("visitor_phone").notNull(),
+  hostStaffId: text("host_staff_id").notNull().references(() => staff.id),
+  purpose: text("purpose").notNull(),
+  qrSignature: text("qr_signature").notNull(),
+  validFrom: text("valid_from").notNull(),
+  validUntil: text("valid_until").notNull(),
+  status: text("status").notNull().default("approved"), // approved | checked_in | checked_out | expired
+  checkInAt: text("check_in_at"),
+  checkOutAt: text("check_out_at"),
+  gatekeeperId: text("gatekeeper_id").references(() => staff.id),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const gateLogs = sqliteTable("gate_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  passId: text("pass_id").references(() => visitorPasses.id),
+  visitorName: text("visitor_name").notNull(),
+  actionType: text("action_type").notNull(), // check_in | check_out | denied
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+  gatekeeperId: text("gatekeeper_id").references(() => staff.id),
+  deviceId: text("device_id"),
+  isOfflineSync: boolean("is_offline_sync").notNull().default(false),
+  syncTimestamp: text("sync_timestamp"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Performance Reviews & HR Development (Sprint-007) ───
+
+export const performanceCycles = sqliteTable("performance_cycles", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  title: text("title").notNull(),
+  cycleType: text("cycle_type").notNull().default("quarterly"),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  selfAssessmentDeadline: text("self_assessment_deadline").notNull(),
+  managerReviewDeadline: text("manager_review_deadline").notNull(),
+  status: text("status").notNull().default("draft"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const competencyFrameworks = sqliteTable("competency_frameworks", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  name: text("name").notNull(),
+  departmentId: text("department_id").references(() => departments.id),
+  roleScope: text("role_scope").default("all"),
+  metricsJson: text("metrics_json").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const evaluationForms = sqliteTable("evaluation_forms", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  frameworkId: text("framework_id").notNull().references(() => competencyFrameworks.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  metricsConfigJson: text("metrics_config_json").notNull(),
+  ratingScale: text("rating_scale").default("1-5"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const performanceGoals = sqliteTable("performance_goals", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  reviewId: text("review_id").references(() => performanceReviews.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  targetDate: text("target_date").notNull(),
+  progressPercentage: integer("progress_percentage").notNull().default(0),
+  status: text("status").notNull().default("in_progress"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const feedbackRequests = sqliteTable("feedback_requests", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  reviewId: text("review_id").notNull().references(() => performanceReviews.id),
+  requesterStaffId: text("requester_staff_id").notNull().references(() => staff.id),
+  peerStaffId: text("peer_staff_id").notNull().references(() => staff.id),
+  feedbackText: text("feedback_text"),
+  rating: real("rating"),
+  status: text("status").notNull().default("pending"),
+  submittedAt: text("submitted_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const developmentPlans = sqliteTable("development_plans", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
+  reviewId: text("review_id").references(() => performanceReviews.id),
+  title: text("title").notNull(),
+  actionItemsJson: text("action_items_json").notNull(),
+  targetCompletionDate: text("target_completion_date").notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── AI Predictive Analytics & Sync Engine (Sprint-008) ───
+
+export const aiModels = sqliteTable("ai_models", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  modelName: text("model_name").notNull(),
+  domain: text("domain").notNull(),
+  version: text("version").notNull(),
+  accuracyScore: real("accuracy_score"),
+  isActive: boolean("is_active").notNull().default(true),
+  lastTrainedAt: text("last_trained_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const aiPredictions = sqliteTable("ai_predictions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  domain: text("domain").notNull(),
+  targetEntityId: text("target_entity_id").notNull(),
+  targetEntityType: text("target_entity_type").notNull(),
+  predictionType: text("prediction_type").notNull(),
+  riskLevel: text("risk_level").notNull(),
+  confidenceScore: real("confidence_score").notNull(),
+  predictedValue: text("predicted_value"),
+  riskFactors: text("risk_factors"),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const aiAnomalies = sqliteTable("ai_anomalies", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  anomalyType: text("anomaly_type").notNull(),
+  severity: text("severity").notNull(),
+  description: text("description").notNull(),
+  metricData: text("metric_data"),
+  status: text("status").notNull().default("unresolved"),
+  resolvedAt: text("resolved_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const syncStates = sqliteTable("sync_states", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  deviceId: text("device_id").notNull(),
+  userId: text("user_id").notNull(),
+  lastSyncVersion: integer("last_sync_version").notNull().default(0),
+  lastSyncAt: text("last_sync_at").notNull(),
+  devicePlatform: text("device_platform").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const syncConflictLogs = sqliteTable("sync_conflict_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  fieldName: text("field_name").notNull(),
+  winningValue: text("winning_value"),
+  losingValue: text("losing_value"),
+  resolutionStrategy: text("resolution_strategy").notNull().default("LWW"),
+  resolvedAt: text("resolved_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const syncDeviceRegistrations = sqliteTable("sync_device_registrations", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  userId: text("user_id").notNull(),
+  deviceId: text("device_id").notNull(),
+  deviceModel: text("device_model"),
+  osVersion: text("os_version"),
+  appVersion: text("app_version"),
+  pushToken: text("push_token"),
+  isActive: boolean("is_active").notNull().default(true),
+  lastActiveAt: text("last_active_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Multi-Campus Regional Analytics & Enterprise Data Warehouse (Sprint-009) ───
+
+export const regionalGroups = sqliteTable("regional_groups", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  description: text("description"),
+  regionalDirectorId: text("regional_director_id"),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const institutionClusters = sqliteTable("institution_clusters", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  clusterCategory: text("cluster_category").notNull().default("standard"),
+  assignedAt: text("assigned_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const regionalAccessGrants = sqliteTable("regional_access_grants", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  grantedBy: text("granted_by").notNull(),
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const regionalBenchmarks = sqliteTable("regional_benchmarks", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  metricDomain: text("metric_domain").notNull(),
+  period: text("period").notNull(),
+  rawScore: real("raw_score").notNull(),
+  normalizedScore: real("normalized_score").notNull(),
+  percentileRank: real("percentile_rank").notNull(),
+  rankPosition: integer("rank_position").notNull(),
+  calculatedAt: text("calculated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const regionalHodRankings = sqliteTable("regional_hod_rankings", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  hodStaffId: text("hod_staff_id").notNull().references(() => staff.id),
+  discipline: text("discipline").notNull(),
+  compositeScore: real("composite_score").notNull(),
+  rankPosition: integer("rank_position").notNull(),
+  performanceFactors: text("performance_factors"),
+  evaluatedAt: text("evaluated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const dwAggregatedAnalytics = sqliteTable("dw_aggregated_analytics", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  snapshotDate: text("snapshot_date").notNull(),
+  attendanceRate: real("attendance_rate").notNull(),
+  feeRealizationRate: real("fee_realization_rate").notNull(),
+  academicPassRate: real("academic_pass_rate").notNull(),
+  aiRiskStudentCount: integer("ai_risk_student_count").notNull().default(0),
+  activeAnomalyCount: integer("active_anomaly_count").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const dwMaterializedSnapshots = sqliteTable("dw_materialized_snapshots", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  snapshotType: text("snapshot_type").notNull(),
+  dataPayload: text("data_payload").notNull(),
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const dwEtlRuns = sqliteTable("dw_etl_runs", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").references(() => regionalGroups.id),
+  runType: text("run_type").notNull(),
+  status: text("status").notNull().default("running"),
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  durationMs: integer("duration_ms"),
+  errorMessage: text("error_message"),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+});
+
+export const pushNotificationSubscriptions = sqliteTable("push_notification_subscriptions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  institutionId: text("institution_id").references(() => institutions.id),
+  deviceToken: text("device_token").notNull().unique(),
+  platform: text("platform").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: text("last_used_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const alertDeliveryLogs = sqliteTable("alert_delivery_logs", {
+  id: text("id").primaryKey(),
+  alertId: text("alert_id").notNull(),
+  userId: text("user_id").notNull(),
+  deviceId: text("device_id"),
+  channel: text("channel").notNull(),
+  deliveryStatus: text("delivery_status").notNull(),
+  attemptCount: integer("attempt_count").notNull().default(1),
+  errorMessage: text("error_message"),
+  sentAt: text("sent_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const regionalAccessLogs = sqliteTable("regional_access_logs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  regionalGroupId: text("regional_group_id").notNull(),
+  action: text("action").notNull(),
+  targetEntity: text("target_entity"),
+  details: text("details"),
+  ipAddress: text("ip_address"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Autonomous Enterprise Operations & Self-Healing Platform Engine (Sprint-010) ───
+
+export const autonomousWorkflows = sqliteTable("autonomous_workflows", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  name: text("name").notNull(),
+  triggerType: text("trigger_type").notNull(), // anomaly_detected | threshold_breached | schedule
+  status: text("status").notNull().default("active"), // active | paused | disabled
+  executionCount: integer("execution_count").notNull().default(0),
+  lastExecutedAt: text("last_executed_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const remediationRules = sqliteTable("remediation_rules", {
+  id: text("id").primaryKey(),
+  workflowId: text("workflow_id").notNull().references(() => autonomousWorkflows.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  anomalyType: text("anomaly_type").notNull(), // chronic_absenteeism | fee_default_risk | grade_drop
+  severityThreshold: text("severity_threshold").notNull().default("high"), // critical | high | medium | low
+  actionPipelineJson: text("action_pipeline_json").notNull(), // array of actions (ticket, reassign, notify)
+  cooldownPeriodMinutes: integer("cooldown_period_minutes").notNull().default(1440), // 24h default
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const remediationTickets = sqliteTable("remediation_tickets", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  anomalyId: text("anomaly_id"),
+  ruleId: text("rule_id").references(() => remediationRules.id),
+  title: text("title").notNull(),
+  severity: text("severity").notNull(), // critical | high | medium | low
+  category: text("category").notNull(), // attendance | finance | academics | operations
+  affectedStudentId: text("affected_student_id"),
+  assignedStaffId: text("assigned_staff_id").references(() => staff.id),
+  status: text("status").notNull().default("open"), // open | auto_assigned | in_progress | resolved | escalated
+  autoCreated: boolean("auto_created").notNull().default(true),
+  resolutionSummary: text("resolution_summary"),
+  resolvedAt: text("resolved_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const remediationActions = sqliteTable("remediation_actions", {
+  id: text("id").primaryKey(),
+  ticketId: text("ticket_id").notNull().references(() => remediationTickets.id, { onDelete: "cascade" }),
+  actionType: text("action_type").notNull(), // auto_ticket | staff_reassign | parent_notification | system_pause
+  executorType: text("executor_type").notNull().default("autonomous_engine"), // autonomous_engine | staff_manual
+  detailsJson: text("details_json"),
+  status: text("status").notNull().default("success"), // success | failed | skipped
+  executedAt: text("executed_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const remediationEscalationLogs = sqliteTable("remediation_escalation_logs", {
+  id: text("id").primaryKey(),
+  ticketId: text("ticket_id").notNull().references(() => remediationTickets.id, { onDelete: "cascade" }),
+  recipientId: text("recipient_id").notNull(),
+  recipientRole: text("recipient_role").notNull(), // parent | staff | principal | regional_admin
+  channel: text("channel").notNull(), // push | sms | email | outbox
+  messageBody: text("message_body").notNull(),
+  deliveryStatus: text("delivery_status").notNull().default("sent"), // sent | failed | queued
+  sentAt: text("sent_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const financialBudgetModels = sqliteTable("financial_budget_models", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  fiscalYear: text("fiscal_year").notNull(),
+  targetBudgetAmount: real("target_budget_amount").notNull(),
+  baselineVelocity: real("baseline_velocity").notNull().default(1.0),
+  historicalCoefficientsJson: text("historical_coefficients_json"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const financialForecastRuns = sqliteTable("financial_forecast_runs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  horizonDays: integer("horizon_days").notNull().default(90),
+  forecastP10: real("forecast_p10").notNull(),
+  forecastP50: real("forecast_p50").notNull(),
+  forecastP90: real("forecast_p90").notNull(),
+  realizationDeficitPercent: real("realization_deficit_percent").notNull(),
+  riskLevel: text("risk_level").notNull().default("low_risk"), // low_risk | moderate_risk | critical_deficit
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const complianceFrameworks = sqliteTable("compliance_frameworks", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  authority: text("authority").notNull(),
+  rulesJson: text("rules_json").notNull(),
+  version: text("version").notNull().default("1.0"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const complianceAuditVault = sqliteTable("compliance_audit_vault", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  eventType: text("event_type").notNull(),
+  previousHash: text("previous_hash").notNull(),
+  recordHash: text("record_hash").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  signature: text("signature").notNull(),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+});
+
+export const complianceReportRuns = sqliteTable("compliance_report_runs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
+  frameworkCode: text("framework_code").notNull(),
+  complianceScore: real("compliance_score").notNull(),
+  vaultIntegrityStatus: text("vault_integrity_status").notNull().default("VALIDATED"),
+  findingsJson: text("findings_json"),
+  generatedBy: text("generated_by").notNull(),
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-011: AI Agent Swarms & Cross-Regional Copilots ───
+
+export const aiAgents = sqliteTable("ai_agents", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  agentType: text("agent_type").notNull(), // academic_advisor | financial_controller | compliance_auditor
+  domain: text("domain").notNull(), // academics | finance | compliance
+  name: text("name").notNull(),
+  capabilitiesJson: text("capabilities_json"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const aiAgentReasoningContexts = sqliteTable("ai_agent_reasoning_contexts", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  agentId: text("agent_id").notNull().references(() => aiAgents.id),
+  inputPayloadJson: text("input_payload_json").notNull(),
+  reasoningGraphJson: text("reasoning_graph_json"),
+  confidenceScore: real("confidence_score").notNull(),
+  createdById: text("created_by_id").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const aiCopilotRecommendations = sqliteTable("ai_copilot_recommendations", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  agentId: text("agent_id").notNull().references(() => aiAgents.id),
+  title: text("title").notNull(),
+  domain: text("domain").notNull(),
+  summary: text("summary").notNull(),
+  contextDataJson: text("context_data_json"),
+  suggestedActionJson: text("suggested_action_json"),
+  confidenceScore: real("confidence_score").notNull(),
+  humanApprovalStatus: text("human_approval_status").notNull().default("REQUIRES_HUMAN_APPROVAL"), // REQUIRES_HUMAN_APPROVAL | AUTO_EXECUTE | APPROVED | REJECTED
+  actionTakenAt: text("action_taken_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const aiAgentCommunications = sqliteTable("ai_agent_communications", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  correlationId: text("correlation_id").notNull(),
+  senderAgentId: text("sender_agent_id").notNull().references(() => aiAgents.id),
+  recipientAgentId: text("recipient_agent_id").notNull().references(() => aiAgents.id),
+  messageType: text("message_type").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  hopCount: integer("hop_count").notNull().default(1),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const redisCircuitBreakerStates = sqliteTable("redis_circuit_breaker_states", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  circuitKey: text("circuit_key").notNull().unique(),
+  state: text("state").notNull().default("CLOSED"), // CLOSED | OPEN | HALF_OPEN
+  failureCount: integer("failure_count").notNull().default(0),
+  lastTrippedAt: text("last_tripped_at"),
+  expiresAt: text("expires_at"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const timeSeriesDecompositions = sqliteTable("time_series_decompositions", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  metricName: text("metric_name").notNull(),
+  granularity: text("granularity").notNull().default("monthly"), // monthly | quarterly | weekly
+  observedJson: text("observed_json").notNull(),
+  trendJson: text("trend_json").notNull(),
+  seasonalJson: text("seasonal_json").notNull(),
+  residualJson: text("residual_json").notNull(),
+  anomaliesJson: text("anomalies_json"),
+  decomposedAt: text("decomposed_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-012: Real-Time Event Streaming & Predictive Allocation ───
+
+export const realtimeStreamSessions = sqliteTable("realtime_stream_sessions", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  userId: text("user_id").notNull(),
+  connectionType: text("connection_type").notNull().default("websocket"), // websocket | sse
+  channelsJson: text("channels_json"),
+  status: text("status").notNull().default("active"), // active | disconnected | closed
+  lastPingAt: text("last_ping_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const automatedTriggerRules = sqliteTable("automated_trigger_rules", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  ruleName: text("rule_name").notNull(),
+  eventType: text("event_type").notNull(), // absenteeism | fee_default | grade_drop | compliance_warning
+  conditionsJson: text("conditions_json").notNull(),
+  actionChannel: text("action_channel").notNull(), // sms | push | email | webhook
+  recipientGroup: text("recipient_group").notNull(), // parents | staff | hods | principals
+  priority: text("priority").notNull().default("normal"), // low | normal | high | urgent
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const notificationDispatchLogs = sqliteTable("notification_dispatch_logs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  ruleId: text("rule_id").references(() => automatedTriggerRules.id, { onDelete: "set null" }),
+  channel: text("channel").notNull(), // sms | push
+  recipientId: text("recipient_id").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  dispatchStatus: text("dispatch_status").notNull().default("SENT"), // SENT | DELIVERED | FAILED | RATE_LIMITED
+  errorMessage: text("error_message"),
+  dispatchedAt: text("dispatched_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const studentRetentionPredictions = sqliteTable("student_retention_predictions", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  atRiskScore: real("at_risk_score").notNull(),
+  riskCategory: text("risk_category").notNull(), // LOW | MODERATE | HIGH
+  contributingFactorsJson: text("contributing_factors_json"),
+  recommendedInterventionJson: text("recommended_intervention_json"),
+  predictedAt: text("predicted_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const enrollmentForecasts = sqliteTable("enrollment_forecasts", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  academicYearId: text("academic_year_id").references(() => academicYears.id, { onDelete: "set null" }),
+  projectedEnrollment: integer("projected_enrollment").notNull(),
+  utilizationPercentage: real("utilization_percentage").notNull(),
+  forecastMetadataJson: text("forecast_metadata_json"),
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const budgetSimulationScenarios = sqliteTable("budget_simulation_scenarios", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  scenarioName: text("scenario_name").notNull(),
+  createdById: text("created_by_id").notNull(),
+  parametersJson: text("parameters_json").notNull(),
+  impactProjectionsJson: text("impact_projections_json").notNull(),
+  variancePercentage: real("variance_percentage").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-013: Federated Governance & Operational Resilience ───
+
+export const federatedPolicies = sqliteTable("federated_policies", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  title: text("title").notNull(),
+  category: text("category").notNull().default("general"),
+  contentJson: text("content_json").notNull(),
+  status: text("status").notNull().default("DRAFT"), // DRAFT | PROPAGATING | ACTIVE | CONFLICT | SUPERSEDED
+  sha256Hash: text("sha256_hash").notNull(),
+  version: integer("version").notNull().default(1),
+  effectiveDate: text("effective_date"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const policyVersions = sqliteTable("policy_versions", {
+  id: text("id").primaryKey(),
+  policyId: text("policy_id").notNull().references(() => federatedPolicies.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  sha256Hash: text("sha256_hash").notNull(),
+  contentJson: text("content_json").notNull(),
+  createdById: text("created_by_id").notNull(),
+  changeLog: text("change_log"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const crossTenantRoleMappings = sqliteTable("cross_tenant_role_mappings", {
+  id: text("id").primaryKey(),
+  sourceTenantId: text("source_tenant_id").notNull(),
+  targetTenantId: text("target_tenant_id").notNull(),
+  sourceRole: text("source_role").notNull(),
+  targetRole: text("target_role").notNull(),
+  permissionsJson: text("permissions_json").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const federatedAuditLogs = sqliteTable("federated_audit_logs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  actorId: text("actor_id").notNull(),
+  severity: text("severity").notNull().default("INFO"), // INFO | WARNING | CRITICAL | AUDIT
+  detailsJson: text("details_json").notNull(),
+  anonymized: boolean("anonymized").notNull().default(false),
+  loggedAt: text("logged_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const databaseIndexMetrics = sqliteTable("database_index_metrics", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  querySignature: text("query_signature").notNull(),
+  tableTarget: text("table_target").notNull(),
+  avgExecutionMs: real("avg_execution_ms").notNull(),
+  executionCount: integer("execution_count").notNull().default(1),
+  recommendedIndexSql: text("recommended_index_sql").notNull(),
+  estimatedSpeedupRatio: real("estimated_speedup_ratio").notNull().default(1.0),
+  status: text("status").notNull().default("PENDING"), // PENDING | APPLIED | REJECTED
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const circuitBreakerStates = sqliteTable("circuit_breaker_states", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  serviceName: text("service_name").notNull(),
+  state: text("state").notNull().default("CLOSED"), // CLOSED | OPEN | HALF_OPEN
+  failureRate: real("failure_rate").notNull().default(0.0),
+  medianLatencyMs: real("median_latency_ms").notNull().default(0.0),
+  trippedAt: text("tripped_at"),
+  cooldownUntil: text("cooldown_until"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const dlqRetryQueue = sqliteTable("dlq_retry_queue", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  jobType: text("job_type").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  errorMessage: text("error_message"),
+  stackTrace: text("stack_trace"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(5),
+  nextRetryAt: text("next_retry_at"),
+  status: text("status").notNull().default("PENDING"), // PENDING | SUCCESS | FAILED | QUARANTINED
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const offlineSyncOutbox = sqliteTable("offline_sync_outbox", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  userId: text("user_id").notNull(),
+  deviceId: text("device_id").notNull(),
+  mutationType: text("mutation_type").notNull(), // CREATE | UPDATE | DELETE
+  entityType: text("entity_type").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  clientTimestamp: text("client_timestamp").notNull(),
+  syncStatus: text("sync_status").notNull().default("PENDING"), // PENDING | SYNCED | CONFLICT | NEEDS_REVIEW
+  conflictDetailsJson: text("conflict_details_json"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const voiceQueryLogs = sqliteTable("voice_query_logs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  userId: text("user_id").notNull(),
+  transcript: text("transcript").notNull(),
+  confidenceScore: real("confidence_score").notNull().default(1.0),
+  parsedIntent: text("parsed_intent").notNull(),
+  entityParamsJson: text("entity_params_json"),
+  executionDurationMs: real("execution_duration_ms").notNull().default(0.0),
+  audioFormat: text("audio_format").notNull().default("pcm"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const pushNotificationTokens = sqliteTable("push_notification_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  platform: text("platform").notNull().default("android"), // android | ios | web
+  deviceModel: text("device_model"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const backgroundSyncLogs = sqliteTable("background_sync_logs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  deviceId: text("device_id").notNull(),
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  recordsFailed: integer("records_failed").notNull().default(0),
+  executionDurationMs: real("execution_duration_ms").notNull().default(0.0),
+  batteryLevel: real("battery_level"),
+  networkType: text("network_type"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+
+// ─── Sprint-016: Data Lakehouse ───
+
+export const dataLakehouseJobs = sqliteTable("data_lakehouse_jobs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  domain: text("domain").notNull(),
+  status: text("status").notNull().default("PENDING"),
+  recordCount: integer("record_count").notNull().default(0),
+  fileSizeBytes: integer("file_size_bytes").notNull().default(0),
+  partitionPath: text("partition_path"),
+  executionDurationMs: real("execution_duration_ms").default(0.0),
+  errorMessage: text("error_message"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+});
+
+export const dataLakehousePartitions = sqliteTable("data_lakehouse_partitions", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  domain: text("domain").notNull(),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  partitionPath: text("partition_path").notNull().unique(),
+  recordCount: integer("record_count").notNull().default(0),
+  fileSizeBytes: integer("file_size_bytes").notNull().default(0),
+  lastWatermark: text("last_watermark").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-015/016: Federated Identity ───
+
+export const samlProviders = sqliteTable("saml_providers", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  name: text("name").notNull(),
+  idpEntityId: text("idp_entity_id").notNull(),
+  ssoUrl: text("sso_url").notNull(),
+  x509Certificate: text("x509_certificate").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const oidcProviders = sqliteTable("oidc_providers", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  name: text("name").notNull(),
+  clientId: text("client_id").notNull(),
+  clientSecret: text("client_secret").notNull(),
+  issuerUrl: text("issuer_url").notNull(),
+  discoveryUrl: text("discovery_url").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const federatedIdentityMappings = sqliteTable("federated_identity_mappings", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  userId: text("user_id").notNull(),
+  providerType: text("provider_type").notNull(),
+  externalSubjectId: text("external_subject_id").notNull(),
+  mappedRole: text("mapped_role").notNull().default("staff"),
+  attributesJson: text("attributes_json"),
+  lastLoginAt: text("last_login_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-016: Index Auto-Tuner ───
+
+export const indexTuningRecommendations = sqliteTable("index_tuning_recommendations", {
+  id: text("id").primaryKey(),
+  tableName: text("table_name").notNull(),
+  recommendedIndexName: text("recommended_index_name").notNull(),
+  indexDdl: text("index_ddl").notNull(),
+  seqScans: integer("seq_scans").notNull().default(0),
+  estTimeSavingsMs: real("est_time_savings_ms").notNull().default(0.0),
+  riskLevel: text("risk_level").notNull().default("LOW"),
+  status: text("status").notNull().default("RECOMMENDED"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const indexTuningLogs = sqliteTable("index_tuning_logs", {
+  id: text("id").primaryKey(),
+  recommendationId: text("recommendation_id").notNull(),
+  action: text("action").notNull(),
+  indexName: text("index_name").notNull(),
+  executionDurationMs: real("execution_duration_ms").notNull().default(0.0),
+  status: text("status").notNull(),
+  errorMessage: text("error_message"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-016: MDM ───
+
+export const mdmProfiles = sqliteTable("mdm_profiles", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  platform: text("platform").notNull(),
+  profileName: text("profile_name").notNull(),
+  configPayloadXml: text("config_payload_xml").notNull(),
+  version: integer("version").notNull().default(1),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const mdmEnrolledDevices = sqliteTable("mdm_enrolled_devices", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  deviceUuid: text("device_uuid").notNull().unique(),
+  deviceModel: text("device_model"),
+  osVersion: text("os_version"),
+  status: text("status").notNull().default("ACTIVE"),
+  enrolledAt: text("enrolled_at").notNull().default(sql`(current_timestamp)`),
+  lastSyncAt: text("last_sync_at"),
+});
+
+// ─── Sprint-017: Multi-Region Data Mesh ───
+
+export const meshNodes = sqliteTable("mesh_nodes", {
+  id: text("id").primaryKey(),
+  regionId: text("region_id").notNull().unique(),
+  nodeName: text("node_name").notNull(),
+  endpoint: text("endpoint").notNull(),
+  status: text("status").notNull().default("ONLINE"),
+  latencyMs: integer("latency_ms").notNull().default(0),
+  lastHeartbeat: text("last_heartbeat").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const replicationLogs = sqliteTable("replication_logs", {
+  id: text("id").primaryKey(),
+  sourceRegion: text("source_region").notNull(),
+  targetRegion: text("target_region").notNull(),
+  mutationsCount: integer("mutations_count").notNull().default(0),
+  status: text("status").notNull(),
+  batchChecksum: text("batch_checksum").notNull(),
+  errorMessage: text("error_message"),
+  executedAt: text("executed_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const conflictEvents = sqliteTable("conflict_events", {
+  id: text("id").primaryKey(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  tenantId: text("tenant_id").notNull(),
+  localRegion: text("local_region").notNull(),
+  remoteRegion: text("remote_region").notNull(),
+  winnerRegion: text("winner_region").notNull(),
+  conflictingFieldsJson: text("conflicting_fields_json"),
+  resolvedAt: text("resolved_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-017: Predictive Analytics ───
+
+export const predictiveModels = sqliteTable("predictive_models", {
+  id: text("id").primaryKey(),
+  modelName: text("model_name").notNull().unique(),
+  version: text("version").notNull(),
+  precisionScore: real("precision_score").notNull().default(0.0),
+  recallScore: real("recall_score").notNull().default(0.0),
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const studentRiskScores = sqliteTable("student_risk_scores", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  studentId: text("student_id").notNull(),
+  riskScore: integer("risk_score").notNull(),
+  riskLevel: text("risk_level").notNull(),
+  confidenceScore: real("confidence_score").notNull().default(0.0),
+  primaryDriversJson: text("primary_drivers_json"),
+  assessedAt: text("assessed_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const learningPathRecommendations = sqliteTable("learning_path_recommendations", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  studentId: text("student_id").notNull(),
+  pathTitle: text("path_title").notNull(),
+  priority: text("priority").notNull(),
+  suggestedActionItemsJson: text("suggested_action_items_json"),
+  targetCompletionDays: integer("target_completion_days").notNull().default(30),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-017: Hybrid Distance Learning Streaming ───
+
+export const streamingRooms = sqliteTable("streaming_rooms", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  roomName: text("room_name").notNull(),
+  hostUserId: text("host_user_id").notNull(),
+  maxParticipants: integer("max_participants").notNull().default(250),
+  status: text("status").notNull().default("ACTIVE"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const streamingSessions = sqliteTable("streaming_sessions", {
+  id: text("id").primaryKey(),
+  roomId: text("room_id").notNull(),
+  participantUserId: text("participant_user_id").notNull(),
+  role: text("role").notNull().default("ATTENDEE"),
+  audioMuted: boolean("audio_muted").notNull().default(true),
+  videoMuted: boolean("video_muted").notNull().default(false),
+  joinedAt: text("joined_at").notNull().default(sql`(current_timestamp)`),
+  leftAt: text("left_at"),
+});
+
+export const streamRecordings = sqliteTable("stream_recordings", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  roomId: text("room_id").notNull(),
+  streamId: text("stream_id").notNull(),
+  durationSeconds: integer("duration_seconds").notNull().default(0),
+  fileSizeBytes: integer("file_size_bytes").notNull().default(0),
+  recordingUrl: text("recording_url").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-017: PostgreSQL Multi-Node Cluster Certification ───
+
+export const clusterNodes = sqliteTable("cluster_nodes", {
+  id: text("id").primaryKey(),
+  nodeId: text("node_id").notNull().unique(),
+  role: text("role").notNull(),
+  endpoint: text("endpoint").notNull(),
+  isHealthy: boolean("is_healthy").notNull().default(true),
+  replicationLagMs: integer("replication_lag_ms").notNull().default(0),
+  lastCheckedAt: text("last_checked_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const failoverEvents = sqliteTable("failover_events", {
+  id: text("id").primaryKey(),
+  failedPrimaryId: text("failed_primary_id").notNull(),
+  promotedNodeId: text("promoted_node_id").notNull(),
+  recoveryDurationMs: integer("recovery_duration_ms").notNull().default(0),
+  status: text("status").notNull(),
+  reason: text("reason"),
+  executedAt: text("executed_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const migrationJobs = sqliteTable("migration_jobs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  migrationName: text("migration_name").notNull(),
+  status: text("status").notNull(),
+  errorMessage: text("error_message"),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+});
+
+// ─── Sprint-018: Edge Caching & Federated API Mesh ───
+
+export const edgeNodes = sqliteTable("edge_nodes", {
+  id: text("id").primaryKey(),
+  nodeRegion: text("node_region").notNull().unique(),
+  nodeName: text("node_name").notNull(),
+  endpoint: text("endpoint").notNull(),
+  status: text("status").notNull().default("ONLINE"),
+  latencyMs: integer("latency_ms").notNull().default(0),
+  lastHeartbeat: text("last_heartbeat").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const cacheEvents = sqliteTable("cache_events", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  cacheKey: text("cache_key").notNull(),
+  action: text("action").notNull(), // EVICT | WARM | CREATE
+  status: text("status").notNull(), // PENDING | SUCCESS | FAILED
+  errorMessage: text("error_message"),
+  executedAt: text("executed_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const apiUsageMetrics = sqliteTable("api_usage_metrics", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  region: text("region").notNull(),
+  endpointPath: text("endpoint_path").notNull(),
+  requestCount: integer("request_count").notNull().default(0),
+  totalLatencyMs: integer("total_latency_ms").notNull().default(0),
+  cacheHitCount: integer("cache_hit_count").notNull().default(0),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+});
+
+export const federatedServices = sqliteTable("federated_services", {
+  id: text("id").primaryKey(),
+  serviceName: text("service_name").notNull().unique(),
+  endpoint: text("endpoint").notNull(),
+  schemaDefinition: text("schema_definition").notNull(),
+  status: text("status").notNull().default("ACTIVE"),
+  lastReloadedAt: text("last_reloaded_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// ─── Sprint-019: Intelligent Agent Orchestration & Self-Healing Core ───
+
+export const agentRegistry = sqliteTable("agent_registry", {
+  id: text("id").primaryKey(),
+  role: text("role").notNull(),
+  version: text("version").notNull(),
+  status: text("status").notNull().default("idle"), // idle | active | remediating | unhealthy
+  lastHeartbeat: text("last_heartbeat").notNull(), // ISO String
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const agentLogs = sqliteTable("agent_logs", {
+  id: text("id").primaryKey(),
+  agentId: text("agent_id").notNull(),
+  logLevel: text("log_level").notNull(), // info | warn | error | debug
+  message: text("message").notNull(),
+  timestamp: text("timestamp").notNull(), // ISO String
+});
+
+export const agentDecisions = sqliteTable("agent_decisions", {
+  id: text("id").primaryKey(),
+  agentId: text("agent_id").notNull(),
+  targetAsset: text("target_asset").notNull(),
+  severity: text("severity").notNull(), // critical | high | medium | low
+  decision: text("decision").notNull(),
+  actionStatus: text("action_status").notNull(), // pending | approved | rejected | success | failed
+  rollbackState: text("rollback_state"), // JSON string
+  createdAt: text("created_at").notNull(), // ISO String
+});
+
+export const swarmNegotiations = sqliteTable('swarm_negotiations', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull(),
+  agentId: text('agent_id').notNull(),
+  institutionId: text('institution_id'),
+  status: text('status').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const negotiationBids = sqliteTable('negotiation_bids', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull(),
+  agentId: text('agent_id').notNull(),
+  bidAmount: real('bid_amount').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const negotiationOutcomes = sqliteTable('negotiation_outcomes', {
+  id: text('id').primaryKey(),
+  sessionId: text('session_id').notNull(),
+  winnerId: text('winner_id').notNull(),
+  finalPrice: real('final_price').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const swarmTopology = sqliteTable('swarm_topology', {
+  id: text('id').primaryKey(),
+  nodeId: text('node_id').notNull(),
+  tier: text('tier').notNull(),
+  status: text('status').notNull(),
+  lastSeenAt: text('last_seen_at').notNull(),
+});
+
+export const complianceReports = sqliteTable('compliance_reports', {
+  id: text('id').primaryKey(),
+  institutionId: text('institution_id').notNull(),
+  framework: text('framework').notNull(),
+  status: text('status').notNull(),
+  findings: jsonb('findings'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const swarmEvents = sqliteTable('swarm_events', {
+  id: text('id').primaryKey(),
+  eventSource: text('event_source').notNull(),
+  severity: text('severity').notNull(),
+  message: text('message').notNull(),
+  timestamp: text('timestamp').notNull(),
+}, (t) => ({
+  timestampIdx: index('idx_swarm_events_timestamp_pg').on(t.timestamp),
+}));
+
+export const swarmMetrics = sqliteTable('swarm_metrics', {
+  id: text('id').primaryKey(),
+  nodeId: text('node_id').notNull(),
+  metricName: text('metric_name').notNull(),
+  metricValue: real('metric_value').notNull(),
+  timestamp: text('timestamp').notNull(),
+}, (t) => ({
+  nodeMetricIdx: index('idx_swarm_metrics_node_metric_pg').on(t.nodeId, t.metricName),
+  timestampIdx: index('idx_swarm_metrics_timestamp_pg').on(t.timestamp),
+}));
+
+export const remediationHistory = sqliteTable('remediation_history', {
+  id: text('id').primaryKey(),
+  complianceFindingId: text('compliance_finding_id').notNull(),
+  actionTriggered: text('action_triggered').notNull(),
+  approvalKey: text('approval_key'),
+  approvalStatus: text('approval_status').notNull(),
+  outcome: text('outcome').notNull(),
+  rollbackStatus: text('rollback_status').notNull(),
+  createdAt: text('created_at').notNull(),
+  institutionId: text('institution_id').notNull(),
+}, (t) => ({
+  instIdx: index('idx_remediation_history_inst_pg').on(t.institutionId),
+}));
+
+export const syncTuningPolicies = sqliteTable('sync_tuning_policies', {
+  id: text('id').primaryKey(),
+  networkType: text('network_type').notNull().unique(), // WIFI | CELLULAR | DEFAULT
+  minBandwidthKbps: integer('min_bandwidth_kbps').notNull().default(0),
+  maxLatencyMs: integer('max_latency_ms').notNull().default(0),
+  batchSize: integer('batch_size').notNull().default(50),
+  compressionLevel: integer('compression_level').notNull().default(1),
+  retryBackoffMs: integer('retry_backoff_ms').notNull().default(5000),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const workspacePreferences = sqliteTable("workspace_preferences", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").references(() => staff.id, { onDelete: "cascade" }),
+  guardianId: text("guardian_id").references(() => guardians.id, { onDelete: "cascade" }),
+  workspaceType: text("workspace_type").notNull(), // 'principal' | 'teacher' | 'cashier' | 'parent'
+  layoutConfig: text("layout_config").notNull(), // JSON string representing widget settings
+  updatedAt: text("updated_at").notNull(),
+}, (t) => ({
+  staffIdIdx: index("idx_pg_workspace_prefs_staff_id").on(t.staffId),
+  guardianIdIdx: index("idx_pg_workspace_prefs_guardian_id").on(t.guardianId),
+  instIdIdx: index("idx_pg_workspace_prefs_inst_id").on(t.institutionId),
+  staffWorkspaceUniqIdx: uniqueIndex("idx_pg_workspace_prefs_staff_ws_uniq").on(t.staffId, t.workspaceType),
+  guardianWorkspaceUniqIdx: uniqueIndex("idx_pg_workspace_prefs_guard_ws_uniq").on(t.guardianId, t.workspaceType),
+}));
+
+export const workspaceAnalyticsCache = sqliteTable("workspace_analytics_cache", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  role: text("role").notNull(),
+  metricName: text("metric_name").notNull(),
+  metricValue: text("metric_value").notNull(), // JSON text
+  calculatedAt: text("calculated_at").notNull(),
+  timeBucket: text("time_bucket"),
+}, (t) => ({
+  instCalcIdx: index("idx_pg_ws_analytics_inst_calc").on(t.institutionId, t.calculatedAt),
+  uniqMetricIdx: uniqueIndex("idx_pg_ws_analytics_uniq_metric").on(t.institutionId, t.role, t.metricName, t.timeBucket),
+}));
+
+export const reportSchedules = sqliteTable("report_schedules", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  frequency: text("frequency").notNull(), // 'daily' | 'weekly' | 'monthly'
+  format: text("format").notNull(), // 'pdf' | 'excel'
+  recipients: text("recipients").notNull(), // JSON array string
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  instIdx: index("idx_pg_report_schedules_inst").on(t.institutionId),
+}));
+
+export const reportHistory = sqliteTable("report_history", {
+  id: text("id").primaryKey(),
+  scheduleId: text("schedule_id").references(() => reportSchedules.id, { onDelete: "set null" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  filePath: text("file_path").notNull(),
+  format: text("format").notNull(),
+  status: text("status").notNull(), // 'success' | 'failed'
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+  sizeBytes: integer("size_bytes").notNull().default(0),
+}, (t) => ({
+  instIdx: index("idx_pg_report_history_inst").on(t.institutionId),
+}));
+
+export const scheduledJobs = sqliteTable("scheduled_jobs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  format: text("format").notNull(),
+  options: text("options").notNull(),
+  status: text("status").notNull().default("queued"),
+  error: text("error"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  instIdx: index("idx_pg_scheduled_jobs_inst").on(t.institutionId),
+  statusIdx: index("idx_pg_scheduled_jobs_status").on(t.status),
+  createdAtIdx: index("idx_pg_scheduled_jobs_created_at").on(t.createdAt),
+}));
+
+export const jobExecutions = sqliteTable("job_executions", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id").notNull().references(() => scheduledJobs.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  retryCount: integer("retry_count").notNull().default(0),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+  errorMessage: text("error_message"),
+}, (t) => ({
+  jobIdx: index("idx_pg_job_executions_job").on(t.jobId),
+}));
+
+export const preferenceAuditLog = sqliteTable("preference_audit_log", {
+  id: text("id").primaryKey(),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+  userId: text("user_id").notNull(),
+  preferenceKey: text("preference_key").notNull(),
+  oldValue: text("old_value"),
+  newValue: text("new_value").notNull(),
+  ipAddress: text("ip_address"),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "set null" }),
+}, (t) => ({
+  userPrefTimestampIdx: index("idx_pg_pref_audit_user_pref_ts").on(t.userId, t.preferenceKey, t.timestamp),
+  institutionIdx: index("idx_pg_pref_audit_inst_id").on(t.institutionId),
+  timestampIdx: index("idx_pg_pref_audit_timestamp").on(t.timestamp),
+}));
+
+
+
+
+
+
 
 

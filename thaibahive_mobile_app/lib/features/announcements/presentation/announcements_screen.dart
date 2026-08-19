@@ -84,7 +84,7 @@ class AnnouncementsScreen extends ConsumerWidget {
                         ),
                         ...pinned.map((a) => _AnnouncementCard(
                               announcement: a,
-                              onTap: () => _showDetail(context, a),
+                              onTap: () => context.push('/announcements/${a.id}'),
                             )),
                         const Divider(height: 24),
                       ],
@@ -99,7 +99,7 @@ class AnnouncementsScreen extends ConsumerWidget {
                         ),
                         ...normal.map((a) => _AnnouncementCard(
                               announcement: a,
-                              onTap: () => _showDetail(context, a),
+                              onTap: () => context.push('/announcements/${a.id}'),
                             )),
                       ],
                     ],

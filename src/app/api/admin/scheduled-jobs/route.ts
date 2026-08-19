@@ -110,7 +110,7 @@ async function postHandler(request: Request, session: any) {
       `job_trigger:${jobId}`,
       "",
       JSON.stringify({ type, format, institutionId }),
-      session.institutionId || "",
+      session.institutionId || null,
       request.headers.get("x-forwarded-for") || "127.0.0.1"
     );
 

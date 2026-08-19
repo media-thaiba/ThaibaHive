@@ -1,0 +1,1 @@
+{"nodes": [{"id": "nonce_handoff", "label": "Mobile WebView Nonce Handoff", "file_type": "concept", "source_file": ".ai/ARCHITECTURE.md"}], "edges": [{"source": "nonce_handoff", "target": "flutter", "relation": "bridges", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": ".ai/ARCHITECTURE.md"}], "hyperedges": []}

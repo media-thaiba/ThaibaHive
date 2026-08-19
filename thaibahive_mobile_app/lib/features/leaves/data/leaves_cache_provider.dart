@@ -25,8 +25,8 @@ class LeavesCacheNotifier extends StateNotifier<AsyncValue<CachedLeavesState>> {
 
   Future<void> fetchLeaveHistory() async {
     // 1. Instant return from local Hive cache if available (Stale-While-Revalidate)
-    final cachedRequests = offlineCacheService.getCache(requestsCacheKey, maxAge: const Duration(hours: 1));
-    final cachedBalances = offlineCacheService.getCache(balancesCacheKey, maxAge: const Duration(hours: 1));
+    final cachedRequests = await offlineCacheService.getCache(requestsCacheKey, maxAge: const Duration(hours: 1));
+    final cachedBalances = await offlineCacheService.getCache(balancesCacheKey, maxAge: const Duration(hours: 1));
 
     if (cachedRequests != null && cachedRequests is List) {
       state = AsyncValue.data(CachedLeavesState(
@@ -56,8 +56,8 @@ class LeavesCacheNotifier extends StateNotifier<AsyncValue<CachedLeavesState>> {
       }
     } catch (e) {
       // 3. Network failed: Fallback to Hive cache if present
-      final fallbackRequests = offlineCacheService.getCache(requestsCacheKey);
-      final fallbackBalances = offlineCacheService.getCache(balancesCacheKey);
+      final fallbackRequests = await offlineCacheService.getCache(requestsCacheKey);
+      final fallbackBalances = await offlineCacheService.getCache(balancesCacheKey);
 
       if (fallbackRequests != null && fallbackRequests is List) {
         state = AsyncValue.data(CachedLeavesState(

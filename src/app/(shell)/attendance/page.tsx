@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+/**
+ * Attendance Page
+ * Migrated to TanStack Query (P2-46) and Central API Client (P2-47).
+ */
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,24 +20,14 @@ import { toast } from "sonner";
 import { Clock, LogOut } from "lucide-react";
 import { CheckInPanel } from "@/components/attendance/check-in-panel";
 import { formatDate, formatTime } from "@/lib/utils";
-
-type AttendanceLog = {
-  id: string;
-  date: string;
-  checkIn: string | null;
-  checkOut: string | null;
-  status: string;
-  lateMinutes: number | null;
-  workedMinutes: number | null;
-  method: string;
-};
-
-type TeamLog = AttendanceLog & {
-  staffId: string;
-  staffName: string | null;
-  staffLastName: string | null;
-  employeeId: string | null;
-};
+import { useDepartments, useInstitutions } from "@/lib/hooks/use-shared";
+import {
+  useTodayAttendance,
+  useMyAttendance,
+  useTeamAttendance,
+  useCheckOut,
+  type AttendanceLog,
+} from "@/lib/hooks/use-attendance";
 
 const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
   present: "success",
@@ -42,9 +37,6 @@ const statusVariant: Record<string, "success" | "warning" | "destructive" | "sec
 };
 
 type Tab = "my" | "team";
-
-type Department = { id: string; name: string };
-type Institution = { id: string; name: string };
 
 function getDefaultDateRange() {
   const now = new Date();
@@ -63,33 +55,17 @@ export default function AttendancePage() {
   const defaultRange = getDefaultDateRange();
 
   const [activeTab, setActiveTab] = useState<Tab>("my");
-  const [todayLog, setTodayLog] = useState<AttendanceLog | null>(null);
-  const [logs, setLogs] = useState<AttendanceLog[]>([]);
-  const [teamLogs, setTeamLogs] = useState<TeamLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [teamLoading, setTeamLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState(defaultRange.from);
   const [dateTo, setDateTo] = useState(defaultRange.to);
-  const [checkingOut, setCheckingOut] = useState(false);
   const [teamSearch, setTeamSearch] = useState("");
 
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>("");
-  const [filtersLoading, setFiltersLoading] = useState(false);
 
-  // Pagination states
   const [myPage, setMyPage] = useState(1);
-  const [, setMyTotal] = useState(0);
-  const [hasMoreMy, setHasMoreMy] = useState(false);
-  const [loadingMoreMy, setLoadingMoreMy] = useState(false);
-
   const [teamPage, setTeamPage] = useState(1);
-  const [teamTotal, setTeamTotal] = useState(0);
   const teamLimit = 20;
 
-  // Debounced search state
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   useEffect(() => {
@@ -99,143 +75,53 @@ export default function AttendancePage() {
     return () => clearTimeout(timer);
   }, [teamSearch]);
 
-  useEffect(() => {
-    async function fetchFilters() {
-      setFiltersLoading(true);
-      try {
-        const [deptRes, instRes] = await Promise.all([
-          fetch("/api/departments"),
-          fetch("/api/institutions"),
-        ]);
-        if (deptRes.ok) {
-          const deptData = await deptRes.json();
-          setDepartments(deptData.departments || []);
-        }
-        if (instRes.ok) {
-          const instData = await instRes.json();
-          setInstitutions(instData.institutions || []);
-        }
-      } catch {
-        // Filters failed to load, continue without them
-      }
-      setFiltersLoading(false);
-    }
-    fetchFilters();
-  }, []);
+  // Shared queries
+  const { data: departments = [], isLoading: deptsLoading } = useDepartments();
+  const { data: institutions = [], isLoading: instsLoading } = useInstitutions();
+  const filtersLoading = deptsLoading || instsLoading;
 
-  // Reset pagination to page 1 on filter/search changes
-  useEffect(() => {
-    setMyPage(1);
-  }, [dateFrom, dateTo]);
+  // Attendance queries
+  const { data: todayLog, refetch: refetchToday } = useTodayAttendance();
+  const { data: myData, isLoading: loadingMy, refetch: refetchMy } = useMyAttendance({
+    dateFrom,
+    dateTo,
+    page: myPage,
+  });
+  const { data: teamData, isLoading: teamLoading } = useTeamAttendance(
+    {
+      dateFrom,
+      dateTo,
+      page: teamPage,
+      search: debouncedSearch,
+      departmentId: selectedDepartmentId,
+      institutionId: selectedInstitutionId,
+    },
+    activeTab === "team" && !!canViewTeam
+  );
 
-  useEffect(() => {
-    setTeamPage(1);
-  }, [dateFrom, dateTo, selectedDepartmentId, selectedInstitutionId, debouncedSearch]);
+  const checkOutMutation = useCheckOut();
 
-  const fetchAttendance = useCallback(async (targetPage = 1, append = false) => {
-    if (!append) {
-      setLoading(true);
-    } else {
-      setLoadingMoreMy(true);
-    }
-    const params = new URLSearchParams();
-    if (dateFrom) params.set("startDate", dateFrom);
-    if (dateTo) params.set("endDate", dateTo);
-    params.set("page", targetPage.toString());
-    params.set("limit", "20");
-    const qs = params.toString();
+  const logs = myData?.logs || [];
+  const myTotal = myData?.pagination?.total || 0;
+  const hasMoreMy = myPage * 20 < myTotal;
 
-    try {
-      const res = await fetch(`/api/attendance/my${qs ? `?${qs}` : ""}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTodayLog(data.todayLog || null);
-        
-        const newLogs = data.logs || [];
-        if (append) {
-          setLogs((prev) => {
-            const existingIds = new Set(prev.map(l => l.id));
-            const filteredNew = newLogs.filter((l: AttendanceLog) => !existingIds.has(l.id));
-            return [...prev, ...filteredNew];
-          });
-        } else {
-          setLogs(newLogs);
-        }
-        
-        setMyTotal(data.total || 0);
-        const pageVal = data.page || 1;
-        const limitVal = data.limit || 20;
-        setHasMoreMy(pageVal * limitVal < (data.total || 0));
-        setMyPage(targetPage);
-      } else {
-        toast.error("Failed to load attendance history");
-      }
-    } catch {
-      toast.error("Failed to load attendance history");
-    } finally {
-      setLoading(false);
-      setLoadingMoreMy(false);
-    }
-  }, [dateFrom, dateTo]);
-
-  const fetchTeamLogs = useCallback(async (targetPage = 1) => {
-    setTeamLoading(true);
-    const params = new URLSearchParams();
-    if (dateFrom) params.set("startDate", dateFrom);
-    if (dateTo) params.set("endDate", dateTo);
-    if (selectedDepartmentId) params.set("departmentId", selectedDepartmentId);
-    if (selectedInstitutionId) params.set("institutionId", selectedInstitutionId);
-    if (debouncedSearch) params.set("search", debouncedSearch);
-    params.set("page", targetPage.toString());
-    params.set("limit", teamLimit.toString());
-    const qs = params.toString();
-
-    try {
-      const res = await fetch(`/api/attendance/logs${qs ? `?${qs}` : ""}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTeamLogs(data.logs || []);
-        setTeamTotal(data.total || 0);
-        setTeamPage(targetPage);
-      } else {
-        toast.error("Failed to load team attendance logs");
-      }
-    } catch {
-      toast.error("Failed to load team attendance logs");
-    } finally {
-      setTeamLoading(false);
-    }
-  }, [dateFrom, dateTo, selectedDepartmentId, selectedInstitutionId, debouncedSearch]);
-
-  // Fetch effects triggered by page changes or active tabs
-  useEffect(() => {
-    if (activeTab === "my") {
-      fetchAttendance(myPage, myPage > 1);
-    }
-  }, [activeTab, dateFrom, dateTo, myPage, fetchAttendance]);
-
-  useEffect(() => {
-    if (activeTab === "team") {
-      fetchTeamLogs(teamPage);
-    }
-  }, [activeTab, dateFrom, dateTo, selectedDepartmentId, selectedInstitutionId, debouncedSearch, teamPage, fetchTeamLogs]);
+  const teamLogs = teamData?.logs || [];
+  const teamTotal = teamData?.pagination?.total || 0;
 
   async function checkOut() {
-    setCheckingOut(true);
-    const res = await fetch("/api/attendance/check-out", { method: "POST" });
-    if (res.ok) {
+    try {
+      await checkOutMutation.mutateAsync();
       toast.success("Checked out successfully!");
-      fetchAttendance(1, false);
-    } else {
-      const d = await res.json();
-      toast.error(d.error || "Failed to check out. Please try again.");
+      refetchToday();
+      refetchMy();
+    } catch {
+      toast.error("Failed to check out. Please try again.");
     }
-    setCheckingOut(false);
   }
 
-  const filteredTeamLogs = teamLogs;
-
-  if (loading) return <div className="flex-1 p-6 lg:p-8"><Skeleton className="h-8 w-48" /></div>;
+  if (loadingMy && activeTab === "my") {
+    return <div className="flex-1 p-6 lg:p-8"><Skeleton className="h-8 w-48" /></div>;
+  }
 
   const tabs: { key: Tab; label: string }[] = [{ key: "my", label: "My Attendance" }];
   if (canViewTeam) tabs.push({ key: "team", label: "Team Overview" });
@@ -247,9 +133,9 @@ export default function AttendancePage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
+          <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setMyPage(1); setTeamPage(1); }} className="w-auto max-w-[160px]" />
           <span className="text-muted-foreground text-xs">to</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+          <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setMyPage(1); setTeamPage(1); }} className="w-auto max-w-[160px]" />
         </div>
         <ExportButton type="attendance" params={{ dateFrom, dateTo }} />
       </div>
@@ -319,9 +205,9 @@ export default function AttendancePage() {
               </div>
               <div className="mt-4">
                 {todayLog && !todayLog.checkOut && (
-                  <Button variant="outline" onClick={checkOut} disabled={checkingOut}>
+                  <Button variant="outline" onClick={checkOut} disabled={checkOutMutation.isPending}>
                     <LogOut className="h-4 w-4 mr-1.5" />
-                    {checkingOut ? "Checking out..." : "Check Out"}
+                    {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
                   </Button>
                 )}
               </div>
@@ -331,7 +217,7 @@ export default function AttendancePage() {
           {!todayLog && (
             <CheckInPanel
               staff={staff}
-              onCheckInComplete={() => fetchAttendance(1, false)}
+              onCheckInComplete={() => { refetchToday(); refetchMy(); }}
             />
           )}
 
@@ -349,7 +235,7 @@ export default function AttendancePage() {
                 />
               ) : (
                 <div className="space-y-2">
-                  {logs.map((log) => (
+                  {logs.map((log: AttendanceLog) => (
                     <div key={log.id} className="flex items-center justify-between rounded-xl border p-3.5 hover:bg-muted/30 transition-colors">
                       <div>
                         <p className="text-sm font-medium">{formatDate(log.date)}</p>
@@ -364,11 +250,11 @@ export default function AttendancePage() {
                       <Button
                         variant="outline"
                         onClick={() => setMyPage((p) => p + 1)}
-                        disabled={loadingMoreMy}
+                        disabled={loadingMy}
                         className="w-full sm:w-auto"
                         aria-label="Load more attendance logs"
                       >
-                        {loadingMoreMy ? "Loading..." : "Load More"}
+                        {loadingMy ? "Loading..." : "Load More"}
                       </Button>
                     </div>
                   )}
@@ -389,7 +275,7 @@ export default function AttendancePage() {
                 type="text"
                 placeholder="Search by name or ID..."
                 value={teamSearch}
-                onChange={(e) => setTeamSearch(e.target.value)}
+                onChange={(e) => { setTeamSearch(e.target.value); setTeamPage(1); }}
                 className="w-full sm:w-64"
               />
             </div>
@@ -400,7 +286,7 @@ export default function AttendancePage() {
                 <label className="text-xs font-medium text-muted-foreground">Department:</label>
                 <Select
                   value={selectedDepartmentId}
-                  onChange={(e) => setSelectedDepartmentId(e.target.value)}
+                  onChange={(e) => { setSelectedDepartmentId(e.target.value); setTeamPage(1); }}
                   disabled={isHod || filtersLoading}
                   className="w-48"
                 >
@@ -414,7 +300,7 @@ export default function AttendancePage() {
                 <label className="text-xs font-medium text-muted-foreground">Institution:</label>
                 <Select
                   value={selectedInstitutionId}
-                  onChange={(e) => setSelectedInstitutionId(e.target.value)}
+                  onChange={(e) => { setSelectedInstitutionId(e.target.value); setTeamPage(1); }}
                   disabled={isPrincipal || filtersLoading}
                   className="w-48"
                 >
@@ -427,7 +313,7 @@ export default function AttendancePage() {
             </div>
             {teamLoading ? (
               <Skeleton className="h-64 w-full" />
-            ) : filteredTeamLogs.length === 0 ? (
+            ) : teamLogs.length === 0 ? (
               <EmptyState
                 icon={<Clock className="h-12 w-12" />}
                 title="No team records"
@@ -449,7 +335,7 @@ export default function AttendancePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredTeamLogs.map((log) => (
+                      {teamLogs.map((log) => (
                         <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="px-4 py-3 text-muted-foreground">{log.employeeId || "\u2014"}</td>
                           <td className="px-4 py-3 font-medium">{[log.staffName, log.staffLastName].filter(Boolean).join(" ") || "\u2014"}</td>

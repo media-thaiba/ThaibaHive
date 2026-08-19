@@ -166,6 +166,7 @@ function SidebarLink({
   return (
     <Link
       href={item.href}
+      aria-label={item.label}
       className={cn(
         "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150 group relative",
         active

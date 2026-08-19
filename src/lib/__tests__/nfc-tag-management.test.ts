@@ -2,14 +2,15 @@ import { GET as lookupHandler } from "@/app/api/admin/nfc/lookup/route";
 import { POST as assignHandler } from "@/app/api/admin/nfc/assign/route";
 import { POST as unbindHandler } from "@/app/api/admin/nfc/unbind/route";
 import { DELETE as staffDeleteHandler } from "@/app/api/staff/[id]/route";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 import { db } from "@/db";
 import { checkRateLimit } from "@/lib/api/rate-limit";
 
-jest.mock("@/lib/auth", () => ({
+jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(() => true),
 }));
+
 
 jest.mock("@/lib/api/activity-log", () => ({
   logActivity: jest.fn().mockResolvedValue(undefined),

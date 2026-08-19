@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/extensions.dart';
@@ -268,8 +269,11 @@ class _EventCard extends StatelessWidget {
     final eventDate = DateTime.tryParse(event.eventDate);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/events/${event.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -341,7 +345,8 @@ class _EventCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

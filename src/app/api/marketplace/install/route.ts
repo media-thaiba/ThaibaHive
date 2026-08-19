@@ -76,4 +76,4 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   return NextResponse.json({ success: true, message: `${app.name} installed` });
-}, "attendance:read");
+}, "marketplace:install");

@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/layout/Providers";
-import { PWARegistrar } from "@/components/pwa-registrar";
+import { PwaRegistrar } from "@/components/pwa-registrar";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -41,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <PWARegistrar />
+        <PwaRegistrar />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -5,9 +5,57 @@ const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+const isProd = process.env.NODE_ENV === "production";
+const scriptSrc = isProd
+  ? "script-src 'self' 'unsafe-inline';"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval';";
+
+const cspDirective = [
+  "default-src 'self'",
+  scriptSrc,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' https: ws: wss:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join("; ");
+
+// Security Headers Reference:
+// Content-Security-Policy: default-src 'self' script-src 'self' style-src 'self' 'unsafe-inline' img-src 'self' data: https: blob: font-src 'self' data: connect-src 'self' https: ws: wss: frame-ancestors 'none' base-uri 'self' object-src 'none';
+// X-Content-Type-Options: nosniff
+// X-Frame-Options: DENY
+// X-XSS-Protection: 1; mode=block
+// Referrer-Policy: strict-origin-when-cross-origin
+
 const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: process.env.DEV_ORIGINS?.split(",") || [],
+  serverExternalPackages: ["pdfkit"],
+
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      const origIgnored = config.watchOptions?.ignored;
+      let ignored: any;
+      if (origIgnored instanceof RegExp) {
+        ignored = new RegExp(origIgnored.source + "|public[\\\\/]exports|sqlite\\.db.*|\\.auth");
+      } else if (typeof origIgnored === "string") {
+        ignored = [origIgnored, "**/public/exports/**"];
+      } else if (Array.isArray(origIgnored)) {
+        ignored = [...origIgnored, "**/public/exports/**"];
+      } else {
+        ignored = /public\/exports/;
+      }
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored,
+      };
+    }
+    return config;
+  },
+
+  turbopack: {},
 
   images: {
     formats: ["image/avif", "image/webp"],
@@ -50,7 +98,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-XSS-Protection", value: "1; mode=block" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';" },
+          { key: "Content-Security-Policy", value: cspDirective },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
         ],

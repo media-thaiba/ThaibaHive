@@ -168,7 +168,7 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
           .run();
 
         if (reportTasks.length) {
-          db.insert(dailyReportTasks)
+          await db.insert(dailyReportTasks)
             .values(
               reportTasks.map((t: { taskId?: string; description: string; hoursSpent?: number; status?: string }) => ({
                 id: crypto.randomUUID(),
@@ -180,6 +180,15 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
               }))
             )
             .run();
+
+          for (const t of reportTasks) {
+            if (t.taskId && t.status === "completed") {
+              await db.update(tasks)
+                .set({ status: "completed", completedAt: now, updatedAt: now })
+                .where(eq(tasks.id, t.taskId))
+                .run();
+            }
+          }
         }
       }
     });

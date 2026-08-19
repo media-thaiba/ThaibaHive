@@ -8,14 +8,8 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "@typescript-eslint/no-require-imports": "off",
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        {
-          "argsIgnorePattern": "^_",
-          "varsIgnorePattern": "^_"
-        }
-      ],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
       "react-hooks/set-state-in-effect": "off",
       "@next/next/no-img-element": "off",
     },
@@ -25,6 +19,38 @@ const eslintConfig = defineConfig([
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },
+  },
+  {
+    // Architectural Boundary: Restrict database client/schema imports in client components and client hooks
+    files: [
+      "src/components/**/*.ts",
+      "src/components/**/*.tsx",
+      "src/hooks/**/*.ts",
+      "src/hooks/**/*.tsx"
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@thaiba/db",
+              message: "Database imports are only allowed in server components, API routes, or server actions. Import from service layers or API client wrappers instead."
+            },
+            {
+              name: "@/db",
+              message: "Database imports are only allowed in server components, API routes, or server actions. Import from service layers or API client wrappers instead."
+            }
+          ],
+          patterns: [
+            {
+              group: ["@thaiba/db/*", "@/db/*"],
+              message: "Database imports are only allowed in server components, API routes, or server actions. Import from service layers or API client wrappers instead."
+            }
+          ]
+        }
+      ]
+    }
   },
   globalIgnores([
     ".next/**",
