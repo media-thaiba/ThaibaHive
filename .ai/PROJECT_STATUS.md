@@ -29,15 +29,16 @@
 **Sprint Name:** Mobile Sync Telemetry & Canary Staging Pipeline Automation  
 **Release Version:** v3.17.0  
 **Release Date:** 2026-08-19  
+**Certificate:** `Release-Certificate-Sprint-033.md` (Unconditionally Certified)  
 **Status:** ✅ RELEASED & CERTIFIED  
 
 **Key Deliverables:**
-- **Mobile Sync CI Integration Test Harness (TD-007):** Flutter integration test suite (`integration_test/`) covering encrypted Hive queue persistence, 401 Unauthorized nonce exchange token renewals, Last-Write-Wins (LWW) conflict resolution, and automated CI execution in `.github/workflows/flutter-ci.yml` and `ci.yml`.
+- **Mobile Sync CI Integration Test Harness (TD-007):** Flutter integration test suite (`integration_test/`) covering encrypted Hive queue persistence, 401 Unauthorized nonce exchange token renewals, Last-Write-Wins (LWW) conflict resolution with `_AllowAllHttpOverrides` network override protection, and automated CI execution in `.github/workflows/flutter-ci.yml` and `ci.yml`.
 - **Mobile Sync Mock Server & Driver:** `MockSyncServer` and `MockSyncHttpClient` simulating network outages, latency throttling, token expiration, and batch rejections.
 - **Mobile Sync Telemetry Bridge:** Flutter `MobileSyncTelemetry` collector and backend endpoint `/api/mobile/v1/telemetry` ingesting mobile sync latency, batch size, failure rate, and conflict counters into `SlidingWindowAggregator`.
 - **Admin Observability UI Mobile Sync KPIs:** Dedicated mobile telemetry console on `/admin/observability` and Prometheus metrics export (`thaibahive_mobile_sync_*`) in `/api/system/metrics`.
-- **Automated Staging Smoke Test Runner (TD-008):** Standalone TypeScript runner (`scripts/staging/staging-smoke-runner.ts`) validating health check, database latency (<250ms), migration parity, critical business APIs, and RBAC boundaries in < 60s.
-- **GitHub Actions Canary Promotion Gate:** Automated pipeline in `.github/workflows/staging-canary-gate.yml` evaluating staging smoke results and blocking production promotion on failures or >20% latency regressions (`canary-promotion-gate.ts`).
+- **Automated Staging Smoke Test Runner (TD-008):** Standalone TypeScript runner (`scripts/staging/staging-smoke-runner.ts`) validating health check, database latency (<250ms), migration schema parity, multi-tier auth (`super_admin`, `principal`, `staff`), critical business APIs, and RBAC boundaries in < 60s.
+- **GitHub Actions Canary Promotion Gate:** Automated pipeline in `.github/workflows/staging-canary-gate.yml` evaluating staging smoke results and blocking production promotion on failures, >0.00% error rate, or >20% latency regressions (`canary-promotion-gate.ts`).
 - **Operational Runbooks:** `docs/mobile-sync-testing-runbook.md` and `docs/staging-canary-runbook.md`.
 
 ---
@@ -58,7 +59,7 @@
 ## Test Status
 
 **Total Test Suites:** 213 / 213 Jest Suites PASSING (100% Pass Rate)  
-**Total Jest Tests Passing:** 925 / 925 Tests (100% PASS)  
+**Total Jest Tests Passing:** 928 / 928 Tests (100% PASS)  
 **Flutter Integration Test Suites:** 3 E2E Integration Suites (Persistence, Auth Nonce, Conflict Resolution)  
 **Playwright E2E Suites:** 28 E2E Test Suites — Cross-browser ready (`chromium`, `firefox`, `webkit`)  
 **E2E Brittle Sleeps:** 0 `waitForTimeout` calls remaining in `e2e/` (Zero-Sleep Compliant)  
@@ -71,9 +72,9 @@
 
 ## Verification Status
 
-**Verification Result:** ✅ PASSED & CERTIFIED (`Release-Sprint-033.md`)  
-**Security/RBAC Verification:** ✅ PASSED (Mobile telemetry route authenticated; staging smoke tests enforce RBAC boundaries.)  
-**Performance Verification:** ✅ PASSED (Staging smoke tests complete in < 60s; canary promotion gate verifies latency baselines.)  
+**Verification Result:** ✅ PASSED & UNCONDITIONALLY CERTIFIED (`Release-Certificate-Sprint-033.md`)  
+**Security/RBAC Verification:** ✅ PASSED (Mobile telemetry route authenticated; staging smoke tests enforce RBAC boundaries across 3 role tiers.)  
+**Performance Verification:** ✅ PASSED (Staging smoke tests complete in < 60s; canary promotion gate verifies latency baselines with 0.00% error rate.)  
 **Accessibility Verification:** ✅ PASSED (0 WCAG 2.1 AA violations on admin observability UI.)  
 **Critical Issues:** 0  
 **Rework Required:** 0  
@@ -141,4 +142,4 @@
 ## Next Engineering Objective
 
 **Sprint ID:** SPRINT-034  
-**Focus:** Continuous Reliability, Enterprise Multi-Region Edge Replication & Long-Term Maintenance Hardening.
+**Focus:** Continuous Reliability, Enterprise Multi-Region Edge Replication, Global Read-Replica Synchronization & Long-Term Maintenance Hardening.
