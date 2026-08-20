@@ -59,13 +59,10 @@ export const POST = withDPoP(
       dropoffCount: 0,
     }));
 
-    const dispatchPlan = router.optimizeRoute(vehicle, stops);
-    AimsDbStore.getInstance().saveDispatch(dispatchPlan);
+    const dispatch = router.optimizeRoute(vehicle, stops);
+    AimsDbStore.getInstance().saveDispatch(dispatch);
 
-    return NextResponse.json({
-      success: true,
-      dispatch: dispatchPlan,
-    });
+    return NextResponse.json({ success: true, dispatch }, { status: 201 });
   }, 'system:fleet:manage'),
   { required: false }
 );

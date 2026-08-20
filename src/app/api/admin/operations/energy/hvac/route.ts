@@ -9,14 +9,25 @@ export const GET = withDPoP(
   requireAuth(async (req: Request) => {
     const { searchParams } = new URL(req.url);
     const campusId = searchParams.get('campusId') || undefined;
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+
     const store = AimsDbStore.getInstance();
-    const optimizations = store.getEnergyOptimizations(campusId);
+    const allOptimizations = store.getEnergyOptimizations(campusId);
+    const offset = (page - 1) * limit;
+    const paginated = allOptimizations.slice(offset, offset + limit);
 
     return NextResponse.json({
-      optimizations,
+      optimizations: paginated,
+      pagination: {
+        page,
+        limit,
+        total: allOptimizations.length,
+        totalPages: Math.ceil(allOptimizations.length / limit),
+      },
       summary: {
-        totalSavedKwh: optimizations.reduce((acc, o) => acc + (o.projectedKwhSavings || 0), 0),
-        totalCostSavedDollars: optimizations.reduce((acc, o) => acc + (o.projectedCostSavingsDollars || 0), 0),
+        totalSavedKwh: allOptimizations.reduce((acc, o) => acc + (o.projectedKwhSavings || 0), 0),
+        totalCostSavedDollars: allOptimizations.reduce((acc, o) => acc + (o.projectedCostSavingsDollars || 0), 0),
       },
     });
   }, 'system:energy:manage'),
@@ -58,13 +69,10 @@ export const POST = withDPoP(
       occupancyRatio: 0.1,
     };
 
-    const optimization = optimizer.optimizeZoneSetpoint(reading, forecast, false);
-    AimsDbStore.getInstance().saveEnergyOptimization(optimization);
+    const opt = optimizer.optimizeZoneSetpoint(reading, forecast);
+    AimsDbStore.getInstance().saveEnergyOptimization(opt);
 
-    return NextResponse.json({
-      success: true,
-      optimization,
-    });
+    return NextResponse.json({ success: true, optimization: opt }, { status: 201 });
   }, 'system:energy:manage'),
   { required: false }
 );

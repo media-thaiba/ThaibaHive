@@ -1,15 +1,4 @@
-import { MicrogridEnergyState } from './energy-types';
-
-export interface DispatchPlan {
-  campusId: string;
-  solarToCampusKw: number;
-  solarToBatteryKw: number;
-  batteryDischargeKw: number;
-  gridImportKw: number;
-  curtailmentRecommendationKw: number;
-  estimatedCostDollarsPerHour: number;
-  timestamp: string;
-}
+import { MicrogridEnergyState, DispatchPlan } from './energy-types';
 
 /**
  * Campus Microgrid & Solar/Battery Energy Dispatcher
@@ -22,8 +11,7 @@ export class MicrogridEnergyDispatcher {
   public calculateDispatchPlan(state: MicrogridEnergyState): DispatchPlan {
     const demand = state.campusTotalDemandKw;
     const solar = state.solarPvGenerationKw;
-
-    let solarToCampus = Math.min(demand, solar);
+    const solarToCampus = Math.min(demand, solar);
     let remainingDemand = demand - solarToCampus;
     let remainingSolar = solar - solarToCampus;
 
@@ -43,17 +31,16 @@ export class MicrogridEnergyDispatcher {
     }
 
     const gridImport = remainingDemand;
-    const estimatedCost = gridImport * state.electricityTariffPerKwh;
 
     return {
-      campusId: state.campusId,
+      timestamp: new Date().toISOString(),
       solarToCampusKw: Number(solarToCampus.toFixed(2)),
       solarToBatteryKw: Number(solarToBattery.toFixed(2)),
       batteryDischargeKw: Number(batteryDischarge.toFixed(2)),
       gridImportKw: Number(gridImport.toFixed(2)),
-      curtailmentRecommendationKw: Number((remainingDemand * 0.1).toFixed(2)),
-      estimatedCostDollarsPerHour: Number(estimatedCost.toFixed(2)),
-      timestamp: new Date().toISOString(),
+      gridExportKw: Number(remainingSolar.toFixed(2)),
+      estimatedCostSavingsDollars: Number(((solarToCampus + batteryDischarge) * (state.electricityTariffPerKwh || 0.14)).toFixed(2)),
+      estimatedCostDollarsPerHour: Number((gridImport * (state.electricityTariffPerKwh || 0.14)).toFixed(2)),
     };
   }
 }

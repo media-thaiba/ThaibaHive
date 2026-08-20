@@ -68,3 +68,17 @@ export interface MicrogridEnergyState {
   timestamp: string;
   institutionId: string;
 }
+
+export interface MicrogridDispatchPlan {
+  timestamp: string;
+  solarToCampusKw: number;
+  solarToBatteryKw: number;
+  batteryDischargeKw: number;
+  gridImportKw: number;
+  gridExportKw: number;
+  estimatedCostSavingsDollars: number;
+  estimatedCostDollarsPerHour: number;
+}
+
+export type DispatchPlan = MicrogridDispatchPlan;
+

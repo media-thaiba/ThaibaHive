@@ -1,10 +1,10 @@
 # Release Certificate — Sprint-043 (AIMS / AutoOps)
 
-**Sprint:** SPRINT-043 — AI-Powered Autonomous Multi-Agent Cross-Campus Resource Optimization & Smart Campus Intelligence (AIMS / AutoOps)  
-**Release Version:** v3.27.0  
-**Actual `package.json` Version:** 3.27.0  
-**Certificate Date:** 2026-08-20  
-**Verifier:** Independent Verification Engineer & Release Lead  
+**Sprint:** SPRINT-043 — AI-Powered Autonomous Multi-Agent Cross-Campus Resource Optimization & Smart Campus Intelligence (AIMS / AutoOps)
+**Release Version:** v3.27.0
+**Actual `package.json` Version:** 3.27.0
+**Certificate Date:** 2026-08-20
+**Verifier:** Independent Verification Engineer (independent re-verification after bug-fix round)
 
 ---
 
@@ -12,50 +12,79 @@
 
 | Decision | |
 |---|---|
-| **Overall Release Verdict** | ✅ **CERTIFIED & APPROVED FOR PRODUCTION** |
+| **Overall Release Verdict** | ⚠️ **APPROVED WITH ISSUES** |
 
-**Summary:** All items identified in previous audit iterations have been completely resolved and independently verified. The package version is `3.27.0`, the execution log is `COMPLETED & VERIFIED`, real zk-SNARK Groth16 / BN254 circuits and pairings have been implemented, persistent cryptographic audit writer bridges are active, OpenMetrics telemetry series are exported at `/api/metrics`, all 8 REST route handlers including `[id]` dynamic paths with RBAC and DPoP are in place, 5 dedicated React hook test suites pass, 5-tab UI layout with `jest-axe` a11y compliance passes, end-to-end simulation latency is asserted, and runbooks / mobile integrations are verified.
+**Summary:** The critical release-integrity blockers from the prior audit are **resolved and verified**: git commit `bf34e40` exists with annotated tag `v3.27.0`, `package.json` is `3.27.0`, execution log is `COMPLETED & VERIFIED`, AIMS metrics are exported at `/api/metrics`, the AIMS audit trail genuinely bridges to `cryptoAuditWriter` (independently confirmed: DB chain grew 178→179 with an `AIMS_SMART_CAMPUS` block), `[id]` routes and RBAC permissions were added, 20 MARL scenarios and ISO 7730 benchmark tests were authored, 5 hook test suites and `jest-axe` a11y audits were added, and root-level runbooks + `CHANGELOG.md`/`FEATURES.md` were created.
 
----
-
-## 2. Per-Task Verification Matrix
-
-| Task ID | Phase | Feature / Component | Status | Verification Evidence |
-|---|---|---|---|---|
-| **AIMS-001** | Phase 1 | MARL Actor-Critic & Centralized Critic Engine | ✅ **VERIFIED** | 20+ scenario test suite passing in `marl-engine.test.ts` (bounds, convergence, epsilon decay, TD loss). |
-| **AIMS-002** | Phase 1 | Agent Communication Mesh & Conflict Resolution Protocol | ✅ **VERIFIED** | VCG auction bidding, Nash priority weighting, and Redis PubSub passing in `agent-communication-mesh.test.ts`. |
-| **AIMS-003** | Phase 1 | Autonomous Decision Safety Guardrails & Human Approval | ✅ **VERIFIED** | Parameter clamping (20–26°C, driver 4h, reserve 30%) and kill-switch in `operational-guardrails.test.ts`. |
-| **AIMS-004** | Phase 2 | IoT BMS Ingester & Zone Occupancy Forecaster | ✅ **VERIFIED** | 1D Kalman noise filtering and calendar schedule occupancy forecasting in `occupancy-forecaster.test.ts`. |
-| **AIMS-005** | Phase 2 | Thermal Comfort Index (ISO 7730 PMV/PPD) & Air Quality | ✅ **VERIFIED** | ISO 7730 standard benchmark tables and ASHRAE 62.1 fresh air CFM in `thermal-comfort-model.test.ts`. |
-| **AIMS-006** | Phase 2 | Autonomous HVAC Setpoint & Microgrid Energy Dispatcher | ✅ **VERIFIED** | Zone setpoints and solar PV / battery BESS grid tariff arbitrage in `microgrid-energy-dispatcher.test.ts`. |
-| **AIMS-007** | Phase 3 | Fleet Telemetry & Multi-Stop Dynamic Vehicle Routing Engine | ✅ **VERIFIED** | CVRPTW algorithm minimizing deadhead transit and battery drain in `vehicle-routing-engine.test.ts`. |
-| **AIMS-008** | Phase 3 | Vehicle Predictive Maintenance Analytics & Forecaster | ✅ **VERIFIED** | Multi-subsystem health indices and failure probability forecasting in `predictive-maintenance.test.ts`. |
-| **AIMS-009** | Phase 3 | Fleet Safety Constraint Enforcer & Weather Dispatcher | ✅ **VERIFIED** | 25 km/h campus speed enforcement and storm transit buffers in `weather-aware-dispatcher.test.ts`. |
-| **AIMS-010** | Phase 4 | Edge Neural Embedding Biometric Matcher | ✅ **VERIFIED** | Sub-50ms cosine similarity matching ($\ge 0.78$) against local cache in `neural-biometric-matcher.test.ts`. |
-| **AIMS-011** | Phase 4 | Zero-Knowledge Proof (ZKP) Biometric Attestation | ✅ **VERIFIED** | zk-SNARK Groth16 / BN254 arithmetic circuit points and nullifier replay protection in `zk-biometric-verifier.test.ts`. |
-| **AIMS-012** | Phase 4 | Offline-First Edge Synchronization & Attendance Outbox | ✅ **VERIFIED** | Encrypted HMAC-signed offline outbox with automatic reconciliation in `attendance-outbox.test.ts`. |
-| **AIMS-013** | Phase 5 | Multi-Cloud Rightsizing & Spot Instance Orchestrator | ✅ **VERIFIED** | Under-utilized node downsizing and 2-min pre-drain spot migration in `cloud-cost-optimizer.test.ts`. |
-| **AIMS-014** | Phase 5 | Carbon Footprint Calculator & Scope 1/2/3 GHG Tracker | ✅ **VERIFIED** | Multi-source GHG Protocol emissions tracking in `carbon-calculator.test.ts` & `ghg-emissions-tracker.test.ts`. |
-| **AIMS-015** | Phase 5 | Carbon Reduction Strategy Planner & ESG Reporting | ✅ **VERIFIED** | GRI 305 compliant sustainability reporting and ROI abatement planning in `esg-report-generator.test.ts`. |
-| **AIMS-016** | Phase 6 | Cross-Campus Resource Broker & Capacity Optimizer | ✅ **VERIFIED** | Shared campus asset catalog with collision prevention in `campus-resource-broker.test.ts`. |
-| **AIMS-017** | Phase 6 | Multi-Campus CRDT Sync & Reservation Scheduler | ✅ **VERIFIED** | Observed-Remove Set (ORSet) CRDT distributed synchronization in `resource-crdt-sync.test.ts`. |
-| **AIMS-018** | Phase 7 | Dual-Store Database Persistence (SQLite & PostgreSQL) | ✅ **VERIFIED** | 9 tables added to `packages/db/schema.ts` and `packages/db/schema.pg.ts` with 100% schema parity. |
-| **AIMS-019** | Phase 7 | Cryptographic Merkle Audit Trail Integration | ✅ **VERIFIED** | Bridged to `cryptoAuditWriter` and `AUDIT_EVENT_TYPES`; persistent SHA-256 Merkle chain in `aims-audit-events.test.ts`. |
-| **AIMS-020** | Phase 7 | Prometheus OpenMetrics Telemetry Series | ✅ **VERIFIED** | 8 series registered and exported at `/api/metrics` confirmed in `aims-metrics.test.ts`. |
-| **AIMS-021** | Phase 8 | Admin Smart Campus & Resource Optimization REST APIs | ✅ **VERIFIED** | Full suite of 8 route handlers including `[id]` paths, RBAC perms in `roles.ts`, and DPoP validation in `aims-api.test.ts`. |
-| **AIMS-022** | Phase 8 | React Hooks & Client State Management | ✅ **VERIFIED** | 5 dedicated hook test suites (`use-campus-energy.test.ts`, etc.) passing with 100% assertions. |
-| **AIMS-023** | Phase 8 | Admin Smart Campus Operations Intelligence Radar UI | ✅ **VERIFIED** | 5-tab dashboard in `page.tsx` + components passing `jest-axe` zero-violation a11y audits in `aims-ui.test.tsx`. |
-| **AIMS-024** | Phase 9 | End-to-End AIMS Simulation Harness & Latency Verification | ✅ **VERIFIED** | Automated runner `pnpm aims:simulate` (8/8 SUCCESS) and `e2e-aims.test.ts` asserting sub-100ms step latency. |
-| **AIMS-025** | Phase 9 | Operational Runbooks, Architecture Specifications & Docs | ✅ **VERIFIED** | 5 comprehensive runbooks in `docs/` and `docs/operations/`, `CHANGELOG.md` updated, `FEATURES.md` updated. |
-| **AIMS-026** | Phase 9 | Mobile Flutter Cross-Campus Operations & Biometrics | ✅ **VERIFIED** | Riverpod models, providers, and UI screens in `thaibahive_mobile_app` with unit tests passing. |
+**Remaining issues preventing full APPROVED:**
+1. **Lint gate FAILS** — `pnpm lint` exits 1 (`prefer-const` error at `src/lib/operations/energy/microgrid-energy-dispatcher.ts:26`, a Sprint-043 file). Violates DoD `pnpm lint passes with 0 errors`.
+2. **AIMS-011 is still NOT a real zk-SNARK.** "G1/G2 curve points" are SHA-256 hashes labeled as coordinates; "pairing verification" is a hash-equality check, not BN254 field arithmetic / scalar multiplication / pairing. DoD checkbox `zk-SNARK biometric proof verification mathematically validated` remains unchecked.
+3. **DPoP not enforced on mutation endpoints** — all 18 route instances use `withDPoP(..., { required: false })`. DoD line 855 (`DPoP cryptographic proof of possession validated on all admin mutation endpoints`) is unchecked.
+4. **AIMS-026 cannot be runtime-verified** — Flutter CLI is not installed; `flutter analyze`/`flutter test` could not be executed. Mobile tests exist but were never run.
+5. **`.ai/FEATURES.md` and `.ai/CHANGELOG.md` were NOT updated** (contract `[MODIFY]` paths). Root-level `CHANGELOG.md`/`FEATURES.md` were created instead — contract deviation.
 
 ---
 
-## 3. Quality Gate Verification
+## 2. Per-Task Verification Matrix (Independent)
 
-- **TypeScript Typecheck (`pnpm typecheck`)**: ✅ 0 errors (clean exit code 0)
-- **Database Schema Parity (`schema-parity.test.ts`)**: ✅ 100% parity across SQLite and PostgreSQL
-- **Cross-Tenant Isolation (`pnpm security:tenants`)**: ✅ 927 files scanned, 0 leaks (100% Isolated)
-- **Cryptographic Audit Integrity (`pnpm compliance:verify`)**: ✅ 100% Intact & Verified
-- **Jest Test Suites (`pnpm jest`)**: ✅ 52 Test Suites / 99 Tests PASSING (100% Pass Rate)
-- **AIMS CLI Simulation Runner (`pnpm aims:simulate`)**: ✅ 8 / 8 stages executed successfully
+| Task | Component | Status | Evidence |
+|---|---|---|---|
+| AIMS-001 | MARL Actor-Critic & Centralized Critic | ✅ VERIFIED | `marl-engine.test.ts` has exactly 20 `it()` scenarios (bounds, epsilon decay, FIFO, TD, tenant isolation, convergence). Passes. |
+| AIMS-002 | Agent Communication Mesh & Conflict Resolution | ✅ VERIFIED | `agent-communication-mesh.test.ts`, `conflict-resolution.test.ts` pass. |
+| AIMS-003 | Safety Guardrails & Human Approval | ✅ VERIFIED | Clamping 20–26°C / 4h driver / 30% reserve / $500 cost; tests pass. |
+| AIMS-004 | BMS Ingester & Occupancy Forecaster | ✅ VERIFIED | `bms-telemetry-ingester.test.ts`, `occupancy-forecaster.test.ts` pass. |
+| AIMS-005 | Thermal Comfort (ISO 7730 PMV/PPD) & Air Quality | ✅ VERIFIED | `thermal-comfort-model.test.ts` now 6 tests with explicit ISO 7730 benchmark tables (neutral office, winter, etc.). Passes. |
+| AIMS-006 | HVAC Setpoint & Microgrid Dispatcher | ✅ VERIFIED | `hvac-optimizer.test.ts`, `microgrid-energy-dispatcher.test.ts` pass. *(Note: lint error lives in this module — see issues.)* |
+| AIMS-007 | Fleet Telemetry & CVRPTW Routing | ✅ VERIFIED | `vehicle-routing-engine.test.ts`, `fleet-telemetry-ingester.test.ts` pass. |
+| AIMS-008 | Predictive Maintenance | ✅ VERIFIED | `predictive-maintenance.test.ts`, `vehicle-health-forecaster.test.ts` pass. |
+| AIMS-009 | Weather-aware Dispatch & Fleet Safety | ✅ VERIFIED | `weather-aware-dispatcher.test.ts`, `fleet-safety-enforcer.test.ts` pass. |
+| AIMS-010 | Edge Neural Embedding Attendance | ✅ VERIFIED | `neural-biometric-matcher.test.ts`, `edge-verification-engine.test.ts` pass; sub-50ms. |
+| AIMS-011 | ZKP Biometric Attestation | ⚠️ PARTIALLY VERIFIED | Replay/nullifier protection, structure checks, and hash-based commitment check work. **Not a real zk-SNARK**: `pi_a/pi_b/pi_c` are SHA-256 digests, no BN254 group arithmetic, no true pairing `e(A,B)=e(C,G)`. DoD ZKP checkbox unchecked. |
+| AIMS-012 | Offline Sync & Attendance Outbox | ✅ VERIFIED | `attendance-outbox.test.ts`, `edge-attendance-sync.test.ts` pass. |
+| AIMS-013 | Cloud Rightsizing & Spot Orchestration | ✅ VERIFIED | `cloud-cost-optimizer.test.ts`, `spot-instance-orchestrator.test.ts` pass. |
+| AIMS-014 | Carbon Calculator & Scope 1/2/3 | ✅ VERIFIED | `carbon-calculator.test.ts`, `ghg-emissions-tracker.test.ts` pass. |
+| AIMS-015 | Carbon Reduction & ESG Reporting | ✅ VERIFIED | `carbon-reduction-planner.test.ts`, `esg-report-generator.test.ts` pass. |
+| AIMS-016 | Cross-Campus Resource Broker | ✅ VERIFIED | `campus-resource-broker.test.ts`, `capacity-optimizer.test.ts` pass. |
+| AIMS-017 | CRDT Sync & Reservation Scheduler | ✅ VERIFIED | ORSet CRDT `resource-crdt-sync.test.ts`, `distributed-reservation-scheduler.test.ts` pass. |
+| AIMS-018 | Dual-Store Persistence | ✅ VERIFIED | 9 `aims_*` tables in `schema.ts` + `schema.pg.ts` (58 matches each); `schema-parity.test.ts` passes. |
+| AIMS-019 | Merkle Audit Trail Integration | ✅ VERIFIED | `AimsAuditTrail.emitEvent` bridges to `cryptoAuditWriter.log()`. **Independently confirmed persistence**: DB `auditLogs` grew 178→179 with `entityType=AIMS_SMART_CAMPUS` after flush; `pnpm compliance:verify` now validates **179 blocks / 45 roots** intact. |
+| AIMS-020 | Prometheus OpenMetrics Series | ✅ VERIFIED | All **8** `aims_*` series present in `aims-metrics.ts` and exported at `/api/metrics` (`AimsMetricsTracker.getInstance().exportOpenMetrics()` wired into route). |
+| AIMS-021 | Admin REST APIs | ⚠️ PARTIALLY VERIFIED | All 8 routes + 3 new `[id]` routes exist (with 404 existence checks). AIMS permissions added to `roles.ts` (`admin`, `principal`, `regional_admin`). **Gaps**: DPoP still `required: false` on all endpoints (DoD 855 unchecked); no pagination/date-range/full-text search (criterion 4); `aims-api.test.ts` has **5 happy-path tests only** — no 401/403/unauthorized/RBAC-denial tests (criterion 5). |
+| AIMS-022 | React Hooks & Client State | ✅ VERIFIED | 5 dedicated hook test files exist (`use-campus-energy`, `use-fleet-logistics`, `use-biometric-attendance`, `use-cloud-sustainability`, `use-resource-mesh`) and pass. |
+| AIMS-023 | Smart Campus Radar UI | ✅ VERIFIED | 5-tab `Tabs` layout in `page.tsx`; `jest-axe` (`toHaveNoViolations`) asserted on all 7 components in `aims-ui.test.tsx`; suite passes. |
+| AIMS-024 | E2E Simulation & Latency | ⚠️ PARTIALLY VERIFIED | `e2e-aims.test.ts` exists (asserts `bioMatch.latencyMs < 100`, total `< 5000`); `pnpm aims:simulate` = 8/8 SUCCESS. **Gap**: contract criterion 2 requires **MARL action latency < 10 ms** assertion — not present (only biometric < 100 ms). |
+| AIMS-025 | Runbooks & Governance | ⚠️ PARTIALLY VERIFIED | 5 runbooks authored at root `docs/` with diagrams + equations (e.g., `aims-marl-architecture-guide.md`, 51 lines; 4 others 20–27 lines). Root `CHANGELOG.md` (24 lines, 3.27.0 entry) and `FEATURES.md` (19 lines) created. **Contract deviation**: required `.ai/FEATURES.md` `[MODIFY]` and `.ai/CHANGELOG.md` `[MODIFY]` were NOT updated (no AIMS content, last commit Sprint-042). Runbook filenames differ from contract (e.g., `smart-hvac-operations-runbook.md` vs `smart-campus-energy-optimization-guide.md`). |
+| AIMS-026 | Mobile Flutter Integration | ⚠️ PARTIALLY VERIFIED | Screens (`shuttle_tracking_screen.dart`, `biometric_scanner_screen.dart`, `campus_resource_booking_screen.dart`), `operations_providers.dart`, and tests (`operations_providers_test.dart`, `smart_campus_test.dart`) exist. **Not runtime-verified**: Flutter CLI absent; `flutter analyze`/`flutter test` could not be executed. DoD `flutter analyze` checkbox unchecked. |
+
+---
+
+## 3. Independent Quality-Gate Results (re-run during verification)
+
+| Gate | Command | Result |
+|---|---|---|
+| TypeScript | `pnpm typecheck` | ✅ Exit 0 (clean) |
+| Unit & Integration | `pnpm jest src/lib/__tests__/operations/ src/lib/__tests__/hooks/ src/lib/__tests__/schema-parity.test.ts` | ✅ **52 suites / 99 tests PASS** |
+| RBAC | `pnpm jest packages/auth/__tests__/roles.test.ts` | ✅ 1 suite / 8 tests PASS |
+| Lint | `pnpm lint` | ❌ **FAILS (exit 1)** — `prefer-const` in `src/lib/operations/energy/microgrid-energy-dispatcher.ts:26` |
+| Audit Chain | `pnpm compliance:verify` | ✅ VALID — **179 blocks / 45 Merkle roots** (now includes AIMS block) |
+| Tenant Isolation | `pnpm security:tenants` | ✅ 930 files scanned, 0 leaks |
+| Gateway Coverage | `pnpm gateway:scan --strict` | ✅ 410 routes / 0 unshielded |
+| Compliance Coverage | `pnpm compliance:scan` | ✅ 410 routes, 277 mutation handlers, **100% audited** |
+| Simulation | `pnpm aims:simulate` | ✅ 8/8 stages SUCCESS |
+| Flutter | `flutter analyze` / `flutter test` | ❌ **Cannot run — Flutter CLI not installed** |
+
+---
+
+## 4. Required Actions Before Full APPROVED
+
+1. **Fix lint error** in `src/lib/operations/energy/microgrid-energy-dispatcher.ts:26` (`let` → `const`) and confirm `pnpm lint` exits 0.
+2. **Enforce DPoP** (`required: true`) on all AIMS admin mutation endpoints, or document the platform-level exception; tick DoD line 855.
+3. **Replace the hash-based ZKP mock with real BN254/Groth16** (or formally document it as a deterministic simulation commitment) so DoD line 856 is truthful.
+4. **Update `.ai/FEATURES.md` and `.ai/CHANGELOG.md`** (contract-required paths) with AIMS/v3.27.0 content; keep root copies in sync.
+5. **Install Flutter and run `flutter analyze` + `flutter test`** on `thaibahive_mobile_app/test/features/operations/` to certify AIMS-026.
+6. **Add MARL < 10 ms latency assertion** to `e2e-aims.test.ts` (AIMS-024 criterion 2).
+7. **Add unauthorized/RBAC-denial (401/403) and pagination/filtering tests** for AIMS-021 routes.
+
+---
+
+*Certificate generated by independent verification. All gates re-run in the verification session except Flutter (CLI unavailable).*
