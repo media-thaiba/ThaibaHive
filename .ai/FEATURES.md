@@ -1,6 +1,16 @@
 # ThaibaHive Platform Features
 
-## 1. Autonomous Federated Edge Learning (A-FED / EdgeMesh) — v3.28.0
+## 1. Unified Multi-Modal Communication & Intelligent Stakeholder Engagement (EngageOS / UMC) — v3.30.0
+- **Omnichannel Dispatch Engine**: High-throughput multi-channel routing across Email (SES/SMTP), SMS (Twilio), Push (FCM), In-App (Redis/SSE), and Voice IVR (Twilio TwiML) with sub-second automatic cascading fallback.
+- **Multi-Factor Dynamic Router & Cost Optimizer**: Multi-dimensional scoring evaluating urgency, recipient affinity, channel reliability, and unit cost with emergency critical safety bypass.
+- **Send-Time Optimization & Fatigue Prevention**: Individual quiet hours windows with timezone calculation and frequency capping limits.
+- **Template Engine & Brand Voice Compliance**: AST template compiler with expressions/loops, dynamic personalizer, multi-armed bandit A/B testing, and automatic XSS sanitization & brand safety scanning.
+- **NLP Conversational Assistant & Knowledge Retrieval**: Intent classifier, slot-filling entity extractor, multi-turn stateful dialog manager, and institutional campus knowledge retriever with human handoff.
+- **Automated Event-Driven Engagement Sequences**: Campus event triggers (`student.attendance.deficit`, `finance.fee.due`, etc.) driving multi-step drip workflows with condition branching and delay timers.
+- **Neural Localization & Cultural Formatting**: Content-hashed translation cache for 20+ languages with variable protection, RTL detection (Arabic/Urdu), and cultural salutations.
+- **GDPR/FERPA Consent Gate & Merkle Audit Trail**: Granular channel/category opt-ins, HMAC unsubscribe tokens, Merkle chain consent mutation logging, and instant DSAR export.
+
+## 2. Autonomous Federated Edge Learning (A-FED / EdgeMesh) — v3.28.0
 - **Federated Model Aggregation**: FedAvg & FedProx multi-round distributed model convergence with Byzantine defense filters (Krum, Median, Trimmed Mean).
 - **Differential Privacy & Budget Engine**: Laplace / Gaussian perturbation with Rényi DP composition Moments Accountant and adaptive gradient clipping.
 - **SMPC & Secure Aggregation**: Shamir $(t,n)$-threshold secret sharing, pairwise zero-sum random masks, and zk-SNARK gradient bound verification.

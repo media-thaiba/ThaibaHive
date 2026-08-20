@@ -2,6 +2,7 @@ import { EdgeInferenceEngine } from './edge-inference-engine';
 import { InferenceCache } from './inference-cache';
 import { InferenceResult } from './inference-types';
 import { DifferentialPrivacyEngine } from '../privacy/differential-privacy-engine';
+import { CloudInferenceClient } from './cloud-inference-client';
 
 /**
  * Tiered Fallback Engine coordinating Edge Local Inference, LRU Cache, and Cloud Ensemble Fallback
@@ -49,19 +50,8 @@ export class TieredFallbackEngine {
       mechanism: 'gaussian',
     });
 
-    // Cloud ensemble mock forward computation with higher calibration
-    const cloudConfidence = Math.min(0.99, localResult.confidenceScore + 0.25);
-    const cloudResult: InferenceResult = {
-      predictionId: `cloud_${localResult.predictionId}`,
-      modelId,
-      probabilities: localResult.probabilities.map((p) => Number((p * 0.9 + 0.05).toFixed(4))),
-      predictedClass: localResult.predictedClass,
-      confidenceScore: Number(cloudConfidence.toFixed(4)),
-      latencyMs: localResult.latencyMs + 45, // includes cloud network hop
-      servedFromCache: false,
-      executedOn: 'CLOUD_FALLBACK',
-      timestamp: new Date().toISOString(),
-    };
+    const cloudClient = CloudInferenceClient.getInstance();
+    const cloudResult = await cloudClient.invokeCloudInference(modelId, dpProtectedInput, localResult);
 
     this.cache.set(modelId, inputVector, cloudResult);
     return cloudResult;

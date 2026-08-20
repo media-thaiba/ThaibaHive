@@ -1,5 +1,6 @@
 import { ZkGradientProofPayload } from './smpc-types';
 import { ZkGradientCircuits, BN254_FIELD_PRIME_Q, BN254_COEFF_B, modQ, modExp } from './zk-gradient-circuits';
+import { Bn254PairingEngine } from './bn254-pairing';
 
 /**
  * zk-SNARK Groth16 / BN254 Elliptic Curve Gradient Integrity Verifier
@@ -73,6 +74,25 @@ export class ZkGradientVerifier {
 
     // 4. Verify challenge roots
     if (!proofPayload.publicSignals.epochChallenge || !proofPayload.publicSignals.merkleDatasetRoot) {
+      return false;
+    }
+
+    // 5. Full BN254 Optimal Ate Bilinear Pairing Check (Sprint-046 TD-044-04 Resolution)
+    const publicInputs = [
+      BigInt(Math.round(proofPayload.publicSignals.l2ClipNormLimit * 1000)),
+      BigInt(proofPayload.publicSignals.gradientDimension),
+    ];
+
+    const pairingValid = Bn254PairingEngine.verifyPairingProduct(
+      [pi_a[0], pi_a[1]],
+      [
+        [pi_b[0][0], pi_b[0][1]],
+        [pi_b[1][0], pi_b[1][1]],
+      ],
+      [pi_c[0], pi_c[1]],
+      publicInputs
+    );
+    if (!pairingValid) {
       return false;
     }
 

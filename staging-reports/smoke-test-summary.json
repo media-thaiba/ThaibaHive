@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-08-20T10:42:44.266Z",
+  "timestamp": "2026-08-20T14:05:16.218Z",
   "baseUrl": "http://localhost:3000",
-  "durationMs": 1,
+  "durationMs": 6,
   "totalChecks": 8,
   "passedChecks": 8,
   "failedChecks": 0,

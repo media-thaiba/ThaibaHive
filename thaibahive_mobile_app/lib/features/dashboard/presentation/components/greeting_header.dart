@@ -70,215 +70,216 @@ class DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
       borderRadius: const BorderRadius.vertical(
         bottom: Radius.circular(AppRadius.card),
       ),
-      child: Container(
-        height: maxExtent - shrinkOffset,
-        decoration: BoxDecoration(
-          color: headerBgColor,
-          boxShadow: shrinkPercentage > 0.05
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null, // No shadow when fully expanded
-        ),
-        child: Stack(
-          children: [
-            // Dynamic Time-of-day gradient background glow overlay
-            Positioned.fill(
-              child: AnimatedContainer(
-                duration: AppMotion.normal,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      timeOfDayColor.withValues(alpha: isDark ? 0.08 : 0.04),
-                      timeOfDayColor.withValues(alpha: 0.0),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-            ),
-
-            // Faded watermark brand logo in background
-            if (opacity > 0.01)
-              Positioned(
-                right: -20,
-                bottom: -30,
-                child: Opacity(
-                  opacity: 0.03 * opacity,
-                  child: SvgPicture.asset(
-                    'assets/images/thl_logo.svg',
-                    width: 160,
-                    height: 160,
+      child: SizedBox.expand(
+        child: Container(
+          decoration: BoxDecoration(
+            color: headerBgColor,
+            boxShadow: shrinkPercentage > 0.05
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.04),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null, // No shadow when fully expanded
+          ),
+          child: Stack(
+            children: [
+              // Dynamic Time-of-day gradient background glow overlay
+              Positioned.fill(
+                child: AnimatedContainer(
+                  duration: AppMotion.normal,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        timeOfDayColor.withValues(alpha: isDark ? 0.08 : 0.04),
+                        timeOfDayColor.withValues(alpha: 0.0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
                 ),
               ),
 
-            // Core content Column
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.section),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: topPadding),
+              // Faded watermark brand logo in background
+              if (opacity > 0.01)
+                Positioned(
+                  right: -20,
+                  bottom: -30,
+                  child: Opacity(
+                    opacity: 0.03 * opacity,
+                    child: SvgPicture.asset(
+                      'assets/images/thl_logo.svg',
+                      width: 160,
+                      height: 160,
+                    ),
+                  ),
+                ),
 
-                  // Top Bar (pinned/always visible)
-                  SizedBox(
-                    height: 64.0,
-                    child: Row(
-                      children: [
-                        // Left: Brand Logo & Name
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/images/thl_logo.svg',
-                              height: 32,
-                            ),
-                            const SizedBox(width: 8),
-                            SvgPicture.asset(
-                              'assets/images/thl_name.svg',
-                              height: 18,
-                              colorFilter: ColorFilter.mode(
-                                AppColors.foreground(context),
-                                BlendMode.srcIn,
+              // Core content Column
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.section),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: topPadding),
+
+                    // Top Bar (pinned/always visible)
+                    SizedBox(
+                      height: 64.0,
+                      child: Row(
+                        children: [
+                          // Left: Brand Logo & Name
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/images/thl_logo.svg',
+                                height: 32,
                               ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
+                              const SizedBox(width: 8),
+                              SvgPicture.asset(
+                                'assets/images/thl_name.svg',
+                                height: 18,
+                                colorFilter: ColorFilter.mode(
+                                  AppColors.foreground(context),
+                                  BlendMode.srcIn,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
 
-                        // Right: Actions (Notifications & Avatar)
-                        Row(
-                          children: [
-                            // Notifications
-                            GestureDetector(
-                              onTap: () => context.push('/notifications'),
-                              child: _TopBarIcon(
-                                isDark: isDark,
+                          // Right: Actions (Notifications & Avatar)
+                          Row(
+                            children: [
+                              // Notifications
+                              GestureDetector(
+                                onTap: () => context.push('/notifications'),
+                                child: _TopBarIcon(
+                                  isDark: isDark,
+                                  child: Stack(
+                                    children: [
+                                      Center(
+                                        child: Icon(
+                                          Icons.notifications_none_rounded,
+                                          color: AppColors.foreground(context),
+                                          size: AppIconSize.list,
+                                        ),
+                                      ),
+                                      if (stats != null && stats.unreadNotifications > 0)
+                                        Positioned(
+                                          top: 9,
+                                          right: 9,
+                                          child: Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFEF4444),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Profile Avatar
+                              GestureDetector(
+                                onTap: onAvatarTap,
                                 child: Stack(
                                   children: [
-                                    Center(
-                                      child: Icon(
-                                        Icons.notifications_none_rounded,
-                                        color: AppColors.foreground(context),
-                                        size: AppIconSize.list,
-                                      ),
-                                    ),
-                                    if (stats != null && stats.unreadNotifications > 0)
-                                      Positioned(
-                                        top: 9,
-                                        right: 9,
-                                        child: Container(
-                                          width: 6,
-                                          height: 6,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFEF4444),
-                                            shape: BoxShape.circle,
+                                    _TopBarIcon(
+                                      isDark: isDark,
+                                      child: Center(
+                                        child: Text(
+                                          user?.initials ?? '?',
+                                          style: TextStyle(
+                                            fontFamily: 'PlusJakartaSans',
+                                            color: AppColors.primary(context),
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                            letterSpacing: -0.2,
                                           ),
                                         ),
                                       ),
+                                    ),
+                                    // Online green status dot
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: headerBgColor,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            // Profile Avatar
-                            GestureDetector(
-                              onTap: onAvatarTap,
-                              child: Stack(
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Expanded Greeting Details Area
+                    if (shrinkPercentage < 0.99)
+                      Expanded(
+                        child: Opacity(
+                          opacity: opacity,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
                                 children: [
-                                  _TopBarIcon(
-                                    isDark: isDark,
-                                    child: Center(
-                                      child: Text(
-                                        user?.initials ?? '?',
-                                        style: TextStyle(
-                                          fontFamily: 'PlusJakartaSans',
-                                          color: AppColors.primary(context),
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 13,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  // Online green status dot
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: headerBgColor,
-                                          width: 1.5,
-                                        ),
-                                      ),
+                                  if (user?.role != null) ...[
+                                    RoleBadge(role: user.role.toString()),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Text(
+                                    greetingLabel,
+                                    style: AppTypography.caption(context).copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.mutedForeground(context),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Expanded Greeting Details Area
-                  if (shrinkPercentage < 0.99)
-                    Expanded(
-                      child: Opacity(
-                        opacity: opacity,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                if (user?.role != null) ...[
-                                  RoleBadge(role: user.role.toString()),
-                                  const SizedBox(width: 8),
-                                ],
-                                Text(
-                                  greetingLabel,
-                                  style: AppTypography.caption(context).copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.mutedForeground(context),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              user?.fullName ?? 'User Name',
-                              style: AppTypography.display(context),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _buildDynamicSubtext(stats),
-                              style: AppTypography.caption(context),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                user?.fullName ?? 'User Name',
+                                style: AppTypography.display(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _buildDynamicSubtext(stats),
+                                style: AppTypography.caption(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

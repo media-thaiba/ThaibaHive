@@ -275,6 +275,12 @@ slivers: [
           else ...[
             // ── Dynamic section ordering ──
             ...sectionOrder.map((sectionId) {
+              // Guard: stats may be null on the very first render frame after
+              // login before the API response arrives — return empty sliver to
+              // avoid the "Null check operator on null value" crash.
+              if (dashState.stats == null) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
               switch (sectionId) {
                 case 'attendance':
                   return SliverToBoxAdapter(

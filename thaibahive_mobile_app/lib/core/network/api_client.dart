@@ -45,25 +45,24 @@ class ApiClient {
       _errorInterceptor(),
       _normalizationInterceptor(),
       _loggerInterceptor(),
+      // NOTE: requestBody and responseBody are intentionally disabled.
+      // Our _loggerInterceptor() above already logs request/response info
+      // with sensitive fields (password, token) redacted. Enabling body
+      // logging here would dump raw payloads — including plaintext passwords
+      // — directly to Android logcat via debugPrint. See security log 2026-08-20.
       if (kDebugMode)
         LogInterceptor(
-          requestBody: true,
-          responseBody: true,
+          requestBody: false,
+          responseBody: false,
+          requestHeader: false,
+          responseHeader: false,
           error: true,
           logPrint: (object) {
             String logStr = object.toString();
-            // Redact Authorization headers and sensitive data
+            // Redact Authorization headers that may appear in error output
             logStr = logStr.replaceAll(
               RegExp(r'Bearer\s+[^\s"]+'),
               'Bearer [REDACTED]',
-            );
-            logStr = logStr.replaceAll(
-              RegExp(r'"password"\s*:\s*"[^"]*"'),
-              '"password": "[REDACTED]"',
-            );
-            logStr = logStr.replaceAll(
-              RegExp(r'"token"\s*:\s*"[^"]*"'),
-              '"token": "[REDACTED]"',
             );
             debugPrint(logStr);
           },

@@ -1,6 +1,6 @@
 {
   "name": "thaibahive",
-  "version": "3.27.0",
+  "version": "3.30.0",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -42,6 +42,7 @@
     "ares:simulate": "tsx scripts/security/ares-simulation-runner.ts",
     "aims:simulate": "tsx scripts/operations/aims-simulation-runner.ts",
     "afed:simulate": "tsx scripts/operations/afed-simulation-runner.ts",
+    "engage:simulate": "tsx scripts/operations/engage-simulation-runner.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {

@@ -176,3 +176,60 @@ registerMetric({
   type: 'gauge',
   labelNames: ['campus_id'],
 });
+
+// ─── Sprint-046: UMC / EngageOS Metrics ─────────────────────────────────────
+registerMetric({
+  name: 'engage_dispatches_total',
+  help: 'Counter of total outbound message dispatches',
+  type: 'counter',
+  labelNames: ['channel', 'priority', 'status'],
+});
+
+registerMetric({
+  name: 'engage_dispatch_duration_seconds',
+  help: 'Histogram of message dispatch latency in seconds',
+  type: 'histogram',
+  labelNames: ['channel'],
+});
+
+registerMetric({
+  name: 'engage_delivery_failures_total',
+  help: 'Counter of failed message delivery attempts',
+  type: 'counter',
+  labelNames: ['channel', 'provider'],
+});
+
+registerMetric({
+  name: 'engage_channel_cost_usd_total',
+  help: 'Cumulative monetary cost of communication dispatches in USD',
+  type: 'counter',
+  labelNames: ['channel'],
+});
+
+registerMetric({
+  name: 'engage_chatbot_sessions_total',
+  help: 'Counter of AI chatbot sessions initiated',
+  type: 'counter',
+  labelNames: ['channel', 'intent'],
+});
+
+registerMetric({
+  name: 'engage_chatbot_deflection_rate',
+  help: 'Ratio of inquiries resolved by AI assistant without human escalation (0.0-1.0)',
+  type: 'gauge',
+  labelNames: ['tenant_id'],
+});
+
+registerMetric({
+  name: 'engage_workflow_executions_total',
+  help: 'Counter of automated engagement workflow executions triggered',
+  type: 'counter',
+  labelNames: ['trigger_event'],
+});
+
+registerMetric({
+  name: 'engage_active_campaigns_gauge',
+  help: 'Number of currently active outbound campaigns',
+  type: 'gauge',
+  labelNames: ['tenant_id'],
+});

@@ -16,9 +16,50 @@ import 'package:thaibahive_mobile/models/presence_log.dart';
 import 'package:thaibahive_mobile/core/services/mock_location_detector.dart';
 import 'presence_verification_service.dart';
 
+// ── Background isolate entry points ──────────────────────────────────────────
+// These MUST be top-level functions (not static class methods).
+// flutter_background_service spawns a new Dart isolate and resolves the entry
+// point by symbol name. If the function is a static class method, the plugin
+// tries to reference the enclosing class from within that isolate — which
+// triggers FlutterBackgroundService() (an instance field on
+// BackgroundPresenceService) to be constructed outside the main isolate,
+// causing: "This class should only be used in the main isolate".
+
+@pragma('vm:entry-point')
+void backgroundServiceOnStart(ServiceInstance service) async {
+  DartPluginRegistrant.ensureInitialized();
+
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
+
+  service.on('updateNotification').listen((event) {
+    if (event != null && event['content'] != null) {
+      service.invoke('setAsForeground');
+    }
+  });
+
+  // 1-minute ticker for presence checks
+  Timer.periodic(const Duration(minutes: 1), (timer) async {
+    if (service is AndroidServiceInstance) {
+      if (await service.isForegroundService()) {
+        service.invoke('performCheck', {
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+      }
+    }
+  });
+}
+
+@pragma('vm:entry-point')
+Future<bool> backgroundServiceOnIosBackground(ServiceInstance service) async {
+  return true;
+}
+
 /// Background service runner managing geofence boundaries, 1-minute ticker,
 /// grace warnings, offline buffers, token refresh handshake, and
 /// automatic background checkouts
+@pragma('vm:entry-point')
 class BackgroundPresenceService {
   static BackgroundPresenceService? _instance;
   static BackgroundPresenceService get instance => _instance ??= BackgroundPresenceService._();
@@ -58,7 +99,7 @@ class BackgroundPresenceService {
   Future<void> init() async {
     await _service.configure(
       androidConfiguration: AndroidConfiguration(
-        onStart: _onStart,
+        onStart: backgroundServiceOnStart,
         autoStart: false,
         isForegroundMode: true,
         notificationChannelId: 'presence_tracking',
@@ -68,8 +109,8 @@ class BackgroundPresenceService {
       ),
       iosConfiguration: IosConfiguration(
         autoStart: false,
-        onForeground: _onStart,
-        onBackground: _onIosBackground,
+        onForeground: backgroundServiceOnStart,
+        onBackground: backgroundServiceOnIosBackground,
       ),
     );
   }
@@ -135,47 +176,6 @@ class BackgroundPresenceService {
         geofenceRadius: double.parse(radius),
       );
     }
-  }
-
-  static void _onStart(ServiceInstance service) async {
-    DartPluginRegistrant.ensureInitialized();
-
-    // Register token refresh handshake listener
-    service.on('requestRefresh').listen((event) {
-      // Token refresh handshake - will be handled by main isolate
-    });
-
-    service.on('stopService').listen((event) {
-      service.stopSelf();
-    });
-
-    service.on('updateNotification').listen((event) {
-      if (event != null && event['content'] != null) {
-        service.invoke('setAsForeground');
-      }
-    });
-
-    // Start 1-minute ticker for presence checks
-    Timer.periodic(const Duration(minutes: 1), (timer) async {
-      if (service is AndroidServiceInstance) {
-        if (await service.isForegroundService()) {
-          // Perform presence check
-          await _performPresenceCheck(service);
-        }
-      }
-    });
-  }
-
-  static Future<bool> _onIosBackground(ServiceInstance service) async {
-    return true;
-  }
-
-  static Future<void> _performPresenceCheck(ServiceInstance service) async {
-    // This runs in background isolate - minimal work here
-    // Actual presence verification happens via API calls
-    service.invoke('performCheck', {
-      'timestamp': DateTime.now().toIso8601String(),
-    });
   }
 
   /// Perform presence verification (called from main isolate)

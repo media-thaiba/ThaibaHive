@@ -3587,6 +3587,192 @@ export const afedPredictions = sqliteTable("afed_predictions", {
   afedPredModelIdx: index("idx_afed_pred_model").on(t.modelId),
 }));
 
+// ─── Unified Multi-Modal Communication & Intelligent Stakeholder Engagement (Sprint-046: UMC / EngageOS) ───
 
+export const engageTemplates = sqliteTable("engage_templates", {
+  id: text("id").primaryKey(),
+  templateId: text("template_id").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("general"),
+  channel: text("channel").notNull().default("email"),
+  subjectTemplate: text("subject_template"),
+  bodyTemplate: text("body_template").notNull(),
+  variablesSchema: text("variables_schema").notNull().default("{}"), // JSON
+  brandRulesData: text("brand_rules_data").notNull().default("{}"), // JSON
+  isApproved: integer("is_approved", { mode: "boolean" }).notNull().default(false),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageTmplIdIdx: index("idx_engage_tmpl_id").on(t.templateId),
+  engageTmplChannelIdx: index("idx_engage_tmpl_channel").on(t.channel),
+}));
 
+export const engageMessages = sqliteTable("engage_messages", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").notNull().unique(),
+  campaignId: text("campaign_id"),
+  templateId: text("template_id"),
+  recipientId: text("recipient_id").notNull(),
+  recipientType: text("recipient_type").notNull().default("student"),
+  recipientChannelAddress: text("recipient_channel_address").notNull(),
+  channel: text("channel").notNull().default("email"),
+  priority: text("priority").notNull().default("standard"),
+  status: text("status").notNull().default("queued"),
+  subject: text("subject"),
+  body: text("body").notNull(),
+  personalizedData: text("personalized_data").notNull().default("{}"), // JSON
+  scheduledAt: text("scheduled_at").notNull().default(sql`(current_timestamp)`),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageMsgIdIdx: index("idx_engage_msg_id").on(t.messageId),
+  engageMsgRecipientIdx: index("idx_engage_msg_recipient").on(t.recipientId),
+  engageMsgStatusIdx: index("idx_engage_msg_status").on(t.status),
+}));
 
+export const engageDeliveries = sqliteTable("engage_deliveries", {
+  id: text("id").primaryKey(),
+  deliveryId: text("delivery_id").notNull().unique(),
+  messageId: text("message_id").notNull(),
+  channel: text("channel").notNull(),
+  provider: text("provider").notNull(),
+  providerMessageId: text("provider_message_id"),
+  status: text("status").notNull().default("queued"),
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").notNull().default(0),
+  costUsd: real("cost_usd").notNull().default(0),
+  dispatchedAt: text("dispatched_at").notNull().default(sql`(current_timestamp)`),
+  deliveredAt: text("delivered_at"),
+  openedAt: text("opened_at"),
+  clickedAt: text("clicked_at"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageDelivIdIdx: index("idx_engage_deliv_id").on(t.deliveryId),
+  engageDelivMsgIdx: index("idx_engage_deliv_msg").on(t.messageId),
+  engageDelivStatusIdx: index("idx_engage_deliv_status").on(t.status),
+}));
+
+export const engagePreferences = sqliteTable("engage_preferences", {
+  id: text("id").primaryKey(),
+  recipientId: text("recipient_id").notNull().unique(),
+  recipientType: text("recipient_type").notNull().default("student"),
+  channelPreferences: text("channel_preferences").notNull().default("{}"), // JSON
+  categorySubscriptions: text("category_subscriptions").notNull().default("{}"), // JSON
+  quietHoursStart: text("quiet_hours_start").notNull().default("21:00"),
+  quietHoursEnd: text("quiet_hours_end").notNull().default("07:00"),
+  timezone: text("timezone").notNull().default("UTC"),
+  isUnsubscribedAll: integer("is_unsubscribed_all", { mode: "boolean" }).notNull().default(false),
+  institutionId: text("institution_id").notNull().default("global"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engagePrefRecipientIdx: index("idx_engage_pref_recipient").on(t.recipientId),
+}));
+
+export const engageWorkflows = sqliteTable("engage_workflows", {
+  id: text("id").primaryKey(),
+  workflowId: text("workflow_id").notNull().unique(),
+  name: text("name").notNull(),
+  triggerEvent: text("trigger_event").notNull(),
+  triggerConditionData: text("trigger_condition_data").notNull().default("{}"), // JSON
+  stepsData: text("steps_data").notNull().default("[]"), // JSON array of sequence nodes
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageWfIdIdx: index("idx_engage_wf_id").on(t.workflowId),
+  engageWfTriggerIdx: index("idx_engage_wf_trigger").on(t.triggerEvent),
+}));
+
+export const engageWorkflowRuns = sqliteTable("engage_workflow_runs", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull().unique(),
+  workflowId: text("workflow_id").notNull(),
+  recipientId: text("recipient_id").notNull(),
+  currentStepIndex: integer("current_step_index").notNull().default(0),
+  status: text("status").notNull().default("active"),
+  stateData: text("state_data").notNull().default("{}"), // JSON
+  nextExecutionTime: text("next_execution_time"),
+  institutionId: text("institution_id").notNull().default("global"),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageRunIdIdx: index("idx_engage_run_id").on(t.runId),
+  engageRunWfIdx: index("idx_engage_run_wf").on(t.workflowId),
+  engageRunStatusIdx: index("idx_engage_run_status").on(t.status),
+}));
+
+export const engageChatSessions = sqliteTable("engage_chat_sessions", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().unique(),
+  stakeholderId: text("stakeholder_id").notNull(),
+  stakeholderType: text("stakeholder_type").notNull().default("student"),
+  channel: text("channel").notNull().default("web"),
+  activeIntent: text("active_intent"),
+  contextSlotsData: text("context_slots_data").notNull().default("{}"), // JSON
+  status: text("status").notNull().default("bot_active"),
+  assignedAgentId: text("assigned_agent_id"),
+  institutionId: text("institution_id").notNull().default("global"),
+  lastInteractionAt: text("last_interaction_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageChatSeshIdIdx: index("idx_engage_chat_sesh_id").on(t.sessionId),
+  engageChatStakeholderIdx: index("idx_engage_chat_stakeholder").on(t.stakeholderId),
+  engageChatStatusIdx: index("idx_engage_chat_status").on(t.status),
+}));
+
+export const engageChatMessages = sqliteTable("engage_chat_messages", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").notNull().unique(),
+  sessionId: text("session_id").notNull(),
+  senderType: text("sender_type").notNull().default("stakeholder"),
+  text: text("text").notNull(),
+  richPayloadData: text("rich_payload_data").notNull().default("{}"), // JSON
+  intentConfidence: real("intent_confidence").notNull().default(1.0),
+  sentimentScore: real("sentiment_score").notNull().default(0),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageChatMsgIdIdx: index("idx_engage_chat_msg_id").on(t.messageId),
+  engageChatMsgSeshIdx: index("idx_engage_chat_msg_sesh").on(t.sessionId),
+}));
+
+export const engageTranslations = sqliteTable("engage_translations", {
+  id: text("id").primaryKey(),
+  contentHash: text("content_hash").notNull().unique(),
+  sourceLanguage: text("source_language").notNull().default("en"),
+  targetLanguage: text("target_language").notNull(),
+  sourceText: text("source_text").notNull(),
+  translatedText: text("translated_text").notNull(),
+  isHumanVerified: integer("is_human_verified", { mode: "boolean" }).notNull().default(false),
+  verifiedBy: text("verified_by"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageTransHashIdx: index("idx_engage_trans_hash").on(t.contentHash),
+  engageTransLangIdx: index("idx_engage_trans_lang").on(t.targetLanguage),
+}));
+
+export const engageAnalyticsEvents = sqliteTable("engage_analytics_events", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().unique(),
+  campaignId: text("campaign_id"),
+  messageId: text("message_id"),
+  deliveryId: text("delivery_id"),
+  recipientId: text("recipient_id"),
+  eventType: text("event_type").notNull(),
+  channel: text("channel").notNull().default("email"),
+  metadata: text("metadata").notNull().default("{}"), // JSON
+  institutionId: text("institution_id").notNull().default("global"),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  engageEvtIdIdx: index("idx_engage_evt_id").on(t.eventId),
+  engageEvtTypeIdx: index("idx_engage_evt_type").on(t.eventType),
+  engageEvtCampaignIdx: index("idx_engage_evt_campaign").on(t.campaignId),
+}));

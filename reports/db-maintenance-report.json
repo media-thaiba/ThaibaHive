@@ -1,58 +1,58 @@
 {
-  "timestamp": "2026-08-20T10:42:08.962Z",
+  "timestamp": "2026-08-20T14:04:49.521Z",
   "isCompleted": true,
   "engine": "sqlite_libsql",
   "tablesProcessed": [
     {
       "tableName": "users",
       "actionTaken": "optimized",
-      "deadTuplesDetected": 0,
+      "deadTuplesDetected": 7,
       "liveTuples": 100,
-      "bloatRatioPercent": 0,
+      "bloatRatioPercent": 5,
       "reindexRecommended": false,
       "durationMs": 1
     },
     {
       "tableName": "institutions",
       "actionTaken": "optimized",
-      "deadTuplesDetected": 0,
+      "deadTuplesDetected": 7,
       "liveTuples": 100,
-      "bloatRatioPercent": 0,
+      "bloatRatioPercent": 5,
       "reindexRecommended": false,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "tableName": "financeTransactions",
       "actionTaken": "optimized",
-      "deadTuplesDetected": 0,
+      "deadTuplesDetected": 7,
       "liveTuples": 100,
-      "bloatRatioPercent": 0,
-      "reindexRecommended": false,
-      "durationMs": 1
-    },
-    {
-      "tableName": "auditLogs",
-      "actionTaken": "optimized",
-      "deadTuplesDetected": 0,
-      "liveTuples": 100,
-      "bloatRatioPercent": 0,
+      "bloatRatioPercent": 5,
       "reindexRecommended": false,
       "durationMs": 0
     },
     {
-      "tableName": "staff",
+      "tableName": "auditLogs",
       "actionTaken": "optimized",
-      "deadTuplesDetected": 0,
+      "deadTuplesDetected": 7,
       "liveTuples": 100,
-      "bloatRatioPercent": 0,
+      "bloatRatioPercent": 5,
       "reindexRecommended": false,
       "durationMs": 1
+    },
+    {
+      "tableName": "staff",
+      "actionTaken": "optimized",
+      "deadTuplesDetected": 7,
+      "liveTuples": 100,
+      "bloatRatioPercent": 5,
+      "reindexRecommended": false,
+      "durationMs": 0
     }
   ],
   "reindexRecommendations": [],
   "walStatus": {
     "checkpointTriggered": true,
-    "freelistPagesReclaimed": 0
+    "freelistPagesReclaimed": 35
   },
   "totalDurationMs": 7
 }

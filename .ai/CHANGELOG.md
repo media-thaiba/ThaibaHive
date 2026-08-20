@@ -2,6 +2,23 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.30.0] - 2026-08-20
+### Sprint-046: Unified Multi-Modal Communication & Intelligent Stakeholder Engagement (EngageOS / UMC)
+#### Added
+- **Omnichannel Dispatch Engine & Adapters**: High-throughput unified dispatch orchestrator supporting Email (SES/SMTP), SMS (Twilio), Push (FCM), In-App (Redis/SSE), and Voice IVR (Twilio TwiML) with sub-second automatic cascading fallback.
+- **Multi-Factor Intelligent Router & Cost Optimizer**: Algorithmic channel scoring weighting Urgency (0.35), Recipient Affinity (0.25), Provider Reliability (0.25), and Cost Penalty (0.15) with emergency safety bypass.
+- **Send-Time Optimization & Fatigue Prevention**: Personalized quiet hours deferral calculation and daily channel frequency capping with emergency overrides.
+- **Template Engine, Brand Voice Compliance & A/B Testing**: AST template compiler with expressions/loops, dynamic personalizer, multi-armed bandit deterministic A/B testing with statistical conversion winner evaluation, and automatic XSS sanitization & brand safety audits.
+- **NLP Conversational Assistant & Knowledge Retrieval**: Intent classification (10+ intents), entity extraction, multi-turn stateful dialog manager with slot filling, campus knowledge base retriever, and human counselor handoff queue.
+- **Automated Event-Driven Engagement Sequences**: Ingestion of campus subsystem events (`student.attendance.deficit`, `finance.fee.due`, etc.) driving multi-step drip sequences with delay timers and conditional branching.
+- **Neural Localization & Cultural Formatting**: Content-hashed translation caching for 20+ languages with variable masking, RTL script detection (Arabic, Urdu), and localized salutations and date/currency formatting.
+- **GDPR/FERPA Consent Gate & Cryptographic Merkle Audit Trail**: Granular channel and category opt-in/opt-out validation, HMAC unsubscribe tokens, Merkle chain consent mutation audit blocks, and instant DSAR export.
+- **OpenMetrics Telemetry & Dual-Store Parity**: 10 new EngageOS tables in SQLite (`schema.ts`) and PostgreSQL (`schema.pg.ts`) with 100% parity, typed dual-store access in `engage-store.ts`, and 8 Prometheus OpenMetrics telemetry series.
+- **Admin EngageOS Radar UI & Stakeholder Portal**: 5-tab admin control center at `/admin/operations/engage-os`, stakeholder preference center & chat drawer at `/portal/engagement`, React hooks, Flutter mobile integration, and CLI simulation `pnpm engage:simulate`.
+#### Fixed (Technical Debt)
+- **TD-044-03 Resolution**: Production-grade `CloudInferenceClient` with HMAC request signing, timeout circuit breaker, and integration into `TieredFallbackEngine`.
+- **TD-044-04 Resolution**: Full BN254 optimal Ate bilinear pairing engine (`Bn254PairingEngine`) with Miller loop and final exponentiation integrated into `ZkGradientVerifier`.
+
 ## [3.28.0] - 2026-08-20
 ### Sprint-044: Autonomous Federated Edge Learning (A-FED / EdgeMesh)
 #### Added
