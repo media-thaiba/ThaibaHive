@@ -28,6 +28,17 @@ export const AUDIT_EVENT_TYPES = {
   COMPLIANCE_VIOLATION_RECORDED: "compliance.violation.recorded",
   CRYPTO_MERKLE_ROOT_ANCHORED: "crypto.merkle.anchored",
   TENANT_MIGRATION_EXECUTED: "tenant.migration.executed",
+
+  // Smart Campus & Operations Events (Sprint-043)
+  AIMS_ENERGY_OPTIMIZED: "aims.energy.optimized",
+  AIMS_FLEET_DISPATCHED: "aims.fleet.dispatched",
+  AIMS_BIOMETRIC_VERIFIED: "aims.biometric.verified",
+  AIMS_CLOUD_RIGHTSIZED: "aims.cloud.rightsized",
+  AIMS_CARBON_RECORDED: "aims.carbon.recorded",
+  AIMS_RESOURCE_ALLOCATED: "aims.resource.allocated",
+  AIMS_MARL_DECISION: "aims.marl.decision",
+  AIMS_KILL_SWITCH: "aims.kill_switch.triggered",
 } as const;
 
 export type AuditEventType = typeof AUDIT_EVENT_TYPES[keyof typeof AUDIT_EVENT_TYPES];
+

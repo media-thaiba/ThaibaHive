@@ -11,6 +11,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "realtime:stream", "triggers:manage", "predictive:retention", "simulation:budget",
     "federated:policies", "federated:audit", "resilience:manage", "voice:copilot", "executive:analytics",
     "workspaces:read", "workspaces:write", "system:manage",
+    "system:energy:manage", "system:fleet:manage", "system:biometrics:verify", "system:operations:manage", "system:sustainability:view", "system:operations:view",
   ],
   regional_auditor: [
     "regional:view", "warehouse:export", "reports:read", "staff:read",
@@ -55,6 +56,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "realtime:stream", "triggers:manage", "predictive:retention", "simulation:budget",
     "federated:policies", "federated:audit", "resilience:manage", "voice:copilot",
     "workspaces:read", "workspaces:write", "system:manage",
+    "system:energy:manage", "system:fleet:manage", "system:biometrics:verify", "system:operations:manage", "system:sustainability:view", "system:operations:view",
   ],
   principal: [
     "staff:read", "staff:create", "staff:update",
@@ -96,6 +98,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "realtime:stream", "triggers:manage", "predictive:retention", "simulation:budget",
     "federated:policies", "federated:audit", "resilience:manage", "voice:copilot",
     "workspaces:read", "workspaces:write",
+    "system:energy:manage", "system:fleet:manage", "system:biometrics:verify", "system:operations:manage", "system:sustainability:view", "system:operations:view",
   ],
   hod: [
     "staff:read",

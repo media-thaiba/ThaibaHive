@@ -1,6 +1,6 @@
 {
   "name": "thaibahive",
-  "version": "3.26.0",
+  "version": "3.27.0",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -40,6 +40,7 @@
     "soar:simulate": "tsx scripts/security/soar-simulation-runner.ts",
     "zasm:simulate": "tsx scripts/security/zasm-simulation-runner.ts",
     "ares:simulate": "tsx scripts/security/ares-simulation-runner.ts",
+    "aims:simulate": "tsx scripts/operations/aims-simulation-runner.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {
@@ -117,6 +118,7 @@
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",
+    "@types/jest-axe": "^3.5.9",
     "@types/jszip": "^3.4.1",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -128,6 +130,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "jest": "^30.4.2",
+    "jest-axe": "^11.0.0",
     "jest-environment-jsdom": "^30.4.1",
     "postcss": "^8.4.31",
     "shadcn": "^4.13.0",

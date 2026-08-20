@@ -3266,4 +3266,178 @@ export const aresResilienceScores = sqliteTable("ares_resilience_scores", {
   resTenantIdx: index("idx_ares_resilience_tenant").on(t.tenantId),
 }));
 
+// ─── AIMS / AutoOps Smart Campus Tables ───
+
+export const aimsAgents = sqliteTable("aims_agents", {
+  id: text("id").primaryKey(),
+  agentId: text("agent_id").notNull().unique(),
+  domain: text("domain").notNull(), // hvac_energy | fleet_logistics | cloud_cost | resource_mesh
+  policyState: text("policy_state").notNull(), // JSON
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  agentIdIdx: index("idx_aims_agents_agent_id").on(t.agentId),
+  agentInstIdx: index("idx_aims_agents_inst").on(t.institutionId),
+}));
+
+export const aimsEnergyTelemetry = sqliteTable("aims_energy_telemetry", {
+  id: text("id").primaryKey(),
+  sensorId: text("sensor_id").notNull(),
+  campusId: text("campus_id").notNull(),
+  buildingId: text("building_id").notNull(),
+  zoneId: text("zone_id").notNull(),
+  temperatureCelsius: real("temperature_celsius").notNull(),
+  relativeHumidityPercent: real("relative_humidity_percent").notNull(),
+  co2Ppm: integer("co2_ppm").notNull(),
+  powerKw: real("power_kw").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  timestamp: text("timestamp").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  energyZoneIdx: index("idx_aims_energy_zone").on(t.zoneId),
+  energyInstIdx: index("idx_aims_energy_inst").on(t.institutionId),
+}));
+
+export const aimsEnergyOptimizations = sqliteTable("aims_energy_optimizations", {
+  id: text("id").primaryKey(),
+  campusId: text("campus_id").notNull(),
+  buildingId: text("building_id").notNull(),
+  zoneId: text("zone_id").notNull(),
+  baselineTempCelsius: real("baseline_temp_celsius").notNull(),
+  optimizedSetpointCelsius: real("optimized_setpoint_celsius").notNull(),
+  deltaCelsius: real("delta_celsius").notNull(),
+  projectedKwhSavings: real("projected_kwh_savings").notNull().default(0),
+  projectedCostSavingsDollars: real("projected_cost_savings_dollars").notNull().default(0),
+  projectedCo2ReductionKg: real("projected_co2_reduction_kg").notNull().default(0),
+  pmvConstraintSatisfied: integer("pmv_constraint_satisfied", { mode: "boolean" }).notNull().default(true),
+  status: text("status").notNull().default("DISPATCHED"),
+  institutionId: text("institution_id").notNull().default("global"),
+  dispatchedAt: text("dispatched_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  optZoneIdx: index("idx_aims_opt_zone").on(t.zoneId),
+  optInstIdx: index("idx_aims_opt_inst").on(t.institutionId),
+}));
+
+export const aimsFleetVehicles = sqliteTable("aims_fleet_vehicles", {
+  id: text("id").primaryKey(),
+  vehicleId: text("vehicle_id").notNull().unique(),
+  campusId: text("campus_id").notNull(),
+  vehicleType: text("vehicle_type").notNull(),
+  speedKmph: real("speed_kmph").notNull().default(0),
+  odometerKm: real("odometer_km").notNull().default(0),
+  batterySoCRatio: real("battery_soc_ratio").notNull().default(1.0),
+  engineTempCelsius: real("engine_temp_celsius").notNull().default(85),
+  brakePadWearPercent: real("brake_pad_wear_percent").notNull().default(10),
+  tirePressurePsi: real("tire_pressure_psi").notNull().default(33),
+  passengerCount: integer("passenger_count").notNull().default(0),
+  maxCapacity: integer("max_capacity").notNull().default(25),
+  status: text("status").notNull().default("IDLE"),
+  institutionId: text("institution_id").notNull().default("global"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  vehIdIdx: index("idx_aims_fleet_veh_id").on(t.vehicleId),
+  vehInstIdx: index("idx_aims_fleet_inst").on(t.institutionId),
+}));
+
+export const aimsFleetDispatches = sqliteTable("aims_fleet_dispatches", {
+  id: text("id").primaryKey(),
+  routeId: text("route_id").notNull().unique(),
+  vehicleId: text("vehicle_id").notNull(),
+  campusId: text("campus_id").notNull(),
+  stopsData: text("stops_data").notNull(), // JSON
+  totalDistanceKm: real("total_distance_km").notNull().default(0),
+  totalDurationMinutes: integer("total_duration_minutes").notNull().default(0),
+  fuelEfficiencyKmPerLiter: real("fuel_efficiency_km_per_liter").notNull().default(12),
+  projectedCo2EmissionsKg: real("projected_co2_emissions_kg").notNull().default(0),
+  status: text("status").notNull().default("SCHEDULED"),
+  institutionId: text("institution_id").notNull().default("global"),
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  dispatchRouteIdx: index("idx_aims_dispatch_route").on(t.routeId),
+  dispatchVehIdx: index("idx_aims_dispatch_veh").on(t.vehicleId),
+}));
+
+export const aimsBiometricLogs = sqliteTable("aims_biometric_logs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  campusId: text("campus_id").notNull(),
+  locationName: text("location_name").notNull(),
+  verificationMethod: text("verification_method").notNull().default("EDGE_NEURAL_ZKP"),
+  zkProofId: text("zk_proof_id"),
+  similarityScore: real("similarity_score").notNull().default(1.0),
+  syncStatus: text("sync_status").notNull().default("SYNCED"),
+  institutionId: text("institution_id").notNull().default("global"),
+  verifiedAt: text("verified_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  bioUserIdx: index("idx_aims_bio_user").on(t.userId),
+  bioSeshIdx: index("idx_aims_bio_sesh").on(t.sessionId),
+  bioInstIdx: index("idx_aims_bio_inst").on(t.institutionId),
+}));
+
+export const aimsCloudCosts = sqliteTable("aims_cloud_costs", {
+  id: text("id").primaryKey(),
+  resourceId: text("resource_id").notNull(),
+  provider: text("provider").notNull(), // AWS | GCP | AZURE
+  region: text("region").notNull(),
+  instanceType: text("instance_type").notNull(),
+  clusterName: text("cluster_name").notNull(),
+  environment: text("environment").notNull().default("production"),
+  cpuUtilizationPercent: real("cpu_utilization_percent").notNull(),
+  memoryUtilizationPercent: real("memory_utilization_percent").notNull(),
+  monthlyCostDollars: real("monthly_cost_dollars").notNull(),
+  isSpotInstance: integer("is_spot_instance", { mode: "boolean" }).notNull().default(false),
+  recommendationData: text("recommendation_data"), // JSON
+  institutionId: text("institution_id").notNull().default("global"),
+  recordedAt: text("recorded_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  cloudResIdx: index("idx_aims_cloud_res").on(t.resourceId),
+  cloudInstIdx: index("idx_aims_cloud_inst").on(t.institutionId),
+}));
+
+export const aimsCarbonMetrics = sqliteTable("aims_carbon_metrics", {
+  id: text("id").primaryKey(),
+  campusId: text("campus_id").notNull(),
+  reportingPeriod: text("reporting_period").notNull(), // e.g. 2026-Q3
+  scope1Kg: real("scope1_kg").notNull().default(0),
+  scope2Kg: real("scope2_kg").notNull().default(0),
+  scope3Kg: real("scope3_kg").notNull().default(0),
+  totalKg: real("total_kg").notNull().default(0),
+  totalTons: real("total_tons").notNull().default(0),
+  renewablePercent: real("renewable_percent").notNull().default(0),
+  studentIntensityKg: real("student_intensity_kg").notNull().default(0),
+  verifiedGri: integer("verified_gri", { mode: "boolean" }).notNull().default(true),
+  institutionId: text("institution_id").notNull().default("global"),
+  recordedAt: text("recorded_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  carbonCampusIdx: index("idx_aims_carbon_campus").on(t.campusId),
+  carbonInstIdx: index("idx_aims_carbon_inst").on(t.institutionId),
+}));
+
+export const aimsCampusResources = sqliteTable("aims_campus_resources", {
+  id: text("id").primaryKey(),
+  resourceId: text("resource_id").notNull().unique(),
+  campusId: text("campus_id").notNull(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  capacityUnits: integer("capacity_units").notNull().default(1),
+  isShareableCrossCampus: integer("is_shareable_cross_campus", { mode: "boolean" }).notNull().default(true),
+  hourlyCostRateDollars: real("hourly_cost_rate_dollars").notNull().default(0),
+  activeReservationsData: text("active_reservations_data"), // JSON
+  institutionId: text("institution_id").notNull().default("global"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  resourceIdIdx: index("idx_aims_resource_id").on(t.resourceId),
+  resourceInstIdx: index("idx_aims_resource_inst").on(t.institutionId),
+}));
+
+
 
