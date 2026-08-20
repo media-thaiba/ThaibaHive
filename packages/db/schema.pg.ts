@@ -3152,3 +3152,123 @@ export const zasmForensicReports = sqliteTable("zasm_forensic_reports", {
   incidentIdx: index("idx_pg_zasm_forensic_incident").on(t.incidentId),
 }));
 
+// ─── Autonomous Resilience & Predictive Security Engine (Sprint-042 ARES) ───
+
+export const aresPredictiveThreats = sqliteTable("ares_predictive_threats", {
+  id: text("id").primaryKey(),
+  category: text("category").notNull(),
+  posteriorProbability: real("posterior_probability").notNull(),
+  confidenceScore: integer("confidence_score").notNull(),
+  severityTier: text("severity_tier").notNull(),
+  projectedExploitWindowDays: integer("projected_exploit_window_days").notNull().default(14),
+  keyIndicators: text("key_indicators"), // JSON
+  affectedAssetIds: text("affected_asset_ids"), // JSON
+  recommendedMitigations: text("recommended_mitigations"), // JSON
+  tenantId: text("tenant_id").notNull().default("global"),
+  calculatedAt: text("calculated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  categoryIdx: index("idx_pg_ares_threats_category").on(t.category),
+  tierIdx: index("idx_pg_ares_threats_tier").on(t.severityTier),
+  tenantIdx: index("idx_pg_ares_threats_tenant").on(t.tenantId),
+}));
+
+export const aresChaosExperiments = sqliteTable("ares_chaos_experiments", {
+  id: text("id").primaryKey(),
+  scenarioId: text("scenario_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  faultType: text("fault_type").notNull(),
+  targetType: text("target_type").notNull(),
+  targetIdentifier: text("target_identifier").notNull(),
+  blastRadiusPercentage: integer("blast_radius_percentage").notNull().default(10),
+  durationSeconds: integer("duration_seconds").notNull().default(10),
+  parameters: text("parameters"), // JSON
+  maxErrorRatePercent: real("max_error_rate_percent").notNull().default(1.0),
+  maxP99LatencyMs: integer("max_p99_latency_ms").notNull().default(1000),
+  tenantId: text("tenant_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  scenarioIdx: index("idx_pg_ares_chaos_scenario").on(t.scenarioId),
+  faultIdx: index("idx_pg_ares_chaos_fault").on(t.faultType),
+}));
+
+export const aresChaosExecutions = sqliteTable("ares_chaos_executions", {
+  id: text("id").primaryKey(),
+  scenarioId: text("scenario_id").notNull(),
+  state: text("state").notNull().default("COMPLETED"),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time"),
+  baselineMetrics: text("baseline_metrics"), // JSON
+  observedMetrics: text("observed_metrics"), // JSON
+  recoveryTimeMs: integer("recovery_time_ms").notNull().default(0),
+  resilienceScoreDeduction: integer("resilience_score_deduction").notNull().default(0),
+  abortReason: text("abort_reason"),
+  logs: text("logs"), // JSON
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  execScenarioIdx: index("idx_pg_ares_chaos_exec_scenario").on(t.scenarioId),
+  stateIdx: index("idx_pg_ares_chaos_exec_state").on(t.state),
+}));
+
+export const aresZkpProofs = sqliteTable("ares_zkp_proofs", {
+  id: text("id").primaryKey(),
+  proofId: text("proof_id").notNull().unique(),
+  merkleRoot: text("merkle_root").notNull(),
+  epochTimestamp: text("epoch_timestamp").notNull(),
+  leafHashCommitment: text("leaf_hash_commitment").notNull(),
+  proofData: text("proof_data").notNull(), // JSON
+  publicInputs: text("public_inputs").notNull(), // JSON
+  tenantId: text("tenant_id").notNull().default("global"),
+  generatedAt: text("generated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  proofIdx: index("idx_pg_ares_zkp_proof_id").on(t.proofId),
+  rootIdx: index("idx_pg_ares_zkp_merkle_root").on(t.merkleRoot),
+}));
+
+export const aresThreatGraphNodes = sqliteTable("ares_threat_graph_nodes", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  name: text("name").notNull(),
+  severity: text("severity"),
+  riskScore: integer("risk_score").notNull().default(50),
+  metadata: text("metadata"), // JSON
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  nodeTypeIdx: index("idx_pg_ares_graph_node_type").on(t.type),
+  nameIdx: index("idx_pg_ares_graph_node_name").on(t.name),
+}));
+
+export const aresThreatGraphEdges = sqliteTable("ares_threat_graph_edges", {
+  id: text("id").primaryKey(),
+  sourceId: text("source_id").notNull(),
+  targetId: text("target_id").notNull(),
+  type: text("type").notNull(),
+  weight: real("weight").notNull().default(1.0),
+  metadata: text("metadata"), // JSON
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  sourceIdx: index("idx_pg_ares_graph_edge_source").on(t.sourceId),
+  targetIdx: index("idx_pg_ares_graph_edge_target").on(t.targetId),
+  edgeTypeIdx: index("idx_pg_ares_graph_edge_type").on(t.type),
+}));
+
+export const aresResilienceScores = sqliteTable("ares_resilience_scores", {
+  id: text("id").primaryKey(),
+  overallScore: real("overall_score").notNull(),
+  tier: text("tier").notNull(),
+  vectorBreakdown: text("vector_breakdown").notNull(), // JSON
+  mttrSeconds: integer("mttr_seconds").notNull().default(45),
+  unresolvedGapsCount: integer("unresolved_gaps_count").notNull().default(0),
+  tenantId: text("tenant_id").notNull().default("global"),
+  calculatedAt: text("calculated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  scoreTierIdx: index("idx_pg_ares_resilience_tier").on(t.tier),
+  resTenantIdx: index("idx_pg_ares_resilience_tenant").on(t.tenantId),
+}));
+
+

@@ -2,6 +2,19 @@
 
 All notable changes to the ThaibaHive ecosystem are documented here.
 
+## [3.26.0] - 2026-08-20
+### Added
+- **Bayesian Predictive Threat Engine & Anomaly Forecasting:** Mathematical Bayesian probability model with Laplace smoothing, prior calibration, MITRE ATT&CK Markov transition pattern analyzer, 7–14 day projected exploit window forecasting, hysteresis early warning alerts, and preemptive hardening dispatcher.
+- **Automated Chaos Resilience Simulation Mesh:** Controlled fault injection suite covering subnet network partitions, bit-flip packet corruption, Gaussian latency jitter, intermediate CA revocation, token replay simulations, and dual-store split-brain faults, with automated health guardrails and sub-100ms instant emergency kill-switch circuit breaker.
+- **Zero-Knowledge Proof (ZKP) Audit Verification System:** zk-SNARK Groth16 / BN128 circuit generator proving Merkle tree audit inclusion with $\le 10,000$ R1CS constraints, sub-50ms cryptographic verifier, and public compliance attestation verification API (`/api/v1/compliance/attestation/verify`).
+- **Live Threat Intelligence Graph & Attack Path Traversal:** STIX/TAXII 2.1 threat feed ingester and normalizer, dual Neo4j and high-speed in-memory graph adapter, shortest attack path exploration, choke point discovery, and blast radius quantification.
+- **System Resilience Scorecard & Gap Remediation Advisor:** Composite 0–100 benchmark calculator across 5 vectors (Fault Tolerance 30%, MTTR 25%, Zero-Trust 20%, Predictive 15%, Audit Health 10%), historical drift trend analyzer, and AI hardening guidance.
+- **Dual-Store Database Persistence & Merkle Audit Trail:** Drizzle ORM persistence across SQLite and PostgreSQL for 7 new tables (`ares_predictive_threats`, `ares_chaos_experiments`, `ares_chaos_executions`, `ares_zkp_proofs`, `ares_threat_graph_nodes`, `ares_threat_graph_edges`, `ares_resilience_scores`) with 100% schema parity and SHA-256 Merkle chain audit logging.
+- **Prometheus OpenMetrics Telemetry:** Registered 6 new metric series for predictive probabilities, active chaos runs, circuit breaker trips, ZKP verification latency histogram, graph nodes, and resilience scorecards in `/api/metrics`.
+- **Admin Predictive Resilience Radar Dashboard UI:** Real-time 5-tab dashboard at `/admin/security/predictive-resilience` featuring Bayesian Threat Radar, Chaos Mesh Runner, Threat Intelligence Graph Viewer, ZKP Attestation Panel, and Resilience Benchmark Matrix.
+- **End-to-End Simulation Runner & CLI:** Automated pipeline runner (`scripts/security/ares-simulation-runner.ts` / `pnpm ares:simulate`) verifying complete 6-stage lifecycle.
+- **Operational Runbooks:** Authored 5 comprehensive runbooks in `docs/` (`ares-architecture-guide.md`, `chaos-mesh-operations-guide.md`, `zkp-audit-verification-guide.md`, `threat-intelligence-graph-guide.md`, `resilience-benchmark-scoring-guide.md`).
+
 ## [3.25.0] - 2026-08-19
 ### Added
 - **Internal PKI & Continuous mTLS Service Mesh:** RFC 5280 compliant X.509 certificates (ECDSA prime256v1 / RSA), root/intermediate CA engine, service identity resolution, SAN matching, and zero-downtime certificate rotation with 30-day dual-cert grace overlap and distributed revocation sync (`CERT_REVOKED`, `CERT_ROTATED`, `CRL_UPDATED`).

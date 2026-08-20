@@ -101,6 +101,11 @@ Canonical index of the features available in ThaibaHive.
 | **Autonomous Forensic Root-Cause Copilot (DAG Graph)** | `src/lib/security/forensics/` | **Complete** | Multi-Stage MITRE ATT&CK, Event Timeline, RootCauseGraph | Security / Forensics |
 | **Admin Zero-Trust Security Mesh Radar (4 Tabs)** | `/app/(shell)/admin/security/zero-trust` | **Complete** | Device Posture, Micro-Segmentation, PKI Mesh, Forensics | Security / Admin |
 | **Zero-Trust E2E Simulation CLI & Test Harness** | `scripts/security/zasm-simulation-runner.ts` | **Complete** | `pnpm zasm:simulate`, 6-Phase Pipeline Validation | Security / Tooling |
-
-
-
+| **Bayesian Predictive Threat Engine & Anomaly Forecaster** | `src/lib/security/ares/` | **Complete** | Laplace Smoothing, Markov ATT&CK Transitions, Exploit Windows | Security / ARES |
+| **Automated Chaos Simulation Mesh & Safety Kill-Switch** | `src/lib/security/chaos/` | **Complete** | 6 Fault Injectors, Guardrails, < 100ms Emergency Kill-Switch | Security / Chaos |
+| **Zero-Knowledge Proof (zk-SNARK Groth16) Audit Verifier** | `src/lib/security/zkp/` | **Complete** | Groth16 / BN128, < 50ms Verifier, Public Attestation API | Security / Compliance |
+| **Live Threat Intelligence Graph & Attack Path Traversal** | `src/lib/security/graph/` | **Complete** | STIX/TAXII 2.1, Neo4j Hybrid, Shortest Attack Paths, Choke Points | Security / Threat Intel |
+| **System Resilience Scorecard & Gap Remediation Advisor** | `src/lib/security/resilience/` | **Complete** | 5-Vector Composite Scoring (0-100), Drift Analyzer, AI Guidance | Security / Resilience |
+| **Dual-Store ARES Database Persistence & Merkle Audit Trail** | `packages/db/schema.ts` & `src/lib/security/ares/ares-db-store.ts` | **Complete** | 7 Drizzle Tables, 100% Schema Parity, SHA-256 Merkle Chain | Security / Database |
+| **Admin Predictive Security & Chaos Resilience Radar (5 Tabs)**| `/app/(shell)/admin/security/predictive-resilience` | **Complete** | Threat Radar, Chaos Runner, Graph Viewer, ZKP Prover, Scorecard | Security / Admin |
+| **ARES End-to-End Simulation CLI & Test Suite** | `scripts/security/ares-simulation-runner.ts` | **Complete** | `pnpm ares:simulate`, 6-Stage Resilience Lifecycle | Security / Tooling |

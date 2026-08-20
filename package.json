@@ -1,6 +1,6 @@
 {
   "name": "thaibahive",
-  "version": "3.25.0",
+  "version": "3.26.0",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -39,6 +39,7 @@
     "test:staging:ddos": "tsx scripts/security/run-staging-ddos-certification.ts",
     "soar:simulate": "tsx scripts/security/soar-simulation-runner.ts",
     "zasm:simulate": "tsx scripts/security/zasm-simulation-runner.ts",
+    "ares:simulate": "tsx scripts/security/ares-simulation-runner.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {
