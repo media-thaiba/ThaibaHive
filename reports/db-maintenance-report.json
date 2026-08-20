@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-20T07:15:06.716Z",
+  "timestamp": "2026-08-20T10:42:08.962Z",
   "isCompleted": true,
   "engine": "sqlite_libsql",
   "tablesProcessed": [
@@ -10,7 +10,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 3
+      "durationMs": 1
     },
     {
       "tableName": "institutions",
@@ -37,7 +37,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "tableName": "staff",
@@ -46,7 +46,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 0
+      "durationMs": 1
     }
   ],
   "reindexRecommendations": [],
@@ -54,5 +54,5 @@
     "checkpointTriggered": true,
     "freelistPagesReclaimed": 0
   },
-  "totalDurationMs": 13
+  "totalDurationMs": 7
 }

@@ -70,4 +70,5 @@ export async function logGatewayThreatEvent(payload: GatewayThreatAuditPayload):
 
 export { ZasmAuditLogger } from "./zasm/zasm-audit-events";
 export { AresAuditLogger } from "./ares/ares-audit-events";
+export { AfedAuditLogger } from "../operations/persistence/afed-audit-events";
 

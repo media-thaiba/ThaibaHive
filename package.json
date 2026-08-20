@@ -41,6 +41,7 @@
     "zasm:simulate": "tsx scripts/security/zasm-simulation-runner.ts",
     "ares:simulate": "tsx scripts/security/ares-simulation-runner.ts",
     "aims:simulate": "tsx scripts/operations/aims-simulation-runner.ts",
+    "afed:simulate": "tsx scripts/operations/afed-simulation-runner.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {

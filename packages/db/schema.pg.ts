@@ -3444,5 +3444,154 @@ export const aimsCampusResources = sqliteTable("aims_campus_resources", {
   resourceInstIdx: index("idx_pg_aims_resource_inst").on(t.institutionId),
 }));
 
+// ─── Autonomous Federated Learning & Decentralized Analytics (Sprint-044: A-FED / EdgeMesh) ───
+
+export const afedModels = sqliteTable("afed_models", {
+  id: text("id").primaryKey(),
+  modelId: text("model_id").notNull().unique(),
+  name: text("name").notNull(),
+  domain: text("domain").notNull(),
+  version: text("version").notNull(),
+  architecture: text("architecture").notNull(),
+  inputDimensions: integer("input_dimensions").notNull(),
+  outputDimensions: integer("output_dimensions").notNull(),
+  hyperparametersData: text("hyperparameters_data").notNull(), // JSON
+  currentRound: integer("current_round").notNull().default(0),
+  status: text("status").notNull().default("initialized"),
+  institutionId: text("institution_id").notNull().default("global"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedModelIdIdx: index("idx_pg_afed_model_id").on(t.modelId),
+  afedModelInstIdx: index("idx_pg_afed_model_inst").on(t.institutionId),
+}));
+
+export const afedNodes = sqliteTable("afed_nodes", {
+  id: text("id").primaryKey(),
+  nodeId: text("node_id").notNull().unique(),
+  campusId: text("campus_id").notNull(),
+  campusName: text("campus_name").notNull(),
+  status: text("status").notNull().default("idle"),
+  computeTier: text("compute_tier").notNull().default("campus_server"),
+  sampleCount: integer("sample_count").notNull().default(0),
+  availableMemoryMb: integer("available_memory_mb").notNull().default(1024),
+  networkLatencyMs: real("network_latency_ms").notNull().default(20),
+  reputationScore: real("reputation_score").notNull().default(1.0),
+  institutionId: text("institution_id").notNull().default("global"),
+  lastHeartbeat: text("last_heartbeat").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedNodeIdIdx: index("idx_pg_afed_node_id").on(t.nodeId),
+  afedNodeCampusIdx: index("idx_pg_afed_node_campus").on(t.campusId),
+}));
+
+export const afedTrainingRounds = sqliteTable("afed_training_rounds", {
+  id: text("id").primaryKey(),
+  roundId: text("round_id").notNull().unique(),
+  modelId: text("model_id").notNull(),
+  roundNumber: integer("round_number").notNull(),
+  participantsCount: integer("participants_count").notNull().default(0),
+  totalSamples: integer("total_samples").notNull().default(0),
+  aggregationAlgorithm: text("aggregation_algorithm").notNull().default("FedAvg"),
+  globalLoss: real("global_loss").notNull().default(0),
+  globalAccuracy: real("global_accuracy").notNull().default(0),
+  roundDurationMs: integer("round_duration_ms").notNull().default(0),
+  epsilonConsumed: real("epsilon_consumed").notNull().default(0),
+  status: text("status").notNull().default("completed"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedRoundModelIdx: index("idx_pg_afed_round_model").on(t.modelId),
+  afedRoundNumIdx: index("idx_pg_afed_round_num").on(t.roundNumber),
+}));
+
+export const afedModelWeights = sqliteTable("afed_model_weights", {
+  id: text("id").primaryKey(),
+  modelId: text("model_id").notNull(),
+  roundNumber: integer("round_number").notNull(),
+  weightsData: text("weights_data").notNull(), // JSON float array
+  checksum: text("checksum").notNull(),
+  format: text("format").notNull().default("FP32"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedWeightModelIdx: index("idx_pg_afed_weight_model").on(t.modelId),
+  afedWeightRoundIdx: index("idx_pg_afed_weight_round").on(t.roundNumber),
+}));
+
+export const afedPrivacyBudgets = sqliteTable("afed_privacy_budgets", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().unique(),
+  totalBudgetEpsilon: real("total_budget_epsilon").notNull().default(10.0),
+  consumedEpsilon: real("consumed_epsilon").notNull().default(0),
+  remainingEpsilon: real("remaining_epsilon").notNull().default(10.0),
+  totalBudgetDelta: real("total_budget_delta").notNull().default(1e-5),
+  isExhausted: boolean("is_exhausted").notNull().default(false),
+  institutionId: text("institution_id").notNull().default("global"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedBudgetTenantIdx: index("idx_pg_afed_budget_tenant").on(t.tenantId),
+}));
+
+export const afedSmpcSessions = sqliteTable("afed_smpc_sessions", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().unique(),
+  modelId: text("model_id").notNull(),
+  roundNumber: integer("round_number").notNull(),
+  threshold: integer("threshold").notNull(),
+  participantsData: text("participants_data").notNull(), // JSON
+  activePhase: text("active_phase").notNull().default("AGGREGATED"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedSmpcSeshIdx: index("idx_pg_afed_smpc_sesh").on(t.sessionId),
+}));
+
+export const afedDriftMetrics = sqliteTable("afed_drift_metrics", {
+  id: text("id").primaryKey(),
+  modelId: text("model_id").notNull(),
+  overallPsi: real("overall_psi").notNull().default(0),
+  maxFeatureKs: real("max_feature_ks").notNull().default(0),
+  driftedFeatureCount: integer("drifted_feature_count").notNull().default(0),
+  hasSignificantDrift: boolean("has_significant_drift").notNull().default(false),
+  featureReportsData: text("feature_reports_data").notNull(), // JSON
+  institutionId: text("institution_id").notNull().default("global"),
+  recordedAt: text("recorded_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedDriftModelIdx: index("idx_pg_afed_drift_model").on(t.modelId),
+}));
+
+export const afedBenchmarks = sqliteTable("afed_benchmarks", {
+  id: text("id").primaryKey(),
+  campusId: text("campus_id").notNull(),
+  reportingYear: text("reporting_year").notNull().default("2026"),
+  retentionRatePercent: real("retention_rate_percent").notNull().default(0),
+  graduationRatePercent: real("graduation_rate_percent").notNull().default(0),
+  rankPosition: integer("rank_position").notNull().default(1),
+  percentilesData: text("percentiles_data").notNull(), // JSON
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedBenchCampusIdx: index("idx_pg_afed_bench_campus").on(t.campusId),
+}));
+
+export const afedPredictions = sqliteTable("afed_predictions", {
+  id: text("id").primaryKey(),
+  predictionId: text("prediction_id").notNull().unique(),
+  modelId: text("model_id").notNull(),
+  predictedClass: integer("predicted_class").notNull().default(0),
+  confidenceScore: real("confidence_score").notNull().default(0),
+  executedOn: text("executed_on").notNull().default("EDGE_LOCAL"),
+  latencyMs: integer("latency_ms").notNull().default(0),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  afedPredIdIdx: index("idx_pg_afed_pred_id").on(t.predictionId),
+  afedPredModelIdx: index("idx_pg_afed_pred_model").on(t.modelId),
+}));
+
+
 
 

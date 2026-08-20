@@ -2,6 +2,19 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.28.0] - 2026-08-20
+### Sprint-044: Autonomous Federated Edge Learning (A-FED / EdgeMesh)
+#### Added
+- **Federated Learning Core**: FedAvg and FedProx aggregation engines with Byzantine defenses (Krum, Coordinate-wise Median, Trimmed Mean) and Z-score poisoning detection.
+- **Differential Privacy & Moments Accountant**: Laplace & Gaussian noise generators, Rényi Differential Privacy ($\epsilon, \delta$-DP) composition, and adaptive gradient clipping.
+- **SMPC & Secure Aggregation**: Shamir $(t,n)$-threshold secret sharing over 127-bit Mersenne prime Galois field, pairwise random zero-sum masking vectors, and zk-SNARK Groth16 gradient bound verifier.
+- **Decentralized Model Mesh**: Push-Sum gossip weight averaging, partition-tolerant CRDT weight buffer with vector clock reconciliation, Top-K gradient sparsification, and Error Feedback (EF21) 8-bit quantization.
+- **Statistical Drift & Self-Healing Retraining**: Two-sample KS-Test, Population Stability Index (PSI), Wasserstein Distance, feature attribution, and automated retraining triggers.
+- **Edge-Native Inference & Optimization**: INT8 post-training quantization (75% compression), magnitude pruning, LRU inference caching, and cloud fallback tiering.
+- **Cross-Campus Benchmarking**: Confidential IPEDS/HESA institutional indicator calculation, percentile ranking, and federated student retention prediction.
+- **Dual-Store Persistence & OpenMetrics**: 9 new tables in SQLite (`schema.ts`) and PostgreSQL (`schema.pg.ts`) with 100% parity, SHA-256 Merkle chain audit logging, and 8 Prometheus OpenMetrics telemetry series.
+- **Admin Radar UI, APIs, Mobile & CLI Simulation**: 5-tab Radar dashboard at `/admin/operations/federated-learning`, 8 REST APIs, React hooks, Flutter Riverpod provider, and `pnpm afed:simulate`.
+
 ## [3.27.0] - 2026-08-20
 ### Sprint-043: Autonomous Intelligence & Multi-Agent Smart Campus System (AIMS / AutoOps)
 #### Added

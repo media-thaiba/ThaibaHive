@@ -926,6 +926,86 @@ export const mobileSyncTelemetryBatchSchema = z.object({
 
 export type MobileSyncTelemetryBatchInput = z.infer<typeof mobileSyncTelemetryBatchSchema>;
 
+// ─── Autonomous Federated Learning & EdgeMesh Validation Schemas (Sprint-044) ───
+
+export const afedModelRegisterSchema = z.object({
+  modelId: z.string().min(1, "modelId is required"),
+  name: z.string().min(1, "name is required"),
+  domain: z.enum(["retention", "financial", "resource_demand", "academic", "energy"]).default("retention"),
+  version: z.string().default("1.0.0"),
+  architecture: z.string().default("logistic_regression"),
+  inputDimensions: z.number().int().min(1).default(5),
+  outputDimensions: z.number().int().min(1).default(1),
+  featureNames: z.array(z.string()).default([]),
+  targetName: z.string().default("target"),
+  hyperparameters: z.object({
+    learningRate: z.number().default(0.01),
+    batchSize: z.number().default(32),
+    localEpochs: z.number().default(3),
+    l2ClipNorm: z.number().optional().default(1.0),
+    differentialPrivacyEpsilon: z.number().optional(),
+  }).optional(),
+  initialWeights: z.array(z.number()).optional(),
+});
+
+export const afedRoundAggregateSchema = z.object({
+  modelId: z.string().min(1, "modelId is required"),
+  roundNumber: z.number().int().min(0).optional(),
+  algorithm: z.enum(["FedAvg", "FedProx"]).default("FedAvg"),
+  aggregationAlgorithm: z.enum(["FedAvg", "FedProx"]).optional(),
+  clientUpdates: z.array(
+    z.object({
+      nodeId: z.string().min(1),
+      modelId: z.string().optional(),
+      weights: z.array(z.number()),
+      sampleCount: z.number().int().min(1),
+      localLoss: z.number().optional(),
+      localAccuracy: z.number().optional(),
+      trainingDurationMs: z.number().optional(),
+    })
+  ).min(1, "At least one client update is required"),
+});
+
+export const afedNodeRegisterSchema = z.object({
+  nodeId: z.string().min(1, "nodeId is required"),
+  campusId: z.string().min(1, "campusId is required"),
+  campusName: z.string().min(1, "campusName is required"),
+  status: z.enum(["idle", "training", "reporting", "offline"]).default("idle"),
+  computeTier: z.enum(["edge_device", "campus_server", "cloud_coordinator"]).default("campus_server"),
+  sampleCount: z.number().int().min(0).default(0),
+  availableMemoryMb: z.number().int().default(1024),
+  networkLatencyMs: z.number().default(20),
+});
+
+export const afedPrivacyBudgetResetSchema = z.object({
+  tenantId: z.string().min(1, "tenantId is required"),
+  newBudgetEpsilon: z.number().min(0.1).max(100.0).default(10.0),
+  reason: z.string().min(1, "reason is required"),
+});
+
+export const afedDriftEvaluateSchema = z.object({
+  modelId: z.string().min(1, "modelId is required"),
+  features: z.array(
+    z.object({
+      featureName: z.string().min(1),
+      baselineValues: z.array(z.number()).min(1),
+      currentValues: z.array(z.number()).min(1),
+    })
+  ).min(1, "At least one feature distribution is required"),
+  autoTriggerRetraining: z.boolean().default(false),
+});
+
+export const afedInferencePredictSchema = z.object({
+  modelId: z.string().min(1, "modelId is required"),
+  inputVector: z.array(z.number()).min(1, "inputVector cannot be empty"),
+  allowCloudFallback: z.boolean().default(true),
+});
+
+export const afedBenchmarkQuerySchema = z.object({
+  reportingYear: z.string().default("2026"),
+});
+
+
 
 
 
