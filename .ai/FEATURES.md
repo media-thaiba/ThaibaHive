@@ -1,6 +1,29 @@
 # ThaibaHive Platform Features
 
-## 1. Unified Multi-Modal Communication & Intelligent Stakeholder Engagement (EngageOS / UMC) — v3.30.0
+## 1. Autonomous Campus Digital Twin & Spatial Facility Intelligence (TWIN-OPS / SpatialGrid) — v3.32.0
+- **Dual-Store 3D Spatial Persistence & Indexer**: 10 SQLite & PostgreSQL relational tables with 3D Octree spatial partitioning ($O(\log N)$ point lookups, radius queries) and Ray-Casting point-in-polygon containment.
+- **IoT Telemetry Mesh Ingester & Anomaly Detector**: Multi-protocol normalization across MQTT, CoAP, HTTP webhooks, and BLE mesh with statistical Z-score anomaly detection ($Z \ge 3.5$ critical) and automated sensor health self-healing.
+- **3D Spatial Rendering & Heatmap Shaders**: GeoJSON/CAD floorplan extrusion, Level of Detail (LOD0/LOD1/LOD2) generation, and Inverse Distance Weighting (IDW) spatial heatmap shader fields.
+- **Predictive Space & HVAC Energy Optimization**: Holt-Winters exponential smoothing 24-hour occupancy forecaster, autonomous space reallocation optimizer, and predictive HVAC setbacks saving $\ge 15\%$ energy.
+- **Dynamic 3D Emergency Wayfinding & Evacuation Engine**: Directed multi-floor spatial graph routing with step-free wheelchair accessibility and sub-5-second dynamic hazard rerouting with crowd flow bottleneck simulation.
+- **Real-Time Location Services (RTLS) & Geofencing**: BLE RSSI Log-Distance Path Loss 3D multilateration, polygon perimeter breach detection, automated inventory reconciler, and preventive maintenance work orders.
+- **Next.js Edge SSE/WebSocket Stream & Prometheus Telemetry**: Push notification streaming and 8 Prometheus OpenMetrics telemetry series (`twin_iot_ingestion_rate_total`, `twin_space_utilization_ratio`, etc.).
+- **Spatial Privacy Shield & Cryptographic Merkle Audit Logger**: GDPR/FERPA location anonymization, coordinate masking for non-admin roles, and tamper-proof SHA-256 Merkle audit chain verification.
+- **Admin Command Radar Studio & Stakeholder Discovery Canvas**: 5-tab admin studio (3D Explorer, Space Optimization, IoT Mesh, Asset Radar, Emergency Simulator) and student/staff room booking canvas.
+- **Flutter Mobile Digital Twin App**: Cross-platform 3D campus navigation, live room comfort indicators, and emergency evacuation AR compass.
+
+## 2. Autonomous Knowledge Mesh & Conversational Campus Copilot (KM-COPILOT / NeoBrain) — v3.31.0
+- **Campus Knowledge Graph & Semantic Ontology**: Directed multi-relational knowledge graph linking courses, prerequisites, faculty, degree requirements, and bylaws with multi-hop BFS/DFS path traversal, cycle detection, and Dijkstra shortest path roadmaps.
+- **Hybrid RAG Retrieval Engine**: Reciprocal Rank Fusion (RRF) combining dense OpenAI / local neural vector embeddings ($D=1536$) with sparse lexical BM25 Okapi keyword search and cross-encoder neural re-ranking.
+- **Automated Ingestion Pipeline & Structural Semantic Chunker**: Change-detection MD5/SHA-256 hash synchronizer for PDF, DOCX, Markdown, and HTML syllabi/bylaws with AST-aware section chunking.
+- **Autonomous Degree Progress Auditor**: Deterministic evaluation of completed credits, core/elective requirement fulfillment, cumulative/major GPA tracking, and graduation eligibility checks.
+- **Prerequisite Solver & Schedule Optimizer**: Topological sort course sequencing, co-requisite validation, workload balancing, and multi-term graduation plan optimization.
+- **Multi-Agent Conversational Reasoning Engine**: Sliding window context memory, elliptical query reformulation, ReAct tool execution loop, and grounded source citation generation.
+- **Anti-Hallucination & FERPA Privacy Shield**: Natural Language Inference (NLI) claim verification against reference passages ($Q \ge 0.80$), automated PII redaction (SSN, phones, emails), and cryptographic SHA-256 Merkle audit logger.
+- **Next.js Edge WebSocket Real-Time Streaming**: Low-latency bidirectional token chunking and counselor take-over routing in Next.js edge runtime.
+- **Production Live Cloud Translation Integration (TD-046-01)**: Live Google Cloud Translation v3 / DeepL API client with circuit breaker and cached neural translation memory.
+
+## 2. Unified Multi-Modal Communication & Intelligent Stakeholder Engagement (EngageOS / UMC) — v3.30.0
 - **Omnichannel Dispatch Engine**: High-throughput multi-channel routing across Email (SES/SMTP), SMS (Twilio), Push (FCM), In-App (Redis/SSE), and Voice IVR (Twilio TwiML) with sub-second automatic cascading fallback.
 - **Multi-Factor Dynamic Router & Cost Optimizer**: Multi-dimensional scoring evaluating urgency, recipient affinity, channel reliability, and unit cost with emergency critical safety bypass.
 - **Send-Time Optimization & Fatigue Prevention**: Individual quiet hours windows with timezone calculation and frequency capping limits.

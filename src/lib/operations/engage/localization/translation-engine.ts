@@ -1,4 +1,5 @@
 import { TranslationCache } from './translation-cache';
+import { cloudTranslationAdapter } from '@/lib/operations/km/localization/cloud-translation-adapter';
 
 export interface TranslationResult {
   translatedText: string;
@@ -96,20 +97,10 @@ export class TranslationEngine {
       return `__PLCHLD_${placeholders.length - 1}__`;
     });
 
-    // Check mock/lexicon dictionary or apply translation mapping
+    // Translate via Cloud Translation Adapter (Google Cloud / DeepL / Neural Fallback)
     let translated = maskedText;
-    const langDict = this.mockDictionary[targetLang.toLowerCase()];
-
-    if (langDict) {
-      for (const [key, val] of Object.entries(langDict)) {
-        if (translated.includes(key)) {
-          translated = translated.replace(new RegExp(key, 'g'), val);
-        }
-      }
-    } else {
-      // Default localized prefix for unsupported mock translation languages
-      translated = `[${targetLang.toUpperCase()}] ${maskedText}`;
-    }
+    const cloudRes = await cloudTranslationAdapter.translateCloud(maskedText, targetLang, sourceLang);
+    translated = cloudRes.translatedText;
 
     // Restore template placeholders
     placeholders.forEach((ph, idx) => {

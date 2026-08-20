@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-08-20T14:04:56.776Z",
+  "timestamp": "2026-08-20T16:54:19.689Z",
   "isSuccess": true,
   "retentionDays": 3650,
-  "cutoffDate": "2016-08-22T14:04:56.768Z",
+  "cutoffDate": "2016-08-22T16:54:19.687Z",
   "totalRecordsArchived": 0,
   "batchesProcessed": 0,
   "integrityVerified": true,
-  "durationMs": 8
+  "durationMs": 2
 }

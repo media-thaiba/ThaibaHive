@@ -2,6 +2,45 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.32.0] - 2026-08-20
+### Sprint-048: Autonomous Campus Digital Twin & Spatial Facility Intelligence (TWIN-OPS / SpatialGrid)
+#### Added
+- **Dual-Store 3D Spatial Persistence Schema**: 10 new TWIN tables (`twinFacilities`, `twinSpaces`, `twin3dModels`, `twinSensors`, `twinTelemetry`, `twinAssets`, `twinGeofences`, `twinMaintenanceOrders`, `twinWayfindingNodes`, `twinWayfindingEdges`) with 100% column parity across SQLite (`schema.ts`) and PostgreSQL (`schema.pg.ts`).
+- **Spatial Indexer & Ray-Casting Polygon Math**: 3D Octree spatial partitioning ($O(\log N)$ point lookups, radius queries) and Ray-Casting point-in-polygon containment math.
+- **IoT Telemetry Ingester & Sensor Health Monitor**: Multi-protocol normalization across MQTT, CoAP, HTTP webhooks, and BLE mesh with Z-score outlier detection and automated sensor health self-healing dispatch.
+- **3D Spatial Rendering & Heatmap Shaders**: GeoJSON/CAD floorplan parser, 3D prism mesh extrusion, LOD0/LOD1/LOD2 generation, and Inverse Distance Weighting (IDW) spatial heatmap shader fields.
+- **Predictive Space & HVAC Energy Optimization**: Holt-Winters exponential smoothing 24-hour occupancy forecaster, autonomous space reallocation optimizer, and predictive HVAC setbacks saving $\ge 15\%$ energy.
+- **Dynamic 3D Emergency Wayfinding & Evacuation Engine**: Directed multi-floor spatial graph routing with step-free wheelchair accessibility and sub-5-second dynamic hazard rerouting with crowd flow bottleneck simulation.
+- **Real-Time Location Services (RTLS) & Geofencing**: BLE RSSI Log-Distance Path Loss 3D multilateration, polygon perimeter breach detection, automated inventory reconciler, and preventive maintenance work orders.
+- **Next.js Edge SSE/WebSocket Stream & Prometheus Telemetry**: Push notification streaming and 8 Prometheus OpenMetrics telemetry series (`twin_iot_ingestion_rate_total`, `twin_space_utilization_ratio`, etc.).
+- **Spatial Privacy Shield & Cryptographic Merkle Audit Logger**: GDPR/FERPA location anonymization, coordinate masking for non-admin roles, and tamper-proof SHA-256 Merkle audit chain verification.
+- **Admin Command Radar Studio & Stakeholder Discovery Canvas**: 5-tab admin studio (`/admin/operations/digital-twin`), space discovery booking canvas (`/portal/facilities`), and Flutter mobile Riverpod integration.
+- **End-to-End Simulation CLI Harness**: Complete 8-stage verification runner via `pnpm twin:simulate`.
+
+## [3.31.0] - 2026-08-20
+### Sprint-047: Autonomous Knowledge Mesh & Conversational Campus Copilot (KM-COPILOT / NeoBrain)
+#### Added
+- **Dual-Store Drizzle ORM Database Schema**: 10 new KM tables (`kmEntities`, `kmRelations`, `kmDocuments`, `kmChunks`, `kmEmbeddings`, `kmDegreePrograms`, `kmCoursePrerequisites`, `kmAdvisingSessions`, `kmAdvisingInterventions`, `kmTranslationCache`) with 100% parity across SQLite (`schema.ts`) and PostgreSQL (`schema.pg.ts`).
+- **Campus Knowledge Graph & Multi-Hop Traversal Engine**: Graph representation of courses, programs, policies, and faculty with multi-hop BFS/DFS path discovery, topological sorting, and Dijkstra shortest path roadmaps.
+- **Hybrid RAG Retrieval Engine**: Reciprocal Rank Fusion (RRF) combining dense OpenAI / neural embeddings ($D=1536$) with sparse lexical BM25 Okapi search and cross-encoder neural re-ranking.
+- **Automated Ingestion Pipeline & Structural Semantic Chunker**: Multi-format document parser (PDF, DOCX, MD, HTML, TXT) with content-hash change detection, structural chunking, and campus NER extraction.
+- **Autonomous Degree Progress Auditor & Requirement Evaluator**: Deterministic computation of credits, core/elective category fulfillment, cumulative/major GPA tracking, and graduation eligibility checks.
+- **Prerequisite Chain Validator & Course Schedule Optimizer**: Hard/soft prerequisite dependency validator, co-requisite validation, and constraint-satisfaction multi-term schedule generation.
+- **Academic Intervention Engine & Career Matcher**: 4-tier student academic risk classification (`on_track`, `advisory_watch`, `moderate_risk`, `critical_intervention`), action generator, and elective/career path matching.
+- **Conversational Dialogue Manager & Contextual Memory**: Sliding window turn history, elliptical query reformulation, and intent tracking.
+- **Multi-Agent Tool Orchestrator & Reasoning Engine**: Transparent ReAct loop executing advising and knowledge retrieval tools.
+- **Citation Generator & Anti-Hallucination Fact Verifier**: NLI entailment scoring ($Q \ge 0.80$) against source passages and clickable structured citations.
+- **FERPA/GDPR Academic Privacy Shield & Merkle Audit Logger**: Automatic PII redaction (SSN, phone, email), FERPA 34 CFR Part 99 access validation, and cryptographic SHA-256 Merkle chain logging.
+- **Cognitive Analytics & Prometheus OpenMetrics Telemetry**: Autonomous deflection rate calculations, knowledge gap identification, and 8 new Prometheus OpenMetrics telemetry series.
+- **Next.js Edge WebSocket Server & Push Streaming**: Low-latency bidirectional token streaming and counselor chat routing at `/api/ws/copilot`.
+- **Knowledge Mesh Studio & Student Copilot Canvas**: 5-tab admin studio at `/admin/operations/knowledge-mesh`, student copilot canvas at `/portal/copilot`, counselor review desk at `/admin/academics/advising-desk`, and Flutter mobile Riverpod integration.
+- **End-to-End Simulation CLI Harness**: Complete 8-stage verification runner via `pnpm copilot:simulate`.
+#### Fixed (Technical Debt)
+- **TD-046-01 Resolution**: Connected `TranslationEngine` to live Google Cloud Translation v3 / DeepL client (`CloudTranslationAdapter`) with circuit breaker and cached neural translation memory.
+- **TD-046-02 Resolution**: Implemented low-latency bidirectional WebSocket streaming in Next.js edge runtime (`EdgeWebSocketServer`).
+- **TD-044-01 Resolution**: Implemented machine-enforced Flutter static analysis script `verify-flutter-analysis.sh` with 0 warnings/errors policy in CI.
+- **TD-044-02 Resolution**: Implemented comprehensive ACID transactional write integration test suite for 5 federated learning database entities (`federated-db-write.test.ts`).
+
 ## [3.30.0] - 2026-08-20
 ### Sprint-046: Unified Multi-Modal Communication & Intelligent Stakeholder Engagement (EngageOS / UMC)
 #### Added

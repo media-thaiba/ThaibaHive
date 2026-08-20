@@ -233,3 +233,60 @@ registerMetric({
   type: 'gauge',
   labelNames: ['tenant_id'],
 });
+
+// ─── Sprint-047 Knowledge Mesh & Campus Copilot Metrics (KM-020) ─────────────
+registerMetric({
+  name: 'km_queries_total',
+  help: 'Total number of knowledge queries processed by Knowledge Mesh',
+  type: 'counter',
+  labelNames: ['tenant_id', 'topic', 'status'],
+});
+
+registerMetric({
+  name: 'km_query_duration_seconds',
+  help: 'Histogram of end-to-end query processing duration in seconds',
+  type: 'histogram',
+  labelNames: ['topic'],
+});
+
+registerMetric({
+  name: 'km_hybrid_retrieval_latency_seconds',
+  help: 'Latency of hybrid dense vector and sparse BM25 fusion retrieval',
+  type: 'histogram',
+  labelNames: ['category'],
+});
+
+registerMetric({
+  name: 'km_vector_search_recall_ratio',
+  help: 'Ratio of top-K relevant vector matches retrieved (0.0-1.0)',
+  type: 'gauge',
+  labelNames: ['tenant_id'],
+});
+
+registerMetric({
+  name: 'km_copilot_token_usage_total',
+  help: 'Cumulative token consumption across copilot reasoning & embeddings',
+  type: 'counter',
+  labelNames: ['model', 'tenant_id'],
+});
+
+registerMetric({
+  name: 'km_degree_audits_total',
+  help: 'Total autonomous degree audits executed by copilot engine',
+  type: 'counter',
+  labelNames: ['program_code', 'status'],
+});
+
+registerMetric({
+  name: 'km_deflection_rate_gauge',
+  help: 'Proportion of academic queries resolved without human advisor escalation',
+  type: 'gauge',
+  labelNames: ['tenant_id'],
+});
+
+registerMetric({
+  name: 'km_active_websocket_connections_gauge',
+  help: 'Number of active live WebSocket client streaming connections',
+  type: 'gauge',
+  labelNames: ['institution_id'],
+});
