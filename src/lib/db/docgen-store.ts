@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq } from 'drizzle-orm';
 import {
   docTemplates,
   docGeneratedRecords,
@@ -22,8 +23,14 @@ import {
   DocAuditLogItem,
   DocCategory,
   DocRecordStatus,
-  ExportJobStatus,
 } from '../operations/docgen/docgen-types';
+
+function handleWriteError(operation: string, error: unknown): void {
+  if (process.env.NODE_ENV === 'production') {
+    throw error;
+  }
+  console.warn(`[DocDbStore] DB write fallback on ${operation}:`, error instanceof Error ? error.message : error);
+}
 
 export interface InMemoryDocStore {
   templates: Map<string, DocTemplateItem>;
@@ -74,6 +81,41 @@ export class DocDbStore {
 
   public async createTemplate(item: DocTemplateItem): Promise<DocTemplateItem> {
     this.memoryStore.templates.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(docTemplates).values({
+          id: item.id,
+          institutionId: item.institutionId,
+          templateCode: item.templateCode,
+          name: item.name,
+          category: item.category,
+          layoutConfig: item.layoutConfig ?? null,
+          contentTemplate: item.contentTemplate,
+          cssStyles: item.cssStyles ?? null,
+          version: item.version,
+          isDefault: item.isDefault,
+          status: item.status,
+          createdById: item.createdById ?? null,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        }).onConflictDoUpdate({
+          target: docTemplates.id,
+          set: {
+            name: item.name,
+            category: item.category,
+            layoutConfig: item.layoutConfig ?? null,
+            contentTemplate: item.contentTemplate,
+            cssStyles: item.cssStyles ?? null,
+            version: item.version,
+            isDefault: item.isDefault,
+            status: item.status,
+            updatedAt: item.updatedAt,
+          },
+        });
+      } catch (error) {
+        handleWriteError('createTemplate', error);
+      }
+    }
     return item;
   }
 
@@ -113,6 +155,44 @@ export class DocDbStore {
 
   public async createGeneratedRecord(item: DocGeneratedRecordItem): Promise<DocGeneratedRecordItem> {
     this.memoryStore.records.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(docGeneratedRecords).values({
+          id: item.id,
+          institutionId: item.institutionId,
+          templateId: item.templateId ?? null,
+          documentType: item.documentType,
+          recipientType: item.recipientType,
+          recipientId: item.recipientId,
+          academicYearId: item.academicYearId ?? null,
+          examId: item.examId ?? null,
+          documentHash: item.documentHash,
+          serialNumber: item.serialNumber,
+          title: item.title,
+          fileUrl: item.fileUrl ?? null,
+          fileSizeBytes: item.fileSizeBytes,
+          status: item.status,
+          metadataJson: item.metadataJson ?? null,
+          generatedById: item.generatedById ?? null,
+          issuedAt: item.issuedAt,
+          expiresAt: item.expiresAt ?? null,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        }).onConflictDoUpdate({
+          target: docGeneratedRecords.id,
+          set: {
+            title: item.title,
+            fileUrl: item.fileUrl ?? null,
+            fileSizeBytes: item.fileSizeBytes,
+            status: item.status,
+            metadataJson: item.metadataJson ?? null,
+            updatedAt: item.updatedAt,
+          },
+        });
+      } catch (error) {
+        handleWriteError('createGeneratedRecord', error);
+      }
+    }
     return item;
   }
 
@@ -152,6 +232,27 @@ export class DocDbStore {
 
   public async createVerificationSignature(item: DocVerificationSignatureItem): Promise<DocVerificationSignatureItem> {
     this.memoryStore.signatures.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(docVerificationSignatures).values({
+          id: item.id,
+          documentRecordId: item.documentRecordId,
+          documentHash: item.documentHash,
+          signature: item.signature,
+          signerPublicKey: item.signerPublicKey ?? null,
+          signingAlgorithm: item.signingAlgorithm,
+          merkleRoot: item.merkleRoot ?? null,
+          merkleProof: item.merkleProof ?? null,
+          verificationCount: item.verificationCount,
+          lastVerifiedAt: item.lastVerifiedAt ?? null,
+          revoked: item.revoked,
+          revokedReason: item.revokedReason ?? null,
+          createdAt: item.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createVerificationSignature', error);
+      }
+    }
     return item;
   }
 
@@ -165,11 +266,25 @@ export class DocDbStore {
   }
 
   public async incrementVerificationCount(documentHash: string): Promise<void> {
+    const now = new Date().toISOString();
+    let updatedCount: number | null = null;
     for (const item of this.memoryStore.signatures.values()) {
       if (item.documentHash === documentHash) {
         item.verificationCount += 1;
-        item.lastVerifiedAt = new Date().toISOString();
-        return;
+        item.lastVerifiedAt = now;
+        updatedCount = item.verificationCount;
+        break;
+      }
+    }
+
+    if (db && updatedCount !== null) {
+      try {
+        await db.update(docVerificationSignatures).set({
+          verificationCount: updatedCount,
+          lastVerifiedAt: now,
+        }).where(eq(docVerificationSignatures.documentHash, documentHash));
+      } catch (error) {
+        handleWriteError('incrementVerificationCount', error);
       }
     }
   }
@@ -178,6 +293,32 @@ export class DocDbStore {
 
   public async createExportJob(item: ExportJobItem): Promise<ExportJobItem> {
     this.memoryStore.exportJobs.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(exportJobs).values({
+          id: item.id,
+          institutionId: item.institutionId,
+          userId: item.userId,
+          jobType: item.jobType,
+          format: item.format,
+          filterParamsJson: item.filterParamsJson ?? null,
+          selectedColumnsJson: item.selectedColumnsJson ?? null,
+          status: item.status,
+          progressPercent: item.progressPercent,
+          totalRecords: item.totalRecords,
+          processedRecords: item.processedRecords,
+          downloadUrl: item.downloadUrl ?? null,
+          fileSizeBytes: item.fileSizeBytes,
+          errorMessage: item.errorMessage ?? null,
+          downloadToken: item.downloadToken ?? null,
+          expiresAt: item.expiresAt ?? null,
+          createdAt: item.createdAt,
+          completedAt: item.completedAt ?? null,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createExportJob', error);
+      }
+    }
     return item;
   }
 
@@ -195,6 +336,27 @@ export class DocDbStore {
     const item = this.memoryStore.exportJobs.get(id);
     if (!item) return null;
     Object.assign(item, updates);
+
+    if (db) {
+      try {
+        const dbUpdates: Record<string, unknown> = {};
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
+        if (updates.progressPercent !== undefined) dbUpdates.progressPercent = updates.progressPercent;
+        if (updates.processedRecords !== undefined) dbUpdates.processedRecords = updates.processedRecords;
+        if (updates.totalRecords !== undefined) dbUpdates.totalRecords = updates.totalRecords;
+        if (updates.downloadUrl !== undefined) dbUpdates.downloadUrl = updates.downloadUrl ?? null;
+        if (updates.fileSizeBytes !== undefined) dbUpdates.fileSizeBytes = updates.fileSizeBytes;
+        if (updates.errorMessage !== undefined) dbUpdates.errorMessage = updates.errorMessage ?? null;
+        if (updates.completedAt !== undefined) dbUpdates.completedAt = updates.completedAt ?? null;
+
+        if (Object.keys(dbUpdates).length > 0) {
+          await db.update(exportJobs).set(dbUpdates).where(eq(exportJobs.id, id));
+        }
+      } catch (error) {
+        handleWriteError('updateExportJobStatus', error);
+      }
+    }
+
     return item;
   }
 
@@ -210,10 +372,91 @@ export class DocDbStore {
     return list;
   }
 
+  // ─── Export Templates ───
+
+  public async createExportTemplate(item: ExportTemplateItem): Promise<ExportTemplateItem> {
+    this.memoryStore.exportTemplates.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(exportTemplates).values({
+          id: item.id,
+          institutionId: item.institutionId,
+          name: item.name,
+          entityType: item.entityType,
+          columnMappingJson: item.columnMappingJson,
+          defaultFormat: item.defaultFormat,
+          isPublic: item.isPublic,
+          createdById: item.createdById ?? null,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        }).onConflictDoUpdate({
+          target: exportTemplates.id,
+          set: {
+            name: item.name,
+            entityType: item.entityType,
+            columnMappingJson: item.columnMappingJson,
+            defaultFormat: item.defaultFormat,
+            isPublic: item.isPublic,
+            updatedAt: item.updatedAt,
+          },
+        });
+      } catch (error) {
+        handleWriteError('createExportTemplate', error);
+      }
+    }
+    return item;
+  }
+
+  public async getExportTemplateById(id: string, institutionId?: string): Promise<ExportTemplateItem | null> {
+    const item = this.memoryStore.exportTemplates.get(id);
+    if (!item) return null;
+    if (institutionId && item.institutionId !== institutionId) return null;
+    return item;
+  }
+
+  public async listExportTemplates(institutionId: string): Promise<ExportTemplateItem[]> {
+    const list: ExportTemplateItem[] = [];
+    for (const item of this.memoryStore.exportTemplates.values()) {
+      if (item.institutionId === institutionId || item.isPublic) {
+        list.push(item);
+      }
+    }
+    return list;
+  }
+
   // ─── Mobile Sync & Tokens ───
 
   public async registerDeviceToken(item: MobileDeviceTokenItem): Promise<MobileDeviceTokenItem> {
     this.memoryStore.deviceTokens.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(mobileDeviceTokens).values({
+          id: item.id,
+          userId: item.userId,
+          institutionId: item.institutionId,
+          deviceToken: item.deviceToken,
+          platform: item.platform,
+          deviceModel: item.deviceModel ?? null,
+          appVersion: item.appVersion ?? null,
+          isActive: item.isActive,
+          lastSeenAt: item.lastSeenAt,
+          createdAt: item.createdAt,
+        }).onConflictDoUpdate({
+          target: mobileDeviceTokens.deviceToken,
+          set: {
+            userId: item.userId,
+            institutionId: item.institutionId,
+            platform: item.platform,
+            deviceModel: item.deviceModel ?? null,
+            appVersion: item.appVersion ?? null,
+            isActive: item.isActive,
+            lastSeenAt: item.lastSeenAt,
+          },
+        });
+      } catch (error) {
+        handleWriteError('registerDeviceToken', error);
+      }
+    }
     return item;
   }
 
@@ -231,6 +474,24 @@ export class DocDbStore {
 
   public async createSyncEvent(item: MobileSyncEventItem): Promise<MobileSyncEventItem> {
     this.memoryStore.syncEvents.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(mobileSyncEvents).values({
+          id: item.id,
+          institutionId: item.institutionId,
+          eventType: item.eventType,
+          entityType: item.entityType,
+          entityId: item.entityId,
+          payloadJson: item.payloadJson,
+          targetAudience: item.targetAudience,
+          targetId: item.targetId ?? null,
+          version: item.version,
+          createdAt: item.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createSyncEvent', error);
+      }
+    }
     return item;
   }
 
@@ -248,6 +509,26 @@ export class DocDbStore {
 
   public async logPushNotification(item: MobilePushLogItem): Promise<MobilePushLogItem> {
     this.memoryStore.pushLogs.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(mobilePushLogs).values({
+          id: item.id,
+          institutionId: item.institutionId,
+          syncEventId: item.syncEventId ?? null,
+          recipientUserId: item.recipientUserId,
+          deviceTokenId: item.deviceTokenId ?? null,
+          title: item.title,
+          body: item.body,
+          dataPayloadJson: item.dataPayloadJson ?? null,
+          status: item.status,
+          errorMessage: item.errorMessage ?? null,
+          deliveredAt: item.deliveredAt ?? null,
+          createdAt: item.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('logPushNotification', error);
+      }
+    }
     return item;
   }
 
@@ -255,6 +536,25 @@ export class DocDbStore {
 
   public async logAudit(item: DocAuditLogItem): Promise<DocAuditLogItem> {
     this.memoryStore.auditLogs.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(docAuditLogs).values({
+          id: item.id,
+          auditId: item.auditId,
+          institutionId: item.institutionId,
+          actorId: item.actorId,
+          actorRole: item.actorRole,
+          action: item.action,
+          entityType: item.entityType,
+          entityId: item.entityId,
+          payloadHash: item.payloadHash,
+          timestamp: item.timestamp,
+          createdAt: item.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('logAudit', error);
+      }
+    }
     return item;
   }
 
@@ -268,3 +568,5 @@ export class DocDbStore {
     return list;
   }
 }
+
+export const docStore = DocDbStore.getInstance();
