@@ -14,10 +14,10 @@ Verified and executed the **Production Release Packaging Pipeline** for the unif
 
 | Binary Artifact | Target Architecture | Location | Actual Size | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Universal Release APK** | Universal Fat Binary (All ABIs) | `build/app/outputs/flutter-apk/app-release.apk` | **464.08 MB** | ✅ **Compiled & Signed** |
-| **ARM64 Release APK** | `arm64-v8a` (Modern Phones) | `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` | **162.33 MB** | ✅ **Compiled & Signed** |
-| **ARMv7 Release APK** | `armeabi-v7a` (Legacy Devices) | `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk` | **148.69 MB** | ✅ **Compiled & Signed** |
-| **x86_64 Release APK** | `x86_64` (Emulators/Chromebooks)| `build/app/outputs/flutter-apk/app-x86_64-release.apk` | **164.09 MB** | ✅ **Compiled & Signed** |
+| **Universal Release APK** | Universal Fat Binary (All ABIs) | `build/app/outputs/flutter-apk/app-release.apk` | **464.08 MiB** | ✅ **Compiled & Signed** |
+| **ARM64 Release APK** | `arm64-v8a` (Modern Phones) | `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` | **162.33 MiB** | ✅ **Compiled & Signed** |
+| **ARMv7 Release APK** | `armeabi-v7a` (Legacy Devices) | `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk` | **148.69 MiB** | ✅ **Compiled & Signed** |
+| **x86_64 Release APK** | `x86_64` (Emulators/Chromebooks)| `build/app/outputs/flutter-apk/app-x86_64-release.apk` | **164.09 MiB** | ✅ **Compiled & Signed** |
 
 ---
 
@@ -25,6 +25,7 @@ Verified and executed the **Production Release Packaging Pipeline** for the unif
 
 | Quality Gate | Command | Result |
 | :--- | :--- | :--- |
+| **Web Test Suite** | `pnpm test` (Jest) | ✅ **715 Suites / 2,344 Tests Passed (100%)** |
 | **Flutter Test Suite** | `flutter test` in `thaibahive_mobile_app` | ✅ **All 78 tests passed! (78/78, 100%)** |
 | **Universal Release APK** | `flutter build apk --release` | ✅ **0 Errors (Exit code 0)** |
 | **Split-per-ABI Release** | `flutter build apk --release --split-per-abi` | ✅ **0 Errors (Exit code 0)** |
