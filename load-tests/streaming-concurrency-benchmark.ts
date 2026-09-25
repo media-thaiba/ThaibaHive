@@ -16,7 +16,8 @@ import { GET as workspacesSseHandler } from "../src/app/api/workspaces/sse/route
 import { VisionStreamManager } from "../src/lib/operations/vision/streaming/vision-stream-manager";
 import { sendToConnection } from "../src/lib/api/realtime";
 
-Object.defineProperty(process.env, "NODE_ENV", { value: "test", writable: true, configurable: true });
+Object.defineProperty(process.env, "NODE_ENV", { value: "test", writable: true, configurable: true, enumerable: true });
+process.env.SSE_HEARTBEAT_INTERVAL_MS = "400";
 
 export interface StreamBenchmarkMetric {
   endpoint: string;
@@ -94,6 +95,9 @@ export async function runHandlerStreamBenchmark(
         },
         signal: abortController.signal,
       });
+      if (!req.signal) {
+        Object.defineProperty(req, "signal", { value: abortController.signal });
+      }
 
       const response = await handler(req);
       const reqEnd = performance.now();

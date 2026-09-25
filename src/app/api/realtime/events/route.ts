@@ -12,17 +12,48 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  if (request.signal?.aborted) {
+    return new Response(new ReadableStream({ start(c) { c.close(); } }), {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "close",
+      },
+    });
+  }
+
   const encoder = new TextEncoder();
+  let streamCleanup: (() => void) | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
-      // Send initial connection event
-      controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ type: "connected", staffId: session.staffId })}\n\n`)
-      );
-
       const staffId = session.staffId;
       const currentTokenVersion = session.tokenVersion;
       let polling = true;
+      let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        polling = false;
+        if (pollTimer) {
+          clearTimeout(pollTimer);
+          pollTimer = null;
+        }
+        try {
+          controller.close();
+        } catch {}
+      };
+
+      streamCleanup = cleanup;
+
+      if (request.signal?.aborted) {
+        cleanup();
+        return;
+      }
+
+      // Send initial connection event
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ type: "connected", staffId })}\n\n`)
+      );
 
       async function pollTokenVersion() {
         if (!polling) return;
@@ -34,35 +65,32 @@ export async function GET(request: Request) {
             .get();
 
           if (!user || !user.isActive) {
-            polling = false;
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "account_deactivated" })}\n\n`)
-            );
-            controller.close();
+            cleanup();
             return;
           }
 
           if (user.tokenVersion !== currentTokenVersion) {
-            polling = false;
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "session_invalidated" })}\n\n`)
-            );
-            controller.close();
+            cleanup();
             return;
           }
         } catch {
           // Ignore errors, keep polling
         }
-        if (polling) setTimeout(pollTokenVersion, 5_000);
+        if (polling) {
+          pollTimer = setTimeout(pollTokenVersion, 5_000);
+        }
       }
 
       pollTokenVersion();
 
       // Clean up on connection close
       request.signal?.addEventListener("abort", () => {
-        polling = false;
-        controller.close();
+        cleanup();
       });
+    },
+    cancel() {
+      streamCleanup?.();
+      streamCleanup = null;
     },
   });
 
