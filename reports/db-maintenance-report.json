@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-20T16:54:09.616Z",
+  "timestamp": "2026-09-25T06:13:00.722Z",
   "isCompleted": true,
   "engine": "sqlite_libsql",
   "tablesProcessed": [
@@ -10,7 +10,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 7
+      "durationMs": 2
     },
     {
       "tableName": "institutions",
@@ -19,7 +19,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 1
+      "durationMs": 0
     },
     {
       "tableName": "financeTransactions",
@@ -28,7 +28,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "tableName": "auditLogs",
@@ -37,7 +37,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 0
+      "durationMs": 1
     },
     {
       "tableName": "staff",
@@ -46,7 +46,7 @@
       "liveTuples": 100,
       "bloatRatioPercent": 0,
       "reindexRecommended": false,
-      "durationMs": 1
+      "durationMs": 0
     }
   ],
   "reindexRecommendations": [],
@@ -54,5 +54,5 @@
     "checkpointTriggered": true,
     "freelistPagesReclaimed": 0
   },
-  "totalDurationMs": 13
+  "totalDurationMs": 8
 }

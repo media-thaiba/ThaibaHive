@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-08-27T11:10:26.510Z",
+  "passed": true,
+  "totalVulnerabilities": 0,
+  "criticalCount": 0,
+  "highCount": 0,
+  "moderateCount": 0,
+  "lowCount": 0,
+  "allowlistedCount": 0,
+  "vulnerabilities": [],
+  "durationMs": 10
+}

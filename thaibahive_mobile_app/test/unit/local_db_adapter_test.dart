@@ -1,13 +1,25 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:thaibahive_mobile/core/sync/local_db_adapter.dart';
 
 void main() {
   group('LocalDbAdapter Unit Tests', () {
     late LocalDbAdapter adapter;
+    late Directory tempDir;
 
     setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('hive_adapter_test');
+      Hive.init(tempDir.path);
       adapter = LocalDbAdapter();
       await adapter.init();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
     });
 
     test('inserts and retrieves pending mutations', () async {

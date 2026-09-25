@@ -15,9 +15,11 @@ type Transition = {
 };
 
 const transitions: Transition[] = [
-  { from: "pending_hod", to: "pending_accounts", roles: ["super_admin", "admin", "hod"], approverField: "approvedByHodId", actionName: "purchase_hod_approved" },
+  { from: "pending_hod", to: "pending_accounts", roles: ["super_admin", "admin", "principal", "hod"], approverField: "approvedByHodId", actionName: "purchase_hod_approved" },
   { from: "pending_accounts", to: "pending_purchase", roles: ["super_admin", "admin", "accounts"], approverField: "approvedByAccountsId", actionName: "purchase_accounts_approved" },
   { from: "pending_purchase", to: "approved", roles: ["super_admin", "admin", "purchase"], approverField: "approvedByPurchaseId", actionName: "purchase_purchase_approved" },
+  { from: "approved", to: "ordered", roles: ["super_admin", "admin", "purchase"], actionName: "purchase_order_placed" },
+  { from: "ordered", to: "received", roles: ["super_admin", "admin", "purchase", "accounts"], actionName: "purchase_goods_received" },
 ];
 
 const rejectTransitions: Record<string, { actionName: string }> = {
@@ -46,6 +48,14 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   const existing = await db.select().from(purchaseRequests).where(eq(purchaseRequests.id, id)).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Anti-Self-Approval Enforcement: Requesters cannot approve or reject their own purchase requests
+  if (existing.requesterId === session.staffId && session.role !== "super_admin") {
+    return NextResponse.json(
+      { error: "Requesters cannot review or approve their own purchase requests." },
+      { status: 403 }
+    );
+  }
 
   if (status === "rejected") {
     const rejectTransition = rejectTransitions[existing.status];

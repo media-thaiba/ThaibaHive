@@ -1,11 +1,24 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:thaibahive_mobile/core/sync/outbox_queue_manager.dart';
 import 'package:thaibahive_mobile/core/sync/background_sync_worker.dart';
 
 void main() {
   group('Sprint-008 Mobile Background Sync Worker Tests', () {
-    setUp(() {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('hive_bg_test');
+      Hive.init(tempDir.path);
       OutboxQueueManager.clearQueue();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
     });
 
     test('executes background sync cleanly when outbox is empty', () async {

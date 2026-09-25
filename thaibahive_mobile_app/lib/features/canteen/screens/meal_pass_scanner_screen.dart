@@ -94,7 +94,7 @@ class _MealPassScannerScreenState extends ConsumerState<MealPassScannerScreen> {
                     ...cart.map((item) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.between,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('${item.name} x ${item.qty}'),
                               Text('₹${(item.price * item.qty).toStringAsFixed(2)}'),
@@ -103,7 +103,7 @@ class _MealPassScannerScreenState extends ConsumerState<MealPassScannerScreen> {
                         )),
                     const Divider(),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.between,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Total Amount', style: TextStyle(fontWeight: FontWeight.bold)),
                         Text('₹${total.toStringAsFixed(2)}',

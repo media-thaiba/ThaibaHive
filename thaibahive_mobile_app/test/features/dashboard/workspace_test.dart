@@ -7,15 +7,14 @@ import 'package:thaibahive_mobile/features/dashboard/presentation/screens/teache
 import 'package:thaibahive_mobile/features/dashboard/presentation/screens/cashier_workspace_screen.dart';
 import 'package:thaibahive_mobile/features/dashboard/presentation/screens/parent_workspace_screen.dart';
 
-class FakeWorkspaceNotifier extends WorkspaceNotifier {
-  FakeWorkspaceNotifier(super.ref, WorkspaceState fakeState) {
-    state = fakeState;
-  }
+class FakeWorkspaceNotifier extends StateNotifier<WorkspaceState> implements WorkspaceNotifier {
+  FakeWorkspaceNotifier(WorkspaceState fakeState) : super(fakeState);
 
   @override
-  Future<void> fetchWorkspaceData() async {
-    // No-op for tests to prevent actual HTTP queries
-  }
+  Future<void> fetchWorkspaceData() async {}
+
+  @override
+  Future<void> refresh() async {}
 }
 
 void main() {
@@ -42,7 +41,7 @@ void main() {
         ProviderScope(
           overrides: [
             workspaceStateProvider.overrideWith(
-              (ref) => FakeWorkspaceNotifier(ref, const WorkspaceState(isLoading: true)),
+              (ref) => FakeWorkspaceNotifier(const WorkspaceState(isLoading: true)),
             ),
           ],
           child: const MaterialApp(
@@ -60,7 +59,7 @@ void main() {
         ProviderScope(
           overrides: [
             workspaceStateProvider.overrideWith(
-              (ref) => FakeWorkspaceNotifier(ref, const WorkspaceState(isLoading: false)),
+              (ref) => FakeWorkspaceNotifier(const WorkspaceState(isLoading: false)),
             ),
           ],
           child: const MaterialApp(
@@ -77,7 +76,7 @@ void main() {
         ProviderScope(
           overrides: [
             workspaceStateProvider.overrideWith(
-              (ref) => FakeWorkspaceNotifier(ref, const WorkspaceState(isLoading: false)),
+              (ref) => FakeWorkspaceNotifier(const WorkspaceState(isLoading: false)),
             ),
           ],
           child: const MaterialApp(
@@ -94,7 +93,7 @@ void main() {
         ProviderScope(
           overrides: [
             workspaceStateProvider.overrideWith(
-              (ref) => FakeWorkspaceNotifier(ref, const WorkspaceState(isLoading: false)),
+              (ref) => FakeWorkspaceNotifier(const WorkspaceState(isLoading: false)),
             ),
           ],
           child: const MaterialApp(

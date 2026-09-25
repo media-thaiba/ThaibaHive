@@ -1,15 +1,12 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:thaibahive_mobile/core/sync/adaptive_sync_decision_engine.dart';
 import 'package:thaibahive_mobile/core/sync/policy_manager.dart';
 import 'package:thaibahive_mobile/core/sync/policy_provider.dart';
 
-class MockPolicyManager extends Mock implements PolicyManager {
+class MockPolicyManager implements PolicyManager {
   @override
-  Future<void> init() async => Future.value();
+  Future<void> init() async {}
 
   @override
   Map<String, dynamic>? getCachedPolicy() {
@@ -23,27 +20,54 @@ class MockPolicyManager extends Mock implements PolicyManager {
       }
     };
   }
+
+  @override
+  DateTime? getLastFetchTime() => null;
+
+  @override
+  bool isCacheExpired() => false;
+
+  @override
+  Future<Map<String, dynamic>> fetchPoliciesFromServer(String baseUrl, String token) async => {};
+
+  @override
+  Future<void> savePolicyToCache(Map<String, dynamic> policy) async {}
 }
 
-class FailureMockPolicyManager extends Mock implements PolicyManager {
+class FailureMockPolicyManager implements PolicyManager {
   @override
-  Future<void> init() async => Future.value();
+  Future<void> init() async {}
 
   @override
   Map<String, dynamic>? getCachedPolicy() => null;
+
+  @override
+  DateTime? getLastFetchTime() => null;
+
+  @override
+  bool isCacheExpired() => true;
 
   @override
   Future<Map<String, dynamic>> fetchPoliciesFromServer(String baseUrl, String token) async {
     throw Exception('Server error');
   }
+
+  @override
+  Future<void> savePolicyToCache(Map<String, dynamic> policy) async {}
 }
 
-class SuccessMockPolicyManager extends Mock implements PolicyManager {
+class SuccessMockPolicyManager implements PolicyManager {
   @override
-  Future<void> init() async => Future.value();
+  Future<void> init() async {}
 
   @override
   Map<String, dynamic>? getCachedPolicy() => null;
+
+  @override
+  DateTime? getLastFetchTime() => null;
+
+  @override
+  bool isCacheExpired() => true;
 
   @override
   Future<Map<String, dynamic>> fetchPoliciesFromServer(String baseUrl, String token) async {
@@ -57,6 +81,9 @@ class SuccessMockPolicyManager extends Mock implements PolicyManager {
       }
     };
   }
+
+  @override
+  Future<void> savePolicyToCache(Map<String, dynamic> policy) async {}
 }
 
 void main() {

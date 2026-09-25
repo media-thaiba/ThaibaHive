@@ -39,6 +39,7 @@ type SignupData = {
   employeeId: string;
   firstName: string;
   lastName: string;
+  invitationToken?: string;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);

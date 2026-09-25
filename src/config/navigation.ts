@@ -98,44 +98,29 @@ export const primaryNav: NavItem[] = [
 export const allNavItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
 const ENABLED_PATHS = new Set([
+  ...allNavItems.map((item) => item.href),
   "/",
-  "/attendance",
-  "/tasks",
-  "/leaves",
-  "/approvals",
-  "/announcements",
-  "/events",
-  "/circulars",
-  "/polls",
-  "/staff",
-  "/bookings",
-  "/assets",
-  "/settings",
-  "/help-desk",
-  "/marketplace",
-  "/media",
+  "/reports",
+  "/expenses",
+  "/purchases",
+  "/accounts",
+  "/vehicles",
+  "/visitors",
+  "/grievances",
+  "/recognition",
+  "/availability",
+  "/timeline",
+  "/examinations",
+  "/academic/timetable",
+  "/academic/academic-years",
+  "/admin",
   "/media-library",
   "/api/media",
-  "/api/media/assets",
-  "/api/media/folders",
-  "/api/media/upload",
-  "/api/media/share-links",
-  "/api/media/batch-download",
-  "/api/media/reconcile",
-  "/reviews",
-  "/canteen",
-  "/academic",
-  "/academic/students",
-  "/academic/classes",
-  "/academic/academic-years",
-  "/admin/nfc",
-  "/admin/executive/analytics",
-  "/admin",
 ]);
 
 export function isPhaseOnePath(href: string): boolean {
   if (href.startsWith("/api/media")) return true;
-  return ENABLED_PATHS.has(href);
+  return ENABLED_PATHS.has(href) || allNavItems.some((item) => item.href === href);
 }
 
 export function searchNav(query: string): NavItem[] {

@@ -10,15 +10,17 @@ export interface MetricRating {
 
 export interface ReviewSubmitOptions {
   reviewId: string;
-  institutionId: string;
+  institutionId?: string;
   stage: "self_assessment" | "manager_review" | "hr_approval" | "signed_off";
-  ratings: MetricRating[];
+  ratings?: MetricRating[];
   comments?: string;
   recommendedGrade?: string;
+  submittingStaffId?: string;
+  userRole?: string;
 }
 
 export class ReviewWorkflowService {
-  static calculateFinalScore(ratings: MetricRating[]): number {
+  static calculateFinalScore(ratings?: MetricRating[]): number {
     if (!ratings || ratings.length === 0) return 0;
     const total = ratings.reduce((sum, r) => sum + r.score, 0);
     return Math.round((total / ratings.length) * 100) / 100;
@@ -33,20 +35,32 @@ export class ReviewWorkflowService {
   }
 
   static async submitReviewStage(options: ReviewSubmitOptions) {
-    const { reviewId, institutionId, stage, ratings, comments, recommendedGrade } = options;
+    const { reviewId, institutionId, stage, ratings = [], comments, recommendedGrade, submittingStaffId, userRole } = options;
 
-    const existing = await db
+    const query = db
       .select()
       .from(performanceReviews)
-      .where(and(eq(performanceReviews.id, reviewId), eq(performanceReviews.institutionId, institutionId)))
-      .get();
+      .where(eq(performanceReviews.id, reviewId));
+
+    const existing = await query.get();
 
     if (!existing) {
       throw new Error("Performance review record not found");
     }
 
+    if (institutionId && existing.institutionId && existing.institutionId !== institutionId) {
+      throw new Error("Performance review belongs to a different institution");
+    }
+
     if (existing.status === "completed" || existing.status === "signed_off") {
       throw new Error("Review is locked for edits in current state");
+    }
+
+    // Anti-Self-Approval Guard:
+    if (submittingStaffId && userRole !== "super_admin") {
+      if ((stage === "manager_review" || stage === "hr_approval") && submittingStaffId === existing.staffId) {
+        throw new Error("Anti-self-approval: Reviewee cannot evaluate or approve their own performance review");
+      }
     }
 
     const calculatedScore = this.calculateFinalScore(ratings);

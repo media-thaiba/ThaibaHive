@@ -11,6 +11,7 @@ import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { CircularComplianceDrawer } from "@/components/circulars/CircularComplianceDrawer";
 import { 
   FileText, 
   File, 
@@ -24,8 +25,10 @@ import {
   Calendar,
   Layers,
   Building,
+  Building2,
   Users,
   Eye,
+  CheckCircle2,
   Loader2
 } from "lucide-react";
 
@@ -86,6 +89,10 @@ export default function CircularsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
+
+  // Campus Compliance Drawer State
+  const [selectedComplianceCircular, setSelectedComplianceCircular] = useState<Circular | null>(null);
+  const [isComplianceOpen, setIsComplianceOpen] = useState(false);
 
   const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("circulars:create") ?? false);
   const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:manage") ?? false);
@@ -493,6 +500,24 @@ export default function CircularsPage() {
                       <Eye className="h-3 w-3" /> {c.downloadCount} downloads
                     </span>
                   )}
+
+                  {/* Campus Compliance Tracker Button for Coordinators & Admins */}
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                      onClick={() => {
+                        setSelectedComplianceCircular(c);
+                        setIsComplianceOpen(true);
+                      }}
+                      title="View Campus Compliance"
+                    >
+                      <Building2 className="h-3 w-3" />
+                      Compliance
+                    </Button>
+                  )}
+
                   {/* Download Tracking Link */}
                   <a
                     href={`/api/circulars/${c.id}/download`}
@@ -519,6 +544,15 @@ export default function CircularsPage() {
           </div>
         )}
       </div>
+
+      {/* Campus Compliance Summary Drawer */}
+      <CircularComplianceDrawer
+        open={isComplianceOpen}
+        onOpenChange={setIsComplianceOpen}
+        circularId={selectedComplianceCircular?.id || null}
+        circularTitle={selectedComplianceCircular?.title || ""}
+        canManage={isAdmin}
+      />
     </div>
   );
 }

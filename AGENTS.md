@@ -147,4 +147,38 @@ packages/db/         → DB package (Drizzle schema)
 - Tests: ✅ All 22 test suites pass (231/231 tests passing)
 - Fix Method: Manual code edits without automatic --fix where available
 
+### 2026-08-21: Sprint-050 SafeCampus OS & Vision Shield Verification Fixes
+
+#### Fixed Issues:
+
+**Issue 1: Schema Dialect Closing Bracket Parity**
+- Files: `packages/db/schema.ts` and `packages/db/schema.pg.ts`
+- Problem: `ecoCarbonOffsets` closing syntax was missing `ecoOffsetStatusIdx` closing structure before vision tables
+- Solution: Restored closing index and bracket block in both SQLite and PG schemas
+- Status: ✅ Fixed
+
+**Issue 2: Relative Store Import Path**
+- File: `src/lib/operations/vision/incidents/incident-ledger-engine.ts`
+- Problem: Referenced `../../db/vision-store` instead of `../../../db/vision-store`
+- Solution: Fixed import path to point directly to `../../../db/vision-store`
+- Status: ✅ Fixed
+
+**Issue 3: Gateway AST Security Route Protection on SSE Stream**
+- File: `src/app/api/vision/stream/route.ts`
+- Problem: SSE route handler was unwrapped, flagged by Gateway AST Scanner
+- Solution: Wrapped `GET` handler in `requireAuth(..., 'vision:alerts:view')`
+- Status: ✅ Fixed
+
+**Issue 4: Strict TypeScript Property Validation**
+- Files: `src/app/api/vision/alpr/route.ts`, `src/app/api/vision/guards/route.ts`, `src/app/api/vision/privacy/route.ts`, and `src/components/operations/vision/lockdown-modal.tsx`
+- Problem: Missing `logId`, `lastHeartbeatAt`, and `updatedAt` properties, and invalid Alert variant `"destructive"`
+- Solution: Provided explicit IDs/timestamps and changed Alert variant to `"error"`
+- Status: ✅ Fixed
+
+**Verification:**
+- Parity & Logic Tests: ✅ 100% Passing across all 22 Vision test suites
+- Gateway AST Scanner: ✅ 100% Platform Route Coverage (473/473 routes shielded)
+- TypeScript: ✅ `tsc --noEmit` exits with 0 errors
+- Simulation: ✅ `pnpm vision:simulate` (8/8 stages passed)
+
 <!-- END:issue-fixes -->

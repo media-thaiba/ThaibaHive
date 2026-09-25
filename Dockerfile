@@ -1,17 +1,17 @@
 # ── Stage 1: Dependencies ──────────────────────────────────────────────────
 FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy package files
+# Copy package descriptors
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/ ./packages/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (frozen lockfile)
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # ── Stage 2: Builder ───────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -39,11 +39,13 @@ ENV HOSTNAME="0.0.0.0"
 
 RUN apk add --no-cache wget
 
-# Create non-root user
+# Create non-root user and persistent data volume directory
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 nextjs && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app/data
 
-# Copy public assets and standalone build output
+# Copy public assets and standalone output
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

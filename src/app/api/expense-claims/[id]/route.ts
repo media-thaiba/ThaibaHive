@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { expenseClaims, activityLogs } from "@/db/schema";
+import { expenseClaims, activityLogs, financialTransactions, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { isManagedBy } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
@@ -21,29 +21,37 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { status, reviewNotes } = result.data;
 
   // Check role permissions
-  const allowedRoles = ["super_admin", "admin", "hod", "accounts"];
+  const allowedRoles = ["super_admin", "admin", "hod", "accounts", "principal"];
   if (!allowedRoles.includes(session.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Validate status transitions based on role
-  const validTransitions: Record<string, string[]> = {
-    super_admin: ["pending_hod", "pending_finance", "approved", "rejected"],
-    admin: ["pending_hod", "pending_finance", "approved", "rejected"],
-    hod: ["pending_finance", "rejected"], // HOD can only approve to finance or reject
-    accounts: ["approved", "rejected"], // Finance/Accounts can approve or reject
-  };
-
   const existing = await db.select().from(expenseClaims).where(eq(expenseClaims.id, id)).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Authorization check
+  // Anti-Self-Approval Enforcement: Requesters cannot approve/review their own expense claims
+  if (existing.staffId === session.staffId && session.role !== "super_admin") {
+    return NextResponse.json(
+      { error: "Requesters cannot review or approve their own expense claims." },
+      { status: 403 }
+    );
+  }
+
+  // Authorization check (departmental / institutional scoping)
   const authorized = await isManagedBy(session.staffId, session.role, existing.staffId);
   if (!authorized) {
     return NextResponse.json({ error: "You are not authorized to review this expense claim" }, { status: 403 });
   }
 
-  // Check if the requested status transition is valid for the current role
+  // Validate status transitions based on role
+  const validTransitions: Record<string, string[]> = {
+    super_admin: ["pending_hod", "pending_finance", "approved", "disbursed", "rejected"],
+    admin: ["pending_hod", "pending_finance", "approved", "disbursed", "rejected"],
+    principal: ["pending_hod", "pending_finance", "approved", "disbursed", "rejected"],
+    hod: ["pending_finance", "rejected"], // HOD can endorse to finance or reject
+    accounts: ["approved", "disbursed", "rejected"], // Accounts can approve, disburse, or reject
+  };
+
   const roleTransitions = validTransitions[session.role] || [];
   if (!roleTransitions.includes(status)) {
     return NextResponse.json(
@@ -54,10 +62,11 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   // Validate current status allows this transition
   const validFromStatus: Record<string, string[]> = {
-    pending_hod: ["pending"], // HOD can move from pending to pending_finance
-    pending_finance: ["pending_hod"], // Finance can move from pending_hod to approved
-    approved: ["pending_finance", "pending_hod"], // Can be approved from either stage
-    rejected: ["pending", "pending_hod", "pending_finance"], // Can be rejected from any stage
+    pending_hod: ["pending"],
+    pending_finance: ["pending", "pending_hod"],
+    approved: ["pending_finance", "pending_hod", "pending"],
+    disbursed: ["approved"],
+    rejected: ["pending", "pending_hod", "pending_finance", "approved"],
   };
 
   const allowedFrom = validFromStatus[status] || [];
@@ -83,6 +92,33 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .where(eq(expenseClaims.id, id))
     .returning()
     .get();
+
+  // If transitioned to disbursed, create corresponding general ledger entry in financialTransactions
+  if (status === "disbursed") {
+    try {
+      const instRecord = await db
+        .select({ institutionId: staffInstitutions.institutionId })
+        .from(staffInstitutions)
+        .where(eq(staffInstitutions.staffId, existing.staffId))
+        .get();
+
+      if (instRecord?.institutionId) {
+        await db.insert(financialTransactions).values({
+          id: crypto.randomUUID(),
+          institutionId: instRecord.institutionId,
+          type: "expense",
+          amount: existing.amount,
+          description: `Expense Reimbursement: ${existing.description}`,
+          category: existing.category || "operational_expense",
+          transactionDate: now.split("T")[0],
+          recordedById: session.staffId,
+          notes: `Ref: EXP-${id.substring(0, 8)}`,
+        });
+      }
+    } catch (err) {
+      console.warn("[ExpenseClaim] Note: financialTransactions ledger insert skipped:", err);
+    }
+  }
 
   // Audit Log Entry
   try {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../lib/features/auth/services/token_storage_service.dart';
+import 'package:thaibahive_mobile/features/auth/services/token_storage_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

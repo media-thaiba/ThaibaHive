@@ -163,7 +163,7 @@ function unwrapTenantKey(wrappedPayload: string): Buffer {
  * Output format: "enc:gcm:iv:authTag:ciphertext" or returns input as-is if already encrypted or empty.
  */
 export function encryptPiiField(plaintext: string | null | undefined): string | null {
-  if (!plaintext) return null;
+  if (!plaintext || plaintext.trim() === "") return null;
   if (plaintext.startsWith("enc:gcm:")) return plaintext;
   const masterKey = getMasterKey();
   const iv = crypto.randomBytes(12);

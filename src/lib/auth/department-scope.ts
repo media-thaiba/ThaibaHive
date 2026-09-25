@@ -52,7 +52,7 @@ export async function isManagedBy(
   targetStaffId: string
 ): Promise<boolean> {
   if (targetStaffId === managerStaffId) return true;
-  if (role === "super_admin" || role === "admin") return true;
+  if (role === "super_admin" || role === "admin" || role === "principal" || role === "accounts" || role === "purchase") return true;
 
   const managedIds = await getManagedStaffIds(managerStaffId, role);
   if (managedIds === null) return true;

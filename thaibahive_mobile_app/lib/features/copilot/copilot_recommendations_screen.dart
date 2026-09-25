@@ -56,7 +56,7 @@ class _CopilotRecommendationsScreenState extends ConsumerState<CopilotRecommenda
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.between,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Chip(label: Text(item.domain.toUpperCase())),
                                   Text(

@@ -17,12 +17,12 @@ class ShuttleTrackingScreen extends ConsumerWidget {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () => ref.read(smartCampusProvider.notifier).refresh(),
+              onRefresh: () => ref.read(smartCampusProvider.notifier).fetchOperationsSummary(),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   Card(
-                    color: Colors.indigo.shade950,
+                    color: Colors.indigo.shade900,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(

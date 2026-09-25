@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'regional_alert_service.dart';
 
 class RegionalAlertScreen extends ConsumerWidget {
-  const RegionalAlertScreen({Key? key}) : super(key: key);
+  const RegionalAlertScreen({super.key});
 
   Color _getSeverityColor(String severity) {
     switch (severity.toLowerCase()) {

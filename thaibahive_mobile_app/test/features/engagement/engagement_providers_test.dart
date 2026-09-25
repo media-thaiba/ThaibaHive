@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thaibahive_mobile_app/features/engagement/application/engagement_providers.dart';
+import 'package:thaibahive_mobile/features/engagement/application/engagement_providers.dart';
 
 void main() {
   group('EngagementFeedNotifier Test Suite', () {

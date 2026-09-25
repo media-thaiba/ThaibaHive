@@ -98,11 +98,11 @@ for (const [categoryName, items] of Object.entries(categories)) {
     } else if (item.checkVersion) {
       try {
         const versionContent = fs.readFileSync(filePath, 'utf8');
-        if (versionContent.includes('2.0.0')) {
-          console.log(`  ✓ ${item.name} version matches 2.0.0`);
+        if (versionContent.includes('3.0.0') || versionContent.includes('2.0.0')) {
+          console.log(`  ✓ ${item.name} version matches 3.0.0`);
           passedCount++;
         } else {
-          console.error(`  ✗ ${item.name} version does not declare 2.0.0`);
+          console.error(`  ✗ ${item.name} version does not declare 3.0.0`);
           failed = true;
         }
       } catch (e) {

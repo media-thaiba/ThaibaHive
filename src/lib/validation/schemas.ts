@@ -22,7 +22,6 @@ export const pushTokenSchema = z.object({
 export type PushTokenInput = z.infer<typeof pushTokenSchema>;
 
 export const staffCreateSchema = z.object({
-
   email: z.string().email(),
   employeeId: z.string().min(1),
   firstName: z.string().min(1),
@@ -33,6 +32,10 @@ export const staffCreateSchema = z.object({
   password: z.string().min(8).optional(),
   departmentIds: z.array(z.string()).optional(),
   institutionIds: z.array(z.string()).optional(),
+  aadhaar: z.string().optional(),
+  pan: z.string().optional(),
+  bankAccount: z.string().optional(),
+  ifscCode: z.string().optional(),
 });
 
 export const taskCreateSchema = z.object({
@@ -105,7 +108,7 @@ export const expenseClaimCreateSchema = z
   );
 
 export const expenseClaimReviewSchema = z.object({
-  status: z.enum(["pending_hod", "pending_finance", "approved", "rejected"]),
+  status: z.enum(["pending_hod", "pending_finance", "approved", "disbursed", "rejected"]),
   reviewNotes: z.string().optional().nullable(),
 }).refine(
   (data) => data.status !== "rejected" || (data.reviewNotes && data.reviewNotes.trim().length > 0),

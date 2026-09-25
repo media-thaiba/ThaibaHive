@@ -53,7 +53,7 @@ class AppConfig {
   static const Duration syncTimeout = Duration(seconds: 30);
   static const int maxOfflineQueueSize = 1000;
   static const Duration offlineSyncRetryDelay = Duration(seconds: 5);
-  static const Duration maxOfflineSyncRetryAttempts = 3;
+  static const int maxOfflineSyncRetryAttempts = 3;
 
   /// QR code scanner settings
   static const int qrCodeScanTimeoutSeconds = 10;

@@ -1,57 +1,15 @@
 {
   "passed": true,
-  "totalStages": 8,
-  "passedStages": 8,
-  "scenario": "all",
+  "totalStages": 1,
+  "passedStages": 1,
+  "scenario": "emergency",
   "stages": [
-    {
-      "stage": 1,
-      "name": "Spatial Partitioning",
-      "status": "passed",
-      "details": "Octree and point containment valid"
-    },
-    {
-      "stage": 2,
-      "name": "IoT Telemetry Ingestion",
-      "status": "passed",
-      "details": "Frame normalized and scored"
-    },
-    {
-      "stage": 3,
-      "name": "3D Spatial Rendering",
-      "status": "passed",
-      "details": "Extrusion & shader color valid"
-    },
-    {
-      "stage": 4,
-      "name": "Predictive Space & HVAC ML",
-      "status": "passed",
-      "details": "Energy reduction: 66.7%"
-    },
-    {
-      "stage": 5,
-      "name": "Step-Free 3D Wayfinding",
-      "status": "passed",
-      "details": "Path solved: 15m"
-    },
     {
       "stage": 6,
       "name": "Emergency Evacuation & Hazard Routing",
       "status": "passed",
       "details": "100% egress in 0ms"
-    },
-    {
-      "stage": 7,
-      "name": "RTLS 3D Trilateration & Geofencing",
-      "status": "passed",
-      "details": "Position: (5, 5)"
-    },
-    {
-      "stage": 8,
-      "name": "Merkle Audit Trail Integrity",
-      "status": "passed",
-      "details": "Cryptographic hash chain intact"
     }
   ],
-  "timestamp": "2026-08-20T17:05:55.418Z"
+  "timestamp": "2026-09-25T06:12:28.510Z"
 }

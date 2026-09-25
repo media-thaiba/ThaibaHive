@@ -58,6 +58,11 @@ import '../features/grievances/presentation/grievances_screen.dart';
 import '../features/grievances/presentation/grievance_submit_screen.dart';
 import '../features/canteen/presentation/canteen_screen.dart';
 import '../features/media/presentation/media_screen.dart';
+import '../features/curriculum/screens/degree_roadmap_screen.dart';
+import '../features/curriculum/screens/mobile_advising_chat_screen.dart';
+import '../features/facility/screens/technician_workorder_screen.dart';
+import '../features/facility/screens/qr_asset_scanner_screen.dart';
+import '../features/facility/screens/work_order_detail_screen.dart';
 import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/widgets/bottom_nav_bar.dart';
 import '../shared/screens/coming_soon_screen.dart';
@@ -232,6 +237,22 @@ GoRouter buildRouter() {
           child: StaffProfileScreen(
             id: state.pathParameters['id']!,
           ),
+        ),
+      ),
+      GoRoute(
+        path: '/curriculum/roadmap',
+        name: 'degreeRoadmap',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const DegreeRoadmapScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/curriculum/advising',
+        name: 'mobileAdvisingChat',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const MobileAdvisingChatScreen(),
         ),
       ),
       GoRoute(
@@ -563,6 +584,22 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const VisitorGateVerificationScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/technician/workorders',
+        name: 'technicianWorkOrders',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const TechnicianWorkOrderScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/technician/scan',
+        name: 'technicianScan',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const QrAssetScannerScreen(),
         ),
       ),
     ],

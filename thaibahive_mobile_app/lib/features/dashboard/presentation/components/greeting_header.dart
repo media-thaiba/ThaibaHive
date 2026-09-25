@@ -234,44 +234,49 @@ class DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
                     ),
 
                     // Expanded Greeting Details Area
-                    if (shrinkPercentage < 0.99)
+                    if (shrinkPercentage < 0.9)
                       Expanded(
-                        child: Opacity(
-                          opacity: opacity,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
+                        child: ClipRect(
+                          child: Opacity(
+                            opacity: opacity,
+                            child: SingleChildScrollView(
+                              physics: const NeverScrollableScrollPhysics(),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  if (user?.role != null) ...[
-                                    RoleBadge(role: user.role.toString()),
-                                    const SizedBox(width: 8),
-                                  ],
+                                  Row(
+                                    children: [
+                                      if (user?.role != null) ...[
+                                        RoleBadge(role: user.role.toString()),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Text(
+                                        greetingLabel,
+                                        style: AppTypography.caption(context).copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.mutedForeground(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
                                   Text(
-                                    greetingLabel,
-                                    style: AppTypography.caption(context).copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.mutedForeground(context),
-                                    ),
+                                    user?.fullName ?? 'User Name',
+                                    style: AppTypography.display(context),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _buildDynamicSubtext(stats),
+                                    style: AppTypography.caption(context),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                user?.fullName ?? 'User Name',
-                                style: AppTypography.display(context),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _buildDynamicSubtext(stats),
-                                style: AppTypography.caption(context),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),

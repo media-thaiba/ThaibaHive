@@ -2,6 +2,21 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.42.0] - 2026-08-27
+### Sprint-058: Autonomous Alumni Network, Career Mentorship Mesh & Endowment Fund Management (ALUMNI-HUB / EndowmentOS)
+#### Added
+- **Dual-Store Persistence Schema (15 Tables)**: Added `alumniProfiles`, `alumniEducations`, `alumniExperiences`, `alumniMentorshipProfiles`, `alumniMentorshipRequests`, `alumniMentorshipSessions`, `alumniJobPostings`, `alumniJobApplications`, `alumniDonationCampaigns`, `alumniDonations`, `alumniChapters`, `alumniChapterMembers`, `alumniEvents`, `alumniEventRsvps`, and `alumniAuditLogs` with 100% column parity across SQLite (`schema.ts`) and PostgreSQL (`schema.pg.ts`).
+- **Graduation Transition & Cryptographic Credential Engine**: Idempotent graduation cohort onboarding pipeline issuing immutable SHA-256 digital credential hashes.
+- **Privacy Consent & PII Redaction Manager**: Tiered privacy controls (`public`, `alumni_only`, `hidden`) with dynamic field-level masking for unauthenticated viewers.
+- **AI Mentorship Skill Graph Matching & Session Lifecycle**: Multi-factor compatibility scoring ($35\%$ career alignment, $25\%$ industry domain, $20\%$ skill graph overlap, $10\%$ capacity, $10\%$ academic background), automated iCal generation, and dual-sided 5-star rating feedback loops.
+- **Alumni Job Board & Fast-Track Referral Engine**: Moderated employer job board, alumni referral tagging, 1-click application submission, and real-time placement analytics.
+- **Endowment Fund Management & Section 80G Tax Receipts**: 6-tier recognition matrix (Supporter to Trustee Circle), balanced double-entry GL ledger integration with FinanceOS, and HMAC-SHA256 cryptographically signed electronic 80G receipts with public verification endpoint (`/api/alumni/verify/donation/[hash]`).
+- **Regional Chapters & Event Ticketing**: Regional/international chapter chartering, officer delegations, and event RSVP ticketing with anti-forgery QR gate pass verification.
+- **Interactive Web Cockpits**: Admin Alumni Cockpit (`/admin/alumni/hub`) and Student/Alumni Career Portal (`/portal/alumni`).
+- **Flutter Mobile Module**: Riverpod state management, offline cached credentials vault, and high-contrast gate pass scanner in `mobile/lib/features/alumni_hub/`.
+- **Simulation Harness**: 8-stage verification harness `pnpm alumni:simulate` (100% Pass).
+- **Operational SOPs & Runbooks**: 4 complete operational runbooks in `docs/operations/`.
+
 ## [3.32.0] - 2026-08-20
 ### Sprint-048: Autonomous Campus Digital Twin & Spatial Facility Intelligence (TWIN-OPS / SpatialGrid)
 #### Added

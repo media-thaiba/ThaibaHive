@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
+import { StudentBulkImportDialog } from "@/components/academic/StudentBulkImportDialog";
+import { Upload } from "lucide-react";
 
 type Student = {
   id: string;
@@ -35,6 +37,7 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("");
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -74,7 +77,13 @@ export default function StudentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Students</h1>
-        <Button onClick={() => router.push("/academic/students/new")}>Add Student</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsBulkImportOpen(true)} className="gap-1.5">
+            <Upload className="h-4 w-4" />
+            Import CSV
+          </Button>
+          <Button onClick={() => router.push("/academic/students/new")}>Add Student</Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -134,6 +143,14 @@ export default function StudentsPage() {
           </table>
         </div>
       )}
+
+      <StudentBulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        institutionId="inst_tgcis"
+        classes={classes}
+        onSuccess={() => fetchStudents()}
+      />
     </div>
   );
 }

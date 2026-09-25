@@ -63,7 +63,7 @@ class SparklineWidget extends StatelessWidget {
     if (data.isEmpty) {
       return Container(
         height: height,
-        alignment: Center,
+        alignment: Alignment.center,
         child: const Text('No trend data', style: TextStyle(fontSize: 12, color: Colors.grey)),
       );
     }
@@ -198,7 +198,7 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                   const SizedBox(height: 10),
                   Text('${presenceRate.toStringAsFixed(0)}%',
-                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.extrabold, color: Color(0xFF0F172A))),
+                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                   const SizedBox(height: 16),
                   // Render visual Presence Gauge
                   Container(
@@ -267,7 +267,7 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                   const SizedBox(height: 10),
                   Text('${efficiency.toStringAsFixed(0)}%',
-                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.extrabold, color: Color(0xFF0F172A))),
+                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                   const SizedBox(height: 6),
                   Text('Total collected: ₹${totalCollected.toStringAsFixed(0)}',
                       style: const TextStyle(fontSize: 13, color: Colors.grey)),
@@ -316,7 +316,7 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                   const SizedBox(height: 10),
                   Text('${passRate.toStringAsFixed(0)}%',
-                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.extrabold, color: Color(0xFF0F172A))),
+                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                 ],
               ),
             ),

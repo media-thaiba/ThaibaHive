@@ -12,6 +12,11 @@ import {
   financialTransactions,
   assets,
   expenseClaims,
+  purchaseRequests,
+  students,
+  classes,
+  timetableEntries,
+  timetableSlots,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and, gte, lte, inArray, type SQL } from "drizzle-orm";
@@ -31,6 +36,10 @@ const REQUIRED_PERMISSIONS: Record<ExportType, string> = {
   accounts: "reports:read",
   assets: "assets:read",
   expenses: "reports:read",
+  fees: "reports:read",
+  purchases: "reports:read",
+  students: "students:read",
+  timetables: "academic:read",
   tabulation: "exam:read",
   examinations: "exam:read",
   fleet: "fleet:read",
@@ -43,10 +52,15 @@ const REQUIRED_PERMISSIONS: Record<ExportType, string> = {
 
 
 async function executeLimitedQuery<T>(queryObj: { limit?: (n: number) => { all(): Promise<T[]> }; all(): Promise<T[]> }): Promise<T[]> {
-  if (typeof queryObj.limit === "function") {
-    return (await queryObj.limit(MAX_EXPORT_ROWS).all()) as T[];
+  try {
+    if (typeof queryObj.limit === "function") {
+      return (await queryObj.limit(MAX_EXPORT_ROWS).all()) as T[];
+    }
+    return (await queryObj.all()) as T[];
+  } catch (err) {
+    console.warn("[ExportAPI] Query execution fallback (table may be empty or unmigrated):", err);
+    return [] as T[];
   }
-  return (await queryObj.all()) as T[];
 }
 
 function getDateParam(searchParams: URLSearchParams, key: string): string | undefined {
@@ -76,7 +90,21 @@ export const GET = requireAuth(async (request: Request, session) => {
   const dateTo = getDateParam(searchParams, "dateTo");
   const requestedInstitutionId = searchParams.get("institutionId") || undefined;
 
-  const VALID_TYPES: ExportType[] = ["attendance", "leaves", "staff", "payroll", "accounts", "assets", "expenses", "tabulation", "examinations"];
+  const VALID_TYPES: ExportType[] = [
+    "attendance",
+    "leaves",
+    "staff",
+    "payroll",
+    "accounts",
+    "assets",
+    "expenses",
+    "fees",
+    "purchases",
+    "students",
+    "timetables",
+    "tabulation",
+    "examinations",
+  ];
   if (!type || !VALID_TYPES.includes(type)) {
     return NextResponse.json({ error: "Invalid type. Must be one of: " + VALID_TYPES.join(", ") }, { status: 400 });
   }
@@ -586,6 +614,224 @@ export const GET = requireAuth(async (request: Request, session) => {
       amount: r.amount || 0,
       status: r.status,
       createdAt: r.createdAt ? r.createdAt.slice(0, 10) : "",
+    }));
+  }
+
+  // ── 8. Fees Export ─────────────────────────────────────────────────────────
+  if (type === "fees") {
+    exportTitle = "Fee Collections & Receipts Report";
+    exportColumns = [
+      { key: "id", header: "Tx ID", width: 14 },
+      { key: "transactionDate", header: "Date", width: 14 },
+      { key: "instName", header: "Institution", width: 20 },
+      { key: "category", header: "Fee Category", width: 18 },
+      { key: "amount", header: "Amount", width: 14, align: "right", format: (v) => `₹${Number(v || 0).toFixed(2)}` },
+      { key: "description", header: "Description / Student", width: 25 },
+      { key: "notes", header: "Reference", width: 18 },
+      { key: "recordedBy", header: "Recorded By", width: 18 },
+    ];
+
+    let query = db
+      .select({
+        id: financialTransactions.id,
+        transactionDate: financialTransactions.transactionDate,
+        category: financialTransactions.category,
+        amount: financialTransactions.amount,
+        description: financialTransactions.description,
+        notes: financialTransactions.notes,
+        instName: institutions.name,
+        recordedByFirst: staff.firstName,
+        recordedByLast: staff.lastName,
+      })
+      .from(financialTransactions)
+      .leftJoin(institutions, eq(financialTransactions.institutionId, institutions.id))
+      .leftJoin(staff, eq(financialTransactions.recordedById, staff.id));
+
+    const conditions: (SQL | undefined)[] = [
+      eq(financialTransactions.type, "income"),
+    ];
+    if (dateFrom) conditions.push(gte(financialTransactions.transactionDate, dateFrom));
+    if (dateTo) conditions.push(lte(financialTransactions.transactionDate, dateTo));
+    if (finalInstitutionId) {
+      conditions.push(eq(financialTransactions.institutionId, finalInstitutionId));
+    } else if (!isSuperOrAdmin) {
+      conditions.push(inArray(financialTransactions.institutionId, allowedInstIds));
+    }
+
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) {
+      query = query.where(and(...activeConditions)) as typeof query;
+    }
+
+    const rows = await executeLimitedQuery<any>(query);
+    exportData = rows.map((r) => ({
+      id: r.id,
+      transactionDate: r.transactionDate,
+      instName: r.instName || "",
+      category: r.category,
+      amount: r.amount || 0,
+      description: r.description || "",
+      notes: r.notes || "",
+      recordedBy: `${r.recordedByFirst || ""} ${r.recordedByLast || ""}`.trim(),
+    }));
+  }
+
+  // ── 9. Purchases Export ────────────────────────────────────────────────────
+  if (type === "purchases") {
+    exportTitle = "Purchase Requisitions Report";
+    exportColumns = [
+      { key: "id", header: "Req ID", width: 14 },
+      { key: "itemName", header: "Item Description", width: 22 },
+      { key: "quantity", header: "Qty", width: 8, align: "center" },
+      { key: "estimatedCost", header: "Est Cost", width: 14, align: "right", format: (v) => `₹${Number(v || 0).toFixed(2)}` },
+      { key: "requesterName", header: "Requester", width: 20 },
+      { key: "status", header: "Status", width: 14 },
+      { key: "justification", header: "Justification", width: 25 },
+      { key: "createdAt", header: "Created At", width: 14 },
+    ];
+
+    let query = db
+      .select({
+        id: purchaseRequests.id,
+        itemName: purchaseRequests.itemName,
+        quantity: purchaseRequests.quantity,
+        estimatedCost: purchaseRequests.estimatedCost,
+        status: purchaseRequests.status,
+        justification: purchaseRequests.justification,
+        createdAt: purchaseRequests.createdAt,
+        requesterFirst: staff.firstName,
+        requesterLast: staff.lastName,
+      })
+      .from(purchaseRequests)
+      .leftJoin(staff, eq(purchaseRequests.requesterId, staff.id));
+
+    const conditions: (SQL | undefined)[] = [];
+    if (dateFrom) conditions.push(gte(purchaseRequests.createdAt, dateFrom));
+    if (dateTo) conditions.push(lte(purchaseRequests.createdAt, dateTo));
+
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) {
+      query = query.where(and(...activeConditions)) as typeof query;
+    }
+
+    const rows = await executeLimitedQuery<any>(query);
+    exportData = rows.map((r) => ({
+      id: r.id,
+      itemName: r.itemName,
+      quantity: r.quantity,
+      estimatedCost: r.estimatedCost,
+      requesterName: `${r.requesterFirst || ""} ${r.requesterLast || ""}`.trim(),
+      status: r.status,
+      justification: r.justification || "",
+      createdAt: r.createdAt ? r.createdAt.slice(0, 10) : "",
+    }));
+  }
+
+  // ── 10. Students Export ────────────────────────────────────────────────────
+  if (type === "students") {
+    exportTitle = "Student Roster & Enrollment Report";
+    exportColumns = [
+      { key: "id", header: "Student ID", width: 14 },
+      { key: "admissionNo", header: "Admission No", width: 14 },
+      { key: "name", header: "Student Name", width: 22 },
+      { key: "className", header: "Class / Grade", width: 14 },
+      { key: "gender", header: "Gender", width: 10 },
+      { key: "emergencyContactName", header: "Guardian / Contact", width: 18 },
+      { key: "emergencyContactPhone", header: "Phone", width: 14 },
+      { key: "status", header: "Status", width: 12 },
+    ];
+
+    let query = db
+      .select({
+        id: students.id,
+        admissionNo: students.admissionNo,
+        firstName: students.firstName,
+        lastName: students.lastName,
+        gender: students.gender,
+        emergencyContactName: students.emergencyContactName,
+        emergencyContactPhone: students.emergencyContactPhone,
+        isActive: students.isActive,
+        className: classes.name,
+      })
+      .from(students)
+      .leftJoin(classes, eq(students.classId, classes.id));
+
+    const conditions: (SQL | undefined)[] = [];
+    if (finalInstitutionId) {
+      conditions.push(eq(students.institutionId, finalInstitutionId));
+    } else if (!isSuperOrAdmin) {
+      conditions.push(inArray(students.institutionId, allowedInstIds));
+    }
+
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) {
+      query = query.where(and(...activeConditions)) as typeof query;
+    }
+
+    const rows = await executeLimitedQuery<any>(query);
+    exportData = rows.map((r) => ({
+      id: r.id,
+      admissionNo: r.admissionNo || "",
+      name: `${r.firstName || ""} ${r.lastName || ""}`.trim(),
+      className: r.className || "Unassigned",
+      gender: r.gender || "",
+      emergencyContactName: r.emergencyContactName || "",
+      emergencyContactPhone: r.emergencyContactPhone || "",
+      status: r.isActive ? "Active" : "Inactive",
+    }));
+  }
+
+  // ── 11. Timetables Export ──────────────────────────────────────────────────
+  if (type === "timetables") {
+    exportTitle = "Academic Timetable Schedule";
+    exportColumns = [
+      { key: "dayOfWeek", header: "Day", width: 12 },
+      { key: "slotName", header: "Time Slot", width: 16 },
+      { key: "className", header: "Class / Section", width: 16 },
+      { key: "subjectName", header: "Subject", width: 20 },
+      { key: "teacherName", header: "Teacher", width: 20 },
+      { key: "roomNumber", header: "Room", width: 12 },
+    ];
+
+    let query = db
+      .select({
+        id: timetableEntries.id,
+        dayOfWeek: timetableEntries.dayOfWeek,
+        subjectName: timetableEntries.subjectName,
+        roomNumber: timetableEntries.roomNumber,
+        slotName: timetableSlots.name,
+        startTime: timetableSlots.startTime,
+        endTime: timetableSlots.endTime,
+        className: classes.name,
+        teacherFirst: staff.firstName,
+        teacherLast: staff.lastName,
+      })
+      .from(timetableEntries)
+      .leftJoin(timetableSlots, eq(timetableEntries.slotId, timetableSlots.id))
+      .leftJoin(classes, eq(timetableEntries.classId, classes.id))
+      .leftJoin(staff, eq(timetableEntries.teacherId, staff.id));
+
+    const conditions: (SQL | undefined)[] = [];
+    if (finalInstitutionId) {
+      conditions.push(eq(timetableEntries.institutionId, finalInstitutionId));
+    } else if (!isSuperOrAdmin) {
+      conditions.push(inArray(timetableEntries.institutionId, allowedInstIds));
+    }
+
+    const activeConditions = conditions.filter((c): c is SQL => !!c);
+    if (activeConditions.length > 0) {
+      query = query.where(and(...activeConditions)) as typeof query;
+    }
+
+    const days = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const rows = await executeLimitedQuery<any>(query);
+    exportData = rows.map((r) => ({
+      dayOfWeek: days[r.dayOfWeek] || `Day ${r.dayOfWeek}`,
+      slotName: r.slotName ? `${r.slotName} (${r.startTime || ""}-${r.endTime || ""})` : "Standard Slot",
+      className: r.className || "Class",
+      subjectName: r.subjectName || "Subject",
+      teacherName: `${r.teacherFirst || ""} ${r.teacherLast || ""}`.trim() || "Assigned Faculty",
+      roomNumber: r.roomNumber || "TBD",
     }));
   } else if (type === "tabulation" || type === "examinations") {
     exportTitle = "EXAMINATION TABULATION REGISTER";

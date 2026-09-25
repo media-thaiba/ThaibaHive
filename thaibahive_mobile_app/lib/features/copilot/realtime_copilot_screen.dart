@@ -72,7 +72,7 @@ class _RealTimeCopilotScreenState extends ConsumerState<RealTimeCopilotScreen> {
                             ),
                             title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Column(
-                              crossAxisAlignment: Cross-Start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const SizedBox(height: 4),
                                 Text(item.summary),

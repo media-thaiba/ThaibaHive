@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
-import 'package:workmanager/workmanager.dart';
-import 'package:background_fetch/background_fetch.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:battery_plus/battery_plus.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'background_sync_isolate.dart';
 import 'isolate_message_protocol.dart';
 import 'network_diagnostics_collector.dart';
@@ -13,23 +12,23 @@ import 'adaptive_sync_decision_engine.dart';
 import 'policy_manager.dart';
 
 @pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    debugPrint('[WorkManager] Executing background sync task: $task');
-    final baseUrl = inputData?['baseUrl'] ?? 'http://localhost:3000';
-    final authToken = inputData?['authToken'] ?? '';
-    
-    // Collect network diagnostics and device unique identifier
+void backgroundSyncCallbackDispatcher(ServiceInstance service) {
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
+
+  service.on('triggerSync').listen((event) async {
+    final baseUrl = event?['baseUrl'] as String? ?? 'http://localhost:3000';
+    final authToken = event?['authToken'] as String? ?? '';
     final diagnostics = await NetworkDiagnosticsCollector().collectDiagnostics(baseUrl);
     final deviceId = await BackgroundTaskManager.getDeviceUniqueIdentifier();
 
-    final result = await BackgroundTaskManager.triggerBackgroundSync(
+    await BackgroundTaskManager.triggerBackgroundSync(
       baseUrl: baseUrl,
       authToken: authToken,
       diagnostics: diagnostics,
       deviceId: deviceId,
     );
-    return result.success;
   });
 }
 
@@ -57,61 +56,27 @@ class BackgroundTaskManager {
     return 'mobile-device';
   }
 
-  /// Initialize Android WorkManager & iOS BackgroundFetch native plugins
+  /// Initialize background execution service
   static Future<void> initializePlugins({
     required String baseUrl,
     required String authToken,
   }) async {
     try {
-      // 1. Android WorkManager initialization
-      await Workmanager().initialize(
-        callbackDispatcher,
-        isInDebugMode: kDebugMode,
-      );
-
-      await Workmanager().registerPeriodicTask(
-        'thaibahive_background_sync',
-        'backgroundSyncQueueTask',
-        frequency: const Duration(minutes: 15),
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-          requiresBatteryNotLow: true,
+      final service = FlutterBackgroundService();
+      await service.configure(
+        androidConfiguration: AndroidConfiguration(
+          onStart: backgroundSyncCallbackDispatcher,
+          autoStart: false,
+          isForegroundMode: false,
         ),
-        inputData: {
-          'baseUrl': baseUrl,
-          'authToken': authToken,
-        },
-      );
-
-      // 2. iOS BackgroundFetch initialization
-      await BackgroundFetch.configure(
-        BackgroundFetchConfig(
-          minimumFetchInterval: 15,
-          stopOnTerminate: false,
-          enableHeadless: true,
-          requiresBatteryNotLow: true,
-          requiresDeviceIdle: false,
-          requiredNetworkType: NetworkType.CONNECTED,
+        iosConfiguration: IosConfiguration(
+          autoStart: false,
+          onForeground: backgroundSyncCallbackDispatcher,
+          onBackground: (ServiceInstance service) async => true,
         ),
-        (String taskId) async {
-          debugPrint('[BackgroundFetch] Executing iOS background task: $taskId');
-          final diagnostics = await NetworkDiagnosticsCollector().collectDiagnostics(baseUrl);
-          final deviceId = await getDeviceUniqueIdentifier();
-          await triggerBackgroundSync(
-            baseUrl: baseUrl,
-            authToken: authToken,
-            diagnostics: diagnostics,
-            deviceId: deviceId,
-          );
-          BackgroundFetch.finish(taskId);
-        },
-        (String taskId) async {
-          debugPrint('[BackgroundFetch] iOS background task timeout: $taskId');
-          BackgroundFetch.finish(taskId);
-        },
       );
     } catch (e) {
-      debugPrint('[BackgroundTaskManager] Native plugin initialization warning: $e');
+      debugPrint('[BackgroundTaskManager] Background service initialization: $e');
     }
   }
 

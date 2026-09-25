@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "totalStages": 8,
+  "passedStages": 8,
+  "scenario": "all",
+  "stages": [
+    {
+      "stage": 1,
+      "name": "Camera Ingestion",
+      "status": "passed",
+      "details": "ONVIF/RTSP gateway and watchdog verified"
+    },
+    {
+      "stage": 2,
+      "name": "Crowd Anomaly Detection",
+      "status": "passed",
+      "details": "Critical crush risk identified"
+    },
+    {
+      "stage": 3,
+      "name": "Perimeter & Slip/Fall ML",
+      "status": "passed",
+      "details": "Tripwire and medical distress confirmed"
+    },
+    {
+      "stage": 4,
+      "name": "ALPR & Gate Control",
+      "status": "passed",
+      "details": "Vehicle whitelist verified and barrier actuated"
+    },
+    {
+      "stage": 5,
+      "name": "Privacy Vault & DP",
+      "status": "passed",
+      "details": "FERPA/GDPR edge anonymization and rolling purge verified"
+    },
+    {
+      "stage": 6,
+      "name": "3D Spatial & Guard Dispatch",
+      "status": "passed",
+      "details": "3D viewing frustum and closest-guard A* confirmed"
+    },
+    {
+      "stage": 7,
+      "name": "Lockdown & ECO-MESH Sync",
+      "status": "passed",
+      "details": "Facility lockdown and BESS islanding power synchronized"
+    },
+    {
+      "stage": 8,
+      "name": "Merkle Audit & OpenMetrics",
+      "status": "passed",
+      "details": "Cryptographic log chain and Prometheus telemetry verified"
+    }
+  ],
+  "timestamp": "2026-08-21T05:06:09.153Z"
+}

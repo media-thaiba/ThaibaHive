@@ -130,7 +130,7 @@ class ParentWorkspaceScreen extends ConsumerWidget {
                       }
 
                       return Row(
-                        mainAxisAlignment: MainAxisAlignment.between,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
                           Chip(

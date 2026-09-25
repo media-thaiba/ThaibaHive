@@ -22,7 +22,7 @@ class OfflineSyncEngine {
     _isSyncing = true;
 
     try {
-      final pending = await _outboxManager.getPendingQueue();
+      final pending = OutboxQueueManager.getPendingActions();
       if (pending.isEmpty) {
         _isSyncing = false;
         return true;
@@ -47,7 +47,9 @@ class OfflineSyncEngine {
         final resData = jsonDecode(response.body);
         final processed = (resData['processedMutations'] as List?)?.cast<String>() ?? [];
         if (processed.isNotEmpty) {
-          await _outboxManager.removeItems(processed);
+          for (final id in processed) {
+            OutboxQueueManager.markSuccess(id);
+          }
         }
         _isSyncing = false;
         return true;

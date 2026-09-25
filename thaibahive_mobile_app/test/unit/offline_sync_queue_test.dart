@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:thaibahive_mobile/core/sync/local_db_adapter.dart';
 import 'package:thaibahive_mobile/core/sync/offline_sync_queue.dart';
 
@@ -6,12 +8,22 @@ void main() {
   group('OfflineSyncQueue Persistence Tests', () {
     late OfflineSyncQueue queue;
     late LocalDbAdapter dbAdapter;
+    late Directory tempDir;
 
     setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('hive_queue_test');
+      Hive.init(tempDir.path);
       dbAdapter = LocalDbAdapter();
       await dbAdapter.init();
       queue = OfflineSyncQueue(adapter: dbAdapter);
       await queue.initialize();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
     });
 
     test('enqueues mutations and fetches pending records sorted by priority', () async {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thaibahive_mobile_app/features/operations/models/smart_campus_models.dart';
+import 'package:thaibahive_mobile/features/operations/models/smart_campus_models.dart';
 
 void main() {
   group('AIMS-026 — Mobile Smart Campus Models & Serialization', () {

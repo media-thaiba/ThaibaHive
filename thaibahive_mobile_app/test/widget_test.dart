@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../lib/features/approvals/screens/approval_list_screen.dart';
-import '../lib/features/examinations/screens/hall_ticket_screen.dart';
-import '../lib/features/parent_portal/screens/parent_dashboard_screen.dart';
+import 'package:thaibahive_mobile/features/approvals/screens/approval_list_screen.dart';
+import 'package:thaibahive_mobile/features/examinations/screens/hall_ticket_screen.dart';
+import 'package:thaibahive_mobile/features/parent_portal/screens/parent_dashboard_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +17,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
       expect(find.text('Pending Approvals'), findsOneWidget);
     });
@@ -30,7 +31,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
       expect(find.text('Examination Hall Ticket'), findsOneWidget);
     });
@@ -43,7 +45,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
       expect(find.text('Enrolled Children'), findsOneWidget);
       expect(find.text('Parent Quick Actions'), findsOneWidget);

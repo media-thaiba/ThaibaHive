@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'remediation_alert_service.dart';
 
 class RemediationAlertScreen extends ConsumerWidget {

@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/api/auth-guard';
 import { wsClientManager } from '@/lib/operations/km/streaming/ws-client-manager';
 import { edgeWebSocketServer } from '@/lib/operations/km/streaming/edge-websocket-server';
 
-export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 export const GET = requireAuth(async (req: Request) => {
   const url = new URL(req.url);

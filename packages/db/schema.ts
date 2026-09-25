@@ -2070,6 +2070,9 @@ export const redisCircuitBreakerStates = sqliteTable("redis_circuit_breaker_stat
   tenantId: text("tenant_id").notNull(),
   circuitKey: text("circuit_key").notNull().unique(),
   state: text("state").notNull().default("CLOSED"), // CLOSED | OPEN | HALF_OPEN
+  failureCount: integer("failure_count").notNull().default(0),
+  lastTrippedAt: text("last_tripped_at"),
+  expiresAt: text("expires_at"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
 
@@ -4160,4 +4163,2567 @@ export const twinWayfindingEdges = sqliteTable("twin_wayfinding_edges", {
   twinWfEdgeSrcIdx: index("idx_twin_wf_edge_src").on(t.sourceNodeId),
   twinWfEdgeTgtIdx: index("idx_twin_wf_edge_tgt").on(t.targetNodeId),
 }));
+
+// ─── ECO-MESH / NetZeroOS Autonomous Microgrid & Sustainability (Sprint-049) ───
+
+export const ecoEnergyAssets = sqliteTable("eco_energy_assets", {
+  id: text("id").primaryKey(),
+  assetId: text("asset_id").notNull().unique(),
+  facilityId: text("facility_id").notNull(),
+  name: text("name").notNull(),
+  assetType: text("asset_type").notNull().default("smart_meter"), // 'smart_meter' | 'solar_inverter' | 'wind_turbine' | 'bess_battery' | 'ev_charger' | 'transformer' | 'generator'
+  status: text("status").notNull().default("online"), // 'online' | 'offline' | 'degraded' | 'maintenance' | 'fault'
+  capacityKw: real("capacity_kw").notNull().default(0.0),
+  ratedVoltage: real("rated_voltage").notNull().default(400.0),
+  specificationsJson: text("specifications_json").notNull().default("{}"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoAssetIdIdx: index("idx_eco_asset_id").on(t.assetId),
+  ecoAssetFacIdx: index("idx_eco_asset_fac").on(t.facilityId),
+  ecoAssetTypeIdx: index("idx_eco_asset_type").on(t.assetType),
+  ecoAssetStatusIdx: index("idx_eco_asset_status").on(t.status),
+}));
+
+export const ecoGenerationSources = sqliteTable("eco_generation_sources", {
+  id: text("id").primaryKey(),
+  sourceId: text("source_id").notNull().unique(),
+  assetId: text("asset_id").notNull(),
+  name: text("name").notNull(),
+  sourceType: text("source_type").notNull().default("solar_pv"), // 'solar_pv' | 'wind' | 'biomass' | 'diesel_gen' | 'grid_interconnect'
+  peakCapacityKw: real("peak_capacity_kw").notNull().default(100.0),
+  efficiencyPercent: real("efficiency_percent").notNull().default(21.5),
+  tiltAngle: real("tilt_angle").notNull().default(15.0),
+  azimuthAngle: real("azimuth_angle").notNull().default(180.0),
+  locationJson: text("location_json").notNull().default("{}"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoGenSourceIdIdx: index("idx_eco_gen_source_id").on(t.sourceId),
+  ecoGenAssetIdIdx: index("idx_eco_gen_asset_id").on(t.assetId),
+  ecoGenTypeIdx: index("idx_eco_gen_type").on(t.sourceType),
+}));
+
+export const ecoStorageBatteries = sqliteTable("eco_storage_batteries", {
+  id: text("id").primaryKey(),
+  batteryId: text("battery_id").notNull().unique(),
+  assetId: text("asset_id").notNull(),
+  name: text("name").notNull(),
+  chemistry: text("chemistry").notNull().default("lfp"), // 'lfp' | 'nmc' | 'solid_state' | 'flow'
+  capacityKwh: real("capacity_kwh").notNull().default(500.0),
+  maxPowerKw: real("max_power_kw").notNull().default(250.0),
+  currentSoCPercent: real("current_soc_percent").notNull().default(65.0),
+  minSoCPercent: real("min_soc_percent").notNull().default(20.0),
+  maxSoCPercent: real("max_soc_percent").notNull().default(90.0),
+  cycleCount: integer("cycle_count").notNull().default(0),
+  healthStatus: text("health_status").notNull().default("good"), // 'excellent' | 'good' | 'fair' | 'degraded'
+  dispatchMode: text("dispatch_mode").notNull().default("arbitrage"), // 'arbitrage' | 'peak_shaving' | 'emergency_reserve' | 'grid_forming' | 'manual'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoBatIdIdx: index("idx_eco_bat_id").on(t.batteryId),
+  ecoBatAssetIdx: index("idx_eco_bat_asset").on(t.assetId),
+  ecoBatModeIdx: index("idx_eco_bat_mode").on(t.dispatchMode),
+}));
+
+export const ecoGridTariffs = sqliteTable("eco_grid_tariffs", {
+  id: text("id").primaryKey(),
+  tariffId: text("tariff_id").notNull().unique(),
+  name: text("name").notNull(),
+  providerName: text("provider_name").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  touRatesJson: text("tou_rates_json").notNull().default("[]"),
+  demandChargePerKw: real("demand_charge_per_kw").notNull().default(15.0),
+  feedInTariffPerKwh: real("feed_in_tariff_per_kwh").notNull().default(0.06),
+  effectiveFrom: text("effective_from").notNull(),
+  effectiveTo: text("effective_to"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoTariffIdIdx: index("idx_eco_tariff_id").on(t.tariffId),
+  ecoTariffProviderIdx: index("idx_eco_tariff_provider").on(t.providerName),
+}));
+
+export const ecoTelemetryEnergy = sqliteTable("eco_telemetry_energy", {
+  id: text("id").primaryKey(),
+  telemetryId: text("telemetry_id").notNull().unique(),
+  assetId: text("asset_id").notNull(),
+  sourceType: text("source_type").notNull().default("smart_meter"), // 'smart_meter' | 'solar_pv' | 'bess' | 'ev_charger' | 'grid_feed'
+  powerKw: real("power_kw").notNull().default(0.0),
+  energyKwh: real("energy_kwh").notNull().default(0.0),
+  voltageV: real("voltage_v").notNull().default(400.0),
+  currentA: real("current_a").notNull().default(0.0),
+  powerFactor: real("power_factor").notNull().default(0.98),
+  frequencyHz: real("frequency_hz").notNull().default(50.0),
+  socPercent: real("soc_percent"),
+  carbonGramsPerKwh: real("carbon_grams_per_kwh").notNull().default(350.0),
+  recordedAt: text("recorded_at").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoTelemIdIdx: index("idx_eco_telem_id").on(t.telemetryId),
+  ecoTelemAssetIdx: index("idx_eco_telem_asset").on(t.assetId),
+  ecoTelemTypeIdx: index("idx_eco_telem_type").on(t.sourceType),
+  ecoTelemTimeIdx: index("idx_eco_telem_time").on(t.recordedAt),
+}));
+
+export const ecoCarbonEmissions = sqliteTable("eco_carbon_emissions", {
+  id: text("id").primaryKey(),
+  emissionId: text("emission_id").notNull().unique(),
+  facilityId: text("facility_id").notNull(),
+  departmentId: text("department_id"),
+  scope: text("scope").notNull().default("scope_2"), // 'scope_1' | 'scope_2' | 'scope_3'
+  category: text("category").notNull().default("electricity"), // 'stationary_combustion' | 'mobile_fleet' | 'electricity' | 'heating_cooling' | 'commute' | 'waste' | 'procurement'
+  fuelType: text("fuel_type"),
+  quantity: real("quantity").notNull().default(0.0),
+  unit: text("unit").notNull().default("kWh"), // 'kWh' | 'liters' | 'kg' | 'km'
+  emissionFactor: real("emission_factor").notNull().default(0.35),
+  co2EquivalentKg: real("co2_equivalent_kg").notNull().default(0.0),
+  activityDate: text("activity_date").notNull(),
+  isOffset: integer("is_offset", { mode: "boolean" }).notNull().default(false),
+  offsetId: text("offset_id"),
+  auditHash: text("audit_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoEmissionIdIdx: index("idx_eco_emission_id").on(t.emissionId),
+  ecoEmissionFacIdx: index("idx_eco_emission_fac").on(t.facilityId),
+  ecoEmissionDeptIdx: index("idx_eco_emission_dept").on(t.departmentId),
+  ecoEmissionScopeIdx: index("idx_eco_emission_scope").on(t.scope),
+  ecoEmissionDateIdx: index("idx_eco_emission_date").on(t.activityDate),
+}));
+
+export const ecoEvChargingStations = sqliteTable("eco_ev_charging_stations", {
+  id: text("id").primaryKey(),
+  stationId: text("station_id").notNull().unique(),
+  facilityId: text("facility_id").notNull(),
+  name: text("name").notNull(),
+  ocppId: text("ocpp_id").notNull().unique(),
+  connectorType: text("connector_type").notNull().default("type2_combo_ccs"), // 'type2_combo_ccs' | 'chademo' | 'type2_ac' | 'tesla_nacs'
+  maxPowerKw: real("max_power_kw").notNull().default(50.0),
+  status: text("status").notNull().default("available"), // 'available' | 'charging' | 'discharging_v2g' | 'faulted' | 'reserved' | 'offline'
+  currentPowerKw: real("current_power_kw").notNull().default(0.0),
+  isV2GEnabled: integer("is_v2g_enabled", { mode: "boolean" }).notNull().default(true),
+  firmwareVersion: text("firmware_version").notNull().default("v2.0.1"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoEvStationIdIdx: index("idx_eco_ev_station_id").on(t.stationId),
+  ecoEvStationFacIdx: index("idx_eco_ev_station_fac").on(t.facilityId),
+  ecoEvOcppIdx: index("idx_eco_ev_ocpp").on(t.ocppId),
+  ecoEvStatusIdx: index("idx_eco_ev_status").on(t.status),
+}));
+
+export const ecoEvFleetSessions = sqliteTable("eco_ev_fleet_sessions", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().unique(),
+  stationId: text("station_id").notNull(),
+  vehicleId: text("vehicle_id").notNull(),
+  vehicleType: text("vehicle_type").notNull().default("bus"), // 'bus' | 'maintenance_van' | 'shuttle' | 'staff_commuter'
+  driverId: text("driver_id"),
+  sessionType: text("session_type").notNull().default("smart_charge"), // 'smart_charge' | 'v2g_discharge' | 'fast_emergency_charge'
+  startSoCPercent: real("start_soc_percent").notNull().default(40.0),
+  currentSoCPercent: real("current_soc_percent").notNull().default(40.0),
+  targetSoCPercent: real("target_soc_percent").notNull().default(85.0),
+  energyDeliveredKwh: real("energy_delivered_kwh").notNull().default(0.0),
+  energyDischargedKwh: real("energy_discharged_kwh").notNull().default(0.0),
+  departureTime: text("departure_time"),
+  status: text("status").notNull().default("active"), // 'active' | 'completed' | 'interrupted'
+  costSavings: real("cost_savings").notNull().default(0.0),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoEvSessionIdIdx: index("idx_eco_ev_session_id").on(t.sessionId),
+  ecoEvSessionStationIdx: index("idx_eco_ev_session_station").on(t.stationId),
+  ecoEvSessionVehIdx: index("idx_eco_ev_session_veh").on(t.vehicleId),
+  ecoEvSessionStatusIdx: index("idx_eco_ev_session_status").on(t.status),
+}));
+
+export const ecoEsgReports = sqliteTable("eco_esg_reports", {
+  id: text("id").primaryKey(),
+  reportId: text("report_id").notNull().unique(),
+  title: text("title").notNull(),
+  reportingPeriod: text("reporting_period").notNull(), // '2026-Q1', '2026-FY'
+  framework: text("framework").notNull().default("ghg_protocol_gri305"), // 'ghg_protocol_gri305' | 'csrd_esrs_e1' | 'sec_climate' | 'tcfd'
+  scope1TotalKg: real("scope1_total_kg").notNull().default(0.0),
+  scope2LocationKg: real("scope2_location_kg").notNull().default(0.0),
+  scope2MarketKg: real("scope2_market_kg").notNull().default(0.0),
+  scope3TotalKg: real("scope3_total_kg").notNull().default(0.0),
+  netEmissionsKg: real("net_emissions_kg").notNull().default(0.0),
+  recOffsetsDeductedKg: real("rec_offsets_deducted_kg").notNull().default(0.0),
+  merkleRoot: text("merkle_root").notNull().default(""),
+  status: text("status").notNull().default("draft"), // 'draft' | 'under_review' | 'certified' | 'published'
+  publishedAt: text("published_at"),
+  signedByUserId: text("signed_by_user_id"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoReportIdIdx: index("idx_eco_report_id").on(t.reportId),
+  ecoReportPeriodIdx: index("idx_eco_report_period").on(t.reportingPeriod),
+  ecoReportStatusIdx: index("idx_eco_report_status").on(t.status),
+}));
+
+export const ecoCarbonOffsets = sqliteTable("eco_carbon_offsets", {
+  id: text("id").primaryKey(),
+  offsetId: text("offset_id").notNull().unique(),
+  certificateNumber: text("certificate_number").notNull().unique(),
+  registry: text("registry").notNull().default("verra_vcs"), // 'verra_vcs' | 'gold_standard' | 'irec_standard' | 'cdm'
+  offsetType: text("offset_type").notNull().default("reforestation"), // 'reforestation' | 'solar_renewable' | 'methane_capture' | 'direct_air_capture' | 'irec_rec'
+  vintageYear: integer("vintage_year").notNull().default(2025),
+  quantityTonsCo2e: real("quantity_tons_co2e").notNull().default(100.0),
+  costPerTon: real("cost_per_ton").notNull().default(25.0),
+  status: text("status").notNull().default("active"), // 'active' | 'retired' | 'expired'
+  retiredForPeriod: text("retired_for_period"),
+  verificationHash: text("verification_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ecoOffsetIdIdx: index("idx_eco_offset_id").on(t.offsetId),
+  ecoOffsetCertIdx: index("idx_eco_offset_cert").on(t.certificateNumber),
+  ecoOffsetStatusIdx: index("idx_eco_offset_status").on(t.status),
+}));
+
+// ─── Autonomous Campus Safety, AI Vision Shield & Edge Physical Security Orchestrator (VISION-SHIELD / SafeCampus OS) ───
+
+export const visionCameras = sqliteTable("vision_cameras", {
+  id: text("id").primaryKey(),
+  cameraId: text("camera_id").notNull().unique(),
+  name: text("name").notNull(),
+  facilityId: text("facility_id").notNull(),
+  spaceId: text("space_id"),
+  zoneType: text("zone_type").notNull().default("perimeter"), // 'perimeter' | 'corridor' | 'entrance' | 'parking' | 'hallway' | 'common_area'
+  protocol: text("protocol").notNull().default("onvif"), // 'onvif' | 'rtsp' | 'webrtc'
+  streamUrl: text("stream_url").notNull(),
+  resolution: text("resolution").notNull().default("1080p"), // '720p' | '1080p' | '4k'
+  fps: integer("fps").notNull().default(30),
+  fovHorizontalDeg: real("fov_horizontal_deg").notNull().default(90.0),
+  fovVerticalDeg: real("fov_vertical_deg").notNull().default(60.0),
+  mountingHeightMeters: real("mounting_height_meters").notNull().default(3.5),
+  positionX: real("position_x").notNull().default(0.0),
+  positionY: real("position_y").notNull().default(0.0),
+  positionZ: real("position_z").notNull().default(3.5),
+  pitchDeg: real("pitch_deg").notNull().default(-15.0),
+  yawDeg: real("yaw_deg").notNull().default(0.0),
+  rollDeg: real("roll_deg").notNull().default(0.0),
+  ptzCapable: integer("ptz_capable", { mode: "boolean" }).notNull().default(false),
+  status: text("status").notNull().default("online"), // 'online' | 'offline' | 'degraded' | 'occluded'
+  isPrivacyMasked: integer("is_privacy_masked", { mode: "boolean" }).notNull().default(false),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionCamIdIdx: index("idx_vision_cam_id").on(t.cameraId),
+  visionCamFacIdx: index("idx_vision_cam_fac").on(t.facilityId),
+  visionCamZoneIdx: index("idx_vision_cam_zone").on(t.zoneType),
+  visionCamStatusIdx: index("idx_vision_cam_status").on(t.status),
+}));
+
+export const visionDetectionZones = sqliteTable("vision_detection_zones", {
+  id: text("id").primaryKey(),
+  zoneId: text("zone_id").notNull().unique(),
+  cameraId: text("camera_id").notNull(),
+  name: text("name").notNull(),
+  zoneType: text("zone_type").notNull().default("perimeter_tripwire"), // 'perimeter_tripwire' | 'crowd_density' | 'restricted_entry' | 'slip_fall_hazard' | 'privacy_exclusion'
+  polygonCoordinatesJson: text("polygon_coordinates_json").notNull().default("[]"),
+  direction: text("direction").notNull().default("bidirectional"), // 'entry' | 'exit' | 'bidirectional'
+  sensitivity: real("sensitivity").notNull().default(0.85),
+  maxOccupancyThreshold: integer("max_occupancy_threshold").notNull().default(50),
+  loiteringThresholdSeconds: integer("loitering_threshold_seconds").notNull().default(120),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionZoneIdIdx: index("idx_vision_zone_id").on(t.zoneId),
+  visionZoneCamIdx: index("idx_vision_zone_cam").on(t.cameraId),
+  visionZoneTypeIdx: index("idx_vision_zone_type").on(t.zoneType),
+}));
+
+export const visionThreatAlerts = sqliteTable("vision_threat_alerts", {
+  id: text("id").primaryKey(),
+  alertId: text("alert_id").notNull().unique(),
+  cameraId: text("camera_id").notNull(),
+  zoneId: text("zone_id"),
+  threatType: text("threat_type").notNull().default("perimeter_intrusion"), // 'perimeter_intrusion' | 'crowd_surge' | 'stampede_risk' | 'slip_and_fall' | 'loitering' | 'camera_tampering' | 'blacklisted_vehicle' | 'unresponsive_person'
+  severity: text("severity").notNull().default("medium"), // 'critical' | 'high' | 'medium' | 'low' | 'informational'
+  confidenceScore: real("confidence_score").notNull().default(0.85),
+  boundingPolygonJson: text("bounding_polygon_json").notNull().default("[]"),
+  snapshotUrl: text("snapshot_url"),
+  status: text("status").notNull().default("active"), // 'active' | 'acknowledged' | 'triaged' | 'dispatched' | 'resolved' | 'false_positive'
+  detectedAt: text("detected_at").notNull(),
+  resolvedAt: text("resolved_at"),
+  auditHash: text("audit_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionAlertIdIdx: index("idx_vision_alert_id").on(t.alertId),
+  visionAlertCamIdx: index("idx_vision_alert_cam").on(t.cameraId),
+  visionAlertThreatIdx: index("idx_vision_alert_threat").on(t.threatType),
+  visionAlertSeverityIdx: index("idx_vision_alert_severity").on(t.severity),
+  visionAlertStatusIdx: index("idx_vision_alert_status").on(t.status),
+  visionAlertTimeIdx: index("idx_vision_alert_time").on(t.detectedAt),
+}));
+
+export const visionSecurityIncidents = sqliteTable("vision_security_incidents", {
+  id: text("id").primaryKey(),
+  incidentId: text("incident_id").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  threatType: text("threat_type").notNull().default("perimeter_intrusion"),
+  severity: text("severity").notNull().default("high"),
+  facilityId: text("facility_id").notNull(),
+  spaceId: text("space_id"),
+  leadGuardId: text("lead_guard_id"),
+  status: text("status").notNull().default("open"), // 'open' | 'investigating' | 'dispatched' | 'contained' | 'resolved' | 'closed'
+  capJson: text("cap_json").notNull().default("{}"),
+  merkleRoot: text("merkle_root").notNull().default(""),
+  occurredAt: text("occurred_at").notNull(),
+  containedAt: text("contained_at"),
+  closedAt: text("closed_at"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionIncidentIdIdx: index("idx_vision_incident_id").on(t.incidentId),
+  visionIncidentFacIdx: index("idx_vision_incident_fac").on(t.facilityId),
+  visionIncidentStatusIdx: index("idx_vision_incident_status").on(t.status),
+  visionIncidentSeverityIdx: index("idx_vision_incident_severity").on(t.severity),
+  visionIncidentOccurIdx: index("idx_vision_incident_occur").on(t.occurredAt),
+}));
+
+export const visionGuardProfiles = sqliteTable("vision_guard_profiles", {
+  id: text("id").primaryKey(),
+  guardId: text("guard_id").notNull().unique(),
+  staffId: text("staff_id").notNull(),
+  badgeNumber: text("badge_number").notNull().unique(),
+  callSign: text("call_sign").notNull(),
+  status: text("status").notNull().default("on_duty"), // 'on_duty' | 'patrolling' | 'dispatched' | 'on_break' | 'off_duty'
+  currentLocationX: real("current_location_x").notNull().default(0.0),
+  currentLocationY: real("current_location_y").notNull().default(0.0),
+  currentLocationZ: real("current_location_z").notNull().default(0.0),
+  currentFacilityId: text("current_facility_id"),
+  assignedSector: text("assigned_sector"),
+  batteryPercent: real("battery_percent").notNull().default(100.0),
+  lastHeartbeatAt: text("last_heartbeat_at").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionGuardIdIdx: index("idx_vision_guard_id").on(t.guardId),
+  visionGuardStaffIdx: index("idx_vision_guard_staff").on(t.staffId),
+  visionGuardStatusIdx: index("idx_vision_guard_status").on(t.status),
+  visionGuardFacIdx: index("idx_vision_guard_fac").on(t.currentFacilityId),
+}));
+
+export const visionGuardDispatches = sqliteTable("vision_guard_dispatches", {
+  id: text("id").primaryKey(),
+  dispatchId: text("dispatch_id").notNull().unique(),
+  incidentId: text("incident_id").notNull(),
+  guardId: text("guard_id").notNull(),
+  priority: text("priority").notNull().default("high"), // 'urgent' | 'high' | 'medium' | 'low'
+  assignedRouteJson: text("assigned_route_json").notNull().default("[]"),
+  etaSeconds: integer("eta_seconds").notNull().default(180),
+  responseStatus: text("response_status").notNull().default("dispatched"), // 'dispatched' | 'acknowledged' | 'en_route' | 'on_scene' | 'cleared'
+  dispatchedAt: text("dispatched_at").notNull(),
+  arrivedAt: text("arrived_at"),
+  clearedAt: text("cleared_at"),
+  notes: text("notes"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionDispatchIdIdx: index("idx_vision_dispatch_id").on(t.dispatchId),
+  visionDispatchIncIdx: index("idx_vision_dispatch_inc").on(t.incidentId),
+  visionDispatchGuardIdx: index("idx_vision_dispatch_guard").on(t.guardId),
+  visionDispatchStatusIdx: index("idx_vision_dispatch_status").on(t.responseStatus),
+}));
+
+export const visionAlprLogs = sqliteTable("vision_alpr_logs", {
+  id: text("id").primaryKey(),
+  logId: text("log_id").notNull().unique(),
+  cameraId: text("camera_id").notNull(),
+  plateNumber: text("plate_number").notNull(),
+  confidenceScore: real("confidence_score").notNull().default(0.95),
+  direction: text("direction").notNull().default("entry"), // 'entry' | 'exit'
+  gateId: text("gate_id").notNull().default("main_gate"),
+  vehicleType: text("vehicle_type").notNull().default("car"), // 'car' | 'motorcycle' | 'bus' | 'van' | 'truck'
+  permitStatus: text("permit_status").notNull().default("unknown"), // 'authorized_staff' | 'authorized_student' | 'visitor_pass' | 'unauthorized' | 'blacklisted'
+  gateActuated: integer("gate_actuated", { mode: "boolean" }).notNull().default(false),
+  snapshotUrl: text("snapshot_url"),
+  capturedAt: text("captured_at").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionAlprLogIdIdx: index("idx_vision_alpr_log_id").on(t.logId),
+  visionAlprCamIdx: index("idx_vision_alpr_cam").on(t.cameraId),
+  visionAlprPlateIdx: index("idx_vision_alpr_plate").on(t.plateNumber),
+  visionAlprPermitIdx: index("idx_vision_alpr_permit").on(t.permitStatus),
+  visionAlprTimeIdx: index("idx_vision_alpr_time").on(t.capturedAt),
+}));
+
+export const visionVehicleWhitelist = sqliteTable("vision_vehicle_whitelist", {
+  id: text("id").primaryKey(),
+  permitId: text("permit_id").notNull().unique(),
+  plateNumber: text("plate_number").notNull().unique(),
+  ownerName: text("owner_name").notNull(),
+  ownerType: text("owner_type").notNull().default("staff"), // 'staff' | 'student' | 'vendor' | 'vip' | 'security'
+  ownerId: text("owner_id"),
+  vehicleMakeModel: text("vehicle_make_model"),
+  vehicleColor: text("vehicle_color"),
+  validFrom: text("valid_from").notNull(),
+  validTo: text("valid_to"),
+  isBlacklisted: integer("is_blacklisted", { mode: "boolean" }).notNull().default(false),
+  blacklistReason: text("blacklist_reason"),
+  status: text("status").notNull().default("active"), // 'active' | 'suspended' | 'expired'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionWhitelistPermitIdx: index("idx_vision_whitelist_permit").on(t.permitId),
+  visionWhitelistPlateIdx: index("idx_vision_whitelist_plate").on(t.plateNumber),
+  visionWhitelistStatusIdx: index("idx_vision_whitelist_status").on(t.status),
+  visionWhitelistOwnerIdx: index("idx_vision_whitelist_owner").on(t.ownerType, t.ownerId),
+}));
+
+export const visionLockdownEvents = sqliteTable("vision_lockdown_events", {
+  id: text("id").primaryKey(),
+  lockdownId: text("lockdown_id").notNull().unique(),
+  scope: text("scope").notNull().default("campus_wide"), // 'campus_wide' | 'facility' | 'zone' | 'floor'
+  targetFacilityId: text("target_facility_id"),
+  targetZoneId: text("target_zone_id"),
+  triggerReason: text("trigger_reason").notNull(),
+  triggeredByUserId: text("triggered_by_user_id").notNull(),
+  status: text("status").notNull().default("active"), // 'active' | 'all_clear' | 'cancelled'
+  doorsLockedCount: integer("doors_locked_count").notNull().default(0),
+  egressPathsIlluminated: integer("egress_paths_illuminated", { mode: "boolean" }).notNull().default(true),
+  ecoMeshIslandingTriggered: integer("eco_mesh_islanding_triggered", { mode: "boolean" }).notNull().default(false),
+  triggeredAt: text("triggered_at").notNull(),
+  allClearAt: text("all_clear_at"),
+  merkleAuditHash: text("merkle_audit_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionLockdownIdIdx: index("idx_vision_lockdown_id").on(t.lockdownId),
+  visionLockdownScopeIdx: index("idx_vision_lockdown_scope").on(t.scope),
+  visionLockdownStatusIdx: index("idx_vision_lockdown_status").on(t.status),
+  visionLockdownTimeIdx: index("idx_vision_lockdown_time").on(t.triggeredAt),
+}));
+
+export const visionPrivacyAuditLogs = sqliteTable("vision_privacy_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  eventType: text("event_type").notNull().default("face_redaction"), // 'face_redaction' | 'plate_redaction' | 'consent_revoked' | 'rolling_purge' | 'dual_auth_deanon'
+  cameraId: text("camera_id"),
+  subjectType: text("subject_type").notNull().default("student"), // 'student' | 'staff' | 'visitor'
+  facesRedactedCount: integer("faces_redacted_count").notNull().default(0),
+  platesRedactedCount: integer("plates_redacted_count").notNull().default(0),
+  authorizedByShare1: text("authorized_by_share1"),
+  authorizedByShare2: text("authorized_by_share2"),
+  deanonReason: text("deanon_reason"),
+  privacyNoiseEpsilon: real("privacy_noise_epsilon").notNull().default(1.0),
+  auditTimestamp: text("audit_timestamp").notNull(),
+  merkleProof: text("merkle_proof").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  visionPrivacyAuditIdIdx: index("idx_vision_privacy_audit_id").on(t.auditId),
+  visionPrivacyTypeIdx: index("idx_vision_privacy_type").on(t.eventType),
+  visionPrivacyCamIdx: index("idx_vision_privacy_cam").on(t.cameraId),
+  visionPrivacyTimeIdx: index("idx_vision_privacy_time").on(t.auditTimestamp),
+}));
+
+// ─── ADVISE-MESH / CognitiveDegree OS: Curricular Graph & Autonomous Advising (Sprint-051) ───
+
+export const curriculumPrograms = sqliteTable("curriculum_programs", {
+  id: text("id").primaryKey(),
+  programCode: text("program_code").notNull().unique(),
+  title: text("title").notNull(),
+  departmentId: text("department_id").references(() => departments.id),
+  degreeType: text("degree_type").notNull().default("bachelor"), // 'bachelor' | 'master' | 'doctorate' | 'associate' | 'diploma'
+  totalCreditsRequired: integer("total_credits_required").notNull().default(120),
+  minimumGpa: real("minimum_gpa").notNull().default(2.0),
+  catalogYear: text("catalog_year").notNull().default("2026-2027"),
+  status: text("status").notNull().default("active"), // 'active' | 'archived' | 'draft'
+  curriculumComplexityIndex: real("curriculum_complexity_index").notNull().default(0.0),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumProgCodeIdx: index("idx_curriculum_prog_code").on(t.programCode),
+  curriculumProgDeptIdx: index("idx_curriculum_prog_dept").on(t.departmentId),
+  curriculumProgYearIdx: index("idx_curriculum_prog_year").on(t.catalogYear),
+  curriculumProgStatusIdx: index("idx_curriculum_prog_status").on(t.status),
+}));
+
+export const curriculumCourses = sqliteTable("curriculum_courses", {
+  id: text("id").primaryKey(),
+  courseCode: text("course_code").notNull(),
+  title: text("title").notNull(),
+  departmentId: text("department_id").references(() => departments.id),
+  credits: integer("credits").notNull().default(3),
+  level: integer("level").notNull().default(100),
+  courseType: text("course_type").notNull().default("major_core"), // 'major_core' | 'major_elective' | 'gen_ed' | 'open_elective'
+  minGrade: text("min_grade").notNull().default("D"),
+  typicalTerm: integer("typical_term").notNull().default(1),
+  historicalPassRate: real("historical_pass_rate").notNull().default(0.85),
+  blockingFactor: integer("blocking_factor").notNull().default(0),
+  description: text("description"),
+  syllabusEmbedding: text("syllabus_embedding"),
+  status: text("status").notNull().default("active"), // 'active' | 'archived'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumCourseCodeIdx: index("idx_curriculum_course_code").on(t.courseCode),
+  curriculumCourseDeptIdx: index("idx_curriculum_course_dept").on(t.departmentId),
+  curriculumCourseLevelIdx: index("idx_curriculum_course_level").on(t.level),
+  curriculumCourseTypeIdx: index("idx_curriculum_course_type").on(t.courseType),
+  curriculumCourseInstIdx: index("idx_curriculum_course_inst").on(t.institutionId),
+}));
+
+export const curriculumPrerequisites = sqliteTable("curriculum_prerequisites", {
+  id: text("id").primaryKey(),
+  courseId: text("course_id").notNull().references(() => curriculumCourses.id, { onDelete: "cascade" }),
+  prerequisiteCourseId: text("prerequisite_course_id").notNull().references(() => curriculumCourses.id, { onDelete: "cascade" }),
+  type: text("type").notNull().default("hard_prerequisite"), // 'hard_prerequisite' | 'corequisite' | 'advisory'
+  minimumGrade: text("minimum_grade").notNull().default("C"),
+  concurrencyAllowed: integer("concurrency_allowed", { mode: "boolean" }).notNull().default(false),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumPrereqCourseIdx: index("idx_curriculum_prereq_course").on(t.courseId),
+  curriculumPrereqTargetIdx: index("idx_curriculum_prereq_target").on(t.prerequisiteCourseId),
+  curriculumPrereqTypeIdx: index("idx_curriculum_prereq_type").on(t.type),
+}));
+
+export const curriculumDegreePlans = sqliteTable("curriculum_degree_plans", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id").notNull().unique(),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  programId: text("program_id").notNull().references(() => curriculumPrograms.id),
+  title: text("title").notNull().default("Primary Degree Plan"),
+  targetGraduationTerm: text("target_graduation_term").notNull().default("Spring 2030"),
+  totalTerms: integer("total_terms").notNull().default(8),
+  status: text("status").notNull().default("draft"), // 'draft' | 'submitted' | 'approved' | 'superseded'
+  approvedByAdvisorId: text("approved_by_advisor_id").references(() => staff.id),
+  approvedAt: text("approved_at"),
+  merkleAuditHash: text("merkle_audit_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumPlanIdIdx: index("idx_curriculum_plan_id").on(t.planId),
+  curriculumPlanStudentIdx: index("idx_curriculum_plan_student").on(t.studentId),
+  curriculumPlanProgramIdx: index("idx_curriculum_plan_program").on(t.programId),
+  curriculumPlanStatusIdx: index("idx_curriculum_plan_status").on(t.status),
+}));
+
+export const curriculumPlanCourses = sqliteTable("curriculum_plan_courses", {
+  id: text("id").primaryKey(),
+  planId: text("plan_id").notNull().references(() => curriculumDegreePlans.id, { onDelete: "cascade" }),
+  courseId: text("course_id").notNull().references(() => curriculumCourses.id),
+  plannedTermIndex: integer("planned_term_index").notNull(),
+  termName: text("term_name").notNull(),
+  credits: integer("credits").notNull().default(3),
+  status: text("status").notNull().default("planned"), // 'planned' | 'enrolled' | 'completed' | 'waived' | 'dropped'
+  gradeReceived: text("grade_received"),
+  isPrerequisiteSatisfied: integer("is_prerequisite_satisfied", { mode: "boolean" }).notNull().default(true),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumPlanCoursePlanIdx: index("idx_curriculum_plancourse_plan").on(t.planId),
+  curriculumPlanCourseCourseIdx: index("idx_curriculum_plancourse_course").on(t.courseId),
+  curriculumPlanCourseTermIdx: index("idx_curriculum_plancourse_term").on(t.plannedTermIndex),
+  curriculumPlanCourseStatusIdx: index("idx_curriculum_plancourse_status").on(t.status),
+}));
+
+export const curriculumTransferArticulations = sqliteTable("curriculum_transfer_articulations", {
+  id: text("id").primaryKey(),
+  articulationId: text("articulation_id").notNull().unique(),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  sourceInstitution: text("source_institution").notNull(),
+  sourceCourseCode: text("source_course_code").notNull(),
+  sourceCourseTitle: text("source_course_title").notNull(),
+  sourceCredits: real("source_credits").notNull().default(3.0),
+  sourceGrade: text("source_grade").notNull(),
+  targetCourseId: text("target_course_id").references(() => curriculumCourses.id),
+  semanticMatchScore: real("semantic_match_score").notNull().default(0.0),
+  status: text("status").notNull().default("pending"), // 'pending' | 'approved' | 'rejected' | 'faculty_review'
+  reviewedByStaffId: text("reviewed_by_staff_id").references(() => staff.id),
+  reviewedAt: text("reviewed_at"),
+  waiverReason: text("waiver_reason"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumTransferArtIdIdx: index("idx_curriculum_transfer_art_id").on(t.articulationId),
+  curriculumTransferStudentIdx: index("idx_curriculum_transfer_student").on(t.studentId),
+  curriculumTransferStatusIdx: index("idx_curriculum_transfer_status").on(t.status),
+}));
+
+export const curriculumAdvisingSessions = sqliteTable("curriculum_advising_sessions", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().unique(),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  activeDomain: text("active_domain").notNull().default("degree_planner"), // 'degree_planner' | 'career_alignment' | 'transfer_articulation' | 'financial_aid_load' | 'academic_recovery'
+  status: text("status").notNull().default("active"), // 'active' | 'resolved' | 'handed_off_to_human'
+  assignedCounselorId: text("assigned_counselor_id").references(() => staff.id),
+  sessionSummary: text("session_summary"),
+  proposedChangesJson: text("proposed_changes_json"),
+  confidenceScore: real("confidence_score").notNull().default(0.9),
+  startedAt: text("started_at").notNull(),
+  endedAt: text("ended_at"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumAdvisingSessionIdIdx: index("idx_curriculum_advsession_id").on(t.sessionId),
+  curriculumAdvisingStudentIdx: index("idx_curriculum_advsession_student").on(t.studentId),
+  curriculumAdvisingDomainIdx: index("idx_curriculum_advsession_domain").on(t.activeDomain),
+  curriculumAdvisingStatusIdx: index("idx_curriculum_advsession_status").on(t.status),
+}));
+
+export const curriculumAdvisingMessages = sqliteTable("curriculum_advising_messages", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id").notNull().references(() => curriculumAdvisingSessions.id, { onDelete: "cascade" }),
+  senderType: text("sender_type").notNull(), // 'student' | 'agent' | 'human_advisor' | 'system'
+  agentDomain: text("agent_domain"), // 'degree_planner' | 'career_alignment' | etc.
+  messageContent: text("message_content").notNull(),
+  citationsJson: text("citations_json"),
+  roadmapActionJson: text("roadmap_action_json"),
+  tokenCount: integer("token_count").notNull().default(0),
+  sentAt: text("sent_at").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumAdvMessageSessionIdx: index("idx_curriculum_advmsg_session").on(t.sessionId),
+  curriculumAdvMessageSenderIdx: index("idx_curriculum_advmsg_sender").on(t.senderType),
+  curriculumAdvMessageTimeIdx: index("idx_curriculum_advmsg_time").on(t.sentAt),
+}));
+
+export const curriculumRetentionAlerts = sqliteTable("curriculum_retention_alerts", {
+  id: text("id").primaryKey(),
+  alertId: text("alert_id").notNull().unique(),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  riskTier: text("risk_tier").notNull().default("medium"), // 'critical' | 'high' | 'medium' | 'low'
+  riskScore: real("risk_score").notNull().default(0.5),
+  contributingFactorsJson: text("contributing_factors_json").notNull(),
+  recommendedInterventionJson: text("recommended_intervention_json"),
+  status: text("status").notNull().default("open"), // 'open' | 'triaged' | 'in_intervention' | 'resolved' | 'dismissed'
+  assignedCounselorId: text("assigned_counselor_id").references(() => staff.id),
+  engageOsDispatched: integer("engage_os_dispatched", { mode: "boolean" }).notNull().default(false),
+  lastContactedAt: text("last_contacted_at"),
+  resolvedAt: text("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumAlertIdIdx: index("idx_curriculum_alert_id").on(t.alertId),
+  curriculumAlertStudentIdx: index("idx_curriculum_alert_student").on(t.studentId),
+  curriculumAlertRiskIdx: index("idx_curriculum_alert_risk").on(t.riskTier),
+  curriculumAlertStatusIdx: index("idx_curriculum_alert_status").on(t.status),
+}));
+
+export const curriculumAuditLogs = sqliteTable("curriculum_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  actionType: text("action_type").notNull(), // 'plan_approved' | 'prerequisite_waived' | 'course_substituted' | 'transfer_approved' | 'retention_overridden'
+  targetStudentId: text("target_student_id").references(() => students.id),
+  planId: text("plan_id").references(() => curriculumDegreePlans.id),
+  performedByUserId: text("performed_by_user_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  previousState: text("previous_state"),
+  newState: text("new_state"),
+  justification: text("justification"),
+  merkleProof: text("merkle_proof").notNull().default(""),
+  merkleAuditHash: text("merkle_audit_hash").notNull().default(""),
+  auditTimestamp: text("audit_timestamp").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  curriculumAuditIdIdx: index("idx_curriculum_audit_id").on(t.auditId),
+  curriculumAuditActionIdx: index("idx_curriculum_audit_action").on(t.actionType),
+  curriculumAuditStudentIdx: index("idx_curriculum_audit_student").on(t.targetStudentId),
+  curriculumAuditTimeIdx: index("idx_curriculum_audit_time").on(t.auditTimestamp),
+}));
+
+// ==========================================
+// FACILITY-MIND / SmartCampus OS (Sprint-052)
+// ==========================================
+
+export const facilityEquipment = sqliteTable("facility_equipment", {
+  id: text("id").primaryKey(),
+  assetTag: text("asset_tag").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("hvac"), // 'hvac' | 'elevator' | 'plumbing' | 'electrical' | 'generator' | 'fire_safety'
+  buildingId: text("building_id").notNull(),
+  floorId: text("floor_id").notNull(),
+  roomId: text("room_id"),
+  spatialCoordinatesJson: text("spatial_coordinates_json"), // { x, y, z }
+  manufacturer: text("manufacturer"),
+  modelNumber: text("model_number"),
+  serialNumber: text("serial_number"),
+  installDate: text("install_date"),
+  warrantyExpiry: text("warranty_expiry"),
+  status: text("status").notNull().default("operational"), // 'operational' | 'degraded' | 'offline' | 'maintenance'
+  criticality: text("criticality").notNull().default("medium"), // 'critical' | 'high' | 'medium' | 'low'
+  healthScore: real("health_score").notNull().default(100.0),
+  metadataJson: text("metadata_json"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityEquipAssetTagIdx: index("idx_facility_equip_asset_tag").on(t.assetTag),
+  facilityEquipCategoryIdx: index("idx_facility_equip_category").on(t.category),
+  facilityEquipBuildingIdx: index("idx_facility_equip_building").on(t.buildingId),
+  facilityEquipStatusIdx: index("idx_facility_equip_status").on(t.status),
+  facilityEquipInstitutionIdx: index("idx_facility_equip_institution").on(t.institutionId),
+}));
+
+export const facilityTelemetrySensors = sqliteTable("facility_telemetry_sensors", {
+  id: text("id").primaryKey(),
+  sensorId: text("sensor_id").notNull().unique(),
+  equipmentId: text("equipment_id").notNull().references(() => facilityEquipment.id, { onDelete: "cascade" }),
+  sensorType: text("sensor_type").notNull().default("temperature"), // 'temperature' | 'vibration' | 'pressure' | 'flow_rate' | 'power_draw' | 'filter_delta_p' | 'refrigerant_pressure' | 'runtime_hours'
+  sensorModel: text("sensor_model"),
+  protocol: text("protocol").notNull().default("mqtt"), // 'mqtt' | 'modbus' | 'bacnet' | 'rest'
+  endpointUrl: text("endpoint_url"),
+  pollingIntervalSec: integer("polling_interval_sec").notNull().default(60),
+  unit: text("unit").notNull().default("celsius"),
+  minThreshold: real("min_threshold"),
+  maxThreshold: real("max_threshold"),
+  deadbandPercent: real("deadband_percent").notNull().default(1.5),
+  status: text("status").notNull().default("active"), // 'active' | 'warning' | 'critical' | 'offline'
+  lastReadingValue: real("last_reading_value"),
+  lastReadingAt: text("last_reading_at"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilitySensorIdIdx: index("idx_facility_sensor_id").on(t.sensorId),
+  facilitySensorEquipIdx: index("idx_facility_sensor_equip").on(t.equipmentId),
+  facilitySensorTypeIdx: index("idx_facility_sensor_type").on(t.sensorType),
+  facilitySensorStatusIdx: index("idx_facility_sensor_status").on(t.status),
+}));
+
+export const facilitySensorReadings = sqliteTable("facility_sensor_readings", {
+  id: text("id").primaryKey(),
+  readingId: text("reading_id").notNull().unique(),
+  sensorId: text("sensor_id").notNull().references(() => facilityTelemetrySensors.id, { onDelete: "cascade" }),
+  equipmentId: text("equipment_id").notNull().references(() => facilityEquipment.id, { onDelete: "cascade" }),
+  readingValue: real("reading_value").notNull(),
+  unit: text("unit").notNull().default("celsius"),
+  anomalyScore: real("anomaly_score").notNull().default(0.0),
+  isAnomaly: integer("is_anomaly", { mode: "boolean" }).notNull().default(false),
+  rawPayloadJson: text("raw_payload_json"),
+  recordedAt: text("recorded_at").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityReadingIdIdx: index("idx_facility_reading_id").on(t.readingId),
+  facilityReadingSensorIdx: index("idx_facility_reading_sensor").on(t.sensorId),
+  facilityReadingEquipIdx: index("idx_facility_reading_equip").on(t.equipmentId),
+  facilityReadingRecordedIdx: index("idx_facility_reading_recorded").on(t.recordedAt),
+  facilityReadingAnomalyIdx: index("idx_facility_reading_anomaly").on(t.isAnomaly),
+}));
+
+export const facilityPredictiveModels = sqliteTable("facility_predictive_models", {
+  id: text("id").primaryKey(),
+  modelId: text("model_id").notNull().unique(),
+  equipmentCategory: text("equipment_category").notNull(),
+  modelType: text("model_type").notNull(), // 'statistical_drift' | 'vibration_fft' | 'thermal_degradation' | 'rul_estimator'
+  version: text("version").notNull().default("1.0.0"),
+  status: text("status").notNull().default("active"), // 'active' | 'training' | 'deprecated'
+  accuracyMetricsJson: text("accuracy_metrics_json"),
+  hyperparametersJson: text("hyperparameters_json"),
+  weightsPath: text("weights_path"),
+  lastTrainedAt: text("last_trained_at"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityModelIdIdx: index("idx_facility_model_id").on(t.modelId),
+  facilityModelCategoryIdx: index("idx_facility_model_category").on(t.equipmentCategory),
+  facilityModelTypeIdx: index("idx_facility_model_type").on(t.modelType),
+}));
+
+export const facilityAnomalyAlerts = sqliteTable("facility_anomaly_alerts", {
+  id: text("id").primaryKey(),
+  alertId: text("alert_id").notNull().unique(),
+  equipmentId: text("equipment_id").notNull().references(() => facilityEquipment.id, { onDelete: "cascade" }),
+  sensorId: text("sensor_id").references(() => facilityTelemetrySensors.id),
+  alertType: text("alert_type").notNull().default("sensor_drift"),
+  severity: text("severity").notNull().default("medium"), // 'critical' | 'high' | 'medium' | 'low'
+  anomalyScore: real("anomaly_score").notNull().default(0.5),
+  predictedFailureMode: text("predicted_failure_mode"),
+  estimatedRulHours: real("estimated_rul_hours"),
+  rootCauseHypothesis: text("root_cause_hypothesis"),
+  status: text("status").notNull().default("open"), // 'open' | 'acknowledged' | 'triaged' | 'work_order_created' | 'resolved' | 'false_positive'
+  acknowledgedByStaffId: text("acknowledged_by_staff_id").references(() => staff.id),
+  acknowledgedAt: text("acknowledged_at"),
+  resolutionNotes: text("resolution_notes"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityAlertIdIdx: index("idx_facility_alert_id").on(t.alertId),
+  facilityAlertEquipIdx: index("idx_facility_alert_equip").on(t.equipmentId),
+  facilityAlertSeverityIdx: index("idx_facility_alert_severity").on(t.severity),
+  facilityAlertStatusIdx: index("idx_facility_alert_status").on(t.status),
+}));
+
+export const facilityWorkOrders = sqliteTable("facility_work_orders", {
+  id: text("id").primaryKey(),
+  workOrderNumber: text("work_order_number").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  priority: text("priority").notNull().default("routine"), // 'emergency' | 'urgent' | 'routine' | 'preventive'
+  category: text("category").notNull().default("general"), // 'electrical' | 'hvac' | 'plumbing' | 'mechanical' | 'elevator' | 'general'
+  status: text("status").notNull().default("draft"), // 'draft' | 'scheduled' | 'assigned' | 'in_progress' | 'pending_parts' | 'completed' | 'verified' | 'cancelled'
+  equipmentId: text("equipment_id").references(() => facilityEquipment.id),
+  anomalyAlertId: text("anomaly_alert_id").references(() => facilityAnomalyAlerts.id),
+  buildingId: text("building_id").notNull(),
+  floorId: text("floor_id").notNull(),
+  roomId: text("room_id"),
+  spatialRouteDataJson: text("spatial_route_data_json"),
+  assignedTechnicianId: text("assigned_technician_id").references(() => staff.id),
+  assignedContractorId: text("assigned_contractor_id"),
+  estimatedDurationMinutes: integer("estimated_duration_minutes").notNull().default(60),
+  actualDurationMinutes: integer("actual_duration_minutes"),
+  scheduledStartTime: text("scheduled_start_time"),
+  scheduledEndTime: text("scheduled_end_time"),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  verifiedAt: text("verified_at"),
+  verifiedByStaffId: text("verified_by_staff_id").references(() => staff.id),
+  resolutionSummary: text("resolution_summary"),
+  technicianSignature: text("technician_signature"),
+  photoEvidenceJson: text("photo_evidence_json"),
+  merkleAuditHash: text("merkle_audit_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityWoNumberIdx: index("idx_facility_wo_number").on(t.workOrderNumber),
+  facilityWoEquipIdx: index("idx_facility_wo_equip").on(t.equipmentId),
+  facilityWoStatusIdx: index("idx_facility_wo_status").on(t.status),
+  facilityWoPriorityIdx: index("idx_facility_wo_priority").on(t.priority),
+  facilityWoTechIdx: index("idx_facility_wo_tech").on(t.assignedTechnicianId),
+}));
+
+export const facilityPartsInventory = sqliteTable("facility_parts_inventory", {
+  id: text("id").primaryKey(),
+  partNumber: text("part_number").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull().default("filters"), // 'filters' | 'belts' | 'lubricants' | 'bearings' | 'valves' | 'electrical' | 'general'
+  quantityOnHand: integer("quantity_on_hand").notNull().default(0),
+  quantityReserved: integer("quantity_reserved").notNull().default(0),
+  reorderThreshold: integer("reorder_threshold").notNull().default(5),
+  targetStockLevel: integer("target_stock_level").notNull().default(20),
+  unitCost: real("unit_cost").notNull().default(0.0),
+  supplierName: text("supplier_name"),
+  leadTimeDays: integer("lead_time_days").notNull().default(3),
+  compatibleEquipmentCategories: text("compatible_equipment_categories"),
+  locationBin: text("location_bin"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityPartNumberIdx: index("idx_facility_part_number").on(t.partNumber),
+  facilityPartCategoryIdx: index("idx_facility_part_category").on(t.category),
+  facilityPartStockIdx: index("idx_facility_part_stock").on(t.quantityOnHand),
+}));
+
+export const facilityWorkOrderParts = sqliteTable("facility_work_order_parts", {
+  id: text("id").primaryKey(),
+  workOrderId: text("work_order_id").notNull().references(() => facilityWorkOrders.id, { onDelete: "cascade" }),
+  partId: text("part_id").notNull().references(() => facilityPartsInventory.id, { onDelete: "cascade" }),
+  quantityRequired: integer("quantity_required").notNull().default(1),
+  quantityUsed: integer("quantity_used").notNull().default(0),
+  unitCostAtTime: real("unit_cost_at_time").notNull().default(0.0),
+  status: text("status").notNull().default("allocated"), // 'allocated' | 'consumed' | 'returned'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityWoPartWoIdx: index("idx_facility_wopart_wo").on(t.workOrderId),
+  facilityWoPartPartIdx: index("idx_facility_wopart_part").on(t.partId),
+  facilityWoPartStatusIdx: index("idx_facility_wopart_status").on(t.status),
+}));
+
+export const facilityContractorRegistry = sqliteTable("facility_contractor_registry", {
+  id: text("id").primaryKey(),
+  contractorId: text("contractor_id").notNull().unique(),
+  companyName: text("company_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  specializationsJson: text("specializations_json").notNull(),
+  ratePerHour: real("rate_per_hour").notNull().default(75.0),
+  slaEmergencyHours: integer("sla_emergency_hours").notNull().default(2),
+  slaRoutineHours: integer("sla_routine_hours").notNull().default(24),
+  performanceRating: real("performance_rating").notNull().default(5.0),
+  activeInsuranceExpiry: text("active_insurance_expiry"),
+  status: text("status").notNull().default("active"), // 'active' | 'inactive' | 'suspended'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityContractorIdIdx: index("idx_facility_contractor_id").on(t.contractorId),
+  facilityContractorStatusIdx: index("idx_facility_contractor_status").on(t.status),
+  facilityContractorRatingIdx: index("idx_facility_contractor_rating").on(t.performanceRating),
+}));
+
+export const facilityAuditLogs = sqliteTable("facility_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(), // 'work_order_created' | 'work_order_completed' | 'technician_assigned' | 'load_shed_executed' | 'safety_override_applied' | 'parts_reordered'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  prevMerkleRoot: text("prev_merkle_root").notNull().default(""),
+  merkleRoot: text("merkle_root").notNull().default(""),
+  timestamp: text("timestamp").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  facilityAuditIdIdx: index("idx_facility_audit_id").on(t.auditId),
+  facilityAuditActionIdx: index("idx_facility_audit_action").on(t.action),
+  facilityAuditEntityIdx: index("idx_facility_audit_entity").on(t.entityType, t.entityId),
+  facilityAuditTimeIdx: index("idx_facility_audit_time").on(t.timestamp),
+}));
+
+// ─── Sprint-053: Autonomous Research Computing & High-Performance AI Cluster Orchestrator (NEURO-CLUSTER / ResearchCompute OS) ───
+
+export const neuroClusters = sqliteTable("neuro_clusters", {
+  id: text("id").primaryKey(),
+  clusterId: text("cluster_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  clusterType: text("cluster_type").notNull().default("hybrid"), // 'on_premise' | 'cloud' | 'hybrid'
+  schedulerType: text("scheduler_type").notNull().default("slurm"), // 'slurm' | 'k8s' | 'native'
+  region: text("region").notNull().default("local-dc-1"),
+  totalNodes: integer("total_nodes").notNull().default(0),
+  totalGpus: integer("total_gpus").notNull().default(0),
+  activeJobsCount: integer("active_jobs_count").notNull().default(0),
+  status: text("status").notNull().default("active"), // 'active' | 'maintenance' | 'degraded' | 'offline'
+  networkTopology: text("network_topology").notNull().default("infiniband_fat_tree"), // 'infiniband_fat_tree' | 'roce_v2' | 'ethernet_100g'
+  configJson: text("config_json"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroClusterIdIdx: index("idx_neuro_cluster_id").on(t.clusterId),
+  neuroClusterStatusIdx: index("idx_neuro_cluster_status").on(t.status),
+  neuroClusterTypeIdx: index("idx_neuro_cluster_type").on(t.clusterType),
+}));
+
+export const neuroNodes = sqliteTable("neuro_nodes", {
+  id: text("id").primaryKey(),
+  nodeId: text("node_id").notNull().unique(),
+  clusterId: text("cluster_id").notNull().references(() => neuroClusters.id, { onDelete: "cascade" }),
+  hostname: text("hostname").notNull(),
+  ipAddress: text("ip_address").notNull(),
+  rackLocation: text("rack_location"), // e.g. "RACK-DC1-A4"
+  chassisSlot: integer("chassis_slot"),
+  nodeType: text("node_type").notNull().default("compute"), // 'compute' | 'head_node' | 'storage' | 'login'
+  cpuCores: integer("cpu_cores").notNull().default(64),
+  ramBytes: real("ram_bytes").notNull().default(549755813888), // 512GB
+  gpuCount: integer("gpu_count").notNull().default(8),
+  gpuModel: text("gpu_model").notNull().default("NVIDIA-H100-SXM5-80GB"),
+  status: text("status").notNull().default("ready"), // 'ready' | 'busy' | 'draining' | 'cordoned' | 'offline'
+  isCloudBurst: integer("is_cloud_burst", { mode: "boolean" }).notNull().default(false),
+  cloudProvider: text("cloud_provider").notNull().default("on_prem"), // 'aws' | 'gcp' | 'runpod' | 'on_prem'
+  spotInstanceId: text("spot_instance_id"),
+  currentPowerWatts: real("current_power_watts").notNull().default(0.0),
+  temperatureCelsius: real("temperature_celsius").notNull().default(35.0),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroNodeIdIdx: index("idx_neuro_node_id").on(t.nodeId),
+  neuroNodeClusterIdx: index("idx_neuro_node_cluster").on(t.clusterId),
+  neuroNodeStatusIdx: index("idx_neuro_node_status").on(t.status),
+  neuroNodeCloudIdx: index("idx_neuro_node_cloud").on(t.isCloudBurst),
+}));
+
+export const neuroGpus = sqliteTable("neuro_gpus", {
+  id: text("id").primaryKey(),
+  gpuId: text("gpu_id").notNull().unique(),
+  nodeId: text("node_id").notNull().references(() => neuroNodes.id, { onDelete: "cascade" }),
+  gpuIndex: integer("gpu_index").notNull().default(0),
+  model: text("model").notNull().default("NVIDIA-H100-SXM5-80GB"),
+  vramTotalBytes: real("vram_total_bytes").notNull().default(85899345920), // 80GB
+  vramAllocatedBytes: real("vram_allocated_bytes").notNull().default(0),
+  utilizationPercent: real("utilization_percent").notNull().default(0.0),
+  temperatureCelsius: real("temperature_celsius").notNull().default(40.0),
+  powerDrawWatts: real("power_draw_watts").notNull().default(150.0),
+  smClockMhz: integer("sm_clock_mhz").notNull().default(1980),
+  memoryClockMhz: integer("memory_clock_mhz").notNull().default(1593),
+  pcieBandwidthGbps: real("pcie_bandwidth_gbps").notNull().default(64.0),
+  nvlinkActive: integer("nvlink_active", { mode: "boolean" }).notNull().default(true),
+  numaNode: integer("numa_node").notNull().default(0),
+  status: text("status").notNull().default("idle"), // 'idle' | 'allocated' | 'error' | 'offline'
+  currentJobId: text("current_job_id"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroGpuIdIdx: index("idx_neuro_gpu_id").on(t.gpuId),
+  neuroGpuNodeIdx: index("idx_neuro_gpu_node").on(t.nodeId),
+  neuroGpuStatusIdx: index("idx_neuro_gpu_status").on(t.status),
+  neuroGpuJobIdx: index("idx_neuro_gpu_job").on(t.currentJobId),
+}));
+
+export const neuroJobs = sqliteTable("neuro_jobs", {
+  id: text("id").primaryKey(),
+  jobId: text("job_id").notNull().unique(),
+  jobName: text("job_name").notNull(),
+  userId: text("user_id").notNull().references(() => staff.id),
+  departmentId: text("department_id").notNull(),
+  grantId: text("grant_id"),
+  clusterId: text("cluster_id").notNull().references(() => neuroClusters.id),
+  jobType: text("job_type").notNull().default("distributed_training"), // 'interactive_notebook' | 'batch_training' | 'distributed_training' | 'inference_service' | 'eval_benchmark'
+  priority: text("priority").notNull().default("normal"), // 'low' | 'normal' | 'high' | 'urgent' | 'preemptible'
+  status: text("status").notNull().default("pending"), // 'pending' | 'queued' | 'running' | 'checkpointing' | 'completed' | 'failed' | 'cancelled' | 'preempted'
+  requestedGpus: integer("requested_gpus").notNull().default(1),
+  gpuModelRequirement: text("gpu_model_requirement").notNull().default("ANY"), // 'NVIDIA-H100' | 'NVIDIA-A100' | 'NVIDIA-L40S' | 'ANY'
+  minVramBytes: real("min_vram_bytes").notNull().default(25769803776), // 24GB
+  containerImage: text("container_image").notNull().default("pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime"),
+  entrypointCommand: text("entrypoint_command").notNull().default("python train.py"),
+  allocatedNodesJson: text("allocated_nodes_json"), // array of node IDs
+  allocatedGpuIdsJson: text("allocated_gpu_ids_json"), // array of GPU IDs
+  queuedAt: text("queued_at"),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  runtimeSeconds: integer("runtime_seconds").notNull().default(0),
+  exitCode: integer("exit_code"),
+  errorMessage: text("error_message"),
+  tokensCostTotal: real("tokens_cost_total").notNull().default(0.0),
+  carbonSavedKg: real("carbon_saved_kg").notNull().default(0.0),
+  merkleProofHash: text("merkle_proof_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroJobIdIdx: index("idx_neuro_job_id").on(t.jobId),
+  neuroJobUserIdx: index("idx_neuro_job_user").on(t.userId),
+  neuroJobDeptIdx: index("idx_neuro_job_dept").on(t.departmentId),
+  neuroJobStatusIdx: index("idx_neuro_job_status").on(t.status),
+  neuroJobClusterIdx: index("idx_neuro_job_cluster").on(t.clusterId),
+}));
+
+export const neuroJobCheckpoints = sqliteTable("neuro_job_checkpoints", {
+  id: text("id").primaryKey(),
+  checkpointId: text("checkpoint_id").notNull().unique(),
+  jobId: text("job_id").notNull().references(() => neuroJobs.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull().default(0),
+  epochNumber: integer("epoch_number").notNull().default(0),
+  lossValue: real("loss_value"),
+  metricsJson: text("metrics_json"),
+  storageUri: text("storage_uri").notNull(),
+  fileSizeBytes: real("file_size_bytes").notNull().default(0),
+  sha256Hash: text("sha256_hash").notNull(),
+  isPreemptionEmergency: integer("is_preemption_emergency", { mode: "boolean" }).notNull().default(false),
+  restoredCount: integer("restored_count").notNull().default(0),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroCheckpointIdIdx: index("idx_neuro_checkpoint_id").on(t.checkpointId),
+  neuroCheckpointJobIdx: index("idx_neuro_checkpoint_job").on(t.jobId),
+  neuroCheckpointHashIdx: index("idx_neuro_checkpoint_hash").on(t.sha256Hash),
+}));
+
+export const neuroFairShareQuotas = sqliteTable("neuro_fair_share_quotas", {
+  id: text("id").primaryKey(),
+  departmentId: text("department_id").notNull().unique(),
+  departmentName: text("department_name").notNull(),
+  allocatedShareWeight: real("allocated_share_weight").notNull().default(1.0), // target proportion
+  maxConcurrentGpus: integer("max_concurrent_gpus").notNull().default(16),
+  historicalUsageDecayed: real("historical_usage_decayed").notNull().default(0.0), // half-life decaying metric
+  fairShareScore: real("fair_share_score").notNull().default(1.0), // shareWeight / (historicalUsage + 1)
+  activeAllocatedGpus: integer("active_allocated_gpus").notNull().default(0),
+  pendingJobsCount: integer("pending_jobs_count").notNull().default(0),
+  halfLifeDecayFactor: real("half_life_decay_factor").notNull().default(0.95),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroQuotaDeptIdx: index("idx_neuro_quota_dept").on(t.departmentId),
+  neuroQuotaScoreIdx: index("idx_neuro_quota_score").on(t.fairShareScore),
+}));
+
+export const neuroCloudProviders = sqliteTable("neuro_cloud_providers", {
+  id: text("id").primaryKey(),
+  providerKey: text("provider_key").notNull().unique(), // 'aws' | 'gcp' | 'runpod'
+  providerName: text("provider_name").notNull(),
+  isEnabled: integer("is_enabled", { mode: "boolean" }).notNull().default(true),
+  apiEndpoint: text("api_endpoint"),
+  region: text("region").notNull().default("us-east-1"),
+  maxSpotInstances: integer("max_spot_instances").notNull().default(10),
+  currentActiveInstances: integer("current_active_instances").notNull().default(0),
+  maxPriceUsdPerHour: real("max_price_usd_per_hour").notNull().default(4.50),
+  autoArbitrageThresholdDelta: real("auto_arbitrage_threshold_delta").notNull().default(0.25), // 25% minimum savings
+  interruptionGraceSeconds: integer("interruption_grace_seconds").notNull().default(120),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroProviderKeyIdx: index("idx_neuro_provider_key").on(t.providerKey),
+  neuroProviderEnabledIdx: index("idx_neuro_provider_enabled").on(t.isEnabled),
+}));
+
+export const neuroSpotPriceHistory = sqliteTable("neuro_spot_price_history", {
+  id: text("id").primaryKey(),
+  provider: text("provider").notNull(), // 'aws' | 'gcp' | 'runpod'
+  region: text("region").notNull(),
+  gpuModel: text("gpu_model").notNull(),
+  instanceType: text("instance_type").notNull(),
+  spotPriceUsd: real("spot_price_usd").notNull(),
+  onDemandPriceUsd: real("on_demand_price_usd").notNull(),
+  discountPercent: real("discount_percent").notNull(),
+  interruptionRiskScore: real("interruption_risk_score").notNull().default(0.1), // 0.0 - 1.0
+  recordedAt: text("recorded_at").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroSpotProviderIdx: index("idx_neuro_spot_provider").on(t.provider),
+  neuroSpotModelIdx: index("idx_neuro_spot_model").on(t.gpuModel),
+  neuroSpotRecordedIdx: index("idx_neuro_spot_recorded").on(t.recordedAt),
+}));
+
+export const neuroDatasetProvenance = sqliteTable("neuro_dataset_provenance", {
+  id: text("id").primaryKey(),
+  datasetId: text("dataset_id").notNull().unique(),
+  name: text("name").notNull(),
+  version: text("version").notNull().default("1.0.0"),
+  description: text("description"),
+  sourceUri: text("source_uri").notNull(),
+  fileCount: integer("file_count").notNull().default(1),
+  totalSizeBytes: real("total_size_bytes").notNull().default(0),
+  manifestSha256: text("manifest_sha256").notNull(),
+  rootMerkleHash: text("root_merkle_hash").notNull(),
+  license: text("license").notNull().default("MIT"),
+  nsfNihGrantTagged: text("nsf_nih_grant_tagged"),
+  containsPiiPhi: integer("contains_pii_phi", { mode: "boolean" }).notNull().default(false),
+  isSealed: integer("is_sealed", { mode: "boolean" }).notNull().default(false),
+  sealedAt: text("sealed_at"),
+  sealedByUserId: text("sealed_by_user_id").references(() => staff.id),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroDatasetIdIdx: index("idx_neuro_dataset_id").on(t.datasetId),
+  neuroDatasetSealedIdx: index("idx_neuro_dataset_sealed").on(t.isSealed),
+  neuroDatasetGrantIdx: index("idx_neuro_dataset_grant").on(t.nsfNihGrantTagged),
+}));
+
+export const neuroMerkleLineageNodes = sqliteTable("neuro_merkle_lineage_nodes", {
+  id: text("id").primaryKey(),
+  nodeHash: text("node_hash").notNull().unique(),
+  parentNodeHash: text("parent_node_hash"),
+  entityType: text("entity_type").notNull(), // 'raw_dataset' | 'preprocessed_shard' | 'model_architecture' | 'hyperparameters' | 'training_epoch' | 'checkpoint_weights'
+  entityId: text("entity_id").notNull(),
+  jobId: text("job_id").references(() => neuroJobs.id),
+  datasetId: text("dataset_id").references(() => neuroDatasetProvenance.id),
+  metadataJson: text("metadata_json").notNull(),
+  provOType: text("prov_o_type").notNull().default("prov:Entity"), // 'prov:Entity' | 'prov:Activity' | 'prov:Agent'
+  inclusionProofJson: text("inclusion_proof_json"),
+  timestamp: text("timestamp").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroLineageNodeHashIdx: index("idx_neuro_lineage_node_hash").on(t.nodeHash),
+  neuroLineageParentIdx: index("idx_neuro_lineage_parent").on(t.parentNodeHash),
+  neuroLineageJobIdx: index("idx_neuro_lineage_job").on(t.jobId),
+  neuroLineageDatasetIdx: index("idx_neuro_lineage_dataset").on(t.datasetId),
+}));
+
+export const neuroComputeBillingAccounts = sqliteTable("neuro_compute_billing_accounts", {
+  id: text("id").primaryKey(),
+  accountNumber: text("account_number").notNull().unique(),
+  departmentId: text("department_id").notNull(),
+  grantId: text("grant_id"),
+  grantTitle: text("grant_title"),
+  principalInvestigatorId: text("principal_investigator_id").references(() => staff.id),
+  tokenBalance: real("token_balance").notNull().default(1000.0),
+  tokenAllocatedTotal: real("token_allocated_total").notNull().default(1000.0),
+  tokenSpentTotal: real("token_spent_total").notNull().default(0.0),
+  softCapPercent: real("soft_cap_percent").notNull().default(80.0),
+  hardCapTokens: real("hard_cap_tokens").notNull().default(1000.0),
+  isHardCapLocked: integer("is_hard_cap_locked", { mode: "boolean" }).notNull().default(false),
+  expiresAt: text("expires_at"),
+  status: text("status").notNull().default("active"), // 'active' | 'warning' | 'suspended' | 'expired'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroBillingAccountIdx: index("idx_neuro_billing_account").on(t.accountNumber),
+  neuroBillingDeptIdx: index("idx_neuro_billing_dept").on(t.departmentId),
+  neuroBillingGrantIdx: index("idx_neuro_billing_grant").on(t.grantId),
+  neuroBillingStatusIdx: index("idx_neuro_billing_status").on(t.status),
+}));
+
+export const neuroGrantCreditAllocations = sqliteTable("neuro_grant_credit_allocations", {
+  id: text("id").primaryKey(),
+  allocationId: text("allocation_id").notNull().unique(),
+  accountId: text("account_id").notNull().references(() => neuroComputeBillingAccounts.id, { onDelete: "cascade" }),
+  grantNumber: text("grant_number").notNull(),
+  fundingAgency: text("funding_agency").notNull().default("NSF"), // 'NSF' | 'NIH' | 'DOE' | 'DARPA' | 'INSTITUTIONAL'
+  creditedTokens: real("credited_tokens").notNull(),
+  dollarEquivalentUsd: real("dollar_equivalent_usd").notNull(),
+  allocatedByUserId: text("allocated_by_user_id").notNull().references(() => staff.id),
+  effectiveDate: text("effective_date").notNull(),
+  expiryDate: text("expiry_date").notNull(),
+  auditNotes: text("audit_notes"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroAllocIdIdx: index("idx_neuro_alloc_id").on(t.allocationId),
+  neuroAllocAccountIdx: index("idx_neuro_alloc_account").on(t.accountId),
+  neuroAllocGrantIdx: index("idx_neuro_alloc_grant").on(t.grantNumber),
+}));
+
+export const neuroBillingLedgerTransactions = sqliteTable("neuro_billing_ledger_transactions", {
+  id: text("id").primaryKey(),
+  transactionId: text("transaction_id").notNull().unique(),
+  accountId: text("account_id").notNull().references(() => neuroComputeBillingAccounts.id),
+  jobId: text("job_id").references(() => neuroJobs.id),
+  transactionType: text("transaction_type").notNull().default("compute_debit"), // 'compute_debit' | 'grant_credit' | 'quota_adjustment' | 'refund'
+  tokensAmount: real("tokens_amount").notNull(),
+  gpuSeconds: integer("gpu_seconds").notNull().default(0),
+  gpuModelRateApplied: text("gpu_model_rate_applied"),
+  debitAccountCode: text("debit_account_code").notNull().default("EXPENSE:GRANT_COMPUTE"),
+  creditAccountCode: text("credit_account_code").notNull().default("REVENUE:HPC_CLUSTER_OPS"),
+  balanceAfterTokens: real("balance_after_tokens").notNull(),
+  description: text("description").notNull(),
+  merkleLeafHash: text("merkle_leaf_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroLedgerTxIdIdx: index("idx_neuro_ledger_tx_id").on(t.transactionId),
+  neuroLedgerAccountIdx: index("idx_neuro_ledger_account").on(t.accountId),
+  neuroLedgerJobIdx: index("idx_neuro_ledger_job").on(t.jobId),
+  neuroLedgerTypeIdx: index("idx_neuro_ledger_type").on(t.transactionType),
+}));
+
+export const neuroAuditLogs = sqliteTable("neuro_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(), // 'cluster_registered' | 'job_submitted' | 'job_preempted' | 'spot_arbitrage_burst' | 'grant_debited' | 'lineage_sealed'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  prevMerkleRoot: text("prev_merkle_root").notNull().default(""),
+  merkleRoot: text("merkle_root").notNull().default(""),
+  timestamp: text("timestamp").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  neuroAuditIdIdx: index("idx_neuro_audit_id").on(t.auditId),
+  neuroAuditActionIdx: index("idx_neuro_audit_action").on(t.action),
+  neuroAuditEntityIdx: index("idx_neuro_audit_entity").on(t.entityType, t.entityId),
+  neuroAuditTimeIdx: index("idx_neuro_audit_time").on(t.timestamp),
+}));
+
+// ─── Autonomous Institutional Procurement & Supply Chain Intelligence (SUPPLY-HIVE / ProcurementOS) ───
+
+export const supplyVendors = sqliteTable("supply_vendors", {
+  id: text("id").primaryKey(),
+  vendorCode: text("vendor_code").notNull().unique(),
+  name: text("name").notNull(),
+  legalEntityName: text("legal_entity_name"),
+  category: text("category").notNull(), // 'hardware' | 'facilities_maintenance' | 'lab_supplies' | 'office_consumables' | 'software_services' | 'logistics'
+  taxId: text("tax_id").notNull(),
+  contactName: text("contact_name").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone"),
+  address: text("address"),
+  city: text("city"),
+  country: text("country").notNull().default("USA"),
+  paymentTerms: text("payment_terms").notNull().default("NET_30"), // 'NET_15' | 'NET_30' | 'NET_60' | 'IMMEDIATE'
+  onboardingStatus: text("onboarding_status").notNull().default("pending_verification"), // 'pending_verification' | 'approved' | 'restricted' | 'blocked'
+  riskTier: text("risk_tier").notNull().default("low"), // 'low' | 'medium' | 'high' | 'critical'
+  riskScore: real("risk_score").notNull().default(10.0),
+  esgRating: text("esg_rating").notNull().default("A"), // 'AAA' | 'AA' | 'A' | 'BBB' | 'BB' | 'B' | 'CCC'
+  esgScore: real("esg_score").notNull().default(75.0),
+  isSanctionsClean: integer("is_sanctions_clean", { mode: "boolean" }).notNull().default(true),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyVendorCodeIdx: index("idx_supply_vendor_code").on(t.vendorCode),
+  supplyVendorCategoryIdx: index("idx_supply_vendor_category").on(t.category),
+  supplyVendorStatusIdx: index("idx_supply_vendor_status").on(t.onboardingStatus),
+  supplyVendorRiskIdx: index("idx_supply_vendor_risk").on(t.riskTier),
+}));
+
+export const supplyVendorCertifications = sqliteTable("supply_vendor_certifications", {
+  id: text("id").primaryKey(),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id, { onDelete: "cascade" }),
+  certType: text("cert_type").notNull(), // 'ISO_9001' | 'ISO_14001' | 'ISO_27001' | 'SOC2' | 'FAIR_LABOR' | 'CARBON_NEUTRAL' | 'MINORITY_OWNED'
+  certNumber: text("cert_number").notNull(),
+  issuingAuthority: text("issuing_authority").notNull(),
+  issuedDate: text("issued_date").notNull(),
+  expiryDate: text("expiry_date").notNull(),
+  documentUrl: text("document_url"),
+  verificationStatus: text("verification_status").notNull().default("verified"), // 'pending' | 'verified' | 'expired' | 'revoked'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyCertVendorIdx: index("idx_supply_cert_vendor").on(t.vendorId),
+  supplyCertTypeIdx: index("idx_supply_cert_type").on(t.certType),
+  supplyCertStatusIdx: index("idx_supply_cert_status").on(t.verificationStatus),
+}));
+
+export const supplyVendorRiskAssessments = sqliteTable("supply_vendor_risk_assessments", {
+  id: text("id").primaryKey(),
+  assessmentId: text("assessment_id").notNull().unique(),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id, { onDelete: "cascade" }),
+  overallRiskScore: real("overall_risk_score").notNull(),
+  financialRiskScore: real("financial_risk_score").notNull().default(20.0),
+  complianceRiskScore: real("compliance_risk_score").notNull().default(15.0),
+  operationalRiskScore: real("operational_risk_score").notNull().default(25.0),
+  sanctionsRegistryChecked: text("sanctions_registry_checked").notNull().default("OFAC_UN_EU"),
+  sanctionsMatched: integer("sanctions_matched", { mode: "boolean" }).notNull().default(false),
+  pepMatched: integer("pep_matched", { mode: "boolean" }).notNull().default(false),
+  adverseMediaFindings: text("adverse_media_findings"),
+  recommendedAction: text("recommended_action").notNull().default("approve"), // 'approve' | 'flag_for_review' | 'reject'
+  assessedByUserId: text("assessed_by_user_id"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyRiskAssmtIdIdx: index("idx_supply_risk_assmt_id").on(t.assessmentId),
+  supplyRiskVendorIdx: index("idx_supply_risk_vendor").on(t.vendorId),
+  supplyRiskActionIdx: index("idx_supply_risk_action").on(t.recommendedAction),
+}));
+
+export const supplyVendorEsgScores = sqliteTable("supply_vendor_esg_scores", {
+  id: text("id").primaryKey(),
+  scoreId: text("score_id").notNull().unique(),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id, { onDelete: "cascade" }),
+  compositeEsgScore: real("composite_esg_score").notNull(),
+  environmentalScore: real("environmental_score").notNull(),
+  socialScore: real("social_score").notNull(),
+  governanceScore: real("governance_score").notNull(),
+  scope3CarbonIntensityKgPerUsd: real("scope3_carbon_intensity_kg_per_usd").notNull().default(0.15),
+  recycledMaterialPercentage: real("recycled_material_percentage").notNull().default(0.0),
+  fairLaborCertified: integer("fair_labor_certified", { mode: "boolean" }).notNull().default(false),
+  ratingGrade: text("rating_grade").notNull().default("A"), // 'AAA' | 'AA' | 'A' | 'BBB' | 'BB' | 'B' | 'CCC'
+  auditYear: integer("audit_year").notNull().default(2026),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyEsgScoreIdIdx: index("idx_supply_esg_score_id").on(t.scoreId),
+  supplyEsgVendorIdx: index("idx_supply_esg_vendor").on(t.vendorId),
+  supplyEsgGradeIdx: index("idx_supply_esg_grade").on(t.ratingGrade),
+}));
+
+export const supplyPurchaseRequisitions = sqliteTable("supply_purchase_requisitions", {
+  id: text("id").primaryKey(),
+  requisitionNumber: text("requisition_number").notNull().unique(),
+  departmentId: text("department_id").notNull(),
+  requesterId: text("requester_id").notNull().references(() => staff.id),
+  sourceType: text("source_type").notNull().default("manual"), // 'manual' | 'facility_work_order' | 'neuro_hpc_compute' | 'predictive_reorder'
+  sourceReferenceId: text("source_reference_id"),
+  title: text("title").notNull(),
+  urgency: text("urgency").notNull().default("standard"), // 'standard' | 'expedited' | 'emergency'
+  estimatedTotalUsd: real("estimated_total_usd").notNull(),
+  budgetCode: text("budget_code").notNull(),
+  requiredByDate: text("required_by_date"),
+  currentApprovalTier: text("current_approval_tier").notNull().default("hod"), // 'auto' | 'hod' | 'principal' | 'cfo_board' | 'approved' | 'rejected'
+  status: text("status").notNull().default("draft"), // 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'converted_to_po' | 'cancelled'
+  rejectionReason: text("rejection_reason"),
+  approvedByUserId: text("approved_by_user_id"),
+  approvedAt: text("approved_at"),
+  notes: text("notes"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyReqNumberIdx: index("idx_supply_req_number").on(t.requisitionNumber),
+  supplyReqDeptIdx: index("idx_supply_req_dept").on(t.departmentId),
+  supplyReqStatusIdx: index("idx_supply_req_status").on(t.status),
+  supplyReqTierIdx: index("idx_supply_req_tier").on(t.currentApprovalTier),
+}));
+
+export const supplyPurchaseOrders = sqliteTable("supply_purchase_orders", {
+  id: text("id").primaryKey(),
+  poNumber: text("po_number").notNull().unique(),
+  requisitionId: text("requisition_id").references(() => supplyPurchaseRequisitions.id),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id),
+  departmentId: text("department_id").notNull(),
+  orderDate: text("order_date").notNull(),
+  expectedDeliveryDate: text("expected_delivery_date"),
+  subtotalUsd: real("subtotal_usd").notNull(),
+  taxAmountUsd: real("tax_amount_usd").notNull().default(0.0),
+  shippingAmountUsd: real("shipping_amount_usd").notNull().default(0.0),
+  totalAmountUsd: real("total_amount_usd").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  paymentTerms: text("payment_terms").notNull().default("NET_30"),
+  shippingAddress: text("shipping_address").notNull(),
+  shippingDock: text("shipping_dock").notNull().default("DOCK_A_CENTRAL"),
+  status: text("status").notNull().default("issued"), // 'issued' | 'acknowledged' | 'partially_shipped' | 'fulfilled' | 'cancelled'
+  isEncumbered: integer("is_encumbered", { mode: "boolean" }).notNull().default(true),
+  encumbranceId: text("encumbrance_id"),
+  merkleLeafHash: text("merkle_leaf_hash").notNull().default(""),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyPoNumberIdx: index("idx_supply_po_number").on(t.poNumber),
+  supplyPoVendorIdx: index("idx_supply_po_vendor").on(t.vendorId),
+  supplyPoDeptIdx: index("idx_supply_po_dept").on(t.departmentId),
+  supplyPoStatusIdx: index("idx_supply_po_status").on(t.status),
+}));
+
+export const supplyPoLineItems = sqliteTable("supply_po_line_items", {
+  id: text("id").primaryKey(),
+  poId: text("po_id").notNull().references(() => supplyPurchaseOrders.id, { onDelete: "cascade" }),
+  lineNumber: integer("line_number").notNull(),
+  itemSku: text("item_sku").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull().default("general"),
+  unitPriceUsd: real("unit_price_usd").notNull(),
+  quantityOrdered: real("quantity_ordered").notNull(),
+  quantityReceived: real("quantity_received").notNull().default(0.0),
+  quantityInvoiced: real("quantity_invoiced").notNull().default(0.0),
+  unitOfMeasure: text("unit_of_measure").notNull().default("EA"), // 'EA' | 'BOX' | 'KG' | 'LITER' | 'HOUR'
+  lineTotalUsd: real("line_total_usd").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending' | 'partially_received' | 'fully_received' | 'cancelled'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyPoLinePoIdx: index("idx_supply_po_line_po").on(t.poId),
+  supplyPoLineSkuIdx: index("idx_supply_po_line_sku").on(t.itemSku),
+  supplyPoLineStatusIdx: index("idx_supply_po_line_status").on(t.status),
+}));
+
+export const supplyGoodsReceipts = sqliteTable("supply_goods_receipts", {
+  id: text("id").primaryKey(),
+  receiptNumber: text("receipt_number").notNull().unique(),
+  poId: text("po_id").notNull().references(() => supplyPurchaseOrders.id),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id),
+  receivedDate: text("received_date").notNull(),
+  receivedByUserId: text("received_by_user_id").notNull().references(() => staff.id),
+  warehouseBay: text("warehouse_bay").notNull().default("BAY_1"),
+  dockTag: text("dock_tag").notNull().default("DOCK_A"),
+  carrierName: text("carrier_name"),
+  trackingNumber: text("tracking_number"),
+  packageCondition: text("package_condition").notNull().default("good"), // 'good' | 'damaged' | 'tampered'
+  inspectionNotes: text("inspection_notes"),
+  receiverSignature: text("receiver_signature").notNull().default("VERIFIED"),
+  status: text("status").notNull().default("verified"), // 'verified' | 'quarantined' | 'rejected'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyReceiptNumberIdx: index("idx_supply_receipt_number").on(t.receiptNumber),
+  supplyReceiptPoIdx: index("idx_supply_receipt_po").on(t.poId),
+  supplyReceiptVendorIdx: index("idx_supply_receipt_vendor").on(t.vendorId),
+  supplyReceiptStatusIdx: index("idx_supply_receipt_status").on(t.status),
+}));
+
+export const supplyVendorInvoices = sqliteTable("supply_vendor_invoices", {
+  id: text("id").primaryKey(),
+  invoiceNumber: text("invoice_number").notNull(),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id),
+  poId: text("po_id").references(() => supplyPurchaseOrders.id),
+  invoiceDate: text("invoice_date").notNull(),
+  dueDate: text("due_date").notNull(),
+  subtotalUsd: real("subtotal_usd").notNull(),
+  taxAmountUsd: real("tax_amount_usd").notNull().default(0.0),
+  totalAmountUsd: real("total_amount_usd").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  documentUrl: text("document_url"),
+  status: text("status").notNull().default("submitted"), // 'submitted' | 'under_match' | 'matched' | 'discrepancy' | 'approved_for_payment' | 'paid' | 'rejected'
+  voucherNumber: text("voucher_number"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyInvNumberIdx: index("idx_supply_inv_number").on(t.invoiceNumber),
+  supplyInvVendorIdx: index("idx_supply_inv_vendor").on(t.vendorId),
+  supplyInvPoIdx: index("idx_supply_inv_po").on(t.poId),
+  supplyInvStatusIdx: index("idx_supply_inv_status").on(t.status),
+}));
+
+export const supplyThreeWayMatches = sqliteTable("supply_three_way_matches", {
+  id: text("id").primaryKey(),
+  matchId: text("match_id").notNull().unique(),
+  invoiceId: text("invoice_id").notNull().references(() => supplyVendorInvoices.id, { onDelete: "cascade" }),
+  poId: text("po_id").notNull().references(() => supplyPurchaseOrders.id),
+  receiptId: text("receipt_id").references(() => supplyGoodsReceipts.id),
+  matchStatus: text("match_status").notNull().default("matched"), // 'matched' | 'price_variance' | 'quantity_variance' | 'missing_receipt' | 'override_approved'
+  priceVariancePercent: real("price_variance_percent").notNull().default(0.0),
+  quantityVarianceUnits: real("quantity_variance_units").notNull().default(0.0),
+  dollarVarianceUsd: real("dollar_variance_usd").notNull().default(0.0),
+  isToleranceCompliant: integer("is_tolerance_compliant", { mode: "boolean" }).notNull().default(true),
+  overrideApprovedByUserId: text("override_approved_by_user_id"),
+  overrideJustification: text("override_justification"),
+  debitMemoGenerated: integer("debit_memo_generated", { mode: "boolean" }).notNull().default(false),
+  debitMemoAmountUsd: real("debit_memo_amount_usd").notNull().default(0.0),
+  paymentVoucherCode: text("payment_voucher_code"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyMatchIdIdx: index("idx_supply_match_id").on(t.matchId),
+  supplyMatchInvoiceIdx: index("idx_supply_match_invoice").on(t.invoiceId),
+  supplyMatchPoIdx: index("idx_supply_match_po").on(t.poId),
+  supplyMatchStatusIdx: index("idx_supply_match_status").on(t.matchStatus),
+}));
+
+export const supplyContracts = sqliteTable("supply_contracts", {
+  id: text("id").primaryKey(),
+  contractCode: text("contract_code").notNull().unique(),
+  vendorId: text("vendor_id").notNull().references(() => supplyVendors.id),
+  title: text("title").notNull(),
+  contractType: text("contract_type").notNull().default("MSA"), // 'MSA' | 'SOW' | 'SLA_SERVICE' | 'EQUIPMENT_LEASE' | 'SOFTWARE_LICENSE'
+  totalValueUsd: real("total_value_usd").notNull(),
+  effectiveStartDate: text("effective_start_date").notNull(),
+  effectiveEndDate: text("effective_end_date").notNull(),
+  renewalNoticeDays: integer("renewal_notice_days").notNull().default(60),
+  slaUptimeTargetPercent: real("sla_uptime_target_percent").notNull().default(99.9),
+  slaPenaltyRatePerOutageHourUsd: real("sla_penalty_rate_per_outage_hour_usd").notNull().default(500.0),
+  status: text("status").notNull().default("active"), // 'draft' | 'active' | 'expiring_soon' | 'renewed' | 'expired' | 'terminated'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyContractCodeIdx: index("idx_supply_contract_code").on(t.contractCode),
+  supplyContractVendorIdx: index("idx_supply_contract_vendor").on(t.vendorId),
+  supplyContractStatusIdx: index("idx_supply_contract_status").on(t.status),
+  supplyContractEndIdx: index("idx_supply_contract_end").on(t.effectiveEndDate),
+}));
+
+export const supplyContractMilestones = sqliteTable("supply_contract_milestones", {
+  id: text("id").primaryKey(),
+  milestoneId: text("milestone_id").notNull().unique(),
+  contractId: text("contract_id").notNull().references(() => supplyContracts.id, { onDelete: "cascade" }),
+  milestoneNumber: integer("milestone_number").notNull(),
+  title: text("title").notNull(),
+  deliverableDescription: text("deliverable_description").notNull(),
+  amountUsd: real("amount_usd").notNull(),
+  dueDate: text("due_date").notNull(),
+  completionDate: text("completion_date"),
+  deliverableEvidenceUrl: text("deliverable_evidence_url"),
+  approvedByUserId: text("approved_by_user_id"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'submitted' | 'approved' | 'paid' | 'delayed'
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyMilestoneIdIdx: index("idx_supply_milestone_id").on(t.milestoneId),
+  supplyMilestoneContractIdx: index("idx_supply_milestone_contract").on(t.contractId),
+  supplyMilestoneStatusIdx: index("idx_supply_milestone_status").on(t.status),
+}));
+
+export const supplyBudgetEncumbrances = sqliteTable("supply_budget_encumbrances", {
+  id: text("id").primaryKey(),
+  encumbranceNumber: text("encumbrance_number").notNull().unique(),
+  departmentId: text("department_id").notNull(),
+  budgetCode: text("budget_code").notNull(),
+  poId: text("po_id").notNull().references(() => supplyPurchaseOrders.id),
+  encumberedAmountUsd: real("encumbered_amount_usd").notNull(),
+  liquidatedAmountUsd: real("liquidated_amount_usd").notNull().default(0.0),
+  remainingEncumberedUsd: real("remaining_encumbered_usd").notNull(),
+  status: text("status").notNull().default("active"), // 'active' | 'partially_liquidated' | 'fully_liquidated' | 'released'
+  debitAccountCode: text("debit_account_code").notNull().default("GL:ENCUMBRANCE_EXPENSE"),
+  creditAccountCode: text("credit_account_code").notNull().default("GL:ENCUMBRANCE_RESERVE"),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyEncumberNumIdx: index("idx_supply_encumber_num").on(t.encumbranceNumber),
+  supplyEncumberDeptIdx: index("idx_supply_encumber_dept").on(t.departmentId),
+  supplyEncumberPoIdx: index("idx_supply_encumber_po").on(t.poId),
+  supplyEncumberStatusIdx: index("idx_supply_encumber_status").on(t.status),
+}));
+
+export const supplyAuditLogs = sqliteTable("supply_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(), // 'requisition_created' | 'requisition_approved' | 'po_issued' | 'goods_received' | 'three_way_matched' | 'discrepancy_overridden' | 'encumbrance_locked' | 'contract_signed'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  prevMerkleRoot: text("prev_merkle_root").notNull().default(""),
+  merkleRoot: text("merkle_root").notNull().default(""),
+  timestamp: text("timestamp").notNull(),
+  institutionId: text("institution_id").notNull().default("global"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  supplyAuditIdIdx: index("idx_supply_audit_id").on(t.auditId),
+  supplyAuditActionIdx: index("idx_supply_audit_action").on(t.action),
+  supplyAuditEntityIdx: index("idx_supply_audit_entity").on(t.entityType, t.entityId),
+  supplyAuditTimeIdx: index("idx_supply_audit_time").on(t.timestamp),
+}));
+
+// ─── Academic Timetables & Institutional Management (TGCIS & Multi-Campus) ───
+
+export const timetableSlots = sqliteTable("timetable_slots", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  slotOrder: integer("slot_order").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  isBreak: integer("is_break", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  instSlotIdx: index("idx_timetable_slots_inst").on(t.institutionId),
+}));
+
+export const timetableEntries = sqliteTable("timetable_entries", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  academicYearId: text("academic_year_id").references(() => academicYears.id, { onDelete: "set null" }),
+  classId: text("class_id").notNull().references(() => classes.id, { onDelete: "cascade" }),
+  slotId: text("slot_id").notNull().references(() => timetableSlots.id, { onDelete: "cascade" }),
+  dayOfWeek: integer("day_of_week").notNull(), // 1 (Mon) to 7 (Sun)
+  subjectName: text("subject_name").notNull(),
+  teacherId: text("teacher_id").references(() => staff.id, { onDelete: "set null" }),
+  roomNumber: text("room_number"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  entryClassDayIdx: index("idx_timetable_entries_class_day").on(t.classId, t.dayOfWeek),
+  entryTeacherIdx: index("idx_timetable_entries_teacher").on(t.teacherId),
+  entryInstIdx: index("idx_timetable_entries_inst").on(t.institutionId),
+}));
+
+export const teacherSubstitutions = sqliteTable("teacher_substitutions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  timetableEntryId: text("timetable_entry_id").notNull().references(() => timetableEntries.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  originalTeacherId: text("original_teacher_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  substituteTeacherId: text("substitute_teacher_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  reason: text("reason"),
+  status: text("status").notNull().default("assigned"), // 'assigned' | 'confirmed' | 'completed' | 'cancelled'
+  assignedById: text("assigned_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  substDateIdx: index("idx_substitutions_date").on(t.date),
+  substTeacherIdx: index("idx_substitutions_sub_teacher").on(t.substituteTeacherId),
+}));
+
+export const studentEnquiries = sqliteTable("student_enquiries", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  applicantName: text("applicant_name").notNull(),
+  guardianName: text("guardian_name").notNull(),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  appliedGradeOrCourse: text("applied_grade_or_course").notNull(),
+  academicYearId: text("academic_year_id").references(() => academicYears.id, { onDelete: "set null" }),
+  previousSchoolOrCollege: text("previous_school_or_college"),
+  notes: text("notes"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'under_review' | 'admitted' | 'rejected'
+  reviewedById: text("reviewed_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  enquiryInstStatusIdx: index("idx_student_enquiries_inst_status").on(t.institutionId, t.status),
+}));
+
+export const campusAffiliations = sqliteTable("campus_affiliations", {
+  id: text("id").primaryKey(),
+  campusName: text("campus_name").notNull(),
+  contactPerson: text("contact_person").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  locationAddress: text("location_address").notNull(),
+  campusType: text("campus_type").notNull().default("affiliated"), // 'off_campus' | 'affiliated'
+  totalCapacity: integer("total_capacity").default(0),
+  facilitiesDescription: text("facilities_description"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'approved' | 'rejected'
+  approvedById: text("approved_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  affiliationStatusIdx: index("idx_campus_affiliations_status").on(t.status),
+}));
+
+export const circularCampusCompliance = sqliteTable("circular_campus_compliance", {
+  id: text("id").primaryKey(),
+  circularId: text("circular_id").notNull().references(() => circulars.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // 'pending' | 'acknowledged' | 'in_progress' | 'completed'
+  completionEvidenceUrl: text("completion_evidence_url"),
+  coordinatorRemarks: text("coordinator_remarks"),
+  completedAt: text("completed_at"),
+  verifiedById: text("verified_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  complianceCircInstIdx: uniqueIndex("idx_circular_compliance_circ_inst").on(t.circularId, t.institutionId),
+}));
+
+// ─── Sprint-056: Examination PDF Generator, Universal Multi-Format Export Engine & Mobile Academic Push Synchronization (DOC-GEN / ExportHub) ───
+
+export const docTemplates = sqliteTable("doc_templates", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  templateCode: text("template_code").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // 'report_card' | 'hall_ticket' | 'certificate' | 'fee_receipt' | 'custom'
+  layoutConfig: text("layout_config"), // JSON configuration (margins, orientation, colors)
+  contentTemplate: text("content_template").notNull(), // Handlebars/HTML template
+  cssStyles: text("css_styles"),
+  version: integer("version").notNull().default(1),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  status: text("status").notNull().default("active"), // 'draft' | 'active' | 'archived'
+  createdById: text("created_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  docTemplateInstIdx: index("idx_doc_templates_inst").on(t.institutionId),
+  docTemplateCodeIdx: index("idx_doc_templates_code").on(t.templateCode),
+  docTemplateCategoryIdx: index("idx_doc_templates_category").on(t.category),
+}));
+
+export const docGeneratedRecords = sqliteTable("doc_generated_records", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  templateId: text("template_id").references(() => docTemplates.id, { onDelete: "set null" }),
+  documentType: text("document_type").notNull(), // 'report_card' | 'hall_ticket' | 'certificate' | 'fee_receipt' | 'custom'
+  recipientType: text("recipient_type").notNull().default("student"), // 'student' | 'guardian' | 'staff' | 'external'
+  recipientId: text("recipient_id").notNull(),
+  academicYearId: text("academic_year_id").references(() => academicYears.id, { onDelete: "set null" }),
+  examId: text("exam_id").references(() => exams.id, { onDelete: "set null" }),
+  documentHash: text("document_hash").notNull().unique(),
+  serialNumber: text("serial_number").notNull().unique(),
+  title: text("title").notNull(),
+  fileUrl: text("file_url"),
+  fileSizeBytes: integer("file_size_bytes").notNull().default(0),
+  status: text("status").notNull().default("valid"), // 'valid' | 'revoked' | 'expired'
+  metadataJson: text("metadata_json"),
+  generatedById: text("generated_by_id").references(() => staff.id, { onDelete: "set null" }),
+  issuedAt: text("issued_at").notNull().default(sql`(current_timestamp)`),
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  docGenInstIdx: index("idx_doc_gen_inst").on(t.institutionId),
+  docGenRecipientIdx: index("idx_doc_gen_recipient").on(t.recipientType, t.recipientId),
+  docGenHashIdx: index("idx_doc_gen_hash").on(t.documentHash),
+  docGenSerialIdx: index("idx_doc_gen_serial").on(t.serialNumber),
+  docGenStatusIdx: index("idx_doc_gen_status").on(t.status),
+}));
+
+export const docVerificationSignatures = sqliteTable("doc_verification_signatures", {
+  id: text("id").primaryKey(),
+  documentRecordId: text("document_record_id").notNull().references(() => docGeneratedRecords.id, { onDelete: "cascade" }),
+  documentHash: text("document_hash").notNull().unique(),
+  signature: text("signature").notNull(),
+  signerPublicKey: text("signer_public_key"),
+  signingAlgorithm: text("signing_algorithm").notNull().default("sha256WithRSAEncryption"),
+  merkleRoot: text("merkle_root"),
+  merkleProof: text("merkle_proof"),
+  verificationCount: integer("verification_count").notNull().default(0),
+  lastVerifiedAt: text("last_verified_at"),
+  revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+  revokedReason: text("revoked_reason"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  docVerifHashIdx: index("idx_doc_verif_hash").on(t.documentHash),
+  docVerifRecordIdx: index("idx_doc_verif_record").on(t.documentRecordId),
+}));
+
+export const exportJobs = sqliteTable("export_jobs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),
+  jobType: text("job_type").notNull(), // 'students' | 'timetables' | 'attendance' | 'grades' | 'finances' | 'audit_logs' | 'custom'
+  format: text("format").notNull().default("csv"), // 'csv' | 'xlsx' | 'json' | 'pdf'
+  filterParamsJson: text("filter_params_json"),
+  selectedColumnsJson: text("selected_columns_json"),
+  status: text("status").notNull().default("queued"), // 'queued' | 'processing' | 'completed' | 'failed' | 'expired'
+  progressPercent: integer("progress_percent").notNull().default(0),
+  totalRecords: integer("total_records").notNull().default(0),
+  processedRecords: integer("processed_records").notNull().default(0),
+  downloadUrl: text("download_url"),
+  fileSizeBytes: integer("file_size_bytes").notNull().default(0),
+  errorMessage: text("error_message"),
+  downloadToken: text("download_token"),
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  completedAt: text("completed_at"),
+}, (t) => ({
+  exportJobsInstIdx: index("idx_export_jobs_inst").on(t.institutionId),
+  exportJobsUserIdx: index("idx_export_jobs_user").on(t.userId),
+  exportJobsStatusIdx: index("idx_export_jobs_status").on(t.status),
+}));
+
+export const exportTemplates = sqliteTable("export_templates", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  entityType: text("entity_type").notNull(),
+  columnMappingJson: text("column_mapping_json").notNull(),
+  defaultFormat: text("default_format").notNull().default("csv"),
+  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+  createdById: text("created_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  exportTemplatesInstIdx: index("idx_export_templates_inst").on(t.institutionId),
+  exportTemplatesEntityIdx: index("idx_export_templates_entity").on(t.entityType),
+}));
+
+export const mobileSyncEvents = sqliteTable("mobile_sync_events", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(), // 'timetable_updated' | 'substitution_assigned' | 'exam_scheduled' | 'grades_published' | 'hall_ticket_released'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  targetAudience: text("target_audience").notNull().default("all"), // 'all' | 'teachers' | 'students' | 'guardians' | 'class'
+  targetId: text("target_id"),
+  version: integer("version").notNull().default(1),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  mobileSyncInstIdx: index("idx_mobile_sync_inst").on(t.institutionId),
+  mobileSyncTypeIdx: index("idx_mobile_sync_type").on(t.eventType),
+  mobileSyncTimeIdx: index("idx_mobile_sync_time").on(t.createdAt),
+}));
+
+export const mobileDeviceTokens = sqliteTable("mobile_device_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  deviceToken: text("device_token").notNull().unique(),
+  platform: text("platform").notNull().default("android"), // 'android' | 'ios' | 'web'
+  deviceModel: text("device_model"),
+  appVersion: text("app_version"),
+  isActive: integer("isActive", { mode: "boolean" }).notNull().default(true),
+  lastSeenAt: text("last_seen_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  mobileDeviceUserIdx: index("idx_mobile_device_user").on(t.userId),
+  mobileDeviceInstIdx: index("idx_mobile_device_inst").on(t.institutionId),
+  mobileDeviceTokenIdx: index("idx_mobile_device_token").on(t.deviceToken),
+}));
+
+export const mobilePushLogs = sqliteTable("mobile_push_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  syncEventId: text("sync_event_id").references(() => mobileSyncEvents.id, { onDelete: "set null" }),
+  recipientUserId: text("recipient_user_id").notNull(),
+  deviceTokenId: text("device_token_id").references(() => mobileDeviceTokens.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  dataPayloadJson: text("data_payload_json"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'delivered' | 'failed'
+  errorMessage: text("error_message"),
+  deliveredAt: text("delivered_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  mobilePushInstIdx: index("idx_mobile_push_inst").on(t.institutionId),
+  mobilePushUserIdx: index("idx_mobile_push_user").on(t.recipientUserId),
+  mobilePushStatusIdx: index("idx_mobile_push_status").on(t.status),
+}));
+
+export const docAuditLogs = sqliteTable("doc_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(), // 'template_created' | 'template_updated' | 'doc_generated' | 'doc_revoked' | 'export_initiated' | 'push_dispatched' | 'doc_verified'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  timestamp: text("timestamp").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  docAuditIdIdx: index("idx_doc_audit_id").on(t.auditId),
+  docAuditActionIdx: index("idx_doc_audit_action").on(t.action),
+  docAuditEntityIdx: index("idx_doc_audit_entity").on(t.entityType, t.entityId),
+  docAuditTimeIdx: index("idx_doc_audit_time").on(t.timestamp),
+}));
+
+// ─── FEE-HIVE / FinanceOS (Sprint-057) ───
+
+export const feeStructures = sqliteTable("fee_structures", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  code: text("code").notNull(),
+  academicYear: text("academic_year").notNull(),
+  programId: text("program_id"),
+  gradeLevel: text("grade_level"),
+  term: text("term").notNull().default("annual"),
+  quota: text("quota").notNull().default("general"), // 'general' | 'merit' | 'management' | 'nri' | 'sports'
+  residentialType: text("residential_type").notNull().default("day_scholar"), // 'day_scholar' | 'hosteller' | 'boarder'
+  currency: text("currency").notNull().default("INR"),
+  totalAmount: real("total_amount").notNull().default(0),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  metadataJson: text("metadata_json"),
+  createdById: text("created_by_id").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeStructInstIdx: index("idx_fee_structures_inst").on(t.institutionId),
+  feeStructCodeIdx: index("idx_fee_structures_code").on(t.code),
+  feeStructYearIdx: index("idx_fee_structures_year").on(t.academicYear),
+}));
+
+export const feeStructureComponents = sqliteTable("fee_structure_components", {
+  id: text("id").primaryKey(),
+  feeStructureId: text("fee_structure_id").notNull().references(() => feeStructures.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  componentType: text("component_type").notNull().default("tuition"), // 'tuition' | 'admission' | 'hostel' | 'transport' | 'lab' | 'library' | 'exam' | 'extracurricular' | 'misc'
+  amount: real("amount").notNull().default(0),
+  isMandatory: integer("is_mandatory", { mode: "boolean" }).notNull().default(true),
+  isRefundable: integer("is_refundable", { mode: "boolean" }).notNull().default(false),
+  taxRatePercent: real("tax_rate_percent").notNull().default(0),
+  glAccountCode: text("gl_account_code").notNull().default("GL:4100-FEE_REVENUE"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeCompStructIdx: index("idx_fee_components_struct").on(t.feeStructureId),
+  feeCompTypeIdx: index("idx_fee_components_type").on(t.componentType),
+}));
+
+export const feeStudentAllocations = sqliteTable("fee_student_allocations", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  feeStructureId: text("fee_structure_id").notNull().references(() => feeStructures.id, { onDelete: "cascade" }),
+  academicYear: text("academic_year").notNull(),
+  baseAmount: real("base_amount").notNull().default(0),
+  concessionAmount: real("concession_amount").notNull().default(0),
+  netPayableAmount: real("net_payable_amount").notNull().default(0),
+  paidAmount: real("paid_amount").notNull().default(0),
+  balanceAmount: real("balance_amount").notNull().default(0),
+  status: text("status").notNull().default("unpaid"), // 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
+  allocationDate: text("allocation_date").notNull().default(sql`(current_timestamp)`),
+  dueDate: text("due_date"),
+  remarks: text("remarks"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeAllocInstIdx: index("idx_fee_alloc_inst").on(t.institutionId),
+  feeAllocStudentIdx: index("idx_fee_alloc_student").on(t.studentId),
+  feeAllocStructIdx: index("idx_fee_alloc_struct").on(t.feeStructureId),
+  feeAllocStatusIdx: index("idx_fee_alloc_status").on(t.status),
+}));
+
+export const feeInstallments = sqliteTable("fee_installments", {
+  id: text("id").primaryKey(),
+  allocationId: text("allocation_id").notNull().references(() => feeStudentAllocations.id, { onDelete: "cascade" }),
+  installmentNumber: integer("installment_number").notNull().default(1),
+  title: text("title").notNull(),
+  dueDate: text("due_date").notNull(),
+  gracePeriodDays: integer("grace_period_days").notNull().default(7),
+  amount: real("amount").notNull().default(0),
+  paidAmount: real("paid_amount").notNull().default(0),
+  balanceAmount: real("balance_amount").notNull().default(0),
+  fineAmount: real("fine_amount").notNull().default(0),
+  fineWaivedAmount: real("fine_waived_amount").notNull().default(0),
+  status: text("status").notNull().default("pending"), // 'pending' | 'partially_paid' | 'paid' | 'overdue' | 'waived'
+  lastPaymentDate: text("last_payment_date"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeInstAllocIdx: index("idx_fee_inst_alloc").on(t.allocationId),
+  feeInstDueIdx: index("idx_fee_inst_due").on(t.dueDate),
+  feeInstStatusIdx: index("idx_fee_inst_status").on(t.status),
+}));
+
+export const feePayments = sqliteTable("fee_payments", {
+  id: text("id").primaryKey(),
+  paymentNumber: text("payment_number").notNull().unique(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  allocationId: text("allocation_id").notNull().references(() => feeStudentAllocations.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  amount: real("amount").notNull().default(0),
+  fineAmount: real("fine_amount").notNull().default(0),
+  discountAmount: real("discount_amount").notNull().default(0),
+  netAmount: real("net_amount").notNull().default(0),
+  currency: text("currency").notNull().default("INR"),
+  paymentMethod: text("payment_method").notNull(), // 'razorpay' | 'stripe' | 'upi' | 'cash' | 'pos_card' | 'bank_transfer' | 'cheque' | 'dd'
+  paymentStatus: text("payment_status").notNull().default("completed"), // 'initiated' | 'pending' | 'completed' | 'failed' | 'refunded' | 'chargeback'
+  gatewayOrderId: text("gateway_order_id"),
+  gatewayPaymentId: text("gateway_payment_id"),
+  transactionReference: text("transaction_reference"),
+  counterRegisterId: text("counter_register_id"),
+  payerName: text("payer_name"),
+  payerPhone: text("payer_phone"),
+  payerEmail: text("payer_email"),
+  receiptNumber: text("receipt_number"),
+  paidAt: text("paid_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feePayInstIdx: index("idx_fee_pay_inst").on(t.institutionId),
+  feePayAllocIdx: index("idx_fee_pay_alloc").on(t.allocationId),
+  feePayStudentIdx: index("idx_fee_pay_student").on(t.studentId),
+  feePayNumberIdx: index("idx_fee_pay_number").on(t.paymentNumber),
+  feePayStatusIdx: index("idx_fee_pay_status").on(t.paymentStatus),
+}));
+
+export const feePaymentTransactions = sqliteTable("fee_payment_transactions", {
+  id: text("id").primaryKey(),
+  paymentId: text("payment_id").notNull().references(() => feePayments.id, { onDelete: "cascade" }),
+  installmentId: text("installment_id").references(() => feeInstallments.id, { onDelete: "set null" }),
+  componentId: text("component_id").references(() => feeStructureComponents.id, { onDelete: "set null" }),
+  allocatedAmount: real("allocated_amount").notNull().default(0),
+  glDebitAccount: text("gl_debit_account").notNull().default("GL:1100-BANK_CASH"),
+  glCreditAccount: text("gl_credit_account").notNull().default("GL:1200-FEE_RECEIVABLE"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeTxPaymentIdx: index("idx_fee_tx_payment").on(t.paymentId),
+  feeTxInstIdx: index("idx_fee_tx_installment").on(t.installmentId),
+}));
+
+export const feeReceipts = sqliteTable("fee_receipts", {
+  id: text("id").primaryKey(),
+  receiptNumber: text("receipt_number").notNull().unique(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  paymentId: text("payment_id").notNull().unique().references(() => feePayments.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  docGeneratedRecordId: text("doc_generated_record_id"),
+  receiptHash: text("receipt_hash").notNull().unique(),
+  signature: text("signature").notNull(),
+  qrPayload: text("qr_payload").notNull(),
+  receiptHtml: text("receipt_html"),
+  receiptPdfUrl: text("receipt_pdf_url"),
+  downloadCount: integer("download_count").notNull().default(0),
+  issuedAt: text("issued_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeRcptInstIdx: index("idx_fee_rcpt_inst").on(t.institutionId),
+  feeRcptNumberIdx: index("idx_fee_rcpt_number").on(t.receiptNumber),
+  feeRcptHashIdx: index("idx_fee_rcpt_hash").on(t.receiptHash),
+  feeRcptStudentIdx: index("idx_fee_rcpt_student").on(t.studentId),
+}));
+
+export const feeScholarships = sqliteTable("fee_scholarships", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  code: text("code").notNull(),
+  category: text("category").notNull().default("merit"), // 'merit' | 'need_based' | 'sports' | 'sibling' | 'staff_ward' | 'orphan' | 'special_grant'
+  discountType: text("discount_type").notNull().default("percentage"), // 'percentage' | 'fixed_amount'
+  discountValue: real("discount_value").notNull().default(0),
+  targetComponentType: text("target_component_type").default("tuition"),
+  totalBudget: real("total_budget").notNull().default(0),
+  disbursedAmount: real("disbursed_amount").notNull().default(0),
+  academicYear: text("academic_year").notNull(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeSchInstIdx: index("idx_fee_sch_inst").on(t.institutionId),
+  feeSchCodeIdx: index("idx_fee_sch_code").on(t.code),
+  feeSchYearIdx: index("idx_fee_sch_year").on(t.academicYear),
+}));
+
+export const feeConcessions = sqliteTable("fee_concessions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  scholarshipId: text("scholarship_id").references(() => feeScholarships.id, { onDelete: "set null" }),
+  allocationId: text("allocation_id").notNull().references(() => feeStudentAllocations.id, { onDelete: "cascade" }),
+  amount: real("amount").notNull().default(0),
+  reason: text("reason").notNull(),
+  supportingDocUrl: text("supporting_doc_url"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'approved' | 'rejected' | 'revoked'
+  appliedById: text("applied_by_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  approvedById: text("approved_by_id").references(() => staff.id, { onDelete: "set null" }),
+  decisionNotes: text("decision_notes"),
+  decisionDate: text("decision_date"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeConcInstIdx: index("idx_fee_conc_inst").on(t.institutionId),
+  feeConcStudentIdx: index("idx_fee_conc_student").on(t.studentId),
+  feeConcAllocIdx: index("idx_fee_conc_alloc").on(t.allocationId),
+  feeConcStatusIdx: index("idx_fee_conc_status").on(t.status),
+}));
+
+export const feeCounterRegisters = sqliteTable("fee_counter_registers", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  cashierId: text("cashier_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  counterName: text("counter_name").notNull(),
+  openingFloat: real("opening_float").notNull().default(0),
+  closingCashDeclared: real("closing_cash_declared"),
+  systemCashTotal: real("system_cash_total").notNull().default(0),
+  systemPosTotal: real("system_pos_total").notNull().default(0),
+  systemChequeTotal: real("system_cheque_total").notNull().default(0),
+  cashDropsTotal: real("cash_drops_total").notNull().default(0),
+  varianceAmount: real("variance_amount").notNull().default(0),
+  status: text("status").notNull().default("open"), // 'open' | 'closed' | 'verified' | 'disputed'
+  openedAt: text("opened_at").notNull().default(sql`(current_timestamp)`),
+  closedAt: text("closed_at"),
+  supervisorId: text("supervisor_id").references(() => staff.id, { onDelete: "set null" }),
+  supervisorNotes: text("supervisor_notes"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeCountInstIdx: index("idx_fee_count_inst").on(t.institutionId),
+  feeCountCashierIdx: index("idx_fee_count_cashier").on(t.cashierId),
+  feeCountStatusIdx: index("idx_fee_count_status").on(t.status),
+}));
+
+export const feeDefaulterLogs = sqliteTable("fee_defaulter_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  allocationId: text("allocation_id").notNull().references(() => feeStudentAllocations.id, { onDelete: "cascade" }),
+  agingDays: integer("aging_days").notNull().default(0),
+  agingBucket: text("aging_bucket").notNull().default("current"), // 'current' | '1_30' | '31_60' | '61_90' | '90_plus'
+  overdueAmount: real("overdue_amount").notNull().default(0),
+  riskScore: integer("risk_score").notNull().default(0),
+  actionTaken: text("action_taken").notNull().default("reminder_sent"), // 'reminder_sent' | 'hall_ticket_blocked' | 'guardian_contacted' | 'escalated_to_principal'
+  channel: text("channel").default("whatsapp"), // 'whatsapp' | 'sms' | 'email' | 'manual_call'
+  dispatchedAt: text("dispatched_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeDefInstIdx: index("idx_fee_def_inst").on(t.institutionId),
+  feeDefStudentIdx: index("idx_fee_def_student").on(t.studentId),
+  feeDefBucketIdx: index("idx_fee_def_bucket").on(t.agingBucket),
+}));
+
+export const feeReconciliationBatches = sqliteTable("fee_reconciliation_batches", {
+  id: text("id").primaryKey(),
+  batchNumber: text("batch_number").notNull().unique(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  sourceType: text("source_type").notNull().default("bank_statement"), // 'razorpay_settlement' | 'stripe_payout' | 'bank_statement' | 'pos_terminal'
+  statementDate: text("statement_date").notNull(),
+  totalTransactions: integer("total_transactions").notNull().default(0),
+  matchedTransactions: integer("matched_transactions").notNull().default(0),
+  unmatchedTransactions: integer("unmatched_transactions").notNull().default(0),
+  totalSettledAmount: real("total_settled_amount").notNull().default(0),
+  feeChargesAmount: real("fee_charges_amount").notNull().default(0),
+  netPayoutAmount: real("net_payout_amount").notNull().default(0),
+  discrepancyAmount: real("discrepancy_amount").notNull().default(0),
+  status: text("status").notNull().default("reconciled"), // 'in_progress' | 'reconciled' | 'discrepancy_flagged'
+  reconciledById: text("reconciled_by_id").references(() => staff.id, { onDelete: "set null" }),
+  reconciledAt: text("reconciled_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeReconInstIdx: index("idx_fee_recon_inst").on(t.institutionId),
+  feeReconBatchIdx: index("idx_fee_recon_batch").on(t.batchNumber),
+  feeReconStatusIdx: index("idx_fee_recon_status").on(t.status),
+}));
+
+export const feeAuditLogs = sqliteTable("fee_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(), // 'structure_created' | 'structure_updated' | 'fee_allocated' | 'payment_received' | 'payment_refunded' | 'receipt_issued' | 'scholarship_approved' | 'concession_granted' | 'counter_shift_closed' | 'statement_reconciled' | 'defaulter_notified'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  timestamp: text("timestamp").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  feeAuditIdIdx: index("idx_fee_audit_id").on(t.auditId),
+  feeAuditActionIdx: index("idx_fee_audit_action").on(t.action),
+  feeAuditEntityIdx: index("idx_fee_audit_entity").on(t.entityType, t.entityId),
+  feeAuditTimeIdx: index("idx_fee_audit_time").on(t.timestamp),
+}));
+
+// ─── ALUMNI-HUB / EndowmentOS (Sprint-058) ───
+
+export const alumniProfiles = sqliteTable("alumni_profiles", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  studentId: text("student_id").references(() => students.id, { onDelete: "set null" }),
+  userId: text("user_id").references(() => staff.id, { onDelete: "set null" }),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  maidenName: text("maiden_name"),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  avatarUrl: text("avatar_url"),
+  headline: text("headline"),
+  bio: text("bio"),
+  currentCompany: text("current_company"),
+  currentDesignation: text("current_designation"),
+  currentIndustry: text("current_industry"),
+  currentCity: text("current_city"),
+  currentCountry: text("current_country"),
+  linkedinUrl: text("linkedin_url"),
+  githubUrl: text("github_url"),
+  portfolioUrl: text("portfolio_url"),
+  graduationBatchYear: integer("graduation_batch_year").notNull(),
+  primaryDegree: text("primary_degree").notNull(),
+  primaryDepartment: text("primary_department").notNull(),
+  credentialHash: text("credential_hash"),
+  isVerified: integer("is_verified", { mode: "boolean" }).notNull().default(false),
+  verifiedAt: text("verified_at"),
+  verifiedById: text("verified_by_id").references(() => staff.id, { onDelete: "set null" }),
+  isMentor: integer("is_mentor", { mode: "boolean" }).notNull().default(false),
+  isHiring: integer("is_hiring", { mode: "boolean" }).notNull().default(false),
+  privacyConsentLevel: text("privacy_consent_level").notNull().default("alumni_only"), // 'public' | 'alumni_only' | 'hidden'
+  showEmail: integer("show_email", { mode: "boolean" }).notNull().default(false),
+  showPhone: integer("show_phone", { mode: "boolean" }).notNull().default(false),
+  showLocation: integer("show_location", { mode: "boolean" }).notNull().default(true),
+  showCompany: integer("show_company", { mode: "boolean" }).notNull().default(true),
+  status: text("status").notNull().default("active"), // 'pending_claim' | 'active' | 'archived' | 'suspended'
+  claimedAt: text("claimed_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumProfInstIdx: index("idx_alum_prof_inst").on(t.institutionId),
+  alumProfEmailIdx: index("idx_alum_prof_email").on(t.email),
+  alumProfBatchIdx: index("idx_alum_prof_batch").on(t.graduationBatchYear),
+  alumProfStatusIdx: index("idx_alum_prof_status").on(t.status),
+  alumProfStudentIdx: index("idx_alum_prof_student").on(t.studentId),
+}));
+
+export const alumniEducations = sqliteTable("alumni_educations", {
+  id: text("id").primaryKey(),
+  alumniProfileId: text("alumni_profile_id").notNull().references(() => alumniProfiles.id, { onDelete: "cascade" }),
+  institutionName: text("institution_name").notNull(),
+  degree: text("degree").notNull(),
+  fieldOfStudy: text("field_of_study").notNull(),
+  startYear: integer("start_year").notNull(),
+  endYear: integer("end_year"),
+  gradeCgpa: text("grade_cgpa"),
+  honors: text("honors"),
+  activities: text("activities"),
+  isInstitutional: integer("is_institutional", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumEduProfIdx: index("idx_alum_edu_prof").on(t.alumniProfileId),
+}));
+
+export const alumniExperiences = sqliteTable("alumni_experiences", {
+  id: text("id").primaryKey(),
+  alumniProfileId: text("alumni_profile_id").notNull().references(() => alumniProfiles.id, { onDelete: "cascade" }),
+  company: text("company").notNull(),
+  title: text("title").notNull(),
+  employmentType: text("employment_type").default("full_time"), // 'full_time' | 'part_time' | 'contract' | 'internship' | 'founder'
+  industry: text("industry").notNull(),
+  location: text("location"),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date"),
+  isCurrent: integer("is_current", { mode: "boolean" }).notNull().default(false),
+  description: text("description"),
+  skills: text("skills"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumExpProfIdx: index("idx_alum_exp_prof").on(t.alumniProfileId),
+  alumExpCompanyIdx: index("idx_alum_exp_company").on(t.company),
+}));
+
+export const alumniMentorshipProfiles = sqliteTable("alumni_mentorship_profiles", {
+  id: text("id").primaryKey(),
+  alumniProfileId: text("alumni_profile_id").notNull().unique().references(() => alumniProfiles.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  expertiseAreas: text("expertise_areas").notNull(), // JSON array
+  targetMenteeTypes: text("target_mentee_types").notNull().default("all"), // 'undergrads' | 'graduates' | 'all'
+  maxActiveMentees: integer("max_active_mentees").notNull().default(3),
+  activeMenteeCount: integer("active_mentee_count").notNull().default(0),
+  preferredLanguages: text("preferred_languages").default("English"),
+  availabilityHoursPerMonth: real("availability_hours_per_month").notNull().default(4),
+  meetingType: text("meeting_type").notNull().default("virtual"), // 'virtual' | 'in_person' | 'hybrid'
+  meetingLink: text("meeting_link"),
+  bioMentor: text("bio_mentor"),
+  averageRating: real("average_rating").notNull().default(5.0),
+  totalReviewsCount: integer("total_reviews_count").notNull().default(0),
+  totalHoursDelivered: real("total_hours_delivered").notNull().default(0),
+  isAcceptingRequests: integer("is_accepting_requests", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumMentorInstIdx: index("idx_alum_mentor_inst").on(t.institutionId),
+  alumMentorProfIdx: index("idx_alum_mentor_prof").on(t.alumniProfileId),
+}));
+
+export const alumniMentorshipRequests = sqliteTable("alumni_mentorship_requests", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  mentorshipProfileId: text("mentorship_profile_id").notNull().references(() => alumniMentorshipProfiles.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  requestTopic: text("request_topic").notNull(),
+  requestGoals: text("request_goals").notNull(),
+  studentNotes: text("student_notes"),
+  compatibilityScore: real("compatibility_score").notNull().default(0),
+  status: text("status").notNull().default("pending"), // 'pending' | 'accepted' | 'declined' | 'completed' | 'cancelled'
+  responseNotes: text("response_notes"),
+  respondedAt: text("responded_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumReqInstIdx: index("idx_alum_req_inst").on(t.institutionId),
+  alumReqMentorIdx: index("idx_alum_req_mentor").on(t.mentorshipProfileId),
+  alumReqStudentIdx: index("idx_alum_req_student").on(t.studentId),
+  alumReqStatusIdx: index("idx_alum_req_status").on(t.status),
+}));
+
+export const alumniMentorshipSessions = sqliteTable("alumni_mentorship_sessions", {
+  id: text("id").primaryKey(),
+  requestId: text("request_id").notNull().references(() => alumniMentorshipRequests.id, { onDelete: "cascade" }),
+  mentorshipProfileId: text("mentorship_profile_id").notNull().references(() => alumniMentorshipProfiles.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  scheduledStart: text("scheduled_start").notNull(),
+  scheduledEnd: text("scheduled_end").notNull(),
+  meetingUrl: text("meeting_url"),
+  status: text("status").notNull().default("scheduled"), // 'scheduled' | 'in_progress' | 'completed' | 'no_show' | 'cancelled'
+  sessionNotes: text("session_notes"),
+  mentorRating: integer("mentor_rating"),
+  mentorFeedback: text("mentor_feedback"),
+  studentRating: integer("student_rating"),
+  studentFeedback: text("student_feedback"),
+  completedAt: text("completed_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumSessReqIdx: index("idx_alum_sess_req").on(t.requestId),
+  alumSessMentorIdx: index("idx_alum_sess_mentor").on(t.mentorshipProfileId),
+  alumSessStudentIdx: index("idx_alum_sess_student").on(t.studentId),
+  alumSessStatusIdx: index("idx_alum_sess_status").on(t.status),
+}));
+
+export const alumniJobPostings = sqliteTable("alumni_job_postings", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  postedByAlumniId: text("posted_by_alumni_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  company: text("company").notNull(),
+  title: text("title").notNull(),
+  roleType: text("role_type").notNull().default("full_time"), // 'full_time' | 'internship' | 'part_time' | 'contract'
+  workplaceType: text("workplace_type").notNull().default("onsite"), // 'remote' | 'hybrid' | 'onsite'
+  location: text("location").notNull(),
+  departmentTarget: text("department_target"),
+  experienceLevel: text("experience_level").default("entry_level"), // 'entry_level' | 'mid_level' | 'senior'
+  minSalary: real("min_salary"),
+  maxSalary: real("max_salary"),
+  salaryCurrency: text("salary_currency").notNull().default("INR"),
+  description: text("description").notNull(),
+  requirements: text("requirements").notNull(),
+  skillsRequired: text("skills_required"), // JSON array
+  applicationUrl: text("application_url"),
+  contactEmail: text("contact_email"),
+  allowDirectApply: integer("allow_direct_apply", { mode: "boolean" }).notNull().default(true),
+  hasAlumniReferral: integer("has_alumni_referral", { mode: "boolean" }).notNull().default(false),
+  status: text("status").notNull().default("draft"), // 'draft' | 'pending_review' | 'published' | 'rejected' | 'expired' | 'closed'
+  moderatedById: text("moderated_by_id").references(() => staff.id, { onDelete: "set null" }),
+  moderationNotes: text("moderation_notes"),
+  publishedAt: text("published_at"),
+  expiresAt: text("expires_at"),
+  viewsCount: integer("views_count").notNull().default(0),
+  applicationsCount: integer("applications_count").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumJobInstIdx: index("idx_alum_job_inst").on(t.institutionId),
+  alumJobStatusIdx: index("idx_alum_job_status").on(t.status),
+  alumJobCompanyIdx: index("idx_alum_job_company").on(t.company),
+}));
+
+export const alumniJobApplications = sqliteTable("alumni_job_applications", {
+  id: text("id").primaryKey(),
+  jobPostingId: text("job_posting_id").notNull().references(() => alumniJobPostings.id, { onDelete: "cascade" }),
+  studentId: text("student_id").notNull().references(() => students.id, { onDelete: "cascade" }),
+  resumeUrl: text("resume_url").notNull(),
+  coverLetter: text("cover_letter"),
+  portfolioLink: text("portfolio_link"),
+  status: text("status").notNull().default("applied"), // 'applied' | 'shortlisted' | 'interviewing' | 'offered' | 'hired' | 'rejected' | 'withdrawn'
+  referralEndorsedById: text("referral_endorsed_by_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  referralNotes: text("referral_notes"),
+  recruiterFeedback: text("recruiter_feedback"),
+  appliedAt: text("applied_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumAppJobIdx: index("idx_alum_app_job").on(t.jobPostingId),
+  alumAppStudentIdx: index("idx_alum_app_student").on(t.studentId),
+  alumAppStatusIdx: index("idx_alum_app_status").on(t.status),
+}));
+
+export const alumniDonationCampaigns = sqliteTable("alumni_donation_campaigns", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  code: text("code").notNull().unique(),
+  category: text("category").notNull().default("general_endowment"), // 'scholarship_fund' | 'infrastructure' | 'research_chair' | 'student_welfare' | 'general_endowment'
+  description: text("description").notNull(),
+  targetAmount: real("target_amount").notNull().default(0),
+  raisedAmount: real("raised_amount").notNull().default(0),
+  donorCount: integer("donor_count").notNull().default(0),
+  bannerImageUrl: text("banner_image_url"),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date"),
+  status: text("status").notNull().default("active"), // 'draft' | 'active' | 'completed' | 'paused' | 'archived'
+  isTaxExempt80G: integer("is_tax_exempt_80g", { mode: "boolean" }).notNull().default(true),
+  matchingDonorName: text("matching_donor_name"),
+  matchingRatio: real("matching_ratio").default(1.0),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumCampInstIdx: index("idx_alum_camp_inst").on(t.institutionId),
+  alumCampCodeIdx: index("idx_alum_camp_code").on(t.code),
+  alumCampStatusIdx: index("idx_alum_camp_status").on(t.status),
+}));
+
+export const alumniDonations = sqliteTable("alumni_donations", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  campaignId: text("campaign_id").notNull().references(() => alumniDonationCampaigns.id, { onDelete: "cascade" }),
+  alumniProfileId: text("alumni_profile_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  donorName: text("donor_name").notNull(),
+  donorEmail: text("donor_email").notNull(),
+  donorPhone: text("donor_phone"),
+  donorPanTaxId: text("donor_pan_tax_id"),
+  isAnonymous: integer("is_anonymous", { mode: "boolean" }).notNull().default(false),
+  amount: real("amount").notNull(),
+  currency: text("currency").notNull().default("INR"),
+  paymentGateway: text("payment_gateway").notNull().default("razorpay"), // 'razorpay' | 'stripe' | 'upi' | 'bank_wire' | 'cash_cheque'
+  gatewayTransactionId: text("gateway_transaction_id").unique(),
+  status: text("status").notNull().default("initiated"), // 'initiated' | 'confirmed' | 'failed' | 'refunded'
+  glJournalId: text("gl_journal_id"),
+  receipt80GNumber: text("receipt_80g_number").unique(),
+  receipt80GHash: text("receipt_80g_hash").unique(),
+  receipt80GPdfUrl: text("receipt_80g_pdf_url"),
+  recognitionTier: text("recognition_tier").notNull().default("supporter"), // 'supporter' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'trustee_circle'
+  isCorporateMatching: integer("is_corporate_matching", { mode: "boolean" }).notNull().default(false),
+  corporateEmployerName: text("corporate_employer_name"),
+  confirmedAt: text("confirmed_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumDonInstIdx: index("idx_alum_don_inst").on(t.institutionId),
+  alumDonCampIdx: index("idx_alum_don_camp").on(t.campaignId),
+  alumDonAlumIdx: index("idx_alum_don_alum").on(t.alumniProfileId),
+  alumDonRcptIdx: index("idx_alum_don_rcpt").on(t.receipt80GNumber),
+  alumDonStatusIdx: index("idx_alum_don_status").on(t.status),
+}));
+
+export const alumniChapters = sqliteTable("alumni_chapters", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  type: text("type").notNull().default("regional"), // 'regional' | 'international' | 'industry' | 'batch'
+  country: text("country").notNull(),
+  city: text("city").notNull(),
+  description: text("description"),
+  presidentAlumniId: text("president_alumni_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  secretaryAlumniId: text("secretary_alumni_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  treasurerAlumniId: text("treasurer_alumni_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  memberCount: integer("member_count").notNull().default(0),
+  status: text("status").notNull().default("active"), // 'forming' | 'active' | 'inactive'
+  bannerUrl: text("banner_url"),
+  foundedDate: text("founded_date"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumChapInstIdx: index("idx_alum_chap_inst").on(t.institutionId),
+  alumChapCodeIdx: index("idx_alum_chap_code").on(t.code),
+  alumChapStatusIdx: index("idx_alum_chap_status").on(t.status),
+}));
+
+export const alumniChapterMembers = sqliteTable("alumni_chapter_members", {
+  id: text("id").primaryKey(),
+  chapterId: text("chapter_id").notNull().references(() => alumniChapters.id, { onDelete: "cascade" }),
+  alumniProfileId: text("alumni_profile_id").notNull().references(() => alumniProfiles.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"), // 'president' | 'secretary' | 'treasurer' | 'coordinator' | 'member'
+  status: text("status").notNull().default("approved"), // 'pending' | 'approved' | 'rejected' | 'left'
+  joinedAt: text("joined_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumMemChapIdx: index("idx_alum_mem_chap").on(t.chapterId),
+  alumMemProfIdx: index("idx_alum_mem_prof").on(t.alumniProfileId),
+}));
+
+export const alumniEvents = sqliteTable("alumni_events", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  chapterId: text("chapter_id").references(() => alumniChapters.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  eventType: text("event_type").notNull().default("reunion"), // 'reunion' | 'networking' | 'webinar' | 'fundraiser' | 'career_fair' | 'annual_meet'
+  format: text("format").notNull().default("in_person"), // 'in_person' | 'virtual' | 'hybrid'
+  venue: text("venue"),
+  virtualMeetingUrl: text("virtual_meeting_url"),
+  startDateTime: text("start_date_time").notNull(),
+  endDateTime: text("end_date_time").notNull(),
+  description: text("description").notNull(),
+  bannerUrl: text("banner_url"),
+  ticketPrice: real("ticket_price").notNull().default(0),
+  currency: text("currency").notNull().default("INR"),
+  capacity: integer("capacity").notNull().default(100),
+  registeredCount: integer("registered_count").notNull().default(0),
+  attendedCount: integer("attended_count").notNull().default(0),
+  status: text("status").notNull().default("published"), // 'draft' | 'published' | 'in_progress' | 'completed' | 'cancelled'
+  organizerAlumniId: text("organizer_alumni_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumEvtInstIdx: index("idx_alum_evt_inst").on(t.institutionId),
+  alumEvtChapIdx: index("idx_alum_evt_chap").on(t.chapterId),
+  alumEvtStatusIdx: index("idx_alum_evt_status").on(t.status),
+  alumEvtDateIdx: index("idx_alum_evt_date").on(t.startDateTime),
+}));
+
+export const alumniEventRsvps = sqliteTable("alumni_event_rsvps", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id").notNull().references(() => alumniEvents.id, { onDelete: "cascade" }),
+  alumniProfileId: text("alumni_profile_id").references(() => alumniProfiles.id, { onDelete: "set null" }),
+  studentId: text("student_id").references(() => students.id, { onDelete: "set null" }),
+  attendeeName: text("attendee_name").notNull(),
+  attendeeEmail: text("attendee_email").notNull(),
+  ticketNumber: text("ticket_number").notNull().unique(),
+  ticketPassQr: text("ticket_pass_qr").notNull(),
+  ticketPassHash: text("ticket_pass_hash").notNull().unique(),
+  paymentStatus: text("payment_status").notNull().default("free"), // 'free' | 'pending' | 'paid' | 'refunded'
+  amountPaid: real("amount_paid").notNull().default(0),
+  isCheckedIn: integer("is_checked_in", { mode: "boolean" }).notNull().default(false),
+  checkedInAt: text("checked_in_at"),
+  checkedInById: text("checked_in_by_id").references(() => staff.id, { onDelete: "set null" }),
+  rsvpStatus: text("rsvp_status").notNull().default("confirmed"), // 'confirmed' | 'waitlisted' | 'cancelled'
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumRsvpEvtIdx: index("idx_alum_rsvp_evt").on(t.eventId),
+  alumRsvpTicketIdx: index("idx_alum_rsvp_ticket").on(t.ticketNumber),
+  alumRsvpHashIdx: index("idx_alum_rsvp_hash").on(t.ticketPassHash),
+}));
+
+export const alumniAuditLogs = sqliteTable("alumni_audit_logs", {
+  id: text("id").primaryKey(),
+  auditId: text("audit_id").notNull().unique(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  action: text("action").notNull(), // 'profile_created' | 'graduation_transitioned' | 'profile_verified' | 'mentorship_matched' | 'session_completed' | 'job_posted' | 'job_application_submitted' | 'donation_received' | '80g_receipt_issued' | 'chapter_created' | 'event_checkin'
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  timestamp: text("timestamp").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alumAuditIdIdx: index("idx_alum_audit_id").on(t.auditId),
+  alumAuditActionIdx: index("idx_alum_audit_action").on(t.action),
+  alumAuditEntityIdx: index("idx_alum_audit_entity").on(t.entityType, t.entityId),
+  alumAuditTimeIdx: index("idx_alum_audit_time").on(t.timestamp),
+}));
+
+
 

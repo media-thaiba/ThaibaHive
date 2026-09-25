@@ -28,12 +28,12 @@ class EvaluationSummaryCard extends StatelessWidget {
             Text('Current Status: ${status.toUpperCase()}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12)),
             const Divider(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.between,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Score: $score / 5.0', style: const TextStyle(fontSize: 14)),
                 Chip(
                   label: Text('Grade $grade', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  backgroundColor: Colors.emerald,
+                  backgroundColor: const Color(0xFF10B981),
                 ),
               ],
             ),

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:go_router/go_router.dart';
-import '../providers/voice_copilot_provider.dart';
-import '../models/voice_copilot_state.dart';
+import '../../providers/voice_copilot_provider.dart';
+import '../../models/voice_copilot_state.dart';
 
 /// VoiceCopilotScreen — Push-to-talk executive voice intelligence interface.
 /// Wired to live authenticated API calls via voiceCopilotProvider.
