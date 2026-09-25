@@ -66,5 +66,7 @@ scratch/
 api/dist/
 *.bak
 public/exports/
+graphify-out/
+.claude/
 
 
