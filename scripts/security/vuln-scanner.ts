@@ -135,12 +135,7 @@ export async function runVulnerabilityScan(dryRun = false): Promise<Vulnerabilit
 
   const report = parseAuditOutput(auditJson, allowlistIds);
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  const reportPath = path.join(reportsDir, "dependency-audit-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  const reportPath = writeJsonReport("dependency-audit-report.json", report);
 
   console.log(`📊 [VulnScanner] Scan finished: ${report.totalVulnerabilities} total vulnerabilities (Critical: ${report.criticalCount}, High: ${report.highCount}, Moderate: ${report.moderateCount}, Low: ${report.lowCount})`);
   console.log(`💾 [VulnScanner] Report saved to ${reportPath}`);

@@ -97,14 +97,7 @@ async function main() {
     findings,
   };
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  fs.writeFileSync(
-    path.join(reportsDir, "tenant-isolation-report.json"),
-    JSON.stringify(report, null, 2)
-  );
+  const savedReportPath = writeJsonReport("tenant-isolation-report.json", report);
 
   if (isJson) {
     console.log(JSON.stringify(report, null, 2));
@@ -115,7 +108,7 @@ async function main() {
     console.log(`  High Risks     : ${report.highCount}`);
     console.log(`  Warnings       : ${report.warningCount}`);
     console.log(`  Status         : ${report.passed ? "✅ 100% TENANT ISOLATED" : "❌ ISOLATION LEAKS DETECTED"}`);
-    console.log(`\nReport saved to: reports/tenant-isolation-report.json\n`);
+    console.log(`\nReport saved to: ${savedReportPath}\n`);
   }
 
   if (!passed) {

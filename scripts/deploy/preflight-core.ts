@@ -9,6 +9,7 @@
 import fs from "fs";
 import path from "path";
 import { validateEnvironment } from "../../src/lib/config/env-validation";
+import { writeJsonReport } from "../lib/reports-path";
 
 const DEV_JWT_PLACEHOLDERS = [
   "dev-jwt-secret-min-32-chars-long-security-key-thaibahive",
@@ -144,11 +145,7 @@ export function writePreflightReport(checks: PreflightCheck[]): string {
     passed: checks.every((c) => c.passed),
     checks,
   };
-  const reportsDir = path.join(repoRoot, "reports", "local");
-  if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
-  const reportPath = path.join(reportsDir, "preflight-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
-  return reportPath;
+  return writeJsonReport("preflight-report.json", report);
 }
 
 export function renderChecks(checks: PreflightCheck[]): string {
