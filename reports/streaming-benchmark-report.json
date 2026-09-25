@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-25T12:31:40.509Z",
+  "timestamp": "2026-09-25T13:04:01.128Z",
   "totalEndpoints": 3,
   "concurrencyPerEndpoint": 50,
   "durationPerEndpointSec": 2,
@@ -7,20 +7,20 @@
     {
       "endpoint": "/api/realtime/events",
       "concurrency": 50,
-      "durationMs": 2036,
+      "durationMs": 2031,
       "totalConnections": 50,
       "successfulConnections": 50,
       "failedConnections": 0,
       "totalEventsReceived": 50,
       "totalHeartbeatsReceived": 0,
-      "eventsPerSecond": 24.56,
+      "eventsPerSecond": 24.61,
       "handshakeLatency": {
-        "p50Ms": 16.13,
-        "p95Ms": 17.82,
-        "p99Ms": 18.76,
-        "minMs": 15.16,
-        "maxMs": 18.76,
-        "avgMs": 16.35
+        "p50Ms": 16.61,
+        "p95Ms": 18.24,
+        "p99Ms": 19.78,
+        "minMs": 15.62,
+        "maxMs": 19.78,
+        "avgMs": 16.82
       }
     },
     {
@@ -32,33 +32,33 @@
       "failedConnections": 0,
       "totalEventsReceived": 950,
       "totalHeartbeatsReceived": 0,
-      "eventsPerSecond": 469.47,
+      "eventsPerSecond": 469.38,
       "handshakeLatency": {
-        "p50Ms": 5.03,
-        "p95Ms": 5.84,
-        "p99Ms": 6.73,
-        "minMs": 4.26,
-        "maxMs": 6.73,
-        "avgMs": 5.05
+        "p50Ms": 5.81,
+        "p95Ms": 7,
+        "p99Ms": 7.74,
+        "minMs": 4.67,
+        "maxMs": 7.74,
+        "avgMs": 5.87
       }
     },
     {
       "endpoint": "/api/workspaces/sse",
       "concurrency": 50,
-      "durationMs": 2023,
+      "durationMs": 2011,
       "totalConnections": 50,
       "successfulConnections": 50,
       "failedConnections": 0,
       "totalEventsReceived": 950,
       "totalHeartbeatsReceived": 200,
-      "eventsPerSecond": 469.53,
+      "eventsPerSecond": 472.35,
       "handshakeLatency": {
-        "p50Ms": 5.24,
-        "p95Ms": 6.28,
-        "p99Ms": 6.63,
-        "minMs": 4.15,
-        "maxMs": 6.63,
-        "avgMs": 5.27
+        "p50Ms": 5.46,
+        "p95Ms": 6.41,
+        "p99Ms": 6.68,
+        "minMs": 4.19,
+        "maxMs": 6.68,
+        "avgMs": 5.4
       }
     }
   ],

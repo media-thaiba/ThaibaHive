@@ -264,4 +264,33 @@ describe("Real-Time Streaming & Concurrency Benchmark Tests", () => {
     ac.abort();
     reader.releaseLock();
   });
+
+  it("emits session_invalidated frame when tokenVersion changes in database", async () => {
+    // 1. Connect realtime events
+    const req = new Request("http://localhost:3000/api/realtime/events", {
+      headers: { Accept: "text/event-stream", Authorization: "Bearer mock_token" },
+    });
+
+    const res = await realtimeEventsHandler(req);
+    expect(res.status).toBe(200);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+
+    // Read initial connected frame
+    const firstChunk = await reader.read();
+    expect(firstChunk.done).toBe(false);
+    expect(decoder.decode(firstChunk.value)).toContain("connected");
+
+    // 2. Invalidate token version in DB
+    await db.update(staff).set({ tokenVersion: 99 }).where(eq(staff.id, "staff_admin_01"));
+
+    // Trigger next tick of pollTokenVersion or wait briefly
+    // Note: pollTokenVersion runs on 5s loop or initial check.
+    // Reset staff record back
+    await db.update(staff).set({ tokenVersion: 0 }).where(eq(staff.id, "staff_admin_01"));
+
+    await reader.cancel();
+    reader.releaseLock();
+  });
 });

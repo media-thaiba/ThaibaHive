@@ -65,11 +65,21 @@ export async function GET(request: Request) {
             .get();
 
           if (!user || !user.isActive) {
+            try {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: "account_deactivated" })}\n\n`)
+              );
+            } catch {}
             cleanup();
             return;
           }
 
           if (user.tokenVersion !== currentTokenVersion) {
+            try {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: "session_invalidated" })}\n\n`)
+              );
+            } catch {}
             cleanup();
             return;
           }

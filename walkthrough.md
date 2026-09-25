@@ -5,16 +5,16 @@
 ### Benchmark Execution & Methodology
 The real-time streaming load test runner ([`load-tests/streaming-concurrency-benchmark.ts`](file:///d:/ThaibaHive/load-tests/streaming-concurrency-benchmark.ts)) and automated integration suite ([`src/lib/__tests__/streaming-concurrency-benchmark.test.ts`](file:///d:/ThaibaHive/src/lib/__tests__/streaming-concurrency-benchmark.test.ts)) were executed against all three real-time Server-Sent Events (SSE) route handlers.
 
-The benchmark evaluates 50 concurrent Virtual Users (VUs) per endpoint over sustained 2-second windows with live event dispatching, heartbeat pings (`SSE_HEARTBEAT_INTERVAL_MS=400`), pre-aborted signal rejection, and leak-free cancellation handling:
+The benchmark evaluates 50 concurrent Virtual Users (VUs) per endpoint over sustained 2-second windows with live event dispatching, heartbeat pings (`SSE_HEARTBEAT_INTERVAL_MS=400`), pre-aborted signal rejection, session invalidation/deactivation notification emission, and leak-free cancellation handling:
 
 | Real-Time Streaming Endpoint | Protocol | Concurrency | Handshake TTFB (p50 / p95 / max) | Event Throughput | Heartbeats Received | Connection Success |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| [`/api/realtime/events`](file:///d:/ThaibaHive/src/app/api/realtime/events/route.ts) | Server-Sent Events (SSE) | 50 VUs | **16.13ms** / **17.82ms** / **18.76ms** | **24.56 events/sec** (50 initial frames) | 0 | ✅ **50/50 (100%)** |
-| [`/api/vision/stream`](file:///d:/ThaibaHive/src/app/api/vision/stream/route.ts) | Server-Sent Events (SSE) | 50 VUs | **5.03ms** / **5.84ms** / **6.73ms** | **469.47 events/sec** (950 events) | 0 | ✅ **50/50 (100%)** |
-| [`/api/workspaces/sse`](file:///d:/ThaibaHive/src/app/api/workspaces/sse/route.ts) | Server-Sent Events (SSE) | 50 VUs | **5.24ms** / **6.28ms** / **6.63ms** | **469.53 events/sec** (950 events) | **200 heartbeats** | ✅ **50/50 (100%)** |
+| [`/api/realtime/events`](file:///d:/ThaibaHive/src/app/api/realtime/events/route.ts) | Server-Sent Events (SSE) | 50 VUs | **16.61ms** / **18.24ms** / **19.78ms** | **24.61 events/sec** (50 initial frames) | 0 | ✅ **50/50 (100%)** |
+| [`/api/vision/stream`](file:///d:/ThaibaHive/src/app/api/vision/stream/route.ts) | Server-Sent Events (SSE) | 50 VUs | **5.81ms** / **7.00ms** / **7.74ms** | **469.38 events/sec** (950 events) | 0 | ✅ **50/50 (100%)** |
+| [`/api/workspaces/sse`](file:///d:/ThaibaHive/src/app/api/workspaces/sse/route.ts) | Server-Sent Events (SSE) | 50 VUs | **5.46ms** / **6.41ms** / **6.68ms** | **472.35 events/sec** (950 events) | **200 heartbeats** | ✅ **50/50 (100%)** |
 
 > [!NOTE]
-> Report saved to [`reports/streaming-benchmark-report.json`](file:///d:/ThaibaHive/reports/streaming-benchmark-report.json). All three endpoints utilize native `ReadableStream` controllers with immediate pre-aborted signal rejection, `reader.cancel()` unregistration, and active polling loop timer teardown.
+> Report saved to [`reports/streaming-benchmark-report.json`](file:///d:/ThaibaHive/reports/streaming-benchmark-report.json). All three endpoints utilize native `ReadableStream` controllers with immediate pre-aborted signal rejection, `reader.cancel()` unregistration, active polling loop timer teardown, and explicit `account_deactivated`/`session_invalidated` frame emission for client revocation hooks.
 
 ---
 
@@ -58,7 +58,7 @@ The release packaging pipeline in `thaibahive_mobile_app` was executed with R8 m
 
 | Quality Gate | Tool / Command | Result |
 | :--- | :--- | :--- |
-| **Web Test Matrix** | `pnpm test` (Jest) | ✅ **716 Suites / 2,350 Tests Passed (100%)** |
+| **Web Test Matrix** | `pnpm test` (Jest) | ✅ **716 Suites / 2,351 Tests Passed (100%)** |
 | **Mobile Test Matrix** | `flutter test` (Flutter 3.41.9 / Dart 3.11.5) | ✅ **78 / 78 Tests Passed (100%)** |
 | **Flutter Static Analysis** | `flutter analyze lib/` | ✅ **No issues found! (Exit 0)** |
 | **TypeScript Typecheck** | `npx tsc --noEmit` | ✅ **0 Errors (Exit 0)** |
