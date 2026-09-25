@@ -1,8 +1,10 @@
 # ThaibaHive
 
-The unified staff management platform for Thaiba Garden Group of Institutions (23+ campuses, 800–1,000 staff).
+The unified multi-campus enterprise management and learning operations platform for Thaiba Garden Group of Institutions (23+ campuses, 800–1,000 staff).
 
-## Quick Start
+---
+
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
@@ -10,156 +12,118 @@ pnpm install
 
 # Set up environment
 cp .env.example .env
-# Edit .env with your secrets (AUTH_JWT_SECRET, etc.)
 
-# Initialize database
+# Initialize database (SQLite dev / PostgreSQL prod)
 pnpm db:push
-
-# Seed sample data (optional)
 pnpm db:seed
 
 # Start development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) or navigate to [http://localhost:3000/docs](http://localhost:3000/docs) for the interactive OpenAPI documentation.
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router) |
-| UI | React 19, Radix UI, Tailwind CSS |
-| State | Zustand, TanStack Query |
-| Forms | React Hook Form + Zod |
-| Database | SQLite (dev) / PostgreSQL (prod) |
-| ORM | Drizzle ORM |
-| Auth | JWT (jose) |
-| Testing | Jest + Playwright |
+## 🏗️ Monorepo Architecture
 
-## Project Structure
+ThaibaHive is structured as a high-performance pnpm monorepo combining Next.js 16 full-stack App Router, shared core packages, and a cross-platform Flutter companion application:
 
 ```
-src/
-├── app/
-│   ├── (public)/              # Login, signup
-│   ├── (shell)/               # Authenticated pages
-│   │   ├── announcements/     # Announcements & targeting
-│   │   ├── attendance/        # Check-in/out, reports
-│   │   ├── tasks/             # Task management, Kanban
-│   │   ├── leaves/            # Leave requests & approvals
-│   │   ├── staff/             # Staff directory
-│   │   └── ...                # Other modules
-│   └── api/                   # API routes
-│       ├── announcements/     # Announcements CRUD
-│       ├── attendance/        # Attendance tracking
-│       ├── auth/              # Login, signup, permissions
-│       ├── tasks/             # Task CRUD
-│       └── ...                # Other API modules
-├── components/ui/             # Reusable UI components
-├── lib/
-│   ├── auth/                  # Auth utilities (re-exports from @thaiba/auth)
-│   ├── validation/            # Zod schemas
-│   ├── api/                   # Auth guard, pick utility
-│   └── utils.ts               # cn, formatDate, timeAgo, ensureArray
-├── db/
-│   ├── schema.ts              # Drizzle schema
-│   └── seed.ts                # Database seeder
-└── types/                     # TypeScript types
-
-packages/
-├── auth/                      # Auth package (JWT, roles, permissions)
-└── db/                        # Database package (schema, connection)
+ThaibaHive/
+├── src/                                  # Next.js 16 Web Application (App Router & React 19)
+│   ├── app/
+│   │   ├── (public)/                     # Login, onboarding, public enquiry portals
+│   │   ├── (shell)/                      # Authenticated dashboard pages (Staff, Attendance, Reviews, Finance, Operations)
+│   │   │   └── docs/                     # Interactive Swagger/OpenAPI API documentation viewer
+│   │   └── api/                          # Next.js Serverless & Node Route Handlers
+│   │       ├── auth/                     # JWT session creation, WebAuthn, OAuth, Nonce Handoff
+│   │       ├── realtime/events/          # SSE stream for user presence & instant token revocation
+│   │       ├── vision/stream/            # SSE stream for live ALPR, threat detection, and CCTV alerts
+│   │       ├── workspaces/sse/           # SSE stream for collaborative workspaces with 5s keep-alive
+│   │       ├── mobile/v1/sync/           # Offline delta sync (Pull / Push) with CRDT resolution
+│   │       ├── openapi.json/             # Official OpenAPI 3.1 specification endpoint
+│   │       └── system/                   # Health checks, Prometheus metrics, and failover drills
+│   ├── components/ui/                    # Reusable Radix UI & Tailwind component primitives
+│   └── lib/                              # Core engines, APM telemetry, RBAC guard, and crypto utilities
+│
+├── packages/
+│   ├── auth/                             # Auth package (@thaiba/auth: JWT, DPoP, roles, permissions)
+│   └── db/                               # DB package (@thaiba/db: Drizzle schema, SQLite/PG dialects)
+│
+├── thaibahive_mobile_app/                # Mobile Companion App (Flutter 3.41 / Dart 3.11)
+│   ├── lib/                              # Riverpod state management, GoRouter, Secure Storage
+│   └── test/                             # 78 unit, widget, and offline sync test suites
+│
+├── load-tests/                           # Concurrency & Streaming Load Test Harnesses
+└── scripts/
+    ├── dr/                               # Disaster recovery drill runners & failover verifiers
+    └── staging/                          # Staging preflight smoke tests & dependency canary scanners
 ```
 
-## Scripts
+---
+
+## 📚 OpenAPI 3.1 Specification
+
+ThaibaHive exposes a complete, validated **OpenAPI 3.1.0** specification accessible at runtime:
+
+- **JSON Endpoint**: `GET /api/openapi.json`
+- **Interactive UI**: `GET /docs` (Swagger UI embedded in the application shell)
+- **Supported Modules**:
+  - **Authentication & Nonce Handoff**: `/api/auth/login`, `/api/auth/me`, `/api/auth/mobile-handoff`
+  - **Staff & Academic Operations**: `/api/staff`, `/api/attendance/check-in`, `/api/leaves`, `/api/reviews`
+  - **Real-Time Streaming**: `/api/realtime/events`, `/api/vision/stream`, `/api/workspaces/sse`
+  - **Mobile Sync & MDM**: `/api/mobile/v1/sync/pull`, `/api/mobile/v1/sync/push`
+  - **System Resilience & Telemetry**: `/api/system/health`, `/api/system/metrics`, `/api/system/failover`
+
+---
+
+## ⚡ Real-Time Streaming & Concurrency Architecture
+
+ThaibaHive implements zero-leak, high-concurrency Server-Sent Events (SSE) across three core real-time channels:
+
+1. **User Revocation & Presence** (`/api/realtime/events`):
+   - Dispatches initial handshake frames and polls token versions in the database.
+   - Emits `session_invalidated` or `account_deactivated` frames immediately upon privilege revocation.
+2. **Computer Vision & Threat Alerts** (`/api/vision/stream`):
+   - Streams ALPR plate scans, perimeter alerts, and slip-and-fall anomaly telemetry.
+3. **Collaborative Workspaces** (`/api/workspaces/sse`):
+   - Broadcasts collaborative mutations with a keep-alive heartbeat (`: ping\n\n`) to prevent carrier disconnections.
+
+---
+
+## 📱 Mobile Companion Workspace (`thaibahive_mobile_app`)
+
+- **State Management**: Flutter Riverpod with immutable state models.
+- **Offline Sync**: Offline-first mutation outbox with optimistic local updates and CRDT conflict resolution.
+- **Hardware Integration**: NFC tag check-in, biometric biometric authentication (`local_auth`), and CameraX scanning.
+- **WebView Nonce Handoff**: Single-use cryptographic nonce exchange (`/api/auth/mobile-handoff`) allowing secure, seamless transitions into authenticated web drawers without manual credential entry.
+
+---
+
+## 🛡️ Quality Gates & Verification
 
 ```bash
-pnpm dev          # Start dev server
-pnpm build        # Production build
-pnpm typecheck    # TypeScript check
-pnpm lint         # ESLint
-pnpm test         # Unit tests
-pnpm test:e2e     # E2E tests (Playwright)
+# Run web test matrix (Jest)
+pnpm test
 
-pnpm db:generate  # Generate Drizzle migrations
-pnpm db:push      # Push schema to database
-pnpm db:migrate   # Run migrations
-pnpm db:seed      # Seed database
+# Run real-time streaming load benchmark (50 VUs per stream)
+npx tsx load-tests/streaming-concurrency-benchmark.ts
+
+# Run TypeScript typecheck
+npx tsc --noEmit
+
+# Run ESLint analysis
+pnpm lint
+
+# Run mobile tests & analyzer
+cd thaibahive_mobile_app
+flutter test
+flutter analyze lib/
 ```
 
-## Environment Variables
+---
 
-```env
-AUTH_JWT_SECRET=your-secret-key    # Required in production
-DATABASE_URL=file:./dev.db         # SQLite file path
-COOKIE_DOMAIN=localhost            # Optional
-```
+## 📄 License
 
-## Key Patterns
-
-### Authentication & WebView Auth Handoff
-- **Web Session**: JWT stored in HTTP-only cookie (`thaibahive_session`)
-- **Session Payload**: `{ staffId, email, role, employeeId, name, tokenVersion }`
-- **Auth Guard**: API routes are wrapped in `requireAuth(handler, "permission:string")`
-- **Mobile WebView Auth Handoff**:
-  1. The mobile app requests a secure, single-use handoff nonce via `POST /auth/mobile-handoff/nonce` from the mobile API.
-  2. The mobile app posts to the web API `POST /api/auth/mobile-handoff?redirect={targetPath}` with the nonce as a Bearer token.
-  3. The web server validates the nonce, marks the unique JTI token identifier as used in the database (preventing replay attacks), and sets the secure `thaibahive_session` cookie for the WebView.
-  4. The web server redirects the WebView to the target authenticated path.
-
-### Permissions (RBAC)
-- `super_admin` — Full access (`*`)
-- `admin` — Most management operations
-- `principal` — Institution-level management
-- `hod` — Department-level management
-- `staff` — Read-only + own data operations
-
-### API Routes
-- All routes use `requireAuth()` wrapper
-- GET returns list, POST creates, PATCH/PUT updates, DELETE removes
-- Validation via Zod schemas in `src/lib/validation/schemas.ts`
-- Error responses: `{ error: string }` with appropriate HTTP status
-
-### UI Components
-- All from `src/components/ui/` (Radix UI + Tailwind)
-- Use `<Input>`, `<Select>`, `<Button>`, `<Badge>`, `<Dialog>`, `<Card>`, `<Alert>`, `<EmptyState>`, `<Skeleton>`
-- Avoid raw HTML `<input>/<select>/<button>` — use UI components
-
-### State Management
-- `useState` for local component state
-- TanStack Query for server state (when adopted)
-- Zustand for global client state (when adopted)
-
-### Error Handling
-- Always add `.catch()` to `useEffect` fetch calls
-- Show user-facing errors via `<Alert>` or `toast`
-- Never leave loading spinners stuck on API failure
-
-## Database
-
-### Roles
-`super_admin` | `admin` | `principal` | `hod` | `staff`
-
-### Core Tables
-- `staff` — User accounts
-- `staffDepartments` — Staff ↔ Department (many-to-many)
-- `staffInstitutions` — Staff ↔ Institution (many-to-many)
-- `departments`, `institutions` — Organization structure
-- `attendanceLogs` — Daily check-in/out records
-- `leaveRequests`, `leaveBalances` — Leave management
-- `tasks`, `taskComments` — Task tracking
-- `announcements`, `announcementReads` — Targeted announcements with read receipts
-- `events`, `eventRsvps` — Event management
-- `circulars` — Official documents
-- `polls`, `pollResponses` — Surveys
-- `helpDeskTickets`, `helpDeskComments` — IT support
-- `notifications` — System notifications
-
-## Contributing
-
-1. Create a feature branch
-2. Make changes following existing patterns
-3. Run `pnpm typecheck` and `pnpm lint`
-4. Test manually in the browser
-5. Submit a PR
+Proprietary © Thaiba Garden Group of Institutions. All rights reserved.

@@ -44,7 +44,9 @@ export async function GET() {
       { name: "Leaves & Approvals", description: "Leave requests, balances, multi-stage approval workflows" },
       { name: "Performance Reviews", description: "Self-evaluations, manager appraisals, rating scores" },
       { name: "Marketplace Apps", description: "App directory, access requests, role assignments" },
-      { name: "System & Telemetry", description: "Health checks, live SSE real-time event broadcasting" },
+      { name: "Real-Time Streaming", description: "Live Server-Sent Events (SSE) for alerts, vision telemetry, and workspace sync" },
+      { name: "Mobile Sync & MDM", description: "Offline-first bidirectional sync, nonce handoff, and mobile device management" },
+      { name: "System & Resilience", description: "Health checks, failover drills, Prometheus metrics, and telemetry" },
     ],
     paths: {
       "/api/auth/login": {
@@ -79,6 +81,17 @@ export async function GET() {
           security: [{ CookieAuth: [] }, { BearerAuth: [] }],
           responses: {
             "200": { description: "Current session user profile data" },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+          },
+        },
+      },
+      "/api/auth/mobile-handoff": {
+        post: {
+          tags: ["Authentication", "Mobile Sync & MDM"],
+          summary: "Exchange one-time mobile nonce for authenticated web session cookie",
+          security: [{ BearerAuth: [] }],
+          responses: {
+            "302": { description: "Redirect to target destination with authenticated session cookie" },
             "401": { $ref: "#/components/responses/Unauthorized" },
           },
         },
@@ -193,9 +206,129 @@ export async function GET() {
           },
         },
       },
+      "/api/realtime/events": {
+        get: {
+          tags: ["Real-Time Streaming"],
+          summary: "Subscribe to Server-Sent Events (SSE) for user presence, token revocation, and session invalidation",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          responses: {
+            "200": {
+              description: "Persistent text/event-stream stream with connected, session_invalidated, and account_deactivated frames",
+              content: { "text/event-stream": { schema: { type: "string" } } },
+            },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+          },
+        },
+      },
+      "/api/vision/stream": {
+        get: {
+          tags: ["Real-Time Streaming"],
+          summary: "Subscribe to real-time Computer Vision alerts, ALPR detections, and edge telemetry via SSE",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          parameters: [
+            {
+              name: "tenantId",
+              in: "query",
+              required: false,
+              schema: { type: "string", default: "global" },
+              description: "Target institution or tenant identifier",
+            },
+            {
+              name: "topics",
+              in: "query",
+              required: false,
+              schema: { type: "string", default: "*" },
+              description: "Comma-separated topics filter (e.g. alpr,intrusion,slip_fall)",
+            },
+          ],
+          responses: {
+            "200": {
+              description: "Persistent text/event-stream streaming frame events",
+              content: { "text/event-stream": { schema: { type: "string" } } },
+            },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/api/workspaces/sse": {
+        get: {
+          tags: ["Real-Time Streaming"],
+          summary: "Subscribe to workspace mutation events with 5s keep-alive heartbeat pings",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          responses: {
+            "200": {
+              description: "Persistent text/event-stream stream for workspace collaborative editing",
+              content: { "text/event-stream": { schema: { type: "string" } } },
+            },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+          },
+        },
+      },
+      "/api/mobile/v1/sync/pull": {
+        post: {
+          tags: ["Mobile Sync & MDM"],
+          summary: "Pull delta sync updates for offline mobile SQLite/Hive storage",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    lastSyncedAt: { type: "string", format: "date-time" },
+                    tables: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Delta changes and synced entities" },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+          },
+        },
+      },
+      "/api/mobile/v1/sync/push": {
+        post: {
+          tags: ["Mobile Sync & MDM"],
+          summary: "Push offline local mutations queue from mobile client with CRDT resolution",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    mutations: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string" },
+                          action: { type: "string" },
+                          entity: { type: "string" },
+                          payload: { type: "object" },
+                          timestamp: { type: "string", format: "date-time" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Mutations processed and synced successfully" },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+          },
+        },
+      },
       "/api/system/health": {
         get: {
-          tags: ["System & Telemetry"],
+          tags: ["System & Resilience"],
           summary: "System health probe & database latency check",
           parameters: [
             {
@@ -212,9 +345,31 @@ export async function GET() {
           },
         },
       },
+      "/api/system/metrics": {
+        get: {
+          tags: ["System & Resilience"],
+          summary: "Export system and API route metrics in OpenTelemetry / Prometheus format",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          responses: {
+            "200": { description: "Prometheus metrics telemetry text format" },
+            "401": { $ref: "#/components/responses/Unauthorized" },
+          },
+        },
+      },
+      "/api/system/failover": {
+        post: {
+          tags: ["System & Resilience"],
+          summary: "Execute emergency disaster recovery leader failover drill",
+          security: [{ CookieAuth: [] }, { BearerAuth: [] }],
+          responses: {
+            "200": { description: "Failover drill completed and candidate promoted" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/api/notifications/subscribe": {
         get: {
-          tags: ["System & Telemetry"],
+          tags: ["Real-Time Streaming"],
           summary: "Subscribe to real-time Server-Sent Events (SSE) notification stream",
           security: [{ CookieAuth: [] }, { BearerAuth: [] }],
           responses: {

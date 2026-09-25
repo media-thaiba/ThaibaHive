@@ -83,12 +83,20 @@ describe("OpenAPI 3.1 Specification Route", () => {
 
     expect(spec.paths["/api/auth/login"]).toBeDefined();
     expect(spec.paths["/api/auth/me"]).toBeDefined();
+    expect(spec.paths["/api/auth/mobile-handoff"]).toBeDefined();
     expect(spec.paths["/api/staff"]).toBeDefined();
     expect(spec.paths["/api/attendance/check-in"]).toBeDefined();
     expect(spec.paths["/api/leaves"]).toBeDefined();
     expect(spec.paths["/api/reviews"]).toBeDefined();
     expect(spec.paths["/api/marketplace/apps"]).toBeDefined();
+    expect(spec.paths["/api/realtime/events"]).toBeDefined();
+    expect(spec.paths["/api/vision/stream"]).toBeDefined();
+    expect(spec.paths["/api/workspaces/sse"]).toBeDefined();
+    expect(spec.paths["/api/mobile/v1/sync/pull"]).toBeDefined();
+    expect(spec.paths["/api/mobile/v1/sync/push"]).toBeDefined();
     expect(spec.paths["/api/system/health"]).toBeDefined();
+    expect(spec.paths["/api/system/metrics"]).toBeDefined();
+    expect(spec.paths["/api/system/failover"]).toBeDefined();
     expect(spec.paths["/api/notifications/subscribe"]).toBeDefined();
   });
 });
