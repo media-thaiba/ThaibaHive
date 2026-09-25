@@ -5,6 +5,7 @@
 
 import fs from "fs";
 import path from "path";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface DependencyCanaryInput {
   smokeTestsPassed: boolean;
@@ -112,12 +113,7 @@ export async function runDependencyCanaryEvaluation(
 
   const evaluation = evaluateDependencyCanary(input);
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  const reportPath = path.join(reportsDir, "dependency-canary-evaluation.json");
-  fs.writeFileSync(reportPath, JSON.stringify(evaluation, null, 2));
+  const reportPath = writeJsonReport("dependency-canary-evaluation.json", evaluation);
 
   console.log(`📋 [DependencyCanary] Evaluation result: ${evaluation.passed ? "PASSED (Auto-merge authorized)" : "BLOCKED"}`);
   for (const r of evaluation.reasons) {

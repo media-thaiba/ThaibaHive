@@ -9,6 +9,7 @@
 
 import fs from "fs";
 import path from "path";
+import { writeJsonReport } from "../lib/reports-path";
 import http from "http";
 import { spawnSync } from "child_process";
 import { AdaptiveRateLimiter } from "../../src/lib/security/adaptive-limiter";
@@ -223,17 +224,8 @@ export async function executeDdosCertification(targetUrl?: string): Promise<Stag
     certificationStatus: passed ? "CERTIFIED" : "FAILED",
   };
 
-  // Write certificate to reports directory
-  const reportsDir = path.join(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-
-  fs.writeFileSync(
-    path.join(reportsDir, "staging-ddos-certification.json"),
-    JSON.stringify(certificate, null, 2),
-    "utf-8"
-  );
+  // Write certificate to live reports directory
+  writeJsonReport("staging-ddos-certification.json", certificate);
 
   return certificate;
 }

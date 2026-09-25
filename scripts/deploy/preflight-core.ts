@@ -144,7 +144,7 @@ export function writePreflightReport(checks: PreflightCheck[]): string {
     passed: checks.every((c) => c.passed),
     checks,
   };
-  const reportsDir = path.join(repoRoot, "reports");
+  const reportsDir = path.join(repoRoot, "reports", "local");
   if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
   const reportPath = path.join(reportsDir, "preflight-report.json");
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));

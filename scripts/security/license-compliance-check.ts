@@ -5,6 +5,7 @@
 
 import fs from "fs";
 import path from "path";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface LicenseEntry {
   name: string;
@@ -146,12 +147,7 @@ export async function runLicenseComplianceCheck(dryRun = false): Promise<License
     durationMs: Date.now() - startTime,
   };
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  const reportPath = path.join(reportsDir, "license-compliance-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  const reportPath = writeJsonReport("license-compliance-report.json", report);
 
   console.log(`📋 [LicenseCompliance] Checked ${report.totalPackagesChecked} packages. Compliant: ${report.compliantCount}, Non-Compliant: ${report.nonCompliantCount}`);
   console.log(`💾 [LicenseCompliance] Report saved to ${reportPath}`);

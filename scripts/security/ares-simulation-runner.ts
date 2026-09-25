@@ -55,7 +55,7 @@ async function runAresSimulation() {
 
   const alert = alertSystem.evaluateAndAlert(forecast, signals);
   if (alert) {
-    console.log(`  ✓ Early Warning Alert Generated: ${alert.alertId} [${alert.alertTier}]`);
+    console.log(`  ✓ Early Warning Alert Generated: ${alert.alertId} [${alert.severityTier}]`);
     const action = hardeningController.planHardeningAction(
       forecast.threatCategory,
       'auth-cluster-primary',

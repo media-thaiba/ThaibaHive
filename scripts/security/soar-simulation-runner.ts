@@ -4,6 +4,7 @@
  */
 
 import { registerBuiltinActions } from '../../src/lib/security/soar/actions';
+import { writeJsonReport } from '../lib/reports-path';
 import { CANONICAL_SECURITY_PLAYBOOKS } from '../../src/lib/security/soar/playbooks/definitions';
 import { soarOrchestrator } from '../../src/lib/security/soar/orchestrator';
 import { TriggerMatcher } from '../../src/lib/security/soar/trigger-matcher';
@@ -343,11 +344,7 @@ if (require.main === module) {
     };
 
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const reportDir = path.resolve(process.cwd(), 'reports');
-      if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
-      fs.writeFileSync(path.join(reportDir, 'soar-simulation-report.json'), JSON.stringify(report, null, 2));
+      writeJsonReport('soar-simulation-report.json', report);
     } catch {}
 
     if (isJson) {

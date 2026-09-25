@@ -4,9 +4,8 @@
  * Part of Sprint-035: Global Multi-Tenant Cross-Region Disaster Recovery Drills & Automated Failover Verification
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import * as crypto from "crypto";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface RollbackVerificationReport {
   timestamp: string;
@@ -120,14 +119,7 @@ async function main() {
 
   const report = await runRollbackVerification(isDryRun);
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  fs.writeFileSync(
-    path.join(reportsDir, "rollback-verification-report.json"),
-    JSON.stringify(report, null, 2)
-  );
+  const savedReportPath = writeJsonReport("rollback-verification-report.json", report);
 
   if (isJson) {
     console.log(JSON.stringify(report, null, 2));
@@ -141,7 +133,7 @@ async function main() {
     report.steps.forEach((s, idx) => {
       console.log(`  ${idx + 1}. [${s.passed ? "OK" : "FAIL"}] ${s.step} (${s.durationMs}ms)`);
     });
-    console.log(`\nReport saved to: reports/rollback-verification-report.json\n`);
+    console.log(`\nReport saved to: ${savedReportPath}\n`);
   }
 
   if (report.status !== "VERIFIED") {

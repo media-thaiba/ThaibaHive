@@ -57,10 +57,11 @@ export function evaluateCanaryPromotion(
     r.name.toLowerCase().includes("metrics endpoint") || r.name.toLowerCase().includes("error rate")
   );
   if (metricsCheck?.details && typeof (metricsCheck.details as any).errorRate === "number") {
-    errorRatePct = (metricsCheck.details as any).errorRate;
-    if (errorRatePct > 0.0) {
+    const rate = (metricsCheck.details as any).errorRate as number;
+    errorRatePct = rate;
+    if (rate > 0.0) {
       reasons.push(
-        `Production safety violation: Staging error rate is ${errorRatePct}% (0.00% required for promotion).`
+        `Production safety violation: Staging error rate is ${rate}% (0.00% required for promotion).`
       );
     }
   }

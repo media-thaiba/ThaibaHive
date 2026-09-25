@@ -73,6 +73,7 @@ async function runAfedSimulation() {
       availableMemoryMb: 2048,
       networkLatencyMs: 15,
       reputationScore: 1.0,
+      totalRoundsParticipated: 0,
       lastHeartbeat: new Date().toISOString(),
     });
   }
@@ -156,10 +157,10 @@ async function runAfedSimulation() {
     peerMgr.registerPeer({
       peerId: node.nodeId,
       campusId: node.campusId,
-      endpointUrl: `ws://${node.nodeId}.mesh:8080`,
+      address: `ws://${node.nodeId}.mesh:8080`,
       status: 'connected',
       latencyMs: 15,
-      lastHeartbeat: new Date().toISOString(),
+      lastSeen: new Date().toISOString(),
     });
   }
   const gossipMesh = new ModelGossipMesh('node_campus_alpha', currentGlobalWeights, peerMgr);

@@ -4,11 +4,10 @@
  * Part of Sprint-035: Global Multi-Tenant Cross-Region Disaster Recovery Drills & Automated Failover Verification
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import { DrillOrchestrator } from "../../src/lib/dr/drill-orchestrator";
 import { DrillMetricsAnalyzer } from "../../src/lib/dr/drill-metrics";
 import { DrillScenarioType } from "../../src/lib/dr/types";
+import { writeJsonReport } from "../lib/reports-path";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -111,12 +110,11 @@ async function main() {
 }
 
 function saveReport(result: any, analysis: any) {
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  const reportPath = path.join(reportsDir, "dr-drill-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify({ result, analysis, generatedAt: new Date().toISOString() }, null, 2));
+  writeJsonReport("dr-drill-report.json", {
+    result,
+    analysis,
+    generatedAt: new Date().toISOString(),
+  });
 }
 
 main();

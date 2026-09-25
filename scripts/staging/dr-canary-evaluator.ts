@@ -6,6 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { resolveLiveReportsDir } from "../lib/reports-path";
 
 interface DRCanaryEvaluation {
   timestamp: string;
@@ -23,7 +24,7 @@ export function evaluateDRExecution(
   failoverReportPath?: string,
   rollbackReportPath?: string
 ): DRCanaryEvaluation {
-  const reportsDir = path.resolve(process.cwd(), "reports");
+  const reportsDir = resolveLiveReportsDir();
   const drillFile = drillReportPath || path.join(reportsDir, "dr-drill-report.json");
   const failoverFile = failoverReportPath || path.join(reportsDir, "failover-verification-report.json");
   const rollbackFile = rollbackReportPath || path.join(reportsDir, "rollback-verification-report.json");

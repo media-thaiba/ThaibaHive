@@ -6,6 +6,7 @@
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface SecurityVulnerability {
   id: string;

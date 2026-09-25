@@ -3,10 +3,9 @@
  * Part of Sprint-034: Enterprise Multi-Region Infrastructure & Automated Dependency Security
  */
 
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 import { db, replicaRouter, sql } from "@/db";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface ParityReport {
   timestamp: string;
@@ -62,8 +61,8 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
   // 1. Query Primary Database
   for (const table of tablesToVerify) {
     try {
-      const res = await db.all(sql.raw(`SELECT count(*) as count FROM "${table}"`)).catch(async () => {
-        return await db.all(sql.raw(`SELECT count(*) as count FROM ${table}`));
+      const res = await db.all<{ count: number | string }>(sql.raw(`SELECT count(*) as count FROM "${table}"`)).catch(async () => {
+        return await db.all<{ count: number | string }>(sql.raw(`SELECT count(*) as count FROM ${table}`));
       });
       const count = Number(res[0]?.count ?? 0);
       primaryRowCounts[table] = count;
@@ -83,7 +82,7 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
 
   // 2. Query All Registered Read-Replicas
   const replicaStatuses = replicaRouter.getReplicaStatuses();
-  const replicaDbs: any[] = (replicaRouter as any).replicaDbs || [];
+  const replicaDbs: (typeof db)[] = (replicaRouter as any).replicaDbs || [];
   const replicaCountsByTable: Record<string, Record<string, number>> = {};
   const replicaChecksums: Record<string, string> = {};
   let allReplicasMatch = true;
@@ -99,8 +98,8 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
 
     for (const table of tablesToVerify) {
       try {
-        const res = await replicaDb.all(sql.raw(`SELECT count(*) as count FROM "${table}"`)).catch(async () => {
-          return await replicaDb.all(sql.raw(`SELECT count(*) as count FROM ${table}`));
+        const res = await replicaDb.all<{ count: number | string }>(sql.raw(`SELECT count(*) as count FROM "${table}"`)).catch(async () => {
+          return await replicaDb.all<{ count: number | string }>(sql.raw(`SELECT count(*) as count FROM ${table}`));
         });
         const repCount = Number(res[0]?.count ?? 0);
         replicaCountsByTable[table][replicaId] = repCount;
@@ -160,13 +159,7 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
     durationMs,
   };
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-
-  const reportPath = path.join(reportsDir, "replica-parity-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  const reportPath = writeJsonReport("replica-parity-report.json", report);
 
   if (!isParityValid) {
     console.warn(`⚠️ [ReplicaParityValidator] Parity scan found ${mismatches.length} divergence(s):`);

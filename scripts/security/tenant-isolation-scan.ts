@@ -6,6 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { writeJsonReport } from "../lib/reports-path";
 
 interface ScanFinding {
   filePath: string;

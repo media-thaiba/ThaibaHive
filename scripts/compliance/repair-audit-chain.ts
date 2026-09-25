@@ -52,13 +52,12 @@ async function repairChain() {
         entityType: e.entityType,
         entityId: e.entityId,
         payloadHash,
-        nonce: e.nonce || '0',
+        nonce: '0',
       });
 
       await db
         .update(auditLogs)
         .set({
-          payloadHash,
           previousHash,
           currentHash,
         })

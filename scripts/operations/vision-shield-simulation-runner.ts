@@ -8,6 +8,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { writeJsonReport } from '../lib/reports-path';
 import { CameraGatewayAdapter } from '../../src/lib/operations/vision/ingestion/camera-gateway-adapter';
 import { StreamHealthMonitor } from '../../src/lib/operations/vision/ingestion/stream-health-monitor';
 import { FrameMetadataIngester } from '../../src/lib/operations/vision/ingestion/frame-metadata-ingester';
@@ -214,6 +215,7 @@ export async function runVisionShieldSimulation(options: { scenario?: string } =
       currentLocationZ: 0.0,
       batteryPercent: 92.0,
       institutionId: 'tenant_main',
+      lastHeartbeatAt: new Date().toISOString(),
     });
 
     const guardRouter = new GuardDispatchRouter(store);
@@ -284,11 +286,7 @@ export async function runVisionShieldSimulation(options: { scenario?: string } =
   };
 
   // Write simulation report
-  const reportsDir = path.join(process.cwd(), 'reports');
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  fs.writeFileSync(path.join(reportsDir, 'vision-shield-simulation-report.json'), JSON.stringify(result, null, 2));
+  writeJsonReport('vision-shield-simulation-report.json', result);
 
   return result;
 }

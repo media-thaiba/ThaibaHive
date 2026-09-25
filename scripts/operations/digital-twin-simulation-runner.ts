@@ -9,6 +9,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { writeJsonReport, resolveLiveExecutionDir } from '../lib/reports-path';
 import { SpatialIndexer } from '../../src/lib/operations/twin/spatial/spatial-indexer';
 import { BoundingVolume } from '../../src/lib/operations/twin/spatial/bounding-volume';
 import { TelemetryIngester } from '../../src/lib/operations/twin/iot/telemetry-ingester';
@@ -223,19 +224,10 @@ export async function runDigitalTwinSimulation(options: { scenario?: string } = 
     timestamp: new Date().toISOString(),
   };
 
-  // Write report to reports/twin-simulation-report.json and .ai/execution/twin-simulation-report.json
+  // Write report to reports/local/twin-simulation-report.json and .ai/execution/local/twin-simulation-report.json
   try {
-    const reportsDir = path.resolve(process.cwd(), 'reports');
-    if (!fs.existsSync(reportsDir)) {
-      fs.mkdirSync(reportsDir, { recursive: true });
-    }
-    fs.writeFileSync(path.join(reportsDir, 'twin-simulation-report.json'), JSON.stringify(result, null, 2));
-
-    const execDir = path.resolve(process.cwd(), '.ai', 'execution');
-    if (!fs.existsSync(execDir)) {
-      fs.mkdirSync(execDir, { recursive: true });
-    }
-    fs.writeFileSync(path.join(execDir, 'twin-simulation-report.json'), JSON.stringify(result, null, 2));
+    writeJsonReport('twin-simulation-report.json', result);
+    writeJsonReport('twin-simulation-report.json', result, resolveLiveExecutionDir());
   } catch (err) {
     console.warn('Could not write simulation report file:', err);
   }

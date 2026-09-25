@@ -74,5 +74,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dr-verification-reports
-          path: reports/
+          path: reports/local/
           retention-days: 30

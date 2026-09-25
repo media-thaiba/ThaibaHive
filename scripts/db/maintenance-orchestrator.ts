@@ -3,9 +3,8 @@
  * Part of Sprint-034: Enterprise Multi-Region Infrastructure & Automated Dependency Security
  */
 
-import fs from "fs";
-import path from "path";
 import { db, isPostgres, sql } from "@/db";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface TableMaintenanceResult {
   tableName: string;
@@ -71,7 +70,7 @@ export async function runDatabaseMaintenance(force = false, dryRun = false): Pro
     try {
       if (isPostgres) {
         // 1. Query Postgres stats for dead tuple bloat ratio
-        const statRes = await db.all(sql.raw(`
+        const statRes = await db.all<{ dead_tuples: number; live_tuples: number }>(sql.raw(`
           SELECT 
             COALESCE(n_dead_tup, 0) as dead_tuples,
             COALESCE(n_live_tup, 0) as live_tuples
@@ -112,7 +111,7 @@ export async function runDatabaseMaintenance(force = false, dryRun = false): Pro
         }
       } else {
         // SQLite / LibSQL optimization
-        const freelistRes = await db.all(sql`PRAGMA freelist_count`).catch(() => [{ freelist_count: 0 }]);
+        const freelistRes = await db.all<{ freelist_count: number }>(sql`PRAGMA freelist_count`).catch(() => [{ freelist_count: 0 }]);
         const freelistCount = Number(freelistRes[0]?.freelist_count ?? 0);
         freelistReclaimed += freelistCount;
 
@@ -157,12 +156,7 @@ export async function runDatabaseMaintenance(force = false, dryRun = false): Pro
     totalDurationMs: Date.now() - startTime,
   };
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  const reportPath = path.join(reportsDir, "db-maintenance-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  const reportPath = writeJsonReport("db-maintenance-report.json", report);
 
   console.log(`✅ [DbMaintenance] Maintenance completed in ${report.totalDurationMs}ms across ${results.length} tables. Report saved to ${reportPath}`);
 

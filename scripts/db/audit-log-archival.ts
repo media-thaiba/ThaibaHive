@@ -8,6 +8,7 @@ import path from "path";
 import zlib from "zlib";
 import crypto from "crypto";
 import { db, sql } from "@/db";
+import { writeJsonReport } from "../lib/reports-path";
 
 export interface ArchivalReport {
   timestamp: string;
@@ -131,12 +132,7 @@ export async function runAuditLogArchival(
     durationMs: Date.now() - startTime,
   };
 
-  const reportsDir = path.resolve(process.cwd(), "reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
-  }
-  const reportPath = path.join(reportsDir, "db-archival-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  const reportPath = writeJsonReport("db-archival-report.json", report);
 
   console.log(`✅ [AuditArchival] Archival complete. ${expiredRecords.length} records archived across ${batchesProcessed} batch(es). Report saved to ${reportPath}`);
 

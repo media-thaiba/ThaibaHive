@@ -71,5 +71,10 @@ graphify-out/
 staging-reports/
 .compliance-snapshots/
 
+# live script run output (drills, simulations, scans) — tracked files in
+# reports/ are stable baselines and must not be churned by re-runs
+reports/local/
+.ai/execution/local/
+
 
 

@@ -36,5 +36,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "thaibahive_mobile_app", "e2e", "scratch", "scripts"]
+  "exclude": ["node_modules", "thaibahive_mobile_app", "e2e", "scratch"]
 }
