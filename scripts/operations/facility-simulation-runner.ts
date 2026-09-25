@@ -1,6 +1,5 @@
 import { facilityStore } from '../../src/lib/db/facility-store';
 import { sensorIngestionGateway } from '../../src/lib/operations/facility/ingestion/sensor-ingestion-gateway';
-import { timeSeriesBuffer } from '../../src/lib/operations/facility/telemetry/time-series-buffer';
 import { TelemetryAggregator } from '../../src/lib/operations/facility/telemetry/telemetry-aggregator';
 import { VibrationFftAnalyzer } from '../../src/lib/operations/facility/predictive/models/vibration-fft-analyzer';
 import { ThermalDegradationModel } from '../../src/lib/operations/facility/predictive/models/thermal-degradation-model';
@@ -9,9 +8,6 @@ import { anomalyAlertManager } from '../../src/lib/operations/facility/predictiv
 import { workOrderEngine } from '../../src/lib/operations/facility/workorders/work-order-engine';
 import { spatialTechnicianRouter } from '../../src/lib/operations/facility/workorders/spatial-technician-router';
 import { partsInventoryManager } from '../../src/lib/operations/facility/inventory/parts-inventory-manager';
-import { ReorderAllocator } from '../../src/lib/operations/facility/inventory/reorder-allocator';
-import { EcoLoadShedder } from '../../src/lib/operations/facility/synergy/eco-load-shedder';
-import { VisionSafetyCorrelator } from '../../src/lib/operations/facility/synergy/vision-safety-correlator';
 import { facilityMetricsExporter } from '../../src/lib/operations/facility/telemetry/facility-metrics';
 import { facilityMerkleAnchor } from '../../src/lib/operations/facility/security/facility-merkle-anchor';
 import { AuditTrailVerifier } from '../../src/lib/operations/facility/security/audit-trail-verifier';

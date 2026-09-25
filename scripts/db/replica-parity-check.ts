@@ -72,7 +72,7 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
       });
       primarySamples[table] = sample;
       combinedPrimaryData += JSON.stringify(sample);
-    } catch (err: any) {
+    } catch (_err: any) {
       primaryRowCounts[table] = 0;
       primarySamples[table] = [];
     }

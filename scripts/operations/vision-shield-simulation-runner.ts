@@ -6,12 +6,9 @@
  * ==============================================================================
  */
 
-import fs from 'fs';
-import path from 'path';
 import { writeJsonReport } from '../lib/reports-path';
 import { CameraGatewayAdapter } from '../../src/lib/operations/vision/ingestion/camera-gateway-adapter';
 import { StreamHealthMonitor } from '../../src/lib/operations/vision/ingestion/stream-health-monitor';
-import { FrameMetadataIngester } from '../../src/lib/operations/vision/ingestion/frame-metadata-ingester';
 import { CrowdAnomalyDetector } from '../../src/lib/operations/vision/ml/crowd-anomaly-detector';
 import { PerimeterIntrusionEngine } from '../../src/lib/operations/vision/ml/perimeter-intrusion-engine';
 import { SlipFallDetector } from '../../src/lib/operations/vision/ml/slip-fall-detector';
@@ -25,7 +22,6 @@ import { GuardDispatchRouter } from '../../src/lib/operations/vision/spatial/gua
 import { LockdownOrchestrator } from '../../src/lib/operations/vision/emergency/lockdown-orchestrator';
 import { EcoMeshSynchronizer } from '../../src/lib/operations/vision/emergency/eco-mesh-synchronizer';
 import { VisionMetricsExporter } from '../../src/lib/operations/vision/telemetry/vision-metrics';
-import { VisionMerkleAnchor } from '../../src/lib/operations/vision/security/vision-merkle-anchor';
 import { IncidentAuditVerifier } from '../../src/lib/operations/vision/security/incident-audit-verifier';
 import { VisionDbStore } from '../../src/lib/db/vision-store';
 

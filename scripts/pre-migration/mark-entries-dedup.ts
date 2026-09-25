@@ -1,6 +1,6 @@
-import { db, isPostgres } from "../../packages/db";
+import { db } from "../../packages/db";
 import { markEntries } from "../../packages/db/schema";
-import { sql, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 
 /**
  * Deduplicate mark_entries on composite key (exam_schedule_id, student_id)
@@ -32,7 +32,7 @@ export async function deduplicateMarkEntries(dbClient: any = db): Promise<{ dupl
   let deletedRows = 0;
   const idsToDelete: string[] = [];
 
-  for (const [key, entries] of groups.entries()) {
+  for (const [_key, entries] of groups.entries()) {
     if (entries.length > 1) {
       duplicateGroups++;
       // Sort to keep the latest one (by createdAt or by array index if equal)

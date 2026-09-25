@@ -18,14 +18,12 @@ import { SendTimeOptimizer } from '../../src/lib/operations/engage/send-time-opt
 import { FrequencyCapper } from '../../src/lib/operations/engage/frequency-capper';
 import { TemplateEngine } from '../../src/lib/operations/engage/template-engine';
 import { BrandValidator } from '../../src/lib/operations/engage/brand-validator';
-import { AiPersonalizer } from '../../src/lib/operations/engage/ai-personalizer';
 import { DialogManager } from '../../src/lib/operations/engage/conversational/dialog-manager';
 import { CampusEventListener } from '../../src/lib/operations/engage/workflow/event-listener';
 import { TranslationEngine } from '../../src/lib/operations/engage/localization/translation-engine';
 import { CulturalAdapter } from '../../src/lib/operations/engage/localization/cultural-adapter';
 import { ConsentManager } from '../../src/lib/operations/engage/privacy/consent-manager';
 import { ComplianceAuditLogger } from '../../src/lib/operations/engage/privacy/compliance-audit';
-import { EngagementAggregator } from '../../src/lib/operations/engage/analytics/engagement-aggregator';
 import { EngageDbStore } from '../../src/lib/db/engage-store';
 
 export async function runEngageSimulation(): Promise<boolean> {

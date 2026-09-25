@@ -4,7 +4,6 @@
  */
 
 import fs from "fs";
-import path from "path";
 import { writeJsonReport } from "../lib/reports-path";
 
 export interface DependencyCanaryInput {
@@ -116,6 +115,7 @@ export async function runDependencyCanaryEvaluation(
   const reportPath = writeJsonReport("dependency-canary-evaluation.json", evaluation);
 
   console.log(`📋 [DependencyCanary] Evaluation result: ${evaluation.passed ? "PASSED (Auto-merge authorized)" : "BLOCKED"}`);
+  console.log(`💾 [DependencyCanary] Report saved to: ${reportPath}`);
   for (const r of evaluation.reasons) {
     console.log(`   - ${r}`);
   }

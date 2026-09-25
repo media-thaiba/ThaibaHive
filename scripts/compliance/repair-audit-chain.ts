@@ -3,7 +3,7 @@
  */
 
 import { db } from '../../src/db';
-import { auditLogs, auditMerkleRoots } from '@thaiba/db/schema';
+import { auditLogs } from '@thaiba/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import {
   computePayloadHash,

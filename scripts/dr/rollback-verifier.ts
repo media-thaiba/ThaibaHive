@@ -4,7 +4,6 @@
  * Part of Sprint-035: Global Multi-Tenant Cross-Region Disaster Recovery Drills & Automated Failover Verification
  */
 
-import * as crypto from "crypto";
 import { writeJsonReport } from "../lib/reports-path";
 
 export interface RollbackVerificationReport {

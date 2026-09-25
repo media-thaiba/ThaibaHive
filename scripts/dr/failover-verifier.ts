@@ -36,7 +36,6 @@ export interface FailoverVerificationReport {
 export async function runFailoverVerification(isDryRun = false): Promise<FailoverVerificationReport> {
   const verificationId = `verify_failover_${Date.now()}`;
   const startedAt = new Date().toISOString();
-  const startTime = Date.now();
   const steps: FailoverVerificationReport["steps"] = [];
 
   if (isDryRun) {

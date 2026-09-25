@@ -7,8 +7,6 @@
  * ==============================================================================
  */
 
-import fs from 'fs';
-import path from 'path';
 import { writeJsonReport, resolveLiveExecutionDir } from '../lib/reports-path';
 import { SpatialIndexer } from '../../src/lib/operations/twin/spatial/spatial-indexer';
 import { BoundingVolume } from '../../src/lib/operations/twin/spatial/bounding-volume';

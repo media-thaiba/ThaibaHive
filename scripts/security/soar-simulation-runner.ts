@@ -11,7 +11,6 @@ import { TriggerMatcher } from '../../src/lib/security/soar/trigger-matcher';
 import { ConfidenceGate } from '../../src/lib/security/soar/confidence-gate';
 import { approvalQueue } from '../../src/lib/security/soar/approval-queue';
 import { QuarantineManager } from '../../src/lib/security/quarantine-manager';
-import { revocationStore } from '../../src/lib/identity/revocation-store';
 
 const quarantineManager = QuarantineManager.getInstance();
 const confidenceGate = ConfidenceGate.getInstance();

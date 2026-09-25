@@ -11,7 +11,6 @@ import { PredictiveAlertSystem } from '../../src/lib/security/ares/predictive-al
 import { PreemptiveHardeningController } from '../../src/lib/security/ares/preemptive-hardening';
 import { ChaosEngine } from '../../src/lib/security/chaos/chaos-engine';
 import { ZkAttestationService } from '../../src/lib/security/zkp/zk-attestation-service';
-import { Neo4jThreatGraphAdapter } from '../../src/lib/security/graph/neo4j-adapter';
 import { ThreatGraphQueryEngine } from '../../src/lib/security/graph/graph-query-engine';
 import { StixTaxiiIngester } from '../../src/lib/security/graph/stix-taxii-ingester';
 import { ResilienceCalculator } from '../../src/lib/security/resilience/resilience-calculator';

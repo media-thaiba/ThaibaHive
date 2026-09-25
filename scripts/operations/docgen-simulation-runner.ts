@@ -12,7 +12,6 @@ import { PagedMediaStyler } from '../../src/lib/operations/docgen/templates/page
 import { ReportCardGenerator } from '../../src/lib/operations/docgen/pdf/report-card-generator';
 import { HallTicketGenerator } from '../../src/lib/operations/docgen/pdf/hall-ticket-generator';
 import { CertificateGenerator } from '../../src/lib/operations/docgen/pdf/certificate-generator';
-import { DocumentSignatureEngine } from '../../src/lib/operations/docgen/crypto/document-signature-engine';
 import { VerificationResolver } from '../../src/lib/operations/docgen/crypto/verification-resolver';
 import { UniversalExportEngine } from '../../src/lib/operations/docgen/export/universal-export-engine';
 import { ExportJobManager } from '../../src/lib/operations/docgen/export/export-job-manager';
@@ -44,7 +43,6 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
   const reportCardGen = ReportCardGenerator.getInstance();
   const hallTicketGen = HallTicketGenerator.getInstance();
   const certificateGen = CertificateGenerator.getInstance();
-  const sigEngine = DocumentSignatureEngine.getInstance();
   const resolver = VerificationResolver.getInstance();
   const exportEngine = UniversalExportEngine.getInstance();
   const exportManager = ExportJobManager.getInstance();

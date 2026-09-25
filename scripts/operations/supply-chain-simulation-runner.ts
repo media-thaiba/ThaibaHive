@@ -8,20 +8,14 @@
 
 import { SupplyDbStore } from '../../src/lib/db/supply-store';
 import { VendorRiskScreeningEngine } from '../../src/lib/operations/supply/risk/vendor-risk-screening-engine';
-import { SanctionsChecker } from '../../src/lib/operations/supply/risk/sanctions-checker';
 import { EsgScoringEngine } from '../../src/lib/operations/supply/esg/esg-scoring-engine';
 import { CarbonSupplyChainTracker } from '../../src/lib/operations/supply/esg/carbon-supply-chain-tracker';
-import { EoqCalculator } from '../../src/lib/operations/supply/inventory/eoq-calculator';
 import { PredictiveReorderEngine } from '../../src/lib/operations/supply/inventory/predictive-reorder-engine';
 import { RequisitionRoutingEngine } from '../../src/lib/operations/supply/workflow/requisition-routing-engine';
-import { ApprovalChainManager } from '../../src/lib/operations/supply/workflow/approval-chain-manager';
 import { BudgetEncumbranceEngine } from '../../src/lib/operations/supply/finance/budget-encumbrance-engine';
 import { ThreeWayMatchingEngine } from '../../src/lib/operations/supply/matching/three-way-matching-engine';
-import { DiscrepancyResolver } from '../../src/lib/operations/supply/matching/discrepancy-resolver';
 import { ContractLifecycleManager } from '../../src/lib/operations/supply/contracts/contract-lifecycle-manager';
-import { MilestoneTracker } from '../../src/lib/operations/supply/contracts/milestone-tracker';
 import { SupplyMetricsExporter } from '../../src/lib/operations/supply/telemetry/supply-metrics';
-import { SupplyStreamManager } from '../../src/lib/operations/supply/streaming/supply-stream-manager';
 import { SupplyMerkleAnchor } from '../../src/lib/operations/supply/security/supply-merkle-anchor';
 import { ProcurementAuditVerifier } from '../../src/lib/operations/supply/security/procurement-audit-verifier';
 
@@ -52,10 +46,8 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
   const routingEngine = RequisitionRoutingEngine.getInstance();
   const encumbranceEngine = BudgetEncumbranceEngine.getInstance();
   const matchingEngine = ThreeWayMatchingEngine.getInstance();
-  const discrepancyResolver = DiscrepancyResolver.getInstance();
   const contractManager = ContractLifecycleManager.getInstance();
   const metricsExporter = SupplyMetricsExporter.getInstance();
-  const streamManager = SupplyStreamManager.getInstance();
   const merkleAnchor = new SupplyMerkleAnchor(store);
 
   // Stage 1: Dual-Store Vendor Onboarding, Risk Screening & Sanctions Interception

@@ -16,7 +16,6 @@ import { agentOrchestrator } from '../../src/lib/operations/km/conversational/ag
 import { edgeWebSocketServer } from '../../src/lib/operations/km/streaming/edge-websocket-server';
 import { wsClientManager } from '../../src/lib/operations/km/streaming/ws-client-manager';
 import { factVerifier } from '../../src/lib/operations/km/governance/fact-verifier';
-import { academicPrivacyShield } from '../../src/lib/operations/km/governance/academic-privacy-shield';
 import { kmAuditLogger } from '../../src/lib/operations/km/governance/km-audit-logger';
 
 async function runSimulation() {

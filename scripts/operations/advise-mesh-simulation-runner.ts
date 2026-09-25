@@ -13,9 +13,6 @@ import { DegreeAuditEngine } from '../../src/lib/operations/curriculum/audit/deg
 import { RiskFeatureExtractor } from '../../src/lib/operations/curriculum/retention/risk-feature-extractor';
 import { EarlyInterventionWorkflow } from '../../src/lib/operations/curriculum/retention/early-intervention-workflow';
 import { advisingMetrics } from '../../src/lib/operations/curriculum/telemetry/advising-metrics';
-import { advisingMerkleAnchor } from '../../src/lib/operations/curriculum/security/advising-merkle-anchor';
-import { TransferCreditParser } from '../../src/lib/operations/curriculum/transfer/transfer-credit-parser';
-import { SemanticArticulationMatcher } from '../../src/lib/operations/curriculum/transfer/semantic-articulation-matcher';
 
 export async function runAdviseMeshSimulation(): Promise<boolean> {
   console.log('\n========================================================================');

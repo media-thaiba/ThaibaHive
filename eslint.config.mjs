@@ -9,15 +9,31 @@ const eslintConfig = defineConfig([
     rules: {
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
       "react-hooks/set-state-in-effect": "off",
       "@next/next/no-img-element": "off",
     },
   },
   {
-    files: ["**/*.test.ts", "**/*.test.tsx", "jest.setup.ts", "**/__tests__/**"],
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "jest.setup.ts",
+      "**/__tests__/**",
+      "e2e/**",
+      "k6/**",
+      "load-tests/**",
+    ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
   {

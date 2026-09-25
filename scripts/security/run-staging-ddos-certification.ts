@@ -7,8 +7,6 @@
  * latencies, and verifying zero unhandled 500 server errors under load.
  */
 
-import fs from "fs";
-import path from "path";
 import { writeJsonReport } from "../lib/reports-path";
 import http from "http";
 import { spawnSync } from "child_process";
@@ -58,7 +56,7 @@ export async function executeDdosCertification(targetUrl?: string): Promise<Stag
   const effectiveUrl = targetUrl || process.env.STAGING_GATEWAY_URL;
 
   // 1. Check if k6 is installed and executable in environment
-  let k6Executed = false;
+  let _k6Executed = false;
   let executionMode: StagingDdosCertificate["executionMode"] = "high-concurrency-http-harness";
 
   if (effectiveUrl) {
@@ -72,7 +70,7 @@ export async function executeDdosCertification(targetUrl?: string): Promise<Stag
           { encoding: "utf-8", stdio: "inherit" }
         );
         if (k6Run.status === 0) {
-          k6Executed = true;
+          _k6Executed = true;
           executionMode = "live-k6-runner";
         }
       }

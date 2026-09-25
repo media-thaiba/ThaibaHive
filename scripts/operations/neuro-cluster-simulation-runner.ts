@@ -10,10 +10,8 @@ import { NeuroDbStore } from '../../src/lib/db/neuro-store';
 import { GpuSchedulerEngine } from '../../src/lib/operations/neuro/scheduler/gpu-scheduler-engine';
 import { SpotPriceAggregator } from '../../src/lib/operations/neuro/cloud/spot-price-aggregator';
 import { CloudArbitrageEngine } from '../../src/lib/operations/neuro/cloud/cloud-arbitrage-engine';
-import { CheckpointManager } from '../../src/lib/operations/neuro/cloud/checkpoint-manager';
 import { PreemptionResilienceHandler } from '../../src/lib/operations/neuro/cloud/preemption-resilience-handler';
 import { CarbonAwareScheduler } from '../../src/lib/operations/neuro/synergy/carbon-aware-scheduler';
-import { EcoComputeOptimizer } from '../../src/lib/operations/neuro/synergy/eco-compute-optimizer';
 import { DatasetProvenanceEngine } from '../../src/lib/operations/neuro/provenance/dataset-provenance-engine';
 import { ReproducibilityExporter } from '../../src/lib/operations/neuro/provenance/reproducibility-exporter';
 import { GrantAuditVerifier } from '../../src/lib/operations/neuro/provenance/grant-audit-verifier';
@@ -149,7 +147,7 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
   // Stage 3: Spot Price Arbitrage Matrix & Cloud Bursting
   try {
     console.log('\n--- Stage 3: Multi-Cloud Spot Arbitrage Matrix & Cloud Bursting ---');
-    const quotes = SpotPriceAggregator.getQuotes('NVIDIA-H100');
+    const _quotes = SpotPriceAggregator.getQuotes('NVIDIA-H100');
     const dummyJob: any = { id: 'JOB-LARGE-LLM', requestedGpus: 8, gpuModelRequirement: 'NVIDIA-H100', priority: 'normal' };
 
     // When on-premise cluster is 90% utilized
@@ -276,7 +274,7 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     );
 
     // Charge 16 GPUs for 2 hours (16 * 2 * 8 = 256 tokens)
-    const { usage, receipt, budgetStatus } = await billingEngine.debitJobCompute(
+    const { usage, receipt, budgetStatus: _budgetStatus } = await billingEngine.debitJobCompute(
       'JOB-BIOMED-ALPHAFOLD',
       'dept_biomed',
       'NVIDIA-H100-SXM5-80GB',

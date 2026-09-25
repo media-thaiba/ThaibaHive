@@ -14,8 +14,6 @@
 import { FedAlgorithms } from '../../src/lib/operations/federated/fed-algorithms';
 import { FederatedAggregationServer } from '../../src/lib/operations/federated/fed-aggregation-server';
 import { FederatedNodeOrchestrator } from '../../src/lib/operations/federated/fed-node-orchestrator';
-import { FederatedClientWorker } from '../../src/lib/operations/federated/fed-client-worker';
-import { DifferentialPrivacyEngine } from '../../src/lib/operations/privacy/differential-privacy-engine';
 import { MomentsAccountant } from '../../src/lib/operations/privacy/moments-accountant';
 import { SecureAggregationProtocol } from '../../src/lib/operations/crypto/secure-aggregation';
 import { MaskingVectorEngine } from '../../src/lib/operations/crypto/masking-vector-engine';
@@ -145,7 +143,7 @@ async function runAfedSimulation() {
   const sampleGradient = [0.15, -0.22, 0.08, -0.05, 0.12];
   const proof = ZkGradientVerifier.generateProof('node_campus_alpha', modelId, 3, sampleGradient, 1.0);
   const isProofValid = ZkGradientVerifier.verifyProof(proof);
-  const masked = MaskingVectorEngine.maskVector(sampleGradient, 'node_campus_alpha', participants, 3);
+  const _masked = MaskingVectorEngine.maskVector(sampleGradient, 'node_campus_alpha', participants, 3);
 
   process.stdout.write(`  • zk-SNARK Groth16 Proof ID: ${proof.proofId} (L2 Norm Bound Verified: ${isProofValid})\n`);
   process.stdout.write(`  • Pairwise Masking Vector Generated: 5 dimensions masked with zero-sum cancelation\n\n`);
