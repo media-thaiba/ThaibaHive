@@ -52,7 +52,7 @@ export const GET = requireAuth(async (request, session) => {
       };
 
       // Abort signal cleanup (Rule 82 — unregister on unmount)
-      request.signal.addEventListener("abort", () => {
+      request.signal?.addEventListener("abort", () => {
         cleanup?.();
         cleanup = null;
       });

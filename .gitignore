@@ -69,6 +69,7 @@ public/exports/
 graphify-out/
 .claude/
 staging-reports/
+.compliance-snapshots/
 
 
 

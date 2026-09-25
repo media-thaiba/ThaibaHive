@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       pollTokenVersion();
 
       // Clean up on connection close
-      request.signal.addEventListener("abort", () => {
+      request.signal?.addEventListener("abort", () => {
         polling = false;
         controller.close();
       });

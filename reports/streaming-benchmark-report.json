@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-09-25T10:34:58.141Z",
+  "totalEndpoints": 3,
+  "concurrencyPerEndpoint": 50,
+  "durationPerEndpointSec": 2,
+  "metrics": [
+    {
+      "endpoint": "/api/realtime/events",
+      "concurrency": 50,
+      "durationMs": 2034,
+      "totalConnections": 50,
+      "successfulConnections": 50,
+      "failedConnections": 0,
+      "totalEventsReceived": 50,
+      "totalHeartbeatsReceived": 0,
+      "eventsPerSecond": 24.58,
+      "handshakeLatency": {
+        "p50Ms": 16.61,
+        "p95Ms": 18.82,
+        "p99Ms": 20.08,
+        "minMs": 15.76,
+        "maxMs": 20.08,
+        "avgMs": 17
+      }
+    },
+    {
+      "endpoint": "/api/vision/stream",
+      "concurrency": 50,
+      "durationMs": 2022,
+      "totalConnections": 50,
+      "successfulConnections": 50,
+      "failedConnections": 0,
+      "totalEventsReceived": 950,
+      "totalHeartbeatsReceived": 0,
+      "eventsPerSecond": 469.91,
+      "handshakeLatency": {
+        "p50Ms": 4.68,
+        "p95Ms": 5.61,
+        "p99Ms": 6.29,
+        "minMs": 3.91,
+        "maxMs": 6.29,
+        "avgMs": 4.75
+      }
+    },
+    {
+      "endpoint": "/api/workspaces/sse",
+      "concurrency": 50,
+      "durationMs": 2022,
+      "totalConnections": 50,
+      "successfulConnections": 50,
+      "failedConnections": 0,
+      "totalEventsReceived": 950,
+      "totalHeartbeatsReceived": 0,
+      "eventsPerSecond": 469.8,
+      "handshakeLatency": {
+        "p50Ms": 4.77,
+        "p95Ms": 5.73,
+        "p99Ms": 5.97,
+        "minMs": 3.7,
+        "maxMs": 5.97,
+        "avgMs": 4.75
+      }
+    }
+  ],
+  "allPassed": true
+}

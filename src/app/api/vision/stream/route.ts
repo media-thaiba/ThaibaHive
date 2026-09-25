@@ -12,28 +12,44 @@ export const GET = requireAuth(async (req: Request, user: any) => {
 
   const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const streamManager = VisionStreamManager.getInstance();
-
-  const responseStream = new TransformStream();
-  const writer = responseStream.writable.getWriter();
   const encoder = new TextEncoder();
 
-  // Send initial connected frame
-  const initialFrame = `data: ${JSON.stringify({ type: 'connected', clientId, tenantId, topics })}\n\n`;
-  await writer.write(encoder.encode(initialFrame));
+  let cleanup: (() => void) | null = null;
 
-  streamManager.subscribe(clientId, tenantId, topics, (topic, data) => {
-    const payload = `event: ${topic}\ndata: ${JSON.stringify(data)}\n\n`;
-    writer.write(encoder.encode(payload)).catch(() => {
-      streamManager.unsubscribe(clientId);
-    });
+  const stream = new ReadableStream({
+    start(controller) {
+      // Send initial connected frame
+      const initialFrame = `data: ${JSON.stringify({ type: 'connected', clientId, tenantId, topics })}\n\n`;
+      controller.enqueue(encoder.encode(initialFrame));
+
+      streamManager.subscribe(clientId, tenantId, topics, (topic, data) => {
+        try {
+          const payload = `event: ${topic}\ndata: ${JSON.stringify(data)}\n\n`;
+          controller.enqueue(encoder.encode(payload));
+        } catch {
+          streamManager.unsubscribe(clientId);
+        }
+      });
+
+      cleanup = () => {
+        streamManager.unsubscribe(clientId);
+        try {
+          controller.close();
+        } catch {}
+      };
+
+      req.signal?.addEventListener('abort', () => {
+        cleanup?.();
+        cleanup = null;
+      });
+    },
+    cancel() {
+      cleanup?.();
+      cleanup = null;
+    },
   });
 
-  req.signal?.addEventListener('abort', () => {
-    streamManager.unsubscribe(clientId);
-    writer.close().catch(() => {});
-  });
-
-  return new NextResponse(responseStream.readable, {
+  return new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
