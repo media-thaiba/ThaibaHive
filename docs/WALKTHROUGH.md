@@ -58,7 +58,7 @@ The release packaging pipeline in `thaibahive_mobile_app` was executed with R8 m
 
 | Quality Gate | Tool / Command | Result |
 | :--- | :--- | :--- |
-| **Web Test Matrix** | `pnpm test` (Jest) | ✅ **716 Suites / 2,351 Tests Passed (100%)** |
+| **Web Test Matrix** | `pnpm test` (Jest) | ✅ **716 Suites / 2,352 Tests Passed (100%)** |
 | **Mobile Test Matrix** | `flutter test` (Flutter 3.41.9 / Dart 3.11.5) | ✅ **78 / 78 Tests Passed (100%)** |
 | **Flutter Static Analysis** | `flutter analyze lib/` | ✅ **No issues found! (Exit 0)** |
 | **TypeScript Typecheck** | `npx tsc --noEmit` | ✅ **0 Errors (Exit 0)** |

@@ -87,7 +87,8 @@ export async function GET(request: Request) {
           // Ignore errors, keep polling
         }
         if (polling) {
-          pollTimer = setTimeout(pollTokenVersion, 5_000);
+          const pollIntervalMs = Number(process.env.REALTIME_POLL_INTERVAL_MS) || 5_000;
+          pollTimer = setTimeout(pollTokenVersion, pollIntervalMs);
         }
       }
 

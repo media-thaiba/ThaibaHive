@@ -265,8 +265,9 @@ describe("Real-Time Streaming & Concurrency Benchmark Tests", () => {
     reader.releaseLock();
   });
 
-  it("emits session_invalidated frame when tokenVersion changes in database", async () => {
-    // 1. Connect realtime events
+  it("emits session_invalidated frame and closes stream when tokenVersion changes", async () => {
+    process.env.REALTIME_POLL_INTERVAL_MS = "50";
+
     const req = new Request("http://localhost:3000/api/realtime/events", {
       headers: { Accept: "text/event-stream", Authorization: "Bearer mock_token" },
     });
@@ -277,20 +278,62 @@ describe("Real-Time Streaming & Concurrency Benchmark Tests", () => {
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
 
-    // Read initial connected frame
+    // 1. Read initial connected frame
     const firstChunk = await reader.read();
     expect(firstChunk.done).toBe(false);
     expect(decoder.decode(firstChunk.value)).toContain("connected");
 
-    // 2. Invalidate token version in DB
+    // 2. Invalidate token version in database
     await db.update(staff).set({ tokenVersion: 99 }).where(eq(staff.id, "staff_admin_01"));
 
-    // Trigger next tick of pollTokenVersion or wait briefly
-    // Note: pollTokenVersion runs on 5s loop or initial check.
+    // 3. Read the revocation event chunk delivered by pollTokenVersion
+    const secondChunk = await reader.read();
+    expect(secondChunk.done).toBe(false);
+    const text = decoder.decode(secondChunk.value);
+    expect(text).toContain("session_invalidated");
+
+    // 4. Stream should now be closed by cleanup()
+    const thirdChunk = await reader.read();
+    expect(thirdChunk.done).toBe(true);
+
     // Reset staff record back
     await db.update(staff).set({ tokenVersion: 0 }).where(eq(staff.id, "staff_admin_01"));
+    reader.releaseLock();
+  });
 
-    await reader.cancel();
+  it("emits account_deactivated frame and closes stream when isActive is set to false", async () => {
+    process.env.REALTIME_POLL_INTERVAL_MS = "50";
+
+    const req = new Request("http://localhost:3000/api/realtime/events", {
+      headers: { Accept: "text/event-stream", Authorization: "Bearer mock_token" },
+    });
+
+    const res = await realtimeEventsHandler(req);
+    expect(res.status).toBe(200);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+
+    // 1. Read initial connected frame
+    const firstChunk = await reader.read();
+    expect(firstChunk.done).toBe(false);
+    expect(decoder.decode(firstChunk.value)).toContain("connected");
+
+    // 2. Deactivate account in database
+    await db.update(staff).set({ isActive: false }).where(eq(staff.id, "staff_admin_01"));
+
+    // 3. Read the deactivation event chunk delivered by pollTokenVersion
+    const secondChunk = await reader.read();
+    expect(secondChunk.done).toBe(false);
+    const text = decoder.decode(secondChunk.value);
+    expect(text).toContain("account_deactivated");
+
+    // 4. Stream should now be closed by cleanup()
+    const thirdChunk = await reader.read();
+    expect(thirdChunk.done).toBe(true);
+
+    // Reset staff record back
+    await db.update(staff).set({ isActive: true }).where(eq(staff.id, "staff_admin_01"));
     reader.releaseLock();
   });
 });
