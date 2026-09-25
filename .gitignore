@@ -74,7 +74,12 @@ staging-reports/
 # live script run output (drills, simulations, scans) — tracked files in
 # reports/ are stable baselines and must not be churned by re-runs
 reports/local/
+reports/ci-artifacts/
+reports/*-artifacts/
 .ai/execution/local/
+.ai/execution/ci-artifacts/
+.ai/execution/*-artifacts/
+
 
 
 
