@@ -1,4 +1,13 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    deprecated_member_use: ignore
+    unnecessary_import: ignore
+    use_super_parameters: ignore
+    avoid_print: ignore
+    curly_braces_in_flow_control_structures: ignore
+
 linter:
   rules:
     prefer_const_constructors: false

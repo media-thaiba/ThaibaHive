@@ -1,6 +1,10 @@
 # ThaibaHive ProGuard Rules for release builds
 
-# Keep Dio and related classes
+# Keep Dio / OkHttp networking classes
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
 -keep class io.flutter.plugins.** { *; }
 -keep class io.flutter.embedding.** { *; }
 
@@ -37,6 +41,13 @@
 # WorkManager & Background Fetch rules
 -keep class androidx.work.** { *; }
 -keep class com.transistorsoft.tsbackgroundfetch.** { *; }
+
+# ML Kit & CameraX rules
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.vision.** { *; }
+-keep class androidx.camera.** { *; }
+-dontwarn com.google.mlkit.**
+-dontwarn androidx.camera.**
 
 # Suppress warnings/errors for optional Play Core Split Install classes
 -dontwarn com.google.android.play.core.**
