@@ -1,53 +1,43 @@
 {
   "result": {
-    "drillId": "drill_primary_outage_1787127808794",
-    "scenario": "PRIMARY_OUTAGE",
+    "drillId": "drill_regional_partition_1790329940687",
+    "scenario": "REGIONAL_PARTITION",
     "status": "COMPLETED",
-    "startedAt": "2026-08-19T08:23:28.794Z",
-    "completedAt": "2026-08-19T08:23:28.796Z",
-    "durationMs": 2,
+    "startedAt": "2026-09-25T09:52:20.687Z",
+    "completedAt": "2026-09-25T09:52:20.688Z",
+    "durationMs": 1,
     "mttrMs": 1,
     "rpoLostTransactions": 0,
     "parityVerified": true,
     "slaPassed": true,
     "stepsExecuted": [
       {
-        "stepName": "Pre-drill Cluster Health Check",
+        "stepName": "Inject Regional Network Partition (eu-central)",
         "durationMs": 1,
         "success": true
       },
       {
-        "stepName": "Inject Primary Database Outage",
+        "stepName": "Verify Region Fallback Routing",
         "durationMs": 0,
         "success": true
       },
       {
-        "stepName": "Evaluate Automated Failover Circuit Breaker",
-        "durationMs": 1,
-        "success": true
-      },
-      {
-        "stepName": "Verify Promotion Candidate Election",
-        "durationMs": 0,
-        "success": true
-      },
-      {
-        "stepName": "Restore Primary & Reset Circuit Breaker",
+        "stepName": "Revert Regional Partition & Heal Mesh",
         "durationMs": 0,
         "success": true
       }
     ]
   },
   "analysis": {
-    "drillId": "drill_primary_outage_1787127808794",
-    "scenario": "PRIMARY_OUTAGE",
+    "drillId": "drill_regional_partition_1790329940687",
+    "scenario": "REGIONAL_PARTITION",
     "mttrMs": 1,
     "mttrSeconds": 0,
     "mttrPassed": true,
     "rpoLostTransactions": 0,
     "rpoPassed": true,
-    "stepSuccessCount": 5,
-    "totalSteps": 5,
+    "stepSuccessCount": 3,
+    "totalSteps": 3,
     "stepSuccessRatio": 1,
     "stepsPassed": true,
     "overallPassed": true,
@@ -55,5 +45,5 @@
       "All DR SLAs satisfied: Zero data loss (RPO = 0s) and recovery completed in 0s (MTTR < 30s)."
     ]
   },
-  "generatedAt": "2026-08-19T08:23:28.797Z"
+  "generatedAt": "2026-09-25T09:52:20.688Z"
 }

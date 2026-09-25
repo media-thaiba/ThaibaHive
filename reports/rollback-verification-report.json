@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-08-19T08:23:36.142Z",
-  "verificationId": "verify_rollback_1787127816142",
+  "timestamp": "2026-09-25T09:52:33.535Z",
+  "verificationId": "verify_rollback_1790329953535",
   "scenario": "ROLLBACK_AND_DEMOTION_PARITY",
   "status": "VERIFIED",
   "parityResults": {
@@ -23,7 +23,7 @@
     },
     {
       "step": "Cross-Node Table Checksum & Schema Parity Check",
-      "durationMs": 400,
+      "durationMs": 745,
       "passed": true
     },
     {

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-25T06:13:01.123Z",
+  "timestamp": "2026-09-25T09:52:34.277Z",
   "isParityValid": true,
   "primaryNode": "primary",
   "totalReplicasChecked": 0,
@@ -37,5 +37,5 @@
     "replicasMatching": true
   },
   "mismatches": [],
-  "durationMs": 4
+  "durationMs": 2
 }
