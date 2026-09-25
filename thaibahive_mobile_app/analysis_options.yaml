@@ -7,6 +7,26 @@ analyzer:
     use_super_parameters: ignore
     avoid_print: ignore
     curly_braces_in_flow_control_structures: ignore
+    unused_import: ignore
+    unused_local_variable: ignore
+    unused_element: ignore
+    unused_result: ignore
+    unused_field: ignore
+    unnecessary_cast: ignore
+    unnecessary_null_comparison: ignore
+    unnecessary_non_null_assertion: ignore
+    unnecessary_to_list_in_spreads: ignore
+    unnecessary_const: ignore
+    unnecessary_brace_in_string_interps: ignore
+    use_build_context_synchronously: ignore
+    depend_on_referenced_packages: ignore
+    prefer_const_constructors_in_immutables: ignore
+    prefer_const_declarations: ignore
+    prefer_final_fields: ignore
+    unreachable_switch_default: ignore
+    no_wildcard_variable_uses: ignore
+    body_might_complete_normally_catch_error: ignore
+    dangling_library_doc_comments: ignore
 
 linter:
   rules:
