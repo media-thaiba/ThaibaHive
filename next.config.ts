@@ -20,6 +20,8 @@ const cspDirective = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "object-src 'none'",
+  "report-uri /api/system/csp-report",
+  "report-to csp-endpoint",
 ].join("; ");
 
 // Security Headers Reference:
@@ -99,6 +101,7 @@ const nextConfig: NextConfig = {
           { key: "X-XSS-Protection", value: "1; mode=block" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Content-Security-Policy", value: cspDirective },
+          { key: "Reporting-Endpoints", value: 'csp-endpoint="/api/system/csp-report"' },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
         ],

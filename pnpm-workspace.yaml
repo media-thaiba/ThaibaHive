@@ -1,7 +1,26 @@
 packages:
   - "packages/*"
 
-ignoredBuiltDependencies:
+# Build-script allowlist. pnpm v11+ uses `allowBuilds`; pnpm <=10 uses
+# `onlyBuiltDependencies`. Both are kept for cross-version CI compatibility
+# (gateway-security-gate pins pnpm 9, other lanes run latest).
+# These native packages REQUIRE their install scripts to run (esbuild/swc
+# binary download, better-sqlite3 native build, sharp libvips, protobufjs
+# codegen, unrs-resolver binary link, @firebase/util).
+allowBuilds:
+  '@firebase/util': true
+  '@swc/core': true
+  better-sqlite3: true
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - better-sqlite3
+  - esbuild
+  - "@firebase/util"
+  - "@swc/core"
+  - protobufjs
   - sharp
   - unrs-resolver
-onlyBuiltDependencies: '[better-sqlite3, esbuild]'

@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, departments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { pick } from "@/lib/api/pick";
 import { hashPassword } from "@/lib/auth";
 import { staffCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 import { autoAssignOnboardingChecklists } from "@/lib/onboarding/auto-assign";
+import { encryptPiiField } from "@/lib/crypto/tenant-encryption";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 const SAFE_STAFF_FIELDS = {
@@ -75,6 +77,9 @@ export const GET = requireAuth(async (request, session) => {
 }, "staff:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(`staff-create:${session.staffId}`, { windowMs: 60_000, max: 15 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json();
   const parsed = staffCreateSchema.safeParse(body);
   if (!parsed.success) {
@@ -128,6 +133,10 @@ export const POST = requireAuth(async (request: Request, session) => {
         designation,
         role: role || "staff",
         passwordHash,
+        aadhaar: encryptPiiField(parsed.data.aadhaar),
+        pan: encryptPiiField(parsed.data.pan),
+        bankAccount: encryptPiiField(parsed.data.bankAccount),
+        ifscCode: encryptPiiField(parsed.data.ifscCode),
       })
       .returning()
       .get();

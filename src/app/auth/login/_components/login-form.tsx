@@ -29,10 +29,6 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   const router = useRouter();
 
   const [isHydrated, setIsHydrated] = useState(false);
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -44,7 +40,17 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
     employeeId: "",
     password: "",
     confirm: "",
+    invitationToken: "",
   });
+
+  useEffect(() => {
+    setIsHydrated(true);
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get("token") || params.get("invite");
+    if (tokenParam) {
+      setSignupForm((prev) => ({ ...prev, invitationToken: tokenParam }));
+    }
+  }, []);
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [recoverySent, setRecoverySent] = useState(false);
@@ -170,6 +176,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         email: signupForm.email,
         employeeId: signupForm.employeeId,
         password: signupForm.password,
+        invitationToken: signupForm.invitationToken || undefined,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
@@ -227,11 +234,11 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         {mode === "signin" && (
           <form onSubmit={handleLoginSubmit} className="space-y-4" data-hydrated={isHydrated}>
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-600" />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
@@ -240,17 +247,17 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#2ea44f] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#2ea44f] h-11 pl-10 pr-4 rounded-xl transition-all"
+                  className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-11 pl-10 pr-4 rounded-xl transition-all"
                 />
               </div>
             </div>
             
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-600" />
+                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
@@ -259,7 +266,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#2ea44f] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#2ea44f] h-11 pl-10 pr-4 rounded-xl transition-all"
+                  className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-11 pl-10 pr-4 rounded-xl transition-all"
                 />
               </div>
             </div>
@@ -272,20 +279,20 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="sr-only"
                 />
-                <div className={`w-[18px] h-[18px] rounded border ${rememberMe ? 'bg-[#2ea44f] border-[#2ea44f]' : 'border-zinc-800 bg-[#121316]/60'} flex items-center justify-center transition-all duration-200`}>
+                <div className={`w-[18px] h-[18px] rounded border ${rememberMe ? 'bg-primary border-primary' : 'border-border bg-background/80'} flex items-center justify-center transition-all duration-200`}>
                   {rememberMe && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                 </div>
-                <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-300 transition-colors uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
                   Keep me signed in
                 </span>
               </label>
             </div>
 
-            {error && <Alert variant="error" className="py-2.5 px-3.5 bg-red-950/40 border-red-900/50 text-red-400 text-xs rounded-xl">{error}</Alert>}
+            {error && <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>}
 
             <div className="space-y-3 pt-3">
               <button
@@ -301,7 +308,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               <button
                 type="button"
                 onClick={() => handleModeChange("signup")}
-                className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] text-zinc-300 hover:text-white font-bold rounded-full h-12 flex items-center justify-center transition-all"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all"
               >
                 No, Create Account
               </button>
@@ -309,13 +316,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               <button
                 type="button"
                 onClick={() => handleModeChange("google")}
-                className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] text-zinc-300 hover:text-white font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#e4e4e7" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#e4e4e7" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#e4e4e7" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#e4e4e7" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 Sign In with Google
               </button>
@@ -324,7 +331,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 type="button"
                 onClick={handlePasskeyLogin}
                 disabled={passkeyLoading}
-                className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-zinc-300 hover:text-white font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all"
               >
                 {passkeyLoading ? "Authenticating..." : (
                   <><Fingerprint className="w-4 h-4" /> Sign in with Passkey</>
@@ -338,39 +345,39 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
           <form onSubmit={handleSignupSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">First Name</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">First Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-zinc-600" />
+                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     placeholder="First name"
                     value={signupForm.firstName}
                     onChange={(e) => setSignupForm({ ...signupForm, firstName: e.target.value })}
                     required
                     autoComplete="given-name"
-                    className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#8bc34a] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#8bc34a] h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
+                    className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Last Name</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-zinc-600" />
+                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     placeholder="Last name"
                     value={signupForm.lastName}
                     onChange={(e) => setSignupForm({ ...signupForm, lastName: e.target.value })}
                     required
                     autoComplete="family-name"
-                    className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#8bc34a] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#8bc34a] h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
+                    className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Email</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-600" />
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="email"
                   placeholder="you@example.com"
@@ -378,30 +385,49 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                   required
                   autoComplete="email"
-                  className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#8bc34a] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#8bc34a] h-10 pl-10 pr-4 rounded-xl transition-all text-xs"
+                  className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-10 pr-4 rounded-xl transition-all text-xs"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Employee ID</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Employee ID</label>
               <div className="relative">
-                <ShieldCheck className="absolute left-3.5 top-3 h-4 w-4 text-zinc-600" />
+                <ShieldCheck className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Your employee ID"
                   value={signupForm.employeeId}
                   onChange={(e) => setSignupForm({ ...signupForm, employeeId: e.target.value })}
                   required
-                  className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#8bc34a] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#8bc34a] h-10 pl-10 pr-4 rounded-xl transition-all text-xs"
+                  className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-10 pr-4 rounded-xl transition-all text-xs"
                 />
               </div>
             </div>
 
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Invitation Code / Token</label>
+                <span className="text-[9px] text-muted-foreground">Institutional Access</span>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Invitation code provided by admin"
+                  value={signupForm.invitationToken}
+                  onChange={(e) => setSignupForm({ ...signupForm, invitationToken: e.target.value })}
+                  className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-10 pr-4 rounded-xl transition-all text-xs"
+                />
+              </div>
+              <p className="text-[9px] text-muted-foreground">
+                Account creation requires an invitation code issued by your campus administrator.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Password</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-zinc-600" />
+                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     type="password"
                     placeholder="Password"
@@ -409,14 +435,14 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                     required
                     autoComplete="new-password"
-                    className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#8bc34a] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#8bc34a] h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
+                    className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Confirm</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Confirm</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-zinc-600" />
+                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     type="password"
                     placeholder="Confirm"
@@ -424,13 +450,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                     onChange={(e) => setSignupForm({ ...signupForm, confirm: e.target.value })}
                     required
                     autoComplete="new-password"
-                    className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#8bc34a] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#8bc34a] h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
+                    className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-9 pr-3 rounded-xl transition-all text-xs"
                   />
                 </div>
               </div>
             </div>
 
-            {error && <Alert variant="error" className="py-2 px-3 bg-red-950/40 border-red-900/50 text-red-400 text-xs rounded-xl">{error}</Alert>}
+            {error && <Alert variant="error" className="py-2 px-3 text-xs rounded-xl">{error}</Alert>}
 
             <div className="space-y-3 pt-3">
               <button
@@ -446,7 +472,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               <button
                 type="button"
                 onClick={() => handleModeChange("signin")}
-                className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] text-zinc-300 hover:text-white font-bold rounded-full h-11 flex items-center justify-center transition-all text-sm"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-11 flex items-center justify-center transition-all text-sm"
               >
                 Already have a profile? Sign In
               </button>
@@ -456,8 +482,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
         {mode === "google" && (
           <form onSubmit={handleGoogleSubmit} className="space-y-4">
-            <div className="flex flex-col items-center justify-center p-6 bg-zinc-950/40 border border-zinc-900/80 rounded-2xl space-y-4">
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-xl border border-zinc-800">
+            <div className="flex flex-col items-center justify-center p-6 bg-muted/40 border border-border rounded-2xl space-y-4">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-xl border border-border">
                 <svg className="w-7 h-7" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -465,12 +491,12 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
               </div>
-              <p className="text-xs text-zinc-400 text-center leading-relaxed max-w-[260px]">
+              <p className="text-xs text-muted-foreground text-center leading-relaxed max-w-[260px]">
                 Authenticate your Google account securely without credentials.
               </p>
             </div>
 
-            {error && <Alert variant="error" className="py-2.5 px-3.5 bg-red-950/40 border-red-900/50 text-red-400 text-xs rounded-xl">{error}</Alert>}
+            {error && <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>}
 
             <div className="space-y-3 pt-3">
               <button
@@ -486,7 +512,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               <button
                 type="button"
                 onClick={() => handleModeChange("signin")}
-                className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] text-zinc-300 hover:text-white font-bold rounded-full h-12 flex items-center justify-center transition-all"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all"
               >
                 Back to local credentials
               </button>
@@ -499,11 +525,11 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             {!recoverySent ? (
               <>
                 <div className="space-y-1.5">
-                  <label htmlFor="forgotEmail" className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  <label htmlFor="forgotEmail" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Group Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-600" />
+                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="forgotEmail"
                       type="email"
@@ -512,12 +538,12 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                       onChange={(e) => setForgotEmail(e.target.value)}
                       required
                       autoComplete="email"
-                      className="bg-[#121316]/60 border-zinc-800/80 text-white placeholder:text-zinc-600 focus-visible:ring-[#f59e0b] focus-visible:ring-offset-[#0e1012] focus-visible:border-[#f59e0b] h-11 pl-10 pr-4 rounded-xl transition-all"
+                      className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-11 pl-10 pr-4 rounded-xl transition-all"
                     />
                   </div>
                 </div>
 
-                {forgotError && <Alert variant="error" className="py-2.5 px-3.5 bg-red-950/40 border-red-900/50 text-red-400 text-xs rounded-xl">{forgotError}</Alert>}
+                {forgotError && <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{forgotError}</Alert>}
 
                 <div className="space-y-3 pt-3">
                   <button
@@ -537,8 +563,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   <Mail className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">RECOVERY EMAIL TRANSMITTED</h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed max-w-[260px] mx-auto">
+                  <h4 className="text-sm font-bold text-foreground">RECOVERY EMAIL TRANSMITTED</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
                     A secure node reset token has been dispatched. Please review your group inbox.
                   </p>
                 </div>
@@ -553,7 +579,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   setForgotError("");
                   handleModeChange("signin");
                 }}
-                className="w-full bg-transparent hover:bg-white/[0.02] border border-zinc-800 hover:border-zinc-700 active:scale-[0.99] text-zinc-300 hover:text-white font-bold rounded-full h-12 flex items-center justify-center transition-all"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all"
               >
                 Return to ACCESS WORKSPACE
               </button>

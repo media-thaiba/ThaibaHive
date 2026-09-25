@@ -9,14 +9,23 @@ export interface PushNotificationPayload {
 }
 
 /**
+ * Redact a long-lived FCM device token before it reaches logs.
+ * Only the first and last 4 characters are preserved.
+ */
+function maskToken(token: string): string {
+  if (token.length <= 8) return "[redacted]";
+  return `${token.slice(0, 4)}...${token.slice(-4)}`;
+}
+
+/**
  * Prune dead/unregistered FCM token from database
  */
 export async function pruneDeadDeviceToken(token: string): Promise<void> {
   try {
-    console.log(`[PushDispatcher] Pruning dead FCM token: ${token}`);
+    console.log(`[PushDispatcher] Pruning dead FCM token: ${maskToken(token)}`);
     await db.delete(staffDeviceTokens).where(eq(staffDeviceTokens.token, token));
   } catch (error) {
-    console.error(`[PushDispatcher] Error pruning dead token ${token}:`, error);
+    console.error(`[PushDispatcher] Error pruning dead token ${maskToken(token)}:`, error);
   }
 }
 
@@ -45,7 +54,7 @@ export async function sendPushNotificationToStaff(
     for (const device of devices) {
       try {
         // FCM HTTP v1 / legacy relay placeholder logic
-        console.log(`[PushDispatcher] Sending push to ${device.platform} token ${device.token}:`, payload.title);
+        console.log(`[PushDispatcher] Sending push to ${device.platform} token ${maskToken(device.token)}:`, payload.title);
         successCount++;
       } catch (err: unknown) {
         failureCount++;

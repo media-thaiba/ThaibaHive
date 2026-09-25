@@ -40,6 +40,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         {onDismiss && (
           <button
             onClick={onDismiss}
+            aria-label="Dismiss alert"
             className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
           >
             <X className="h-4 w-4" />

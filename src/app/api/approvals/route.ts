@@ -13,6 +13,7 @@ import {
   approvalDelegations,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -641,6 +642,9 @@ export const GET = requireAuth(async (request, session) => {
 
 export const PATCH = requireAuth(async (request, session) => {
   const { staffId } = session;
+  const rl = checkRateLimit(`approval-action:${staffId}`, { windowMs: 60_000, max: 40 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json();
   const { type, id, action, notes } = body;
 

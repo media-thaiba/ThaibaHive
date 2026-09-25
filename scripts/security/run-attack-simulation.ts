@@ -72,7 +72,6 @@ export async function runSimulationHarness(): Promise<SimulationReport> {
 
 if (require.main === module) {
   runSimulationHarness().then((report) => {
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(report, null, 2));
     process.exit(report.overallStatus === "PASSED" ? 0 : 1);
   });

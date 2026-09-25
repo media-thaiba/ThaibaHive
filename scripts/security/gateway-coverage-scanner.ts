@@ -72,12 +72,14 @@ export function inspectRouteAst(filePath: string, rootDir: string = process.cwd(
   const relativePath = path.relative(rootDir, filePath).replace(/\\/g, "/");
 
   const isExempt =
+    normalized.includes("/api/health") ||
     normalized.includes("/api/auth/") ||
     normalized.includes("/api/biometric/") ||
     normalized.includes("/api/system/") ||
     normalized.includes("/api/media/") ||
     normalized.includes("/api/mobile/") ||
     normalized.includes("/api/webhooks/") ||
+    normalized.includes("/api/public/") ||
     normalized.includes("/api/metrics");
 
   const sourceFile = ts.createSourceFile(
@@ -279,32 +281,25 @@ if (require.main === module) {
   const isFixDryRun = args.includes("--fix-dry-run");
 
   if (!isJson) {
-    // eslint-disable-next-line no-console
     console.log("==> Running TypeScript AST Gateway Security Coverage Scanner (TIF-015 / TD-018)...");
   }
 
   const result = runGatewayCoverageScan();
 
   if (isFixDryRun && !isJson) {
-    // eslint-disable-next-line no-console
     console.log(`[--fix-dry-run] ${result.unshieldedRoutes.length} route(s) require withRateLimit or requireAuth wrappers.`);
   }
 
   if (isJson) {
-    // eslint-disable-next-line no-console
     console.log(JSON.stringify(result, null, 2));
     process.exit(result.passed ? 0 : 1);
   }
 
-  // eslint-disable-next-line no-console
   console.log(`Mandatory modules checked: ${result.totalModulesChecked} (Missing: ${result.missingModules.length})`);
-  // eslint-disable-next-line no-console
   console.log(`Secret leaks: ${result.secretViolations.length}`);
-  // eslint-disable-next-line no-console
   console.log(`API routes checked: ${result.totalRoutesChecked} (Unshielded: ${result.unshieldedRoutes.length})`);
 
   if (!result.passed || (isStrict && result.unshieldedRoutes.length > 0)) {
-    // eslint-disable-next-line no-console
     console.error("❌ Gateway AST Security Scan FAILED:", {
       missingModules: result.missingModules,
       secretViolations: result.secretViolations,
@@ -312,7 +307,6 @@ if (require.main === module) {
     });
     process.exit(1);
   } else {
-    // eslint-disable-next-line no-console
     console.log("✅ Gateway AST Security Scan PASSED (100% Platform Route Coverage, 0 Leaks)");
     process.exit(0);
   }

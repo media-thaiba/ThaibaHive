@@ -16,10 +16,10 @@ type LoginHeaderProps = {
 
 export function LoginHeader({ mode, activeTheme }: LoginHeaderProps) {
   const svgCircles = [
-    { id: "signin", color: "#14532d", baseR: 90, activeR: 98 },
-    { id: "signup", color: "#2ea44f", baseR: 70, activeR: 82 },
-    { id: "google", color: "#8bc34a", baseR: 50, activeR: 62 },
-    { id: "forgot", color: "#f59e0b", baseR: 30, activeR: 42 },
+    { id: "signin", color: "hsl(var(--primary))", baseR: 90, activeR: 98 },
+    { id: "signup", color: "hsl(var(--success, 142 76% 36%))", baseR: 70, activeR: 82 },
+    { id: "google", color: "hsl(var(--info, 217 91% 60%))", baseR: 50, activeR: 62 },
+    { id: "forgot", color: "hsl(var(--warning, 38 92% 50%))", baseR: 30, activeR: 42 },
   ];
 
   return (
@@ -47,12 +47,12 @@ export function LoginHeader({ mode, activeTheme }: LoginHeaderProps) {
               />
             );
           })}
-          <circle cx="100" cy="0" r="16" fill="#0e1012" />
+          <circle cx="100" cy="0" r="16" fill="hsl(var(--card))" />
         </svg>
       </div>
 
       <div className="space-y-1">
-        <h2 className="text-2xl font-black tracking-tight text-white uppercase">
+        <h2 className="text-2xl font-black tracking-tight text-foreground uppercase">
           {mode === "signin" && "ACCESS WORKSPACE"}
           {mode === "signup" && "CREATE PROFILE"}
           {mode === "google" && "GOOGLE FEDERATION"}
@@ -66,7 +66,7 @@ export function LoginHeader({ mode, activeTheme }: LoginHeaderProps) {
         >
           {activeTheme.subtitle}
         </motion.p>
-        <p className="text-xs text-zinc-400 font-normal leading-relaxed pt-3">
+        <p className="text-xs text-muted-foreground font-normal leading-relaxed pt-3">
           {mode === "signin" && "Please verify your credentials or create a new developer profile to deploy your workspace node."}
           {mode === "signup" && "Create your credentials and link your employee profile to register as a network operator."}
           {mode === "google" && "Authorize your Thaiba Garden workspace nodes using Google OAuth secure session handoff."}

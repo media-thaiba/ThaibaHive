@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-telemetry";
 import { applyTenantRegionHeaders } from "./middleware/tenant-region";
+import { applyEdgeCaching } from "./lib/edge/cache-control";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -16,6 +17,8 @@ const publicPaths = [
   "/api/auth/google",
   "/api/auth/mobile-handoff",
   "/api/system/health",
+  "/api/health",
+  "/api/system/csp-report",
   "/api/system/update",
   "/api/media/share-links/",
   "/share/",
@@ -188,12 +191,11 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
   response.headers.set(
     "Content-Security-Policy",
-    `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';`
+    `default-src 'self'; ${scriptSrc} style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri /api/system/csp-report; report-to csp-endpoint;`
   );
+  response.headers.set("Reporting-Endpoints", 'csp-endpoint="/api/system/csp-report"');
 
   // Multi-Region Edge Caching integration (Sprint-034 / EDG-001)
-  const { applyEdgeCaching } = require("./lib/edge/cache-control");
-
   if (pathname.startsWith("/_next/static/") || pathname.startsWith("/Logo") || pathname.endsWith(".png") || pathname.endsWith(".jpg")) {
     applyEdgeCaching(response, "PUBLIC_IMMUTABLE", { tags: ["static-assets"] });
   } else if (pathname === "/api/departments" || pathname === "/api/institutions" || pathname === "/api/canteen/menu") {

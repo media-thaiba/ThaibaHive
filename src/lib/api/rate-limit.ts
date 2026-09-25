@@ -27,6 +27,8 @@ const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
   upload: { windowMs: 60_000, max: 10, keyPrefix: "upload" },
 };
 
+import { getDistributedRateLimiter } from "../security/rate-limit-redis";
+
 export function checkRateLimit(
   identifier: string,
   config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
@@ -59,6 +61,36 @@ export function checkRateLimit(
 
   entry.count++;
   return { allowed: true, remaining: resolved.max - entry.count, resetMs: entry.resetAt - now };
+}
+
+export async function checkDistributedRateLimit(
+  identifier: string,
+  config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
+): Promise<{ allowed: boolean; remaining: number; resetMs: number; retryAfterSeconds: number }> {
+  if (
+    (process.env.NODE_ENV !== "production" && process.env.ENABLE_RATE_LIMIT !== "true") ||
+    process.env.PLAYWRIGHT_TEST === "true" ||
+    (process.env.CI === "true" && process.env.ENABLE_RATE_LIMIT !== "true") ||
+    (process.env.NODE_ENV === "test" && process.env.ENABLE_RATE_LIMIT !== "true")
+  ) {
+    return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
+  }
+
+  const resolved = typeof config === "string" ? DEFAULT_CONFIGS[config] : config;
+  const limiter = getDistributedRateLimiter();
+  const key = `${resolved.keyPrefix ?? "default"}:${identifier}`;
+
+  const res = await limiter.evaluate(key, {
+    windowMs: resolved.windowMs,
+    maxRequests: resolved.max,
+  });
+
+  return {
+    allowed: res.allowed,
+    remaining: res.remaining,
+    resetMs: res.resetMs,
+    retryAfterSeconds: res.retryAfterSeconds,
+  };
 }
 
 export function extractIp(request: Request): string {

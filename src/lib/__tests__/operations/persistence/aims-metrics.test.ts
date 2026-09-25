@@ -33,11 +33,20 @@ describe('AIMS-020 — AimsMetricsTracker', () => {
     const tracker = AimsMetricsTracker.getInstance();
     tracker.recordEnergySaved('campus_north', 'bld_it', 250.0);
 
-    const res = await getMetrics();
+    const previousMetricsSecret = process.env.METRICS_SECRET;
+    process.env.METRICS_SECRET = 'metrics-secret-0123456789abcdef';
+
+    const res = await getMetrics(
+      new Request('http://localhost/api/metrics', {
+        headers: { 'x-metrics-secret': 'metrics-secret-0123456789abcdef' },
+      })
+    );
     expect(res.status).toBe(200);
     const body = await res.text();
 
     expect(body).toContain('# --- AIMS Smart Campus Operations Telemetry ---');
     expect(body).toContain('aims_energy_saved_kwh_total');
+
+    process.env.METRICS_SECRET = previousMetricsSecret;
   });
 });

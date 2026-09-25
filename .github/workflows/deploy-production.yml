@@ -1,0 +1,111 @@
+name: Deploy Production (Vercel)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Production Preflight Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run production preflight (env + workspace + build artifact)
+        run: pnpm deploy:preflight
+        env:
+          NODE_ENV: production
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ secrets.METRICS_SECRET }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+
+  deploy:
+    name: Deploy to Vercel Production
+    runs-on: ubuntu-latest
+    needs: [ preflight ]
+    environment: production
+    timeout-minutes: 30
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pull Vercel environment information
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build project artifacts (Vercel)
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy project artifacts to Vercel
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+  verify:
+    name: Post-Deploy Health Verification
+    runs-on: ubuntu-latest
+    needs: [ deploy ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify production deployment is healthy
+        run: pnpm deploy:preflight --base-url="https://${{ secrets.NEXT_PUBLIC_APP_URL }}"
+        env:
+          NODE_ENV: production
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ secrets.METRICS_SECRET }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}

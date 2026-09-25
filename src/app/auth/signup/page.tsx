@@ -11,8 +11,8 @@ export default function SignupPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#070809] flex items-center justify-center">
-      <div className="text-zinc-500 text-xs font-medium uppercase tracking-wider animate-pulse-subtle">
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider animate-pulse-subtle">
         Redirecting to enroll secure node...
       </div>
     </div>

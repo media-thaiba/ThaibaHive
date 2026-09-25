@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { circulars, staff, staffDepartments, staffInstitutions, departments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { circularCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, inArray, sql } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";
@@ -131,6 +132,9 @@ export const GET = requireAuth(async (request, session) => {
 }, "circulars:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(`circular-create:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json();
   const parsed = circularCreateSchema.safeParse(body);
   if (!parsed.success) {

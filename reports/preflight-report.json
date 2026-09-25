@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-09-25T06:08:08.571Z",
+  "version": "1.0.0",
+  "passed": true,
+  "checks": [
+    {
+      "gate": "ENV",
+      "name": "Environment schema validity",
+      "passed": true
+    },
+    {
+      "gate": "ENV",
+      "name": "JWT signing secret configured (non-empty, >= 16 chars)",
+      "passed": true
+    },
+    {
+      "gate": "ENV",
+      "name": "No dev/CI placeholder secret used in production",
+      "passed": true
+    },
+    {
+      "gate": "ENV",
+      "name": "DATABASE_URL configured",
+      "passed": true
+    },
+    {
+      "gate": "ENV",
+      "name": "HEALTH_SECRET configured",
+      "passed": true
+    },
+    {
+      "gate": "ENV",
+      "name": "METRICS_SECRET configured",
+      "passed": true
+    },
+    {
+      "gate": "ENV",
+      "name": "NEXT_PUBLIC_APP_URL is a valid http(s) URL",
+      "passed": true
+    },
+    {
+      "gate": "WORKSPACE",
+      "name": "node_modules/@thaiba/auth linked",
+      "passed": true
+    },
+    {
+      "gate": "WORKSPACE",
+      "name": "node_modules/@thaiba/db linked",
+      "passed": true
+    },
+    {
+      "gate": "BUILD",
+      "name": "Standalone build artifact present (.next/standalone/server.js)",
+      "passed": true
+    },
+    {
+      "gate": "LIVE",
+      "name": "http://localhost:3105/api/health returns 200",
+      "passed": true,
+      "detail": "status=200 body={\"status\":\"ok\",\"timestamp\":\"2026-09-25T06:08:08.559Z\"}"
+    }
+  ]
+}

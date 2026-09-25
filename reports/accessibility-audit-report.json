@@ -1,0 +1,166 @@
+{
+  "generatedAt": "2026-09-25T05:53:41.701Z",
+  "axeVersion": "4.x",
+  "baseUrl": "http://localhost:3105",
+  "ruleset": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa"
+  ],
+  "gate": "serious",
+  "pages": [
+    {
+      "url": "http://localhost:3105/auth/login",
+      "role": null,
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/auth/signup",
+      "role": null,
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/",
+      "role": "staff",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/attendance",
+      "role": "staff",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/tasks",
+      "role": "staff",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/circulars",
+      "role": "staff",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/help-desk",
+      "role": "staff",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/staff",
+      "role": "admin",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/admin/departments",
+      "role": "admin",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/admin/institutions",
+      "role": "admin",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    },
+    {
+      "url": "http://localhost:3105/admin/audit-logs",
+      "role": "admin",
+      "pass": true,
+      "violations": [],
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "pagesFullyAnalyzed": true
+    }
+  ],
+  "summary": {
+    "totalPages": 11,
+    "passedPages": 11,
+    "failedPages": 0,
+    "totalViolations": 0,
+    "byImpact": {},
+    "byRule": {}
+  },
+  "pass": true
+}

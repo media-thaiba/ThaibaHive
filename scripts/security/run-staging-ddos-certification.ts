@@ -64,7 +64,6 @@ export async function executeDdosCertification(targetUrl?: string): Promise<Stag
     try {
       const k6Check = spawnSync("k6", ["version"], { encoding: "utf-8" });
       if (k6Check.status === 0) {
-        // eslint-disable-next-line no-console
         console.log("==> k6 binary detected. Launching live k6 staging certification scenario...");
         const k6Run = spawnSync(
           "k6",
@@ -240,17 +239,13 @@ export async function executeDdosCertification(targetUrl?: string): Promise<Stag
 }
 
 if (require.main === module) {
-  // eslint-disable-next-line no-console
   console.log("==> Running High-Throughput DDoS Performance & Resilience Certification (TIF-016 / TD-016)...");
   executeDdosCertification().then((cert) => {
-    // eslint-disable-next-line no-console
     console.log("Certification Report:", JSON.stringify(cert, null, 2));
     if (cert.certificationStatus === "CERTIFIED") {
-      // eslint-disable-next-line no-console
       console.log(`✅ Platform Resilience CERTIFIED: Measured ${cert.measuredRps} RPS across ${cert.totalRequestsExecuted} live HTTP requests (p95: ${cert.latencyMetrics.p95Ms}ms, 0 500 errors)`);
       process.exit(0);
     } else {
-      // eslint-disable-next-line no-console
       console.error("❌ DDoS Performance Certification FAILED");
       process.exit(1);
     }

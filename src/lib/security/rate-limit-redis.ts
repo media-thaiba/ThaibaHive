@@ -128,3 +128,74 @@ export class RedisRateLimiterAdapter {
     this.fallbackStore.reset();
   }
 }
+
+/**
+ * Lightweight HTTP-based Upstash / Redis REST Client for Serverless & Edge runtimes.
+ * Does not require TCP sockets or native binary packages.
+ */
+export class UpstashRedisClient implements IRedisRateLimitClient {
+  private url: string;
+  private token: string;
+
+  constructor(url?: string, token?: string) {
+    this.url = (url || process.env.UPSTASH_REDIS_REST_URL || process.env.REDIS_REST_URL || "").replace(/\/$/, "");
+    this.token = token || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.REDIS_REST_TOKEN || "";
+  }
+
+  public isConfigured(): boolean {
+    return Boolean(this.url && this.token);
+  }
+
+  public async ping(): Promise<string> {
+    const res = await fetch(`${this.url}/ping`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+      },
+    });
+    if (!res.ok) throw new Error(`Upstash ping failed: ${res.statusText}`);
+    const data = await res.json();
+    return data.result || "PONG";
+  }
+
+  public async eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown> {
+    const res = await fetch(`${this.url}/eval`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([script, numKeys, ...args]),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upstash eval failed with HTTP status ${res.status}: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data.error) {
+      throw new Error(`Upstash error: ${data.error}`);
+    }
+
+    return data.result;
+  }
+}
+
+let globalLimiter: RedisRateLimiterAdapter | null = null;
+
+export function getDistributedRateLimiter(): RedisRateLimiterAdapter {
+  if (!globalLimiter) {
+    const upstash = new UpstashRedisClient();
+    if (upstash.isConfigured()) {
+      globalLimiter = new RedisRateLimiterAdapter(upstash);
+    } else {
+      globalLimiter = new RedisRateLimiterAdapter(null);
+    }
+  }
+  return globalLimiter;
+}
+
+export function resetGlobalDistributedRateLimiter(): void {
+  globalLimiter = null;
+}
+
