@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq } from 'drizzle-orm';
 import {
   supplyVendors,
   supplyVendorCertifications,
@@ -37,8 +38,14 @@ import {
   ThreeWayMatchStatus,
   ContractStatus,
   MilestoneStatus,
-  EncumbranceStatus,
 } from '../operations/supply/supply-types';
+
+function handleWriteError(operation: string, error: unknown): void {
+  if (process.env.NODE_ENV === 'production') {
+    throw error;
+  }
+  console.warn(`[SupplyDbStore] DB write fallback on ${operation}:`, error instanceof Error ? error.message : error);
+}
 
 export interface InMemorySupplyStore {
   vendors: Map<string, SupplyVendorItem>;
@@ -105,12 +112,57 @@ export class SupplyDbStore {
 
   public async createVendor(vendor: SupplyVendorItem): Promise<SupplyVendorItem> {
     this.memoryStore.vendors.set(vendor.id, { ...vendor });
-    try {
-      if (db && typeof (db as any).insert === 'function') {
-        await (db as any).insert(supplyVendors).values(vendor).onConflictDoNothing();
+    if (db) {
+      try {
+        await db.insert(supplyVendors).values({
+          id: vendor.id,
+          vendorCode: vendor.vendorCode,
+          name: vendor.name,
+          legalEntityName: vendor.legalEntityName ?? null,
+          category: vendor.category,
+          taxId: vendor.taxId,
+          contactName: vendor.contactName,
+          contactEmail: vendor.contactEmail,
+          contactPhone: vendor.contactPhone ?? null,
+          address: vendor.address ?? null,
+          city: vendor.city ?? null,
+          country: vendor.country,
+          paymentTerms: vendor.paymentTerms,
+          onboardingStatus: vendor.onboardingStatus,
+          riskTier: vendor.riskTier,
+          riskScore: vendor.riskScore,
+          esgRating: vendor.esgRating,
+          esgScore: vendor.esgScore,
+          isSanctionsClean: vendor.isSanctionsClean,
+          institutionId: vendor.institutionId,
+          createdAt: vendor.createdAt,
+          updatedAt: vendor.updatedAt,
+        }).onConflictDoUpdate({
+          target: supplyVendors.id,
+          set: {
+            name: vendor.name,
+            legalEntityName: vendor.legalEntityName ?? null,
+            category: vendor.category,
+            taxId: vendor.taxId,
+            contactName: vendor.contactName,
+            contactEmail: vendor.contactEmail,
+            contactPhone: vendor.contactPhone ?? null,
+            address: vendor.address ?? null,
+            city: vendor.city ?? null,
+            country: vendor.country,
+            paymentTerms: vendor.paymentTerms,
+            onboardingStatus: vendor.onboardingStatus,
+            riskTier: vendor.riskTier,
+            riskScore: vendor.riskScore,
+            esgRating: vendor.esgRating,
+            esgScore: vendor.esgScore,
+            isSanctionsClean: vendor.isSanctionsClean,
+            updatedAt: vendor.updatedAt,
+          },
+        });
+      } catch (error) {
+        handleWriteError('createVendor', error);
       }
-    } catch {
-      // Fall back to memoryStore
     }
     return vendor;
   }
@@ -155,6 +207,18 @@ export class SupplyDbStore {
     vendor.onboardingStatus = status;
     vendor.updatedAt = new Date().toISOString();
     this.memoryStore.vendors.set(id, vendor);
+
+    if (db) {
+      try {
+        await db.update(supplyVendors).set({
+          onboardingStatus: status,
+          updatedAt: vendor.updatedAt,
+        }).where(eq(supplyVendors.id, id));
+      } catch (error) {
+        handleWriteError('updateVendorStatus', error);
+      }
+    }
+
     return vendor;
   }
 
@@ -162,6 +226,25 @@ export class SupplyDbStore {
 
   public async createCertification(cert: SupplyVendorCertificationItem): Promise<SupplyVendorCertificationItem> {
     this.memoryStore.certifications.set(cert.id, { ...cert });
+    if (db) {
+      try {
+        await db.insert(supplyVendorCertifications).values({
+          id: cert.id,
+          vendorId: cert.vendorId,
+          certType: cert.certType,
+          certNumber: cert.certNumber,
+          issuingAuthority: cert.issuingAuthority,
+          issuedDate: cert.issuedDate,
+          expiryDate: cert.expiryDate,
+          documentUrl: cert.documentUrl ?? null,
+          verificationStatus: cert.verificationStatus,
+          institutionId: cert.institutionId,
+          createdAt: cert.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createCertification', error);
+      }
+    }
     return cert;
   }
 
@@ -182,6 +265,29 @@ export class SupplyDbStore {
 
   public async createRiskAssessment(assessment: SupplyVendorRiskAssessmentItem): Promise<SupplyVendorRiskAssessmentItem> {
     this.memoryStore.riskAssessments.set(assessment.id, { ...assessment });
+    if (db) {
+      try {
+        await db.insert(supplyVendorRiskAssessments).values({
+          id: assessment.id,
+          assessmentId: assessment.assessmentId,
+          vendorId: assessment.vendorId,
+          overallRiskScore: assessment.overallRiskScore,
+          financialRiskScore: assessment.financialRiskScore,
+          complianceRiskScore: assessment.complianceRiskScore,
+          operationalRiskScore: assessment.operationalRiskScore,
+          sanctionsRegistryChecked: assessment.sanctionsRegistryChecked,
+          sanctionsMatched: assessment.sanctionsMatched,
+          pepMatched: assessment.pepMatched,
+          adverseMediaFindings: assessment.adverseMediaFindings ?? null,
+          recommendedAction: assessment.recommendedAction,
+          assessedByUserId: assessment.assessedByUserId ?? null,
+          institutionId: assessment.institutionId,
+          createdAt: assessment.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createRiskAssessment', error);
+      }
+    }
     return assessment;
   }
 
@@ -211,6 +317,28 @@ export class SupplyDbStore {
 
   public async createEsgScore(score: SupplyVendorEsgScoreItem): Promise<SupplyVendorEsgScoreItem> {
     this.memoryStore.esgScores.set(score.id, { ...score });
+    if (db) {
+      try {
+        await db.insert(supplyVendorEsgScores).values({
+          id: score.id,
+          scoreId: score.scoreId,
+          vendorId: score.vendorId,
+          compositeEsgScore: score.compositeEsgScore,
+          environmentalScore: score.environmentalScore,
+          socialScore: score.socialScore,
+          governanceScore: score.governanceScore,
+          scope3CarbonIntensityKgPerUsd: score.scope3CarbonIntensityKgPerUsd,
+          recycledMaterialPercentage: score.recycledMaterialPercentage,
+          fairLaborCertified: score.fairLaborCertified,
+          ratingGrade: score.ratingGrade,
+          auditYear: score.auditYear,
+          institutionId: score.institutionId,
+          createdAt: score.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createEsgScore', error);
+      }
+    }
     return score;
   }
 
@@ -240,6 +368,34 @@ export class SupplyDbStore {
 
   public async createRequisition(req: SupplyPurchaseRequisitionItem): Promise<SupplyPurchaseRequisitionItem> {
     this.memoryStore.requisitions.set(req.id, { ...req });
+    if (db) {
+      try {
+        await db.insert(supplyPurchaseRequisitions).values({
+          id: req.id,
+          requisitionNumber: req.requisitionNumber,
+          departmentId: req.departmentId,
+          requesterId: req.requesterId,
+          sourceType: req.sourceType,
+          sourceReferenceId: req.sourceReferenceId ?? null,
+          title: req.title,
+          urgency: req.urgency,
+          estimatedTotalUsd: req.estimatedTotalUsd,
+          budgetCode: req.budgetCode,
+          requiredByDate: req.requiredByDate ?? null,
+          currentApprovalTier: req.currentApprovalTier,
+          status: req.status,
+          rejectionReason: req.rejectionReason ?? null,
+          approvedByUserId: req.approvedByUserId ?? null,
+          approvedAt: req.approvedAt ?? null,
+          notes: req.notes ?? null,
+          institutionId: req.institutionId,
+          createdAt: req.createdAt,
+          updatedAt: req.updatedAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createRequisition', error);
+      }
+    }
     return req;
   }
 
@@ -292,6 +448,26 @@ export class SupplyDbStore {
     }
     req.updatedAt = new Date().toISOString();
     this.memoryStore.requisitions.set(id, req);
+
+    if (db) {
+      try {
+        const dbUpdates: Record<string, unknown> = {
+          status: req.status,
+          updatedAt: req.updatedAt,
+        };
+        if (req.approvedByUserId) {
+          dbUpdates.approvedByUserId = req.approvedByUserId;
+          dbUpdates.approvedAt = req.approvedAt;
+        }
+        if (req.rejectionReason) {
+          dbUpdates.rejectionReason = req.rejectionReason;
+        }
+        await db.update(supplyPurchaseRequisitions).set(dbUpdates).where(eq(supplyPurchaseRequisitions.id, id));
+      } catch (error) {
+        handleWriteError('updateRequisitionStatus', error);
+      }
+    }
+
     return req;
   }
 
@@ -299,6 +475,36 @@ export class SupplyDbStore {
 
   public async createPurchaseOrder(po: SupplyPurchaseOrderItem): Promise<SupplyPurchaseOrderItem> {
     this.memoryStore.purchaseOrders.set(po.id, { ...po });
+    if (db) {
+      try {
+        await db.insert(supplyPurchaseOrders).values({
+          id: po.id,
+          poNumber: po.poNumber,
+          requisitionId: po.requisitionId ?? null,
+          vendorId: po.vendorId,
+          departmentId: po.departmentId,
+          orderDate: po.orderDate,
+          expectedDeliveryDate: po.expectedDeliveryDate ?? null,
+          subtotalUsd: po.subtotalUsd,
+          taxAmountUsd: po.taxAmountUsd,
+          shippingAmountUsd: po.shippingAmountUsd,
+          totalAmountUsd: po.totalAmountUsd,
+          currency: po.currency,
+          paymentTerms: po.paymentTerms,
+          shippingAddress: po.shippingAddress,
+          shippingDock: po.shippingDock,
+          status: po.status,
+          isEncumbered: po.isEncumbered,
+          encumbranceId: po.encumbranceId ?? null,
+          merkleLeafHash: po.merkleLeafHash,
+          institutionId: po.institutionId,
+          createdAt: po.createdAt,
+          updatedAt: po.updatedAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createPurchaseOrder', error);
+      }
+    }
     return po;
   }
 
@@ -342,6 +548,18 @@ export class SupplyDbStore {
     po.status = status;
     po.updatedAt = new Date().toISOString();
     this.memoryStore.purchaseOrders.set(id, po);
+
+    if (db) {
+      try {
+        await db.update(supplyPurchaseOrders).set({
+          status: po.status,
+          updatedAt: po.updatedAt,
+        }).where(eq(supplyPurchaseOrders.id, id));
+      } catch (error) {
+        handleWriteError('updatePurchaseOrderStatus', error);
+      }
+    }
+
     return po;
   }
 
@@ -349,6 +567,29 @@ export class SupplyDbStore {
 
   public async createLineItem(item: SupplyPoLineItemItem): Promise<SupplyPoLineItemItem> {
     this.memoryStore.lineItems.set(item.id, { ...item });
+    if (db) {
+      try {
+        await db.insert(supplyPoLineItems).values({
+          id: item.id,
+          poId: item.poId,
+          lineNumber: item.lineNumber,
+          itemSku: item.itemSku,
+          description: item.description,
+          category: item.category,
+          unitPriceUsd: item.unitPriceUsd,
+          quantityOrdered: item.quantityOrdered,
+          quantityReceived: item.quantityReceived,
+          quantityInvoiced: item.quantityInvoiced,
+          unitOfMeasure: item.unitOfMeasure,
+          lineTotalUsd: item.lineTotalUsd,
+          status: item.status,
+          institutionId: item.institutionId,
+          createdAt: item.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createLineItem', error);
+      }
+    }
     return item;
   }
 
@@ -369,7 +610,7 @@ export class SupplyDbStore {
     id: string,
     qtyReceivedDelta: number,
     qtyInvoicedDelta: number,
-    institutionId = 'global'
+    _institutionId = 'global'
   ): Promise<SupplyPoLineItemItem | null> {
     const item = this.memoryStore.lineItems.get(id);
     if (!item) return null;
@@ -381,6 +622,19 @@ export class SupplyDbStore {
       item.status = 'partially_received';
     }
     this.memoryStore.lineItems.set(id, item);
+
+    if (db) {
+      try {
+        await db.update(supplyPoLineItems).set({
+          quantityReceived: item.quantityReceived,
+          quantityInvoiced: item.quantityInvoiced,
+          status: item.status,
+        }).where(eq(supplyPoLineItems.id, id));
+      } catch (error) {
+        handleWriteError('updateLineItemQuantities', error);
+      }
+    }
+
     return item;
   }
 
@@ -388,6 +642,30 @@ export class SupplyDbStore {
 
   public async createGoodsReceipt(grn: SupplyGoodsReceiptItem): Promise<SupplyGoodsReceiptItem> {
     this.memoryStore.goodsReceipts.set(grn.id, { ...grn });
+    if (db) {
+      try {
+        await db.insert(supplyGoodsReceipts).values({
+          id: grn.id,
+          receiptNumber: grn.receiptNumber,
+          poId: grn.poId,
+          vendorId: grn.vendorId,
+          receivedDate: grn.receivedDate,
+          receivedByUserId: grn.receivedByUserId,
+          warehouseBay: grn.warehouseBay,
+          dockTag: grn.dockTag,
+          carrierName: grn.carrierName ?? null,
+          trackingNumber: grn.trackingNumber ?? null,
+          packageCondition: grn.packageCondition,
+          inspectionNotes: grn.inspectionNotes ?? null,
+          receiverSignature: grn.receiverSignature,
+          status: grn.status,
+          institutionId: grn.institutionId,
+          createdAt: grn.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createGoodsReceipt', error);
+      }
+    }
     return grn;
   }
 
@@ -426,6 +704,30 @@ export class SupplyDbStore {
 
   public async createInvoice(invoice: SupplyVendorInvoiceItem): Promise<SupplyVendorInvoiceItem> {
     this.memoryStore.invoices.set(invoice.id, { ...invoice });
+    if (db) {
+      try {
+        await db.insert(supplyVendorInvoices).values({
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          vendorId: invoice.vendorId,
+          poId: invoice.poId ?? null,
+          invoiceDate: invoice.invoiceDate,
+          dueDate: invoice.dueDate,
+          subtotalUsd: invoice.subtotalUsd,
+          taxAmountUsd: invoice.taxAmountUsd,
+          totalAmountUsd: invoice.totalAmountUsd,
+          currency: invoice.currency,
+          documentUrl: invoice.documentUrl ?? null,
+          status: invoice.status,
+          voucherNumber: invoice.voucherNumber ?? null,
+          institutionId: invoice.institutionId,
+          createdAt: invoice.createdAt,
+          updatedAt: invoice.updatedAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createInvoice', error);
+      }
+    }
     return invoice;
   }
 
@@ -472,6 +774,22 @@ export class SupplyDbStore {
     if (voucherNumber) inv.voucherNumber = voucherNumber;
     inv.updatedAt = new Date().toISOString();
     this.memoryStore.invoices.set(id, inv);
+
+    if (db) {
+      try {
+        const dbUpdates: Record<string, unknown> = {
+          status: inv.status,
+          updatedAt: inv.updatedAt,
+        };
+        if (voucherNumber) {
+          dbUpdates.voucherNumber = voucherNumber;
+        }
+        await db.update(supplyVendorInvoices).set(dbUpdates).where(eq(supplyVendorInvoices.id, id));
+      } catch (error) {
+        handleWriteError('updateInvoiceStatus', error);
+      }
+    }
+
     return inv;
   }
 
@@ -479,6 +797,31 @@ export class SupplyDbStore {
 
   public async createThreeWayMatch(match: SupplyThreeWayMatchItem): Promise<SupplyThreeWayMatchItem> {
     this.memoryStore.threeWayMatches.set(match.id, { ...match });
+    if (db) {
+      try {
+        await db.insert(supplyThreeWayMatches).values({
+          id: match.id,
+          matchId: match.matchId,
+          invoiceId: match.invoiceId,
+          poId: match.poId,
+          receiptId: match.receiptId ?? null,
+          matchStatus: match.matchStatus,
+          priceVariancePercent: match.priceVariancePercent,
+          quantityVarianceUnits: match.quantityVarianceUnits,
+          dollarVarianceUsd: match.dollarVarianceUsd,
+          isToleranceCompliant: match.isToleranceCompliant,
+          overrideApprovedByUserId: match.overrideApprovedByUserId ?? null,
+          overrideJustification: match.overrideJustification ?? null,
+          debitMemoGenerated: match.debitMemoGenerated,
+          debitMemoAmountUsd: match.debitMemoAmountUsd,
+          paymentVoucherCode: match.paymentVoucherCode ?? null,
+          institutionId: match.institutionId,
+          createdAt: match.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createThreeWayMatch', error);
+      }
+    }
     return match;
   }
 
@@ -527,6 +870,22 @@ export class SupplyDbStore {
     if (justification) match.overrideJustification = justification;
     if (paymentVoucherCode) match.paymentVoucherCode = paymentVoucherCode;
     this.memoryStore.threeWayMatches.set(id, match);
+
+    if (db) {
+      try {
+        const dbUpdates: Record<string, unknown> = {
+          matchStatus: match.matchStatus,
+        };
+        if (overrideUserId) dbUpdates.overrideApprovedByUserId = overrideUserId;
+        if (justification) dbUpdates.overrideJustification = justification;
+        if (paymentVoucherCode) dbUpdates.paymentVoucherCode = paymentVoucherCode;
+
+        await db.update(supplyThreeWayMatches).set(dbUpdates).where(eq(supplyThreeWayMatches.id, id));
+      } catch (error) {
+        handleWriteError('updateThreeWayMatch', error);
+      }
+    }
+
     return match;
   }
 
@@ -534,6 +893,29 @@ export class SupplyDbStore {
 
   public async createContract(contract: SupplyContractItem): Promise<SupplyContractItem> {
     this.memoryStore.contracts.set(contract.id, { ...contract });
+    if (db) {
+      try {
+        await db.insert(supplyContracts).values({
+          id: contract.id,
+          contractCode: contract.contractCode,
+          vendorId: contract.vendorId,
+          title: contract.title,
+          contractType: contract.contractType,
+          totalValueUsd: contract.totalValueUsd,
+          effectiveStartDate: contract.effectiveStartDate,
+          effectiveEndDate: contract.effectiveEndDate,
+          renewalNoticeDays: contract.renewalNoticeDays,
+          slaUptimeTargetPercent: contract.slaUptimeTargetPercent,
+          slaPenaltyRatePerOutageHourUsd: contract.slaPenaltyRatePerOutageHourUsd,
+          status: contract.status,
+          institutionId: contract.institutionId,
+          createdAt: contract.createdAt,
+          updatedAt: contract.updatedAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createContract', error);
+      }
+    }
     return contract;
   }
 
@@ -577,6 +959,18 @@ export class SupplyDbStore {
     contract.status = status;
     contract.updatedAt = new Date().toISOString();
     this.memoryStore.contracts.set(id, contract);
+
+    if (db) {
+      try {
+        await db.update(supplyContracts).set({
+          status: contract.status,
+          updatedAt: contract.updatedAt,
+        }).where(eq(supplyContracts.id, id));
+      } catch (error) {
+        handleWriteError('updateContractStatus', error);
+      }
+    }
+
     return contract;
   }
 
@@ -584,6 +978,28 @@ export class SupplyDbStore {
 
   public async createMilestone(milestone: SupplyContractMilestoneItem): Promise<SupplyContractMilestoneItem> {
     this.memoryStore.milestones.set(milestone.id, { ...milestone });
+    if (db) {
+      try {
+        await db.insert(supplyContractMilestones).values({
+          id: milestone.id,
+          milestoneId: milestone.milestoneId,
+          contractId: milestone.contractId,
+          milestoneNumber: milestone.milestoneNumber,
+          title: milestone.title,
+          deliverableDescription: milestone.deliverableDescription,
+          amountUsd: milestone.amountUsd,
+          dueDate: milestone.dueDate,
+          completionDate: milestone.completionDate ?? null,
+          deliverableEvidenceUrl: milestone.deliverableEvidenceUrl ?? null,
+          approvedByUserId: milestone.approvedByUserId ?? null,
+          status: milestone.status,
+          institutionId: milestone.institutionId,
+          createdAt: milestone.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createMilestone', error);
+      }
+    }
     return milestone;
   }
 
@@ -604,7 +1020,7 @@ export class SupplyDbStore {
     id: string,
     status: MilestoneStatus,
     approvedByUserId?: string,
-    institutionId = 'global'
+    _institutionId = 'global'
   ): Promise<SupplyContractMilestoneItem | null> {
     const item = this.memoryStore.milestones.get(id);
     if (!item) return null;
@@ -614,6 +1030,21 @@ export class SupplyDbStore {
       item.completionDate = new Date().toISOString();
     }
     this.memoryStore.milestones.set(id, item);
+
+    if (db) {
+      try {
+        const dbUpdates: Record<string, unknown> = {
+          status: item.status,
+        };
+        if (item.approvedByUserId) dbUpdates.approvedByUserId = item.approvedByUserId;
+        if (item.completionDate) dbUpdates.completionDate = item.completionDate;
+
+        await db.update(supplyContractMilestones).set(dbUpdates).where(eq(supplyContractMilestones.id, id));
+      } catch (error) {
+        handleWriteError('updateMilestoneStatus', error);
+      }
+    }
+
     return item;
   }
 
@@ -621,6 +1052,28 @@ export class SupplyDbStore {
 
   public async createEncumbrance(enc: SupplyBudgetEncumbranceItem): Promise<SupplyBudgetEncumbranceItem> {
     this.memoryStore.encumbrances.set(enc.id, { ...enc });
+    if (db) {
+      try {
+        await db.insert(supplyBudgetEncumbrances).values({
+          id: enc.id,
+          encumbranceNumber: enc.encumbranceNumber,
+          departmentId: enc.departmentId,
+          budgetCode: enc.budgetCode,
+          poId: enc.poId,
+          encumberedAmountUsd: enc.encumberedAmountUsd,
+          liquidatedAmountUsd: enc.liquidatedAmountUsd,
+          remainingEncumberedUsd: enc.remainingEncumberedUsd,
+          status: enc.status,
+          debitAccountCode: enc.debitAccountCode,
+          creditAccountCode: enc.creditAccountCode,
+          institutionId: enc.institutionId,
+          createdAt: enc.createdAt,
+          updatedAt: enc.updatedAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createEncumbrance', error);
+      }
+    }
     return enc;
   }
 
@@ -662,6 +1115,20 @@ export class SupplyDbStore {
     }
     enc.updatedAt = new Date().toISOString();
     this.memoryStore.encumbrances.set(enc.id, enc);
+
+    if (db) {
+      try {
+        await db.update(supplyBudgetEncumbrances).set({
+          liquidatedAmountUsd: enc.liquidatedAmountUsd,
+          remainingEncumberedUsd: enc.remainingEncumberedUsd,
+          status: enc.status,
+          updatedAt: enc.updatedAt,
+        }).where(eq(supplyBudgetEncumbrances.id, enc.id));
+      } catch (error) {
+        handleWriteError('liquidateEncumbrance', error);
+      }
+    }
+
     return enc;
   }
 
@@ -672,6 +1139,27 @@ export class SupplyDbStore {
   public async createAuditLog(log: SupplyAuditLogItem): Promise<SupplyAuditLogItem> {
     this.memoryStore.auditLogs.set(log.id, { ...log });
     this.auditLogList.push({ ...log });
+    if (db) {
+      try {
+        await db.insert(supplyAuditLogs).values({
+          id: log.id,
+          auditId: log.auditId,
+          actorId: log.actorId,
+          actorRole: log.actorRole,
+          action: log.action,
+          entityType: log.entityType,
+          entityId: log.entityId,
+          payloadHash: log.payloadHash,
+          prevMerkleRoot: log.prevMerkleRoot,
+          merkleRoot: log.merkleRoot,
+          timestamp: log.timestamp,
+          institutionId: log.institutionId,
+          createdAt: log.createdAt,
+        }).onConflictDoNothing();
+      } catch (error) {
+        handleWriteError('createAuditLog', error);
+      }
+    }
     return log;
   }
 
@@ -686,3 +1174,5 @@ export class SupplyDbStore {
     return [...result].reverse();
   }
 }
+
+export const supplyStore = SupplyDbStore.getInstance();
