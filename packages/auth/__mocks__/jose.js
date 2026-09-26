@@ -19,7 +19,7 @@ async function jwtVerify(token) {
       const decoded = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
       return { payload: decoded };
     }
-  } catch (e) {}
+  } catch {}
   throw new Error("Invalid JWT token");
 }
 
@@ -29,7 +29,7 @@ function decodeJwt(token) {
     if (parts.length >= 2) {
       return JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
     }
-  } catch (e) {}
+  } catch {}
   return {};
 }
 

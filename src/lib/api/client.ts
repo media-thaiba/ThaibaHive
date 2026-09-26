@@ -68,7 +68,6 @@ async function request<T = unknown>(
   onLoading?.(true);
 
   let attempt = 0;
-  let lastError: unknown;
   let res: Response | null = null;
 
   while (attempt <= retries) {
@@ -97,8 +96,7 @@ async function request<T = unknown>(
       }
 
       break;
-    } catch (err) {
-      lastError = err;
+    } catch {
       if (attempt < retries) {
         attempt++;
         await delay(retryDelayMs * Math.pow(2, attempt - 1));
@@ -111,7 +109,7 @@ async function request<T = unknown>(
   try {
     if (!res) {
       const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
-      const msg = errorMessage || (lastError instanceof Error ? lastError.message : undefined) || (isOffline 
+      const msg = errorMessage || (isOffline 
         ? "You are offline. Please check your internet connection."
         : "Network error or timeout. Please check your connection and try again.");
       if (showToast) toast.error(msg);

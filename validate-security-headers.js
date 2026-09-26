@@ -114,7 +114,7 @@ function validateSecurityHeaders() {
     console.log('✓ Permissions-Policy configured with camera, microphone, geolocation, payment');
   }
 
-  const stats = {
+  const _stats = {
     csp: validation.csp,
     xFrameOptions: validation.xFrameOptions,
     xContentTypeOptions: validation.xContentTypeOptions,

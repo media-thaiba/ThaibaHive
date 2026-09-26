@@ -60,7 +60,7 @@ export async function createSession(payload: SessionPayload, extendSession = fal
   return token;
 }
 
-export async function createDPoPSession(payload: SessionPayload, dpopThumbprint: string, extendSession = false) {
+export async function createDPoPSession(payload: SessionPayload, dpopThumbprint: string, _extendSession = false) {
   const enhancedPayload: DPoPSessionPayload = {
     ...payload,
     dpopEnabled: true,

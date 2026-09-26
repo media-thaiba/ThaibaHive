@@ -6,8 +6,8 @@ import { createClient } from "@libsql/client";
 
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { ReplicaQueryRouter, ReplicaNodeStatus, ReplicaConfig } from "./replica-router";
-import { TenantRouter, TenantRegion, TenantIsolationError } from "./tenant-router";
+import { ReplicaQueryRouter } from "./replica-router";
+import { TenantRouter } from "./tenant-router";
 
 export * from "./schema";
 export * from "drizzle-orm";

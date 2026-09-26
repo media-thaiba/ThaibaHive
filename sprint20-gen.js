@@ -163,7 +163,7 @@ export class ConstraintEngine {
 appendLog('AS-FG-003', 'Utility & Constraint Engines', ['src/lib/agents/negotiation/utility-engine.ts', 'src/lib/agents/negotiation/constraint-engine.ts']);
 
 // AS-FG-004
-const dbSchemaPath = 'packages/db/schema.ts'; // writing directly since path was observed
+const _dbSchemaPath = 'packages/db/schema.ts'; // writing directly since path was observed
 const swarmSchemaContent = `
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
