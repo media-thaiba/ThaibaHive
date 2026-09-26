@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SensorRegistrationModal } from './sensor-registration-modal';
-import { Radio, Plus, Battery, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Radio, Plus, Battery } from 'lucide-react';
 
 export function IotSensorMeshTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);

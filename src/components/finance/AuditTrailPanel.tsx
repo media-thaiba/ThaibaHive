@@ -12,7 +12,7 @@ interface AuditTrailPanelProps {
   history?: ApprovalHistoryItem[];
 }
 
-export function AuditTrailPanel({ requestId, history = [] }: AuditTrailPanelProps) {
+export function AuditTrailPanel({ requestId: _requestId, history = [] }: AuditTrailPanelProps) {
   const [showExportDialog, setShowExportDialog] = useState(false);
 
   return (

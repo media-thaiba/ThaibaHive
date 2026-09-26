@@ -53,6 +53,10 @@ export function VisitorRequestModal({
             <Input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} required />
           </div>
           <div>
+            <label className="text-xs font-medium text-muted-foreground">Host Staff Member (Optional)</label>
+            <Input placeholder="Staff ID or Name (e.g. staff_1)" value={hostStaffId} onChange={(e) => setHostStaffId(e.target.value)} />
+          </div>
+          <div>
             <label className="text-xs font-medium text-muted-foreground">Purpose of Visit</label>
             <Input placeholder="Parent Meeting / Vendor Delivery" value={purpose} onChange={(e) => setPurpose(e.target.value)} required />
           </div>

@@ -57,7 +57,7 @@ export class RedisClusterClient {
     return this.store.delete(key);
   }
 
-  public async publish(channel: string, message: string): Promise<number> {
+  public async publish(_channel: string, _message: string): Promise<number> {
     if (this.isPartitioned()) {
       throw new Error(`[RedisCluster] Cannot publish: Region '${this.region}' is partitioned`);
     }

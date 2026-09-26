@@ -1,4 +1,4 @@
-import { EdgeRequest, EdgeResponse, EdgeContext } from "./types";
+import { EdgeRequest, EdgeContext } from "./types";
 import { handleEdgeRequest } from "./worker";
 
 /**
@@ -7,9 +7,8 @@ import { handleEdgeRequest } from "./worker";
  */
 export async function webFetchAdapter(
   request: Request,
-  cloudflareContext?: { env?: any; waitUntil?: (p: Promise<any>) => void }
+  _cloudflareContext?: { env?: any; waitUntil?: (p: Promise<any>) => void }
 ): Promise<Response> {
-  const urlObj = new URL(request.url);
   const headers: Record<string, string> = {};
   request.headers.forEach((val, key) => {
     headers[key] = val;

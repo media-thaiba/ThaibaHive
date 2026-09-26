@@ -10,7 +10,7 @@ import { Building, RefreshCw } from 'lucide-react';
 export function Campus3dExplorerTab() {
   const [scene, setScene] = useState<ParsedFacilityScene | null>(null);
   const [selectedSpace, setSelectedSpace] = useState<ParsedSpaceModel | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);

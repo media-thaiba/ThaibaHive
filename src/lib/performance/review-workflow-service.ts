@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { performanceReviews } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export interface MetricRating {
   metricId: string;

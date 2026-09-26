@@ -22,7 +22,7 @@ export class HealerConnector {
     
     try {
       return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
-    } catch (e) {
+    } catch {
       return false;
     }
   }

@@ -47,7 +47,7 @@ type Props = {
   getStatusBadge: (status: string) => React.ReactNode;
 };
 
-export function PurchaseList({ purchases, allPurchases, activeTab, canApprove, staffRole, onSelect, getStatusBadge }: Props) {
+export function PurchaseList({ purchases, allPurchases, activeTab, canApprove: _canApprove, staffRole, onSelect, getStatusBadge }: Props) {
   const checkUserCanReview = (req: PurchaseRequest): boolean => {
     if (!staffRole) return false;
     if (["super_admin", "admin"].includes(staffRole)) return true;

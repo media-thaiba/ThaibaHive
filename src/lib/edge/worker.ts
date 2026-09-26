@@ -11,7 +11,6 @@ export async function handleEdgeRequest(
 ): Promise<EdgeResponse> {
   const startTime = Date.now();
   let tenant: TenantContext | null = null;
-  let cacheHit = false;
 
   try {
     // 1. JWT / Tenant Context Verification
@@ -49,7 +48,6 @@ export async function handleEdgeRequest(
     if (isCacheable) {
       const cached = await getCachedResponse(cacheKey);
       if (cached) {
-        cacheHit = true;
         const latency = Date.now() - startTime;
         recordEdgeMetrics(tenantId, ctx.region, req.url, latency, true, false);
         return {

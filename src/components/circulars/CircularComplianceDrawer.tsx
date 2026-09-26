@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
-import { Building2, CheckCircle2, Clock, Check, AlertCircle, ExternalLink } from "lucide-react";
+import { Building2 } from "lucide-react";
 
 interface CampusComplianceItem {
   institutionId: string;

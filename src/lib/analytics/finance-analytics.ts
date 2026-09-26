@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { financialTransactions } from "@thaiba/db/schema";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 
 export interface FinancialAnalytics {
   collectionTotal: number;

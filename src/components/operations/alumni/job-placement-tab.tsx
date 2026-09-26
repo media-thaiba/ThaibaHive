@@ -4,14 +4,13 @@ import React from 'react';
 import { AlumniJobPostingItem } from '@/lib/operations/alumni/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 interface JobPlacementTabProps {
   jobs: AlumniJobPostingItem[];
   onRefresh?: () => void;
 }
 
-export function JobPlacementTab({ jobs, onRefresh }: JobPlacementTabProps) {
+export function JobPlacementTab({ jobs, onRefresh: _onRefresh }: JobPlacementTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

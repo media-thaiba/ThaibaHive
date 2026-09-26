@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ShieldCheck, Shield, Network, KeyRound, Cpu } from 'lucide-react';
+import { Shield, Network, KeyRound, Cpu } from 'lucide-react';
 import { useZeroTrustMesh } from '@/lib/hooks/use-zero-trust-mesh';
 import { useSbomScanner } from '@/lib/hooks/use-sbom-scanner';
 import { useForensicCopilot } from '@/lib/hooks/use-forensic-copilot';

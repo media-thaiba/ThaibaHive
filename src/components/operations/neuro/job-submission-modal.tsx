@@ -72,7 +72,7 @@ export const JobSubmissionModal: React.FC<JobSubmissionModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Department</Label>
               <Select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
@@ -80,6 +80,16 @@ export const JobSubmissionModal: React.FC<JobSubmissionModalProps> = ({
                 <SelectItem value="dept_biomed">Biomedical Informatics</SelectItem>
                 <SelectItem value="dept_physics">Computational Physics</SelectItem>
                 <SelectItem value="dept_robotics">Robotics Institute</SelectItem>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Job Type</Label>
+              <Select value={jobType} onChange={(e) => setJobType(e.target.value)}>
+                <SelectItem value="distributed_training">Distributed Training</SelectItem>
+                <SelectItem value="fine_tuning">Fine-Tuning</SelectItem>
+                <SelectItem value="inference_batch">Inference Batch</SelectItem>
+                <SelectItem value="simulation">Simulation</SelectItem>
               </Select>
             </div>
 

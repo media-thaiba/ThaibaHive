@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,6 @@ import {
   Eye,
   CheckCircle2,
   Star,
-  Clock,
 } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { formatDate, ensureArray } from "@/lib/utils";
@@ -56,7 +55,7 @@ const statusLabels: Record<string, string> = {
   completed: "Completed",
 };
 
-function StarRating({ value, readonly = true }: { value: number; readonly?: boolean }) {
+function StarRating({ value, readonly: _readonly = true }: { value: number; readonly?: boolean }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((star) => (

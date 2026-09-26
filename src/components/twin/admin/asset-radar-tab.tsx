@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { GeofenceDrawer } from './geofence-drawer';
-import { Shield, Plus, MapPin, AlertOctagon, CheckCircle2, Search } from 'lucide-react';
+import { Shield, Plus, MapPin, AlertOctagon } from 'lucide-react';
 
 export function AssetRadarTab() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [assets, setAssets] = useState([
+  const [assets] = useState([
     {
       assetId: 'AST-SPECTRO-01',
       tagId: 'BLE:AA:11:22',

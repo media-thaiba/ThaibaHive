@@ -9,6 +9,6 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   canteen: false,
   academic_tracking: false,
 };
-export function getFeatureFlags(institutionId?: string): Record<FeatureFlag, boolean> {
+export function getFeatureFlags(_institutionId?: string): Record<FeatureFlag, boolean> {
   return { ...DEFAULT_FLAGS };
 }

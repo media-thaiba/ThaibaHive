@@ -27,7 +27,6 @@ export const Datacenter3DTopology: React.FC<Datacenter3DTopologyProps> = ({
     if (!ctx) return;
 
     let animationFrameId: number;
-    let angle = 0;
 
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -106,7 +105,6 @@ export const Datacenter3DTopology: React.FC<Datacenter3DTopologyProps> = ({
         ctx.fillText(node.nodeId, posX - 20, posY - rackHeight - 6);
       });
 
-      angle += 0.01;
       animationFrameId = requestAnimationFrame(render);
     };
 

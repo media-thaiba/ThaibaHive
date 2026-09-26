@@ -21,7 +21,7 @@ export function ThreatIntelligenceGraphViewer({
   nodes,
   edges,
   overview,
-  loading,
+  loading: _loading,
 }: ThreatIntelligenceGraphViewerProps) {
   return (
     <div className="space-y-6">

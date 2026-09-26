@@ -41,7 +41,7 @@ export function ApprovalModal({ item, onClose, onSuccess }: ApprovalModalProps) 
         if (!res.ok) throw new Error("Failed to submit approval decision");
         return res.json();
       })
-      .then((data) => {
+      .then(() => {
         toast.success(`Request ${action} decision processed successfully.`);
         onSuccess();
       })

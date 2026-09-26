@@ -3,8 +3,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Navigation, Footprints, Clock, CheckCircle } from 'lucide-react';
+import { Navigation, Footprints, Clock } from 'lucide-react';
 
 interface IndoorNavigationSheetProps {
   isOpen: boolean;

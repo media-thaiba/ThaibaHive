@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Calendar, Mail, RefreshCw, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, Download, RefreshCw, Trash2, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 export function ReportBuilder() {
@@ -28,7 +28,7 @@ export function ReportBuilder() {
   
   const [schedulesList, setSchedulesList] = useState<any[]>([]);
   const [historyList, setHistoryList] = useState<any[]>([]);
-  const [loadingLists, setLoadingLists] = useState(true);
+  const [_loadingLists, setLoadingLists] = useState(true);
 
   const fetchLists = () => {
     setLoadingLists(true);

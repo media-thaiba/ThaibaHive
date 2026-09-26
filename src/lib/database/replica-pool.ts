@@ -1,4 +1,3 @@
-import { PostgresClusterNode } from "./types";
 import { PostgresClusterMonitor } from "./cluster-monitor";
 
 export class DynamicReplicaPool {

@@ -31,7 +31,7 @@ export class SSEManager {
           )
         );
         controller.close();
-      } catch (err) {
+      } catch {
         // Ignore
       }
       return false;
@@ -67,7 +67,7 @@ export class SSEManager {
       this.connections.forEach((controller) => {
         try {
           controller.enqueue(heartbeatData);
-        } catch (err) {
+        } catch {
           // Closed connection, clean it up
           this.removeConnection(controller);
         }
@@ -100,7 +100,7 @@ export class SSEManager {
           metricName: "bandwidth_compressed_bytes",
           metricValue: compressedBytes,
         });
-      } catch (err) {
+      } catch {
         // Silently catch compression tracker errors to prevent stream drops
       }
     }
@@ -109,7 +109,7 @@ export class SSEManager {
     this.connections.forEach((controller) => {
       try {
         controller.enqueue(data);
-      } catch (err) {
+      } catch {
         this.removeConnection(controller);
       }
     });
@@ -118,7 +118,7 @@ export class SSEManager {
   private sendToController(controller: ReadableStreamDefaultController, event: ObservabilityEvent) {
     try {
       controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
-    } catch (err) {
+    } catch {
       this.removeConnection(controller);
     }
   }

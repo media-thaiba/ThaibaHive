@@ -4,15 +4,14 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {  } from "@/components/ui/badge";
-import { QrCode, ShoppingCart,  } from "lucide-react";
+import { QrCode, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 
 export function CashierTerminal() {
   const [passCode, setPassCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number }[]>([
+  const [cart] = useState<{ id: string; name: string; price: number; qty: number }[]>([
     { id: "item_1", name: "Standard Meals", price: 50.0, qty: 1 },
   ]);
 

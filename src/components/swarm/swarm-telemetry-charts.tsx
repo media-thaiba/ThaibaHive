@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 
 interface MetricPoint {
   id: string;

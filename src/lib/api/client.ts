@@ -111,7 +111,7 @@ async function request<T = unknown>(
   try {
     if (!res) {
       const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
-      const msg = errorMessage || (isOffline 
+      const msg = errorMessage || (lastError instanceof Error ? lastError.message : undefined) || (isOffline 
         ? "You are offline. Please check your internet connection."
         : "Network error or timeout. Please check your connection and try again.");
       if (showToast) toast.error(msg);

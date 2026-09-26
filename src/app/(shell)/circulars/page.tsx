@@ -28,7 +28,6 @@ import {
   Building2,
   Users,
   Eye,
-  CheckCircle2,
   Loader2
 } from "lucide-react";
 

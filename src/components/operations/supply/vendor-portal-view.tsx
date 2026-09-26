@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Award, Clock, FileCheck2, Upload, ExternalLink } from "lucide-react";
+import { Building2, FileCheck2, Upload, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export interface VendorPortalContract {
@@ -39,9 +39,9 @@ export function VendorPortalView({
   riskTier: string;
   contracts: VendorPortalContract[];
 }) {
-  const [activeContracts, setActiveContracts] = useState(contracts);
+  const [activeContracts] = useState(contracts);
 
-  const handleSubmitDeliverable = (contractId: string, milestoneId: string) => {
+  const handleSubmitDeliverable = (_contractId: string, _milestoneId: string) => {
     toast.success("Deliverable evidence uploaded and submitted for institution sign-off!");
   };
 

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, CheckCircle2, ShieldCheck, DollarSign, TrendingUp, AlertTriangle } from "lucide-react";
+import { ShoppingCart, CheckCircle2, ShieldCheck, DollarSign, TrendingUp } from "lucide-react";
 
 interface SupplyKpiProps {
   totalOrders: number;

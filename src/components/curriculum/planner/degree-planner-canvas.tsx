@@ -60,7 +60,7 @@ export const DegreePlannerCanvas: React.FC<DegreePlannerCanvasProps> = ({
   initialTerms = defaultInitialTerms,
   onSavePlan,
 }) => {
-  const [terms, setTerms] = useState<TermData[]>(initialTerms);
+  const [terms] = useState<TermData[]>(initialTerms);
 
   const totalDegreeCredits = terms.reduce(
     (total, term) => total + term.courses.reduce((sum, c) => sum + (c.credits || 3), 0),

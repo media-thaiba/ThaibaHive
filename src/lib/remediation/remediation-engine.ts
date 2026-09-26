@@ -114,7 +114,7 @@ export class RemediationEngine {
           .set({ outcome: "success" })
           .where(eq(remediationHistory.id, workflow.id))
           .run();
-      } catch (err) {}
+      } catch {}
       
       EventBus.getInstance().publishEvent({
         eventSource: "remediation-engine",
@@ -129,7 +129,7 @@ export class RemediationEngine {
           .set({ outcome: "failed" })
           .where(eq(remediationHistory.id, workflow.id))
           .run();
-      } catch (err) {}
+      } catch {}
 
       EventBus.getInstance().publishEvent({
         eventSource: "remediation-engine",

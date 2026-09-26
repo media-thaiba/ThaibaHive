@@ -12,7 +12,7 @@ export interface StreamRecordingMetadata {
 export class StreamRecorder {
   private activeRecordings: Map<string, { startTime: number; chunksCount: number }> = new Map();
 
-  public startRecording(recordingId: string, streamId: string, roomId: string, tenantId: string): void {
+  public startRecording(recordingId: string, _streamId: string, _roomId: string, _tenantId: string): void {
     this.activeRecordings.set(recordingId, {
       startTime: Date.now(),
       chunksCount: 0,

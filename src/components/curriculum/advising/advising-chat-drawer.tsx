@@ -36,7 +36,7 @@ const defaultPrompts = [
 
 export const AdvisingChatDrawer: React.FC<AdvisingChatDrawerProps> = ({
   sessionId = 'sess_demo',
-  studentId = 'stud_demo',
+  studentId: _studentId = 'stud_demo',
   initialMessages = [
     {
       id: 'm1',

@@ -75,11 +75,9 @@ export class GlobalQueryRouter {
     } else {
       // READ queries can go to nearest healthy node / replica
       let targetNode = this.healthManager.selectBestNode(req.preferredRegion || primaryRegion);
-      let failoverApplied = false;
 
       if (!targetNode) {
         targetNode = this.healthManager.selectBestNode();
-        failoverApplied = true;
       }
 
       if (!targetNode) {

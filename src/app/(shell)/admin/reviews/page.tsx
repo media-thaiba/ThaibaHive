@@ -24,7 +24,6 @@ import {
   Star,
   Eye,
   CheckCircle2,
-  Clock,
 } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { formatDate, ensureArray } from "@/lib/utils";

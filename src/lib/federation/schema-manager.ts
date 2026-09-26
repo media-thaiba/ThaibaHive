@@ -1,7 +1,6 @@
 import { FederatedServiceInfo } from "./types";
 import { db } from "../../db";
 import { federatedServices } from "../../db/schema";
-import { eq } from "drizzle-orm";
 
 let cachedServices: FederatedServiceInfo[] = [];
 const inMemoryServices: FederatedServiceInfo[] = getMockServices();
@@ -33,7 +32,7 @@ export async function getFederatedSchemas(): Promise<FederatedServiceInfo[]> {
       }));
     }
     lastFetchedTime = now;
-  } catch (error) {
+  } catch {
     // Fallback to static mock schemas if database is not ready or seeded (safeguard)
     if (cachedServices.length === 0) {
       cachedServices = [...inMemoryServices];

@@ -60,7 +60,7 @@ export async function detectAnomalies(institutionId: string): Promise<Operationa
       });
     }
 
-  } catch (err) {
+  } catch {
     // DB query notice for unmigrated test environments
   }
 

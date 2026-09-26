@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
 import type { Vehicle, StaffMember } from "./types";
 
 export function RouteAssignmentModal({
@@ -57,6 +58,30 @@ export function RouteAssignmentModal({
             <div>
               <label className="text-xs font-medium text-muted-foreground">End Location</label>
               <Input placeholder="Engineering Block" value={endLocation} onChange={(e) => setEndLocation(e.target.value)} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Assign Vehicle</label>
+              <Select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+                <SelectItem value="">None (Unassigned)</SelectItem>
+                {vehicles.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.registrationNumber} ({v.model})
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Assign Driver</label>
+              <Select value={driverId} onChange={(e) => setDriverId(e.target.value)}>
+                <SelectItem value="">None (Unassigned)</SelectItem>
+                {drivers.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.firstName} {d.lastName} {d.designation ? `(${d.designation})` : ""}
+                  </SelectItem>
+                ))}
+              </Select>
             </div>
           </div>
           <DialogFooter className="pt-2">

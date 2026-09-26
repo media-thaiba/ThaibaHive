@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkspaceShell } from '@/components/workspaces/workspace-shell';
 import { WorkspaceSkeleton } from '@/components/workspaces/workspace-skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShieldAlert } from 'lucide-react';
 

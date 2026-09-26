@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Zap, Thermometer, ShieldCheck } from 'lucide-react';
+import { Zap, Thermometer } from 'lucide-react';
 
 interface HvacEnergyOptimizerCardProps {
   optimizations: any[];

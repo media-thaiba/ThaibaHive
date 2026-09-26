@@ -20,7 +20,7 @@ interface CourseCardProps {
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
-  onRemove,
+  onRemove: _onRemove,
 }) => {
   return (
     <div

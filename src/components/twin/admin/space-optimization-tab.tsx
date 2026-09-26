@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Zap, CheckCircle2, AlertTriangle, ArrowRight, TrendingUp } from 'lucide-react';
+import { Zap, CheckCircle2, ArrowRight, TrendingUp } from 'lucide-react';
 
 export function SpaceOptimizationTab() {
   const [proposals, setProposals] = useState([

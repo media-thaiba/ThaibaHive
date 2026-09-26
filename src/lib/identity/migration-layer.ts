@@ -1,7 +1,6 @@
 import { decodeJwt } from 'jose';
 import { db } from '@thaiba/db';
 import { identity_sessions } from '@thaiba/db/schema';
-import { eq } from 'drizzle-orm';
 import { cryptoAuditWriter } from '@/lib/audit/crypto-writer';
 
 export function isDPoPToken(token: string): boolean {

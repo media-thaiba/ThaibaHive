@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useEngageWorkflows } from '@/lib/hooks/engage/use-engage-workflows';
 
 export function WorkflowCanvasPanel() {
-  const { workflows, loading, error, createWorkflow } = useEngageWorkflows();
+  const { workflows, loading, error: _error, createWorkflow } = useEngageWorkflows();
   const [name, setName] = useState('');
   const [triggerEvent, setTriggerEvent] = useState('student.attendance.deficit');
   const [submitting, setSubmitting] = useState(false);

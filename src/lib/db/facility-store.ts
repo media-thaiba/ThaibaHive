@@ -7,7 +7,6 @@ import {
   facilityAnomalyAlerts,
   facilityWorkOrders,
   facilityPartsInventory,
-  facilityWorkOrderParts,
   facilityContractorRegistry,
   facilityAuditLogs,
 } from '@thaiba/db/schema';

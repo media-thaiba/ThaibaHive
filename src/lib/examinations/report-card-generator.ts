@@ -1,5 +1,4 @@
 import PDFDocument from "pdfkit";
-import * as fs from "fs";
 
 export interface ReportCardStudentData {
   studentId: string;

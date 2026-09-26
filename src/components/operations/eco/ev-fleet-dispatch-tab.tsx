@@ -4,11 +4,11 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Car, Zap, BatteryCharging, ArrowDownCircle, ArrowUpCircle, RefreshCw } from 'lucide-react';
+import { Zap, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 export function EvFleetDispatchTab() {
   const [isDispatching, setIsDispatching] = useState(false);
-  const [vehicles, setVehicles] = useState([
+  const [vehicles] = useState([
     {
       vehicleId: 'bus_campus_01',
       name: 'Campus Shuttle Bus Alpha',

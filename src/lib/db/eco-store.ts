@@ -11,8 +11,6 @@ import {
   ecoEsgReports,
   ecoCarbonOffsets,
 } from '@thaiba/db/schema';
-import { eq, and } from 'drizzle-orm';
-
 type OptionalId<T> = Omit<T, 'id'> & { id?: string };
 
 export interface InMemoryEcoStore {

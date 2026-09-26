@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { forensicSnapshots } from "@thaiba/db/schema";
-import { eq, lt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { RetentionTier } from "./types";
 import { snapshotStorageManager } from "./snapshot-storage";
 

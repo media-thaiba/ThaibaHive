@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldCheck, Plus, CheckCircle, Award, ExternalLink } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 export function CarbonOffsetRegistryTab() {
   const [balance, setBalance] = useState<any>(null);

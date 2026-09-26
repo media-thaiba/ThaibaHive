@@ -55,7 +55,7 @@ export class CrossRegionSyncQueue {
     }
   }
 
-  public markFailed(id: string, errorMessage?: string): void {
+  public markFailed(id: string, _errorMessage?: string): void {
     const item = this.queue.get(id);
     if (!item) return;
 

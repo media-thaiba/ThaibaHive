@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SystemResilienceSnapshot } from '@/lib/security/resilience/resilience-types';
 
@@ -15,7 +15,7 @@ interface ResilienceScoreMatrixProps {
   loading?: boolean;
 }
 
-export function ResilienceScoreMatrix({ snapshot, loading }: ResilienceScoreMatrixProps) {
+export function ResilienceScoreMatrix({ snapshot, loading: _loading }: ResilienceScoreMatrixProps) {
   if (!snapshot) {
     return null;
   }

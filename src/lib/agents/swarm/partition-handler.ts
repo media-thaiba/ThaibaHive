@@ -134,7 +134,7 @@ export class PartitionHandler {
     for (const listener of this.sseListeners) {
       try {
         listener(event);
-      } catch (err) {
+      } catch {
         // Swallow listener errors to prevent one broken listener from disrupting others
       }
     }

@@ -1,4 +1,4 @@
-import { ParquetSchema, ParquetWriterOptions, CompressionCodec } from './types';
+import { ParquetSchema, ParquetWriterOptions } from './types';
 
 /**
  * Parquet & Apache Arrow Columnar Binary Serialization Utility

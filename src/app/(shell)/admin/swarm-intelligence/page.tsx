@@ -218,7 +218,7 @@ export default function SwarmIntelligencePage() {
       setMetrics(metricsRes.metrics || []);
       setRemediations(remediationsRes.history || []);
       setFindings([]); 
-    } catch (err) {
+    } catch {
       toast.error("Failed to load initial swarm telemetry data");
     } finally {
       setLoading(false);
@@ -283,7 +283,7 @@ export default function SwarmIntelligencePage() {
               return next;
             });
           }
-        } catch (err) {
+        } catch {
           // Ignore JSON parse errors
         }
       };
@@ -319,7 +319,7 @@ export default function SwarmIntelligencePage() {
     };
   }, [isPlaybackMode]);
 
-  const handleTriggerRemediation = async (findingId: string) => {
+  const handleTriggerRemediation = async (_findingId: string) => {
     try {
       const res = await fetch("/api/admin/agents/remediate", {
         method: "POST",
@@ -332,7 +332,7 @@ export default function SwarmIntelligencePage() {
       } else {
         toast.error(data.error || "Failed to trigger remediation");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to execute remediation request");
     }
   };
@@ -354,7 +354,7 @@ export default function SwarmIntelligencePage() {
       } else {
         toast.error(data.error || "Failed to approve remediation");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to submit approval request");
     }
   };
@@ -376,7 +376,7 @@ export default function SwarmIntelligencePage() {
       } else {
         toast.error(data.error || "Failed to reject remediation");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to submit rejection request");
     }
   };

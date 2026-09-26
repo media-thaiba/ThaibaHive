@@ -9,7 +9,7 @@ import { Lock, EyeOff, ShieldCheck, Trash2, KeyRound } from 'lucide-react';
 
 export function PrivacyAuditTab() {
   const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
 
   const fetchPrivacyLogs = () => {

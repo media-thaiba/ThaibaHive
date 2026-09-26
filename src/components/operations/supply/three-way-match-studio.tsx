@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, AlertTriangle, ArrowRight, ShieldCheck, DollarSign, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 export interface ReconcileStudioItem {

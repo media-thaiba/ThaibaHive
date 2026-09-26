@@ -3,7 +3,7 @@
  * Part of Sprint-034: Enterprise Multi-Region Infrastructure & Automated Dependency Security
  */
 
-import { getEdgeCacheHeaders, EdgeCachePolicy } from "@/lib/edge/cache-control";
+import { getEdgeCacheHeaders } from "@/lib/edge/cache-control";
 
 export interface MediaEdgeOptions {
   id: string;

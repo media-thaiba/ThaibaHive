@@ -10,7 +10,7 @@ interface EndowmentCampaignTabProps {
   onRefresh?: () => void;
 }
 
-export function EndowmentCampaignTab({ campaigns, onRefresh }: EndowmentCampaignTabProps) {
+export function EndowmentCampaignTab({ campaigns, onRefresh: _onRefresh }: EndowmentCampaignTabProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

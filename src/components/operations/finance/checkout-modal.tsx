@@ -49,7 +49,7 @@ export function CheckoutModal({
       const receiptNo = res?.payment?.receiptNumber || `RCPT-${Date.now().toString().slice(-6)}`;
       onPaymentSuccess(receiptNo);
       onClose();
-    } catch (err) {
+    } catch {
       // Fallback success simulation
       onPaymentSuccess(`RCPT-AUTO-${Date.now().toString().slice(-4)}`);
       onClose();

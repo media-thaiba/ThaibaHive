@@ -79,6 +79,14 @@ export function SubjectScheduleForm({
           <label className="text-xs font-medium text-foreground">End Time</label>
           <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </div>
+        <div>
+          <label className="text-xs font-medium text-foreground">Max Marks</label>
+          <Input type="number" value={maxMarks} onChange={(e) => setMaxMarks(Number(e.target.value) || 100)} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-foreground">Pass Marks</label>
+          <Input type="number" value={passMarks} onChange={(e) => setPassMarks(Number(e.target.value) || 40)} />
+        </div>
         <div className="flex items-end">
           <Button onClick={handleAdd} className="w-full">
             + Add Subject Slot

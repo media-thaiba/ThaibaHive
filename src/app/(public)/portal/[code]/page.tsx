@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,11 +16,8 @@ import {
   Building2,
   BookOpen,
   Award,
-  Users,
   CheckCircle2,
   Lock,
-  ArrowRight,
-  Shield,
   Clock,
   Sparkles,
 } from "lucide-react";
@@ -159,6 +156,7 @@ export default function PublicInstitutionPortalPage({
         setAffEmail("");
         setAffPhone("");
         setAffAddress("");
+        setAffCapacity("");
       }, 2500);
     } catch (err: unknown) {
       setAffError(err instanceof Error ? err.message : "Submission failed");
@@ -455,15 +453,26 @@ export default function PublicInstitutionPortalPage({
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold">Contact Email</label>
-              <Input
-                type="email"
-                placeholder="office@campus.org"
-                value={affEmail}
-                onChange={(e) => setAffEmail(e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Contact Email</label>
+                <Input
+                  type="email"
+                  placeholder="office@campus.org"
+                  value={affEmail}
+                  onChange={(e) => setAffEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Proposed Student Capacity</label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 500"
+                  value={affCapacity}
+                  onChange={(e) => setAffCapacity(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="space-y-1">

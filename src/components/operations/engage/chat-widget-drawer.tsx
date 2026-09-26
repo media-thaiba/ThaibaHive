@@ -4,13 +4,12 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { useEngageChat } from '@/lib/hooks/engage/use-engage-chat';
 
 export function ChatWidgetDrawer({ stakeholderId = 'student_portal_user' }: { stakeholderId?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputVal, setInputVal] = useState('');
-  const { messages, loading, sessionStatus, sendMessage } = useEngageChat(`portal_sesh_${stakeholderId}`);
+  const { messages, loading, sessionStatus: _sessionStatus, sendMessage } = useEngageChat(`portal_sesh_${stakeholderId}`);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();

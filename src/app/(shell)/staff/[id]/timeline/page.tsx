@@ -11,7 +11,6 @@ import {
   CreditCard,
   Filter,
   ArrowLeft,
-  User,
   ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

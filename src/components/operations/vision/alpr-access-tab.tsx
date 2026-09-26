@@ -5,12 +5,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Car, ShieldCheck, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { Car, ShieldCheck, CheckCircle2, XCircle } from 'lucide-react';
 
 export function AlprAccessTab() {
   const [logs, setLogs] = useState<any[]>([]);
   const [whitelist, setWhitelist] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   const fetchAlprData = () => {
     setLoading(true);

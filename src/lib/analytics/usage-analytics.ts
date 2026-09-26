@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { apiUsageMetrics, workspacePreferences } from "@thaiba/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export interface UsageAnalytics {
   activeUsersCount: number;

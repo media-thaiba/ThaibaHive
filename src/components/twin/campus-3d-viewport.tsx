@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { ParsedFacilityScene, ParsedSpaceModel } from '@/lib/operations/twin/rendering/model-parser';
 import { MetricType } from '@/lib/operations/twin/twin-types';
 import { ShaderMaterials } from '@/lib/operations/twin/rendering/shader-materials';
 import { ViewportControls } from './viewport-controls';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 
 interface Campus3dViewportProps {
   scene: ParsedFacilityScene | null;

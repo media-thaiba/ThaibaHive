@@ -34,7 +34,7 @@ export class MediaAccelerator {
    */
   static async compressImageBufferAtEdge(
     buffer: ArrayBuffer,
-    targetQuality = 80
+    _targetQuality: number = 80
   ): Promise<{ data: ArrayBuffer; compressionRatio: number }> {
     // Edge optimized compression simulation (representing 30-40% savings)
     const compressionRatio = 0.65; // Represents 35% size reduction

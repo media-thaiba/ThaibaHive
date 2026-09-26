@@ -12,7 +12,7 @@ export class WorkflowEngine {
   static determineInitialStatus(
     type: RequestType,
     amount: number,
-    isEmergency: boolean = false
+    _isEmergency: boolean = false
   ): ApprovalStatus {
     if (type === "expense" && amount < AMOUNT_THRESHOLDS.AUTO_APPROVE_MAX) {
       return "approved";
@@ -63,7 +63,7 @@ export class WorkflowEngine {
     action: "approve" | "reject" | "return",
     type: RequestType,
     amount: number,
-    isEmergency: boolean = false
+    _isEmergency: boolean = false
   ): ApprovalStatus {
     if (action === "reject") {
       return "rejected";

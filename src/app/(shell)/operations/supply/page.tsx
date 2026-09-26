@@ -9,7 +9,7 @@ import { SupplyCockpitKpiCards } from "@/components/operations/supply/supply-coc
 import { ThreeWayMatchStudio, ReconcileStudioItem } from "@/components/operations/supply/three-way-match-studio";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Plus, RefreshCw, Truck, FileText, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { ensureArray } from "@/lib/utils";
 

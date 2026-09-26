@@ -1,5 +1,4 @@
 import { PostgresClusterMonitor } from "./cluster-monitor";
-import { PostgresClusterNode } from "./types";
 
 export interface FailoverResult {
   failedPrimaryId: string;

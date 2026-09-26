@@ -57,6 +57,15 @@ export function GeofenceDrawer({ isOpen, onClose, onSave }: GeofenceDrawerProps)
             />
           </div>
 
+          <div className="space-y-1">
+            <Label htmlFor="geoFacility">Facility / Building</Label>
+            <Input
+              id="geoFacility"
+              value={facilityId}
+              onChange={(e) => setFacilityId(e.target.value)}
+            />
+          </div>
+
           <DialogFooter className="pt-3">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel

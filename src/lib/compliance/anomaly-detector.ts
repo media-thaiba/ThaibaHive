@@ -1,4 +1,4 @@
-import { ComplianceEvent, ComplianceViolationReport, TelemetrySummary, ViolationSeverity } from "./types";
+import { ComplianceEvent, ComplianceViolationReport } from "./types";
 import { COMPLIANCE_RULES, ComplianceRuleDefinition, AnomalyHistoryTracker } from "./detection-rules";
 import { violationDispatcher } from "./violation-dispatcher";
 

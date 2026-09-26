@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { MetricType } from '@/lib/operations/twin/twin-types';
-import { Layers, ZoomIn, ZoomOut, RotateCcw, Thermometer, Wind, Volume2, Users } from 'lucide-react';
+import { Layers, RotateCcw, Thermometer, Wind, Volume2, Users } from 'lucide-react';
 
 interface ViewportControlsProps {
   activeFloor: number | null;

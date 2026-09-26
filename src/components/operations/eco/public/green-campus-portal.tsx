@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StudentCarbonGamificationCard } from './student-carbon-gamification-card';
-import { Sun, Wind, Battery, Leaf, ShieldCheck, TreePine } from 'lucide-react';
+import { Sun, Leaf, ShieldCheck, TreePine } from 'lucide-react';
 
 export function GreenCampusPortal() {
   return (

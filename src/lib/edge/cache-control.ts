@@ -3,8 +3,6 @@
  * Part of Sprint-034: Enterprise Multi-Region Infrastructure & Automated Dependency Security
  */
 
-import { NextResponse } from "next/server";
-
 export type EdgeCachePolicy = 
   | "PUBLIC_IMMUTABLE"       // Static assets, fonts, client bundles
   | "PUBLIC_SEMI_STATIC"     // Institution catalogs, departments, public courses

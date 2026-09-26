@@ -1,6 +1,5 @@
 import PDFDocument from "pdfkit";
 import { ExportFormatter, ExportOptions, ExportResult } from "./types";
-import * as fs from "fs";
 
 export class PdfFormatter implements ExportFormatter {
   async generate<T = Record<string, unknown>>(options: ExportOptions<T>): Promise<ExportResult> {
@@ -33,7 +32,6 @@ export class PdfFormatter implements ExportFormatter {
         doc.on("error", (err) => reject(err));
 
         const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-        const pageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
 
         // 1. Header Banner
         doc

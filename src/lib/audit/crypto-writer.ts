@@ -5,7 +5,6 @@ import {
   computePayloadHash, 
   computeAuditBlockHash, 
   buildMerkleTree, 
-  generateMerkleProof, 
   GENESIS_PREV_HASH 
 } from "./crypto-audit-engine";
 import { AuditEntry } from "./types";
@@ -80,7 +79,7 @@ export class CryptographicAuditWriter {
       const hash = lastEntry.length > 0 ? lastEntry[0].currentHash : GENESIS_PREV_HASH;
       this.lastHashesByTenant.set(tenantId, hash);
       return hash;
-    } catch (e) {
+    } catch {
       // If DB read fails during initial bootstrap, fallback to genesis
       return GENESIS_PREV_HASH;
     }

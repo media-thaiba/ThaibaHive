@@ -19,7 +19,7 @@ export function BessControllerCard({
   initialSoC = 78,
 }: BessControllerCardProps) {
   const [mode, setMode] = useState<BatteryDispatchMode>('arbitrage');
-  const [soc, setSoc] = useState<number>(initialSoC);
+  const [soc] = useState<number>(initialSoC);
   const [powerKw, setPowerKw] = useState<number>(120);
 
   const handleModeChange = (newMode: BatteryDispatchMode) => {

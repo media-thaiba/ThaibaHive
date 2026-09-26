@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Folder,
   FolderPlus,
-  ImageIcon,
   Film,
   Grid,
   ListIcon,
@@ -12,9 +11,6 @@ import {
   Download,
   Trash2,
   Eye,
-  Filter,
-  Search,
-  Upload,
   RefreshCw,
   FolderInput,
   CheckSquare,
@@ -41,12 +37,11 @@ import { Breadcrumbs, BreadcrumbItem } from "@/components/ui/breadcrumbs";
 import { FilePreview } from "@/components/ui/file-preview";
 import { AssetMetadata } from "@/components/ui/metadata-panel";
 import { ShareDialog } from "@/components/ui/share-dialog";
-import { ShareItem } from "@/components/ui/share-list";
 import { DownloadProgress } from "@/components/ui/download-progress";
 import { FolderSelector } from "@/components/ui/folder-selector";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SearchBar } from "@/components/ui/search-bar";
-import { FilterPanel, FilterState,  } from "@/components/ui/filter-panel";
+import { FilterPanel, FilterState } from "@/components/ui/filter-panel";
 
 export type MediaAsset = {
   id: string;
@@ -99,7 +94,6 @@ export default function MediaLibraryPage() {
   // Preview & Share Modals
   const [previewAsset, setPreviewAsset] = useState<AssetMetadata | null>(null);
   const [shareTarget, setShareTarget] = useState<{ assetId?: string; folderId?: string; name: string } | null>(null);
-  const [activeShares, setActiveShares] = useState<ShareItem[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Folder Operations

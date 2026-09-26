@@ -11,7 +11,6 @@ import {
   neuroDatasetProvenance,
   neuroMerkleLineageNodes,
   neuroComputeBillingAccounts,
-  neuroGrantCreditAllocations,
   neuroBillingLedgerTransactions,
   neuroAuditLogs,
 } from '@thaiba/db/schema';
@@ -30,12 +29,7 @@ import {
   NeuroGrantCreditAllocationItem,
   NeuroBillingLedgerTransactionItem,
   NeuroAuditLogItem,
-  ClusterStatus,
-  NodeStatus,
-  GpuStatus,
   JobStatus,
-  JobPriority,
-  BillingAccountStatus,
 } from '../operations/neuro/neuro-types';
 
 export interface InMemoryNeuroStore {

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, Clock, Users, ArrowRightLeft, BookOpen, Check } from "lucide-react";
+import { Calendar, Clock, ArrowRightLeft, BookOpen, Check } from "lucide-react";
 
 interface ClassOption {
   id: string;
@@ -45,7 +45,7 @@ export default function TimetablePage() {
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [entries, setEntries] = useState<TimetableEntryItem[]>([]);
   const [substitutions, setSubstitutions] = useState<SubstitutionRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   // Slot Assignment Dialog state
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);

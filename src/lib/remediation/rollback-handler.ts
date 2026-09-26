@@ -12,7 +12,7 @@ export class RollbackHandler {
         .set({ rollbackStatus: "pending" })
         .where(eq(remediationHistory.id, workflow.id))
         .run();
-    } catch (err) {
+    } catch {
       // Ignore DB write errors locally
     }
 
@@ -43,7 +43,7 @@ export class RollbackHandler {
           .set({ rollbackStatus: "success" })
           .where(eq(remediationHistory.id, workflow.id))
           .run();
-      } catch (err) {}
+      } catch {}
 
       EventBus.getInstance().publishEvent({
         eventSource: "rollback-handler",
@@ -58,7 +58,7 @@ export class RollbackHandler {
           .set({ rollbackStatus: "failed" })
           .where(eq(remediationHistory.id, workflow.id))
           .run();
-      } catch (err) {}
+      } catch {}
 
       EventBus.getInstance().publishEvent({
         eventSource: "rollback-handler",

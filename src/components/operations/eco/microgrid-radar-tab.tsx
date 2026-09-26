@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sun, Zap, Battery, Car, Activity, Leaf, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Sun, Zap, Battery, Activity, Leaf, RefreshCw } from 'lucide-react';
 import { CampusPowerFlowSnapshot } from '@/lib/operations/eco/eco-types';
 
 export function MicrogridRadarTab() {

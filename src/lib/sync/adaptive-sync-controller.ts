@@ -12,7 +12,7 @@ export class AdaptiveSyncController {
     return 'batched';
   }
   
-  private logTransition(mode: string) {
+  private logTransition(_mode: string) {
     // structured logging
   }
 }

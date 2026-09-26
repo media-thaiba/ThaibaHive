@@ -1,6 +1,6 @@
 import { db } from "@thaiba/db";
 import { aiModels } from "@thaiba/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { AgentMessageBus } from "../agents/core/message-bus";
 import { AgentStateStore } from "../agents/core/state-store";
 

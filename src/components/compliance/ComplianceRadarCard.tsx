@@ -3,8 +3,8 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TelemetrySummary } from "@/lib/compliance/types";
-import { ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
+import type { TelemetrySummary } from "@/lib/compliance/types";
+import { ShieldCheck, ShieldAlert } from "lucide-react";
 
 interface ComplianceRadarCardProps {
   telemetry?: TelemetrySummary | null;

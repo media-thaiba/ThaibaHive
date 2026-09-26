@@ -11,7 +11,7 @@ interface ChapterEventsTabProps {
   onRefresh?: () => void;
 }
 
-export function ChapterEventsTab({ chapters, events, onRefresh }: ChapterEventsTabProps) {
+export function ChapterEventsTab({ chapters, events, onRefresh: _onRefresh }: ChapterEventsTabProps) {
   return (
     <div className="space-y-6">
       <div>

@@ -27,9 +27,9 @@ type StaffOnboardingWizardProps = {
   onComplete: () => void;
 };
 
-export function StaffOnboardingWizard({ staffId, onComplete }: StaffOnboardingWizardProps) {
+export function StaffOnboardingWizard({ staffId: _staffId, onComplete }: StaffOnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  const [_completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
   function handleNext() {
     const step = STEPS[currentStep];

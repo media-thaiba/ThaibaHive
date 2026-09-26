@@ -57,7 +57,7 @@ export function BookingModal({
               ))}
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Date</label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
@@ -65,6 +65,10 @@ export function BookingModal({
             <div>
               <label className="text-xs font-medium text-muted-foreground">Start Time</label>
               <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">End Time</label>
+              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </div>
           </div>
           <div>

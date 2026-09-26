@@ -11,7 +11,7 @@ interface AlumniDirectoryTabProps {
   onRefresh?: () => void;
 }
 
-export function AlumniDirectoryTab({ profiles, onRefresh }: AlumniDirectoryTabProps) {
+export function AlumniDirectoryTab({ profiles, onRefresh: _onRefresh }: AlumniDirectoryTabProps) {
   const [search, setSearch] = useState('');
 
   const filtered = profiles.filter((p) => {

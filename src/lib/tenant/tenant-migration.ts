@@ -148,7 +148,7 @@ export class TenantMigrationOrchestrator {
     }
   }
 
-  private computeTenantChecksum(tenantId: string, region: string): string {
+  private computeTenantChecksum(tenantId: string, _region: string): string {
     const hash = crypto.createHash("sha256");
     const tenantPayload = JSON.stringify({
       tenantId,

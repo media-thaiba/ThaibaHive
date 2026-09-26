@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Download } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, Download } from "lucide-react";
 
 interface ClassOption {
   id: string;

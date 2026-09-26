@@ -5,11 +5,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Shield, Navigation, BatteryCharging, Send, Check } from 'lucide-react';
+import { Navigation, BatteryCharging, Send } from 'lucide-react';
 
 export function GuardDispatchTab() {
   const [guards, setGuards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [dispatchStatus, setDispatchStatus] = useState<string | null>(null);
 
   const fetchGuards = () => {

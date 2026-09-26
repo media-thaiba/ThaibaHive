@@ -23,7 +23,7 @@ export interface IncomingChange {
 export async function getDeltaChanges(
   institutionId: string,
   sinceVersion: number,
-  limit = 500
+  _limit = 500
 ): Promise<{ currentServerVersion: number; changes: EntityChange[]; hasMore: boolean }> {
   const currentServerVersion = Math.max(Date.now(), sinceVersion + 1);
 

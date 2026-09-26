@@ -19,7 +19,7 @@ interface ActiveExecutionsTableProps {
   loading?: boolean;
 }
 
-export function ActiveExecutionsTable({ executions, loading }: ActiveExecutionsTableProps) {
+export function ActiveExecutionsTable({ executions, loading: _loading }: ActiveExecutionsTableProps) {
   const [selectedExecution, setSelectedExecution] = useState<SoarExecutionContext | null>(null);
   const items = ensureArray<SoarExecutionContext>(executions);
 

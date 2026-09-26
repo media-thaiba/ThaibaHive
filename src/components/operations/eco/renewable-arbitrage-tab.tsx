@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BessControllerCard } from './bess-controller-card';
-import { TrendingUp, DollarSign, Zap, Calendar, Play } from 'lucide-react';
+import { TrendingUp, Play } from 'lucide-react';
 import { ArbitrageOptimizationResult } from '@/lib/operations/eco/ml/tariff-arbitrage-optimizer';
 
 export function RenewableArbitrageTab() {

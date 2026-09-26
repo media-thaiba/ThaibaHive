@@ -132,7 +132,7 @@ export default function FacilityMindAdminPage() {
     } catch {}
   };
 
-  const handleExecutePeakShave = async (setbackDegrees: number) => {
+  const handleExecutePeakShave = async (_setbackDegrees: number) => {
     return {
       eventId: 'PEAK_MANUAL_01',
       totalPowerCurtailmentKw: 68.4,

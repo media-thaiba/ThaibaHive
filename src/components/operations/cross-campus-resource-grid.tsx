@@ -14,7 +14,7 @@ interface CrossCampusResourceGridProps {
 
 export function CrossCampusResourceGrid({
   resources,
-  recommendations,
+  recommendations: _recommendations,
   isLoading,
 }: CrossCampusResourceGridProps) {
   if (isLoading) {

@@ -3,13 +3,12 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 interface MentorshipMeshTabProps {
   onRefresh?: () => void;
 }
 
-export function MentorshipMeshTab({ onRefresh }: MentorshipMeshTabProps) {
+export function MentorshipMeshTab({ onRefresh: _onRefresh }: MentorshipMeshTabProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

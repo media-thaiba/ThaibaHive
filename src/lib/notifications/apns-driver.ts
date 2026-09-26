@@ -12,7 +12,7 @@ export interface ApnsResponse {
   unregistered?: boolean;
 }
 
-export async function sendApnsNotification(payload: ApnsPayload): Promise<ApnsResponse> {
+export async function sendApnsNotification(_payload: ApnsPayload): Promise<ApnsResponse> {
   const apnsKey = process.env.APNS_KEY_ID;
   if (!apnsKey) {
     // Development / fallback mode when APNs certificate is not provisioned

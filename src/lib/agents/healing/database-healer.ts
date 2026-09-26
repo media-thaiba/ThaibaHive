@@ -34,7 +34,7 @@ export class DatabaseHealer {
             `Standby replica ${standby.nodeId} lag exceeds 10s (${standby.replicationLagMs}ms). Initiating mitigation.`
           );
           
-          const decisionId = await this.stateStore.logDecision(
+          await this.stateStore.logDecision(
             this.agentId,
             `node:${standby.nodeId}`,
             "medium",

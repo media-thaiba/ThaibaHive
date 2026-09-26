@@ -12,7 +12,7 @@ import {
 
 export function useAlumniHub(institutionId: string = 'global') {
   const [profiles, setProfiles] = useState<AlumniProfileItem[]>([]);
-  const [mentors, setMentors] = useState<AlumniMentorshipProfileItem[]>([]);
+  const [mentors, _setMentors] = useState<AlumniMentorshipProfileItem[]>([]);
   const [jobs, setJobs] = useState<AlumniJobPostingItem[]>([]);
   const [campaigns, setCampaigns] = useState<AlumniDonationCampaignItem[]>([]);
   const [chapters, setChapters] = useState<AlumniChapterItem[]>([]);

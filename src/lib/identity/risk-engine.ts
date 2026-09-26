@@ -1,5 +1,5 @@
 import { RiskSignal, RiskLevel, RiskScore } from './risk-signals';
-import { GeoLocation, lookupIP, computeGeoImpossibility } from './geo-lookup';
+import { lookupIP, computeGeoImpossibility } from './geo-lookup';
 
 interface RiskEngineParams {
   userId: string;

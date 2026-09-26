@@ -5,12 +5,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, CheckCircle, ShieldAlert, UserCheck } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 export function ThreatDetectionTab() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [incidents, setIncidents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   const fetchThreatData = () => {
     setLoading(true);

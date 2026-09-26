@@ -1,6 +1,6 @@
 "use client";
 
-import { useState,  } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { api } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export default function ParentCanteenPage() {
-  const [balance, setBalance] = useState<number>(350.0);
+  const [balance] = useState<number>(350.0);
   const [dietary, setDietary] = useState<string>("Vegetarian, Nut Allergy");
 
   const handleUpdateDietary = async () => {

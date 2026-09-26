@@ -30,7 +30,7 @@ export const DegreeAuditTab: React.FC<DegreeAuditTabProps> = ({
   }
 
   const categories = ensureArray(auditReport.categories);
-  const outstanding = ensureArray(auditReport.outstandingRequirements);
+  const outstanding = ensureArray<string>(auditReport.outstandingRequirements);
 
   return (
     <div className="space-y-6">
@@ -98,6 +98,19 @@ export const DegreeAuditTab: React.FC<DegreeAuditTabProps> = ({
           </Card>
         ))}
       </div>
+
+      {outstanding.length > 0 && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardHeader className="py-3 px-4">
+            <p className="font-semibold text-sm text-foreground">Outstanding Requirements</p>
+          </CardHeader>
+          <CardContent className="px-4 py-2 text-xs space-y-1">
+            {outstanding.map((req: string, idx: number) => (
+              <p key={idx} className="text-muted-foreground">• {req}</p>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

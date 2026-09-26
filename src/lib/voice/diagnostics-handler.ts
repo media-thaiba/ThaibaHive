@@ -1,5 +1,5 @@
 import { db } from "@thaiba/db";
-import { clusterNodes, edgeNodes } from "@thaiba/db/schema";
+import { clusterNodes } from "@thaiba/db/schema";
 import { VoiceIntent } from "./intent-mapper";
 import { dynamicPoolConfigs } from "../agents/healing/pool-healer";
 

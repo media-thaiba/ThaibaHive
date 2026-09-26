@@ -70,7 +70,7 @@ export function verifyQRPayload(qrPayloadBase64: string): { valid: boolean; payl
     }
 
     return { valid: true, payload: parsed };
-  } catch (err: any) {
+  } catch {
     return { valid: false, error: "Corrupted or malformed QR code" };
   }
 }

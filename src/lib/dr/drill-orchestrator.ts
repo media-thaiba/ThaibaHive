@@ -61,7 +61,7 @@ export class DrillOrchestrator {
 
   public async runDrill(
     scenario: DrillScenarioType,
-    options: { maxDurationMs?: number } = {}
+    _options: { maxDurationMs?: number } = {}
   ): Promise<DrillExecutionResult> {
     if (this.currentStatus !== "IDLE" && this.currentStatus !== "COMPLETED" && this.currentStatus !== "ABORTED" && this.currentStatus !== "FAILED") {
       throw new Error(`Another drill (${this.currentDrillId}) is currently in progress: ${this.currentStatus}`);
@@ -128,7 +128,7 @@ export class DrillOrchestrator {
 
         // Step 4: Validate Recovery / Promoted Primary Continuity
         const step4Start = Date.now();
-        const candidate = detector.getPromotionCandidate();
+        const _candidate = detector.getPromotionCandidate();
         stepsExecuted.push({
           stepName: "Verify Promotion Candidate Election",
           durationMs: Date.now() - step4Start,

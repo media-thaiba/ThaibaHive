@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EsgDisclosureGenerator } from './esg-disclosure-generator';
-import { Factory, Zap, Users, Award, ShieldCheck, RefreshCw } from 'lucide-react';
+import { ShieldCheck, RefreshCw } from 'lucide-react';
 import { CarbonCalculationResult } from '@/lib/operations/eco/eco-types';
 
 export function CarbonAccountingTab() {

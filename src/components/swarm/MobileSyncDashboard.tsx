@@ -41,7 +41,7 @@ export function MobileSyncDashboard() {
   const [metrics, setMetrics] = useState<MobileMetric[]>([]);
   const [anomalies, setAnomalies] = useState<AnomalyEvent[]>([]);
   const [policies, setPolicies] = useState<TuningPolicy[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [savingPolicyId, setSavingPolicyId] = useState<string | null>(null);
 
   const fetchDiagnostics = async (hours: string) => {
@@ -53,7 +53,7 @@ export function MobileSyncDashboard() {
       const data = await res.json();
       setMetrics(data.metrics || []);
       setAnomalies(data.anomalies || []);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load mobile diagnostics telemetry");
     } finally {
       setLoading(false);
@@ -66,7 +66,7 @@ export function MobileSyncDashboard() {
       if (!res.ok) throw new Error("Failed to fetch policies");
       const data = await res.json();
       setPolicies(data.policies || []);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load sync tuning policies");
     }
   };

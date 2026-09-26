@@ -1,6 +1,5 @@
 import { db } from "../../db";
 import { clusterNodes } from "../../db/schema";
-import { eq, and } from "drizzle-orm";
 
 // In-memory routing topology cache to bypass constant DB lookups on edge
 let cachedTopology: Array<{ role: string; endpoint: string; isHealthy: boolean; replicationLagMs: number }> = [];
