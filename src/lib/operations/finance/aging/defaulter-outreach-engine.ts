@@ -1,5 +1,5 @@
 import { FeeDbStore } from '../../../../db/fee-store';
-import { AgingAnalyticsEngine, StudentAgingAnalysis } from './aging-analytics-engine';
+import { AgingAnalyticsEngine } from './aging-analytics-engine';
 import {
   FeeDefaulterLogItem,
   OutreachChannel,

@@ -8,7 +8,7 @@ export class CareerAlignmentAgent implements BaseAdvisorAgent {
   public async evaluate(
     prompt: string,
     profile: StudentAcademicProfile,
-    intent: AdvisingIntent
+    _intent: AdvisingIntent
   ): Promise<AdvisorAgentResponse> {
     const lower = prompt.toLowerCase();
     let careerFocus = 'Software Engineering';

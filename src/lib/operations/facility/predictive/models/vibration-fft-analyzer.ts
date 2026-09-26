@@ -65,7 +65,6 @@ export class VibrationFftAnalyzer {
     // Bearing fault multiplier constants (typical deep groove ball bearing)
     const bpfoMultiplier = 3.58; // Outer race
     const bpfiMultiplier = 5.42; // Inner race
-    const bsfMultiplier = 2.32;  // Ball element
 
     for (let i = 0; i < topPeaks.length; i++) {
       const peak = topPeaks[i];

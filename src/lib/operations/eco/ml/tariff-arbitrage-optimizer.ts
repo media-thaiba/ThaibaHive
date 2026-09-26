@@ -55,9 +55,6 @@ export class TariffArbitrageOptimizer {
 
     // 2. Identify peak rate and off-peak rate hours
     const hourlyRates = Array.from({ length: 24 }, (_, h) => TimeOfUseSchedule.getRateForHour(h, tariff));
-    const sortedRateIndices = Array.from({ length: 24 }, (_, i) => i).sort(
-      (a, b) => hourlyRates[b].ratePerKwh - hourlyRates[a].ratePerKwh
-    );
 
     // Peak hours (top rates) -> prioritize discharge
     // Off-peak hours (lowest rates) or high solar surplus -> prioritize charge

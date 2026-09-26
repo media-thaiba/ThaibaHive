@@ -1,8 +1,6 @@
 import { FeeDbStore } from '../../../../db/fee-store';
 import {
   FeeCounterRegisterItem,
-  FeePaymentItem,
-  CounterStatus,
   PaymentMethod,
 } from '../types';
 
@@ -89,7 +87,7 @@ export class CounterRegisterEngine {
   public async recordCashDrop(
     shiftId: string,
     dropAmount: number,
-    authorizedSupervisorId: string
+    _authorizedSupervisorId: string
   ): Promise<FeeCounterRegisterItem> {
     const shift = await this.store.getCounterRegisterById(shiftId);
     if (!shift || shift.status !== 'open') {

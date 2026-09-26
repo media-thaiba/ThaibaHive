@@ -1,4 +1,4 @@
-import { Polygon2D, Point3D, BoundingBox3D } from '../twin-types';
+import { Polygon2D, BoundingBox3D } from '../twin-types';
 import { MeshGenerator, GeneratedMesh3D } from './mesh-generator';
 
 export interface GeoJsonFeature {

@@ -1,5 +1,4 @@
 import { contextMemory } from './context-memory';
-import { kmStore } from '@/lib/db/km-store';
 
 export interface ReformulatedQuery {
   rawPrompt: string;

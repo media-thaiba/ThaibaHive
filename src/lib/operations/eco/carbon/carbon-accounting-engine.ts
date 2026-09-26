@@ -7,7 +7,6 @@ import { createHash } from 'crypto';
 import {
   ActivityEmissionInput,
   ScopeBreakdown,
-  EmissionFactor,
   DepartmentCarbonSummary,
   BuildingCarbonSummary,
 } from '../eco-types';

@@ -11,27 +11,27 @@ export class KmTelemetry {
     return KmTelemetry.instance;
   }
 
-  public trackQuery(topic: string, status: 'success' | 'fallback' | 'error', durationSec: number, tenantId = 'global'): void {
+  public trackQuery(_topic: string, _status: 'success' | 'fallback' | 'error', _durationSec: number, _tenantId = 'global'): void {
     incrementCounter('km_queries_total');
   }
 
-  public trackHybridRetrievalLatency(category: string, latencySec: number): void {
+  public trackHybridRetrievalLatency(_category: string, latencySec: number): void {
     incrementCounter('km_hybrid_retrieval_latency_seconds', latencySec);
   }
 
-  public trackTokenUsage(tokens: number, model = 'text-embedding-3-small', tenantId = 'global'): void {
+  public trackTokenUsage(tokens: number, _model = 'text-embedding-3-small', _tenantId = 'global'): void {
     incrementCounter('km_copilot_token_usage_total', tokens);
   }
 
-  public trackDegreeAudit(programCode: string, isEligible: boolean): void {
+  public trackDegreeAudit(_programCode: string, _isEligible: boolean): void {
     incrementCounter('km_degree_audits_total');
   }
 
-  public updateDeflectionRate(deflectionRateRatio: number, tenantId = 'global'): void {
+  public updateDeflectionRate(deflectionRateRatio: number, _tenantId = 'global'): void {
     setGauge('km_deflection_rate_gauge', Math.max(0, Math.min(1.0, deflectionRateRatio)));
   }
 
-  public syncActiveWebSocketConnections(institutionId = 'global'): void {
+  public syncActiveWebSocketConnections(_institutionId = 'global'): void {
     const activeCount = wsClientManager.getActiveConnectionsCount();
     setGauge('km_active_websocket_connections_gauge', activeCount);
   }

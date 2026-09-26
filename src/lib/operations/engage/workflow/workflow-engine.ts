@@ -1,4 +1,4 @@
-import { CampusEventPayload, WorkflowDefinition } from './workflow-types';
+import { CampusEventPayload } from './workflow-types';
 import { SequenceOrchestrator } from './sequence-orchestrator';
 import { EngageDbStore } from '../../../db/engage-store';
 

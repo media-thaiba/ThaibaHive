@@ -17,10 +17,9 @@ export class EsgAuditVerifier {
   /**
    * Verify all carbon transactions and ESG disclosures against Merkle integrity rules
    */
-  public static verifyInstitutionalEsgAudit(institutionId: string = 'global'): EsgComplianceVerificationResult {
+  public static verifyInstitutionalEsgAudit(_institutionId: string = 'global'): EsgComplianceVerificationResult {
     const anchor = CarbonMerkleAnchor.getInstance();
     const chainCheck = anchor.verifyChainIntegrity();
-    const auditEntries = anchor.getAuditTrail(institutionId, 1000);
 
     const tamperDetected = !chainCheck.isValid;
     const isCompliant = !tamperDetected && chainCheck.checkedBlocks >= 0;

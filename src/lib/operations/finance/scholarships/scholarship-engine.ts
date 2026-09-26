@@ -3,8 +3,6 @@ import {
   FeeScholarshipItem,
   FeeStructureItem,
   FeeConcessionItem,
-  ScholarshipCategory,
-  DiscountType,
 } from '../types';
 
 export interface ScholarshipApplicationParams {

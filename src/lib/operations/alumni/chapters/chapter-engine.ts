@@ -5,7 +5,6 @@ import {
   AlumniChapterMemberItem,
   ChapterType,
   ChapterRole,
-  ChapterStatus,
 } from '../types';
 
 export interface CreateChapterInput {

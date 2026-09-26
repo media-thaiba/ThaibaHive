@@ -3,7 +3,7 @@
  * Conforms to GHG Protocol Corporate Standard, IPCC AR6, and GRI 305
  */
 
-import { EmissionFactor, CarbonCategory, EmissionUnit } from '../eco-types';
+import { EmissionFactor, CarbonCategory } from '../eco-types';
 
 export class EmissionFactorRegistry {
   private static instance: EmissionFactorRegistry;

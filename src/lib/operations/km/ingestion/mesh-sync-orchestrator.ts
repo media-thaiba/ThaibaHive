@@ -1,10 +1,9 @@
-import { documentParser, ParsedDocument } from './document-parser';
+import { documentParser } from './document-parser';
 import { semanticChunker } from './semantic-chunker';
 import { entityExtractor } from './entity-extractor';
 import { campusGraph } from '../graph/knowledge-graph-engine';
 import { hybridFusionEngine } from '../retrieval/hybrid-fusion-engine';
 import { kmStore } from '@/lib/db/km-store';
-import { DocumentChunk } from '../km-types';
 
 export interface IngestionResult {
   documentId: string;

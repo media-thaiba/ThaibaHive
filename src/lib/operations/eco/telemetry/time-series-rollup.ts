@@ -50,7 +50,7 @@ export class TimeSeriesRollup {
 
     const rollups: EnergyRollupBucket[] = [];
 
-    for (const [key, samples] of groupedBuckets.entries()) {
+    for (const samples of groupedBuckets.values()) {
       if (samples.length === 0) continue;
 
       const firstSample = samples[0];

@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import {
   PaymentGatewayAdapter,
   CreateOrderRequest,
@@ -79,7 +78,7 @@ export class UpiAdapter implements PaymentGatewayAdapter {
 
   public async processWebhookPayload(
     rawBody: string,
-    signature: string
+    _signature: string
   ): Promise<WebhookEventPayload> {
     const parsed = JSON.parse(rawBody || '{}');
     return {

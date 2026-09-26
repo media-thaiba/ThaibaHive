@@ -265,8 +265,8 @@ export class InstallmentFineEngine {
   public async applyFineWaiver(
     installmentId: string,
     waiverAmount: number,
-    reason: string,
-    authorizedStaffId: string
+    _reason: string,
+    _authorizedStaffId: string
   ): Promise<FeeInstallmentItem | null> {
     const installment = this.store['memoryStore']?.installments.get(installmentId);
     if (!installment) return null;

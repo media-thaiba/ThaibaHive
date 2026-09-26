@@ -93,7 +93,7 @@ export class AgentReasoningEngine {
     tenantId: string,
     recommendationId: string,
     approvalStatus: "APPROVED" | "REJECTED",
-    feedbackNotes?: string
+    _feedbackNotes?: string
   ): Promise<{ success: boolean; recommendationId: string; updatedStatus: string }> {
     const actionTakenAt = new Date().toISOString();
 

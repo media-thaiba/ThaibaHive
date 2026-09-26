@@ -72,7 +72,7 @@ export class NeuroMetricsExporter {
       '# TYPE neuro_carbon_saved_kg counter',
     ];
 
-    for (const [key, m] of this.metrics.entries()) {
+    for (const m of this.metrics.values()) {
       const labelStr = Object.entries(m.labels)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([k, v]) => `${k}="${v}"`)

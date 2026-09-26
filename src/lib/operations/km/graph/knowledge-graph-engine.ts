@@ -1,5 +1,4 @@
-import { KmNode, KmEdge, KmEntityType, KmRelationType, GraphTraversalPath } from '../km-types';
-import { kmStore } from '@/lib/db/km-store';
+import { KmNode, KmEdge, KmRelationType, GraphTraversalPath } from '../km-types';
 
 export class KnowledgeGraphEngine {
   private nodes: Map<string, KmNode> = new Map();

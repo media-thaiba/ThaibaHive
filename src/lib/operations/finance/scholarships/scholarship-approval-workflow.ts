@@ -1,6 +1,6 @@
-import crypto from 'crypto';
 import { FeeDbStore } from '../../../../db/fee-store';
-import { FeeConcessionItem, ConcessionStatus } from '../types';
+import { FeeConcessionItem } from '../types';
+import * as crypto from 'crypto';
 
 export class ScholarshipApprovalWorkflow {
   private store: FeeDbStore;

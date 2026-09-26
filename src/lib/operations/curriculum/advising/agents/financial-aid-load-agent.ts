@@ -6,9 +6,9 @@ export class FinancialAidLoadAgent implements BaseAdvisorAgent {
   public description = 'Monitors full-time credit enrollment bounds, tuition thresholds, and overload permission rules.';
 
   public async evaluate(
-    prompt: string,
+    _prompt: string,
     profile: StudentAcademicProfile,
-    intent: AdvisingIntent
+    _intent: AdvisingIntent
   ): Promise<AdvisorAgentResponse> {
     const replyText = `Here is a summary of your credit enrollment and financial aid parameters:\n\n` +
       `- **Full-Time Threshold**: Minimum **12 credits/term** required to maintain institutional scholarships and full-time status.\n` +

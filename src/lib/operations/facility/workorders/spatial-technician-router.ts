@@ -1,5 +1,4 @@
 import { TechnicianCandidate, SpatialRoutePlan, SpatialWaypoint } from './work-order-types';
-import { facilityStore } from '../../../db/facility-store';
 
 export interface SpatialLocation {
   buildingId: string;

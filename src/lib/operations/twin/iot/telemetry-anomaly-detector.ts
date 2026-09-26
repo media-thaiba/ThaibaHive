@@ -1,4 +1,4 @@
-import { MetricType, SpatialTelemetryFrame } from '../twin-types';
+import { MetricType } from '../twin-types';
 
 export interface AnomalyDetectionResult {
   isAnomaly: boolean;

@@ -26,8 +26,8 @@ export class PrivacyRedactionFilter {
   public applyPrivacyRedaction(
     cameraId: string,
     features: DetectedFeatureBox[],
-    frameWidth: number = 1920,
-    frameHeight: number = 1080
+    _frameWidth: number = 1920,
+    _frameHeight: number = 1080
   ): RedactionResult {
     let redactedFeaturesCount = 0;
     const masks = this.zoneMasker.getMasksForCamera(cameraId);

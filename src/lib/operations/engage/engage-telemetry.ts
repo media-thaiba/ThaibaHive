@@ -2,8 +2,6 @@ import {
   incrementCounter,
   setGauge,
   observeHistogram,
-  getCounter,
-  getGauge,
 } from '../../metrics/registry';
 import { ChannelType, MessagePriority } from './engage-types';
 
@@ -17,12 +15,12 @@ export class EngageTelemetry {
     return EngageTelemetry.instance;
   }
 
-  public recordDispatch(channel: ChannelType, priority: MessagePriority = 'standard', durationSeconds = 0.05): void {
+  public recordDispatch(_channel: ChannelType, _priority: MessagePriority = 'standard', durationSeconds = 0.05): void {
     incrementCounter('engage_dispatches_total', 1);
     observeHistogram('engage_dispatch_duration_seconds', durationSeconds);
   }
 
-  public recordFailure(channel: ChannelType, provider: string): void {
+  public recordFailure(_channel: ChannelType, _provider: string): void {
     incrementCounter('engage_delivery_failures_total', 1);
   }
 

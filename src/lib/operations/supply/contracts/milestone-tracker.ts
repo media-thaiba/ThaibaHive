@@ -1,4 +1,4 @@
-import { SupplyContractMilestoneItem, MilestoneStatus } from '../supply-types';
+import { SupplyContractMilestoneItem } from '../supply-types';
 
 export class MilestoneTracker {
   public static evaluateMilestoneReadiness(

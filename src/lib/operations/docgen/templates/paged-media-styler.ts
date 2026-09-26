@@ -25,8 +25,6 @@ export class PagedMediaStyler {
       marginLeftMm = 15,
       theme: themeProp = 'academicNavy',
       watermarkText,
-      footerText = 'ThaibaHive Academic Operating System — Confidential & Official',
-      showPageNumbers = true,
     } = options;
 
     const theme: PrintTheme =

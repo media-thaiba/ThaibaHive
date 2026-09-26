@@ -1,4 +1,4 @@
-import { Point3D, BoundingBox3D } from '../twin-types';
+import { Point3D } from '../twin-types';
 import { ParsedFacilityScene, ParsedSpaceModel } from './model-parser';
 
 export interface CameraState {

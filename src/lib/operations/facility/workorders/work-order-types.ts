@@ -1,4 +1,4 @@
-import { WorkOrderPriority, WorkOrderStatus, WorkOrderCategory } from '../facility-types';
+import { WorkOrderStatus } from '../facility-types';
 
 export interface WorkOrderTransitionRequest {
   workOrderNumber: string;

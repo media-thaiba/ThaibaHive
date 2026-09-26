@@ -1,4 +1,4 @@
-import { MobileSyncEventType, MobilePlatform } from '../docgen-types';
+import { MobileSyncEventType } from '../docgen-types';
 
 export interface AcademicPushPayload {
   institutionId: string;

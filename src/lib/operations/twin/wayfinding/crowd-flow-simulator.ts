@@ -30,7 +30,6 @@ export class CrowdFlowSimulator {
   ): CrowdEvacuationSimulationReport {
     const occupants: SimulatedOccupant[] = [];
     const exitUtilization: Record<string, number> = {};
-    const nodeQueues: Map<string, number> = new Map();
 
     let occIndex = 0;
     for (const [startNode, count] of Object.entries(occupantsPerNode)) {

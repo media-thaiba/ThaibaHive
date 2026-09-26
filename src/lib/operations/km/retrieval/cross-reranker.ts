@@ -1,4 +1,4 @@
-import { DocumentChunk, SearchResultItem } from '../km-types';
+import { SearchResultItem } from '../km-types';
 
 export class CrossReranker {
   /**

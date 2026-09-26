@@ -1,5 +1,5 @@
 import { NeuroDbStore, neuroStore } from '../../../db/neuro-store';
-import { NeuroFairShareQuotaItem, NeuroGpuItem, NeuroJobItem, NeuroNodeItem } from '../neuro-types';
+import { NeuroFairShareQuotaItem } from '../neuro-types';
 import { FairShareCalculator } from './fair-share-calculator';
 import { GangScheduler } from './gang-scheduler';
 import { GpuPlacementDecision, SchedulingCycleResult } from './scheduler-types';

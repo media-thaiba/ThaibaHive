@@ -26,7 +26,7 @@ export class GangScheduler {
 
     const preemptibleJobs = runningJobs
       .filter((rj) => rj.priority === 'preemptible' || rj.priority === 'low')
-      .sort((a, b) => (a.priority === 'preemptible' ? -1 : 1));
+      .sort((a, _b) => (a.priority === 'preemptible' ? -1 : 1));
 
     if (preemptibleJobs.length === 0) {
       return null;

@@ -2,7 +2,6 @@ import crypto from 'crypto';
 import { AlumniDbStore, alumniStore } from '../../../db/alumni-store';
 import {
   AlumniProfileItem,
-  AlumniEducationItem,
   AlumniExperienceItem,
   PrivacyConsentLevel,
 } from './types';

@@ -48,8 +48,6 @@ export class WeatherAdapter {
     }
 
     const forecast: HourlyWeatherForecast[] = [];
-    const dayOfYear = this.getDayOfYear(baseDate);
-    const startHour = baseDate.getHours();
 
     for (let h = 0; h < horizonHours; h++) {
       const forecastTime = new Date(baseDate.getTime() + h * 3600 * 1000);

@@ -61,7 +61,7 @@ export class FeeTelemetryManager {
     for (const listener of this.listeners) {
       try {
         listener(event);
-      } catch (err) {
+      } catch {
         // Suppress client disconnect errors
       }
     }

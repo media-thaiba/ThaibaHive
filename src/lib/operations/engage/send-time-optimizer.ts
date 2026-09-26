@@ -32,8 +32,8 @@ export class SendTimeOptimizer {
     const quietStart = preferences?.quietHoursStart || '21:00';
     const quietEnd = preferences?.quietHoursEnd || '07:00';
 
-    const [startHour, startMin] = quietStart.split(':').map(Number);
-    const [endHour, endMin] = quietEnd.split(':').map(Number);
+    const [startHour] = quietStart.split(':').map(Number);
+    const [endHour, endMin = 0] = quietEnd.split(':').map(Number);
 
     const candidateDate = new Date(targetDate);
     const currentHour = candidateDate.getUTCHours();

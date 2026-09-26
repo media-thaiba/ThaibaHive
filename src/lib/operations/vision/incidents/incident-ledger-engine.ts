@@ -1,6 +1,6 @@
 import { VisionDbStore } from '../../../db/vision-store';
-import { CapAlertPayload, ThreatSeverity, ThreatType, AlertStatus, IncidentStatus } from '../vision-types';
-import { ThreatScoringMatrix, ThreatScoringInput } from './threat-scoring-matrix';
+import { CapAlertPayload, ThreatSeverity, ThreatType, IncidentStatus } from '../vision-types';
+import { ThreatScoringMatrix } from './threat-scoring-matrix';
 import * as crypto from 'crypto';
 
 export interface ProcessThreatAlertParams {

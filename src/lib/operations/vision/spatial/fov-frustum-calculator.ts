@@ -25,9 +25,7 @@ export class FovFrustumCalculator {
     const pitchRad = (config.orientation.pitchDeg * Math.PI) / 180.0;
     const yawRad = (config.orientation.yawDeg * Math.PI) / 180.0;
 
-    // Near and far plane half-dimensions
-    const nearH = near * Math.tan(vFovRad / 2);
-    const nearW = near * Math.tan(hFovRad / 2);
+    // Far plane half-dimensions
     const farH = far * Math.tan(vFovRad / 2);
     const farW = far * Math.tan(hFovRad / 2);
 

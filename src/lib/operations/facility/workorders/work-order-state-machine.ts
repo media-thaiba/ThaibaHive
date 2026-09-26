@@ -1,5 +1,5 @@
 import { WorkOrderStatus } from '../facility-types';
-import { WorkOrderTransitionRequest, WorkOrderStateTransitionResult } from './work-order-types';
+import { WorkOrderTransitionRequest } from './work-order-types';
 
 export class WorkOrderStateMachine {
   private static readonly VALID_TRANSITIONS: Record<WorkOrderStatus, WorkOrderStatus[]> = {

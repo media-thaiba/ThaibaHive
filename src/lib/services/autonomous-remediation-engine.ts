@@ -194,7 +194,7 @@ export class AutonomousRemediationEngine {
   private static async executeSingleAction(
     actionType: string,
     alert: RiskAlertPayload,
-    ruleId: string
+    _ruleId: string
   ): Promise<{ actionType: string; status: "success" | "failed" | "skipped"; details?: string }> {
     try {
       if (actionType === "auto_ticket") {

@@ -3,8 +3,6 @@
  * SUPPLY-HIVE / ProcurementOS (Sprint-054)
  */
 
-import { ContractType, ContractStatus, MilestoneStatus } from '../supply-types';
-
 export interface ContractRenewalAlert {
   contractId: string;
   contractCode: string;

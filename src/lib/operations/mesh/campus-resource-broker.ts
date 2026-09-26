@@ -1,4 +1,4 @@
-import { CampusResource, CapacityAllocation, ResourceReservation } from './mesh-types';
+import { CampusResource, ResourceReservation } from './mesh-types';
 
 /**
  * Cross-Campus Resource Broker

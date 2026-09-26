@@ -15,7 +15,7 @@ export class SemanticChunker {
    */
   public chunkDocument(doc: ParsedDocument, options?: ChunkingOptions): DocumentChunk[] {
     const maxTokens = options?.maxTokensPerChunk || this.defaultMaxTokens;
-    const overlap = options?.overlapTokens || this.defaultOverlap;
+    const _overlap = options?.overlapTokens || this.defaultOverlap;
     const chunks: DocumentChunk[] = [];
 
     let chunkCounter = 0;

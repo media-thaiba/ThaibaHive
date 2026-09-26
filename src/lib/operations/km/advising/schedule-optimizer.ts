@@ -1,4 +1,4 @@
-import { TermSchedulePlan, DegreeRequirementGroup } from './advising-types';
+import { TermSchedulePlan } from './advising-types';
 import { prerequisiteValidator } from './prereq-validator';
 
 export interface ScheduleOptimizerOptions {

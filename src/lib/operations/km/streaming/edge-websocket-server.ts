@@ -1,4 +1,4 @@
-import { wsClientManager, WebSocketClientSession } from './ws-client-manager';
+import { wsClientManager } from './ws-client-manager';
 import { agentOrchestrator } from '../conversational/agent-orchestrator';
 
 export interface WSMessagePayload {

@@ -1,4 +1,4 @@
-import { LineageEntityType, NeuroDatasetProvenanceItem, NeuroMerkleLineageNodeItem } from '../neuro-types';
+import { NeuroDatasetProvenanceItem, NeuroMerkleLineageNodeItem } from '../neuro-types';
 
 export interface DatasetManifest {
   datasetId: string;

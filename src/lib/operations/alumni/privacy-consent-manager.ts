@@ -1,4 +1,4 @@
-import { AlumniProfileItem, PrivacyConsentLevel } from './types';
+import { AlumniProfileItem } from './types';
 
 export type ViewerRole = 'super_admin' | 'admin' | 'alumni' | 'student' | 'public_anonymous';
 

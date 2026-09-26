@@ -1,4 +1,4 @@
-import { MetricType, SensorProtocol, SpatialTelemetryFrame } from '../twin-types';
+import { MetricType, SpatialTelemetryFrame } from '../twin-types';
 
 export interface RawMqttMessage {
   topic: string;
@@ -33,14 +33,14 @@ export class ProtocolAdapters {
   public static parseMqtt(msg: RawMqttMessage, defaultTenant: string = 'global'): Partial<SpatialTelemetryFrame>[] {
     const parts = msg.topic.split('/');
     // e.g. campus/inst_01/FAC-01/SPC-101/SEN-01/temperature
-    let tenantId = defaultTenant;
+    let _tenantId = defaultTenant;
     let facilityId = 'unknown';
     let spaceId: string | undefined = undefined;
     let sensorId = 'unknown';
     let metricType: MetricType = 'temperature_c';
 
     if (parts.length >= 6) {
-      tenantId = parts[1];
+      _tenantId = parts[1];
       facilityId = parts[2];
       spaceId = parts[3] === 'none' ? undefined : parts[3];
       sensorId = parts[4];
@@ -83,7 +83,7 @@ export class ProtocolAdapters {
   /**
    * Parse CoAP message: /sensors/{facilityId}/{sensorId}
    */
-  public static parseCoap(msg: RawCoapMessage, tenantId: string = 'global'): Partial<SpatialTelemetryFrame>[] {
+  public static parseCoap(msg: RawCoapMessage, _tenantId: string = 'global'): Partial<SpatialTelemetryFrame>[] {
     const parts = msg.path.split('/').filter(Boolean);
     const facilityId = parts[1] || 'facility_default';
     const sensorId = parts[2] || 'sensor_default';
@@ -121,7 +121,7 @@ export class ProtocolAdapters {
   /**
    * Parse HTTP Webhook multi-sensor payload
    */
-  public static parseWebhook(payload: RawWebhookPayload, tenantId: string = 'global'): Partial<SpatialTelemetryFrame>[] {
+  public static parseWebhook(payload: RawWebhookPayload, _tenantId: string = 'global'): Partial<SpatialTelemetryFrame>[] {
     return payload.readings.map((r) => {
       const metric = this.normalizeMetricName(r.metric);
       const numVal = typeof r.value === 'number' ? r.value : parseFloat(r.value) || 0;

@@ -1,4 +1,4 @@
-import { ClientGradientUpdate, ModelWeights } from './federated-types';
+import { ClientGradientUpdate } from './federated-types';
 import * as crypto from 'crypto';
 
 /**

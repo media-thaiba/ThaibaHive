@@ -1,4 +1,4 @@
-import { Polygon2D, Point3D } from '../twin-types';
+import { Polygon2D } from '../twin-types';
 
 export interface GeneratedMesh3D {
   vertices: number[]; // Flat array [x0, y0, z0, x1, y1, z1, ...]

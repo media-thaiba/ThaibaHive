@@ -1,4 +1,4 @@
-import { JobPriority, JobStatus, NeuroGpuItem, NeuroJobItem, NeuroNodeItem } from '../neuro-types';
+import { NeuroJobItem, NeuroNodeItem, NeuroGpuItem } from '../neuro-types';
 
 export interface FairShareWeightConfig {
   fairShareWeight: number; // e.g. 0.50

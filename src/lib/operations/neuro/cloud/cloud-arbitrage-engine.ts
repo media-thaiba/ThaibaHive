@@ -1,5 +1,5 @@
 import { NeuroJobItem } from '../neuro-types';
-import { ArbitrageDecision, CloudSpotQuote } from './cloud-types';
+import { ArbitrageDecision } from './cloud-types';
 import { SpotPriceAggregator } from './spot-price-aggregator';
 
 export class CloudArbitrageEngine {

@@ -29,7 +29,7 @@ export class GraduationSimulator {
   ): CohortSimulationResult {
     const identifiedBottlenecks = this.analyzer.analyzeBottlenecks();
     const cci = this.solver.calculateCurricularComplexityIndex();
-    const { criticalPathLength } = this.solver.calculateCriticalPath();
+    this.solver.calculateCriticalPath();
 
     // Baseline graduation assumptions
     // More complex curricular graph & lower pass rates reduce on-time graduation

@@ -3,8 +3,6 @@ import { AlumniDbStore, alumniStore } from '../../../../db/alumni-store';
 import {
   AlumniMentorshipRequestItem,
   AlumniMentorshipSessionItem,
-  MentorshipRequestStatus,
-  MentorshipSessionStatus,
 } from '../types';
 
 export interface ScheduleSessionInput {

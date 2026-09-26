@@ -1,7 +1,6 @@
 import { FeeDbStore } from '../../../../db/fee-store';
 import {
   FeeStudentAllocationItem,
-  FeeInstallmentItem,
   AgingBucket,
 } from '../types';
 

@@ -1,5 +1,4 @@
 import { hybridFusionEngine } from '../../retrieval/hybrid-fusion-engine';
-import { campusGraph } from '../../graph/knowledge-graph-engine';
 import { degreeAuditor } from '../../advising/degree-auditor';
 import { prerequisiteValidator } from '../../advising/prereq-validator';
 import { scheduleOptimizer } from '../../advising/schedule-optimizer';
