@@ -9,7 +9,7 @@ import { ZasmDbStore } from '@/lib/security/zasm/zasm-db-store';
 import { ZasmMetricsTracker } from '@/lib/security/zasm/zasm-metrics';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (_req: Request) => {
     try {
       // Ingest standard active packages from workspace
       const dependencies = [
@@ -20,7 +20,7 @@ export const POST = withDPoP(
         { name: 'react', version: '19.0.0', license: 'MIT', isDirect: true },
       ];
 
-      const { document, rawOutput } = SbomGenerator.generateSbom({
+      const { document } = SbomGenerator.generateSbom({
         projectName: 'ThaibaHive',
         version: '3.25.0',
         dependencies,

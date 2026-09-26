@@ -5,7 +5,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { ViolationSeverity, ViolationStatus } from "@/lib/compliance/types";
 
-async function getHandler(req: Request, session: any) {
+async function getHandler(req: Request, _session: any) {
   try {
     const { searchParams } = new URL(req.url);
     const tenantId = searchParams.get("tenantId") || undefined;

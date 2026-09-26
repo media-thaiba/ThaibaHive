@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { db } from "@/db";
 import { scheduledJobs, jobExecutions } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { jobUpdateSchema } from "@/lib/validation/schemas";
 import { ReportQueue } from "@/lib/services/report-queue";
 import { PreferenceAuditService } from "@/lib/services/preference-audit";

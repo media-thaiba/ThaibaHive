@@ -8,7 +8,7 @@ const diffSchema = z.object({
   targetSnapshotUri: z.string().min(1),
 });
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, _session: any) {
   try {
     const body = await req.json();
     const parsed = diffSchema.safeParse(body);

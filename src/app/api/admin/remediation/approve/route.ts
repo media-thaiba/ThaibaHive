@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { ApprovalGateway } from "@/lib/remediation/approval-gateway";
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, _session: any) {
   try {
     const { workflowId, approvalKey, action } = await req.json();
 

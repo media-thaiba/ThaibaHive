@@ -6,7 +6,7 @@ import { AfedAuditLogger } from '@/lib/operations/persistence/afed-audit-events'
 
 const dbStore = AfedDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (_request: Request) => {
   try {
     const models = dbStore.getAllModels();
     return NextResponse.json({ success: true, models }, { status: 200 });
@@ -26,7 +26,7 @@ export const POST = requireAuth(async (request: Request) => {
       return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
     }
 
-    const { modelId, name, domain, version, architecture, inputDimensions, outputDimensions, hyperparameters, initialWeights } = parse.data;
+    const { modelId, name, domain, version, architecture, inputDimensions, outputDimensions, hyperparameters } = parse.data;
 
     dbStore.saveModel({
       modelId,

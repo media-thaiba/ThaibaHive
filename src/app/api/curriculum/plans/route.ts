@@ -36,7 +36,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
     }
 
     const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
-    const { courses, ...planData } = parsed.data;
+    const { courses: _courses, ...planData } = parsed.data;
 
     // Create plan header
     const plan = await curriculumStore.createDegreePlan({

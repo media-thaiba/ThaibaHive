@@ -5,7 +5,6 @@
  * bounded in size, rate-limited per IP, and only summarized in logs.
  */
 
-import { NextResponse } from "next/server";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const rateBuckets = new Map<string, number>();

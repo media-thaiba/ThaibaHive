@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { academicYears } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import {  } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (_request: Request) => {
   const rows = await db
     .select()
     .from(academicYears)

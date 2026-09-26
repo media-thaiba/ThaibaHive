@@ -1,4 +1,3 @@
-import {  } from "next/server";
 import { db } from "@/db";
 import { aiPredictions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
@@ -6,13 +5,10 @@ import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
-import { getUserInstitutionScope } from "@/lib/auth";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const format = (url.searchParams.get("format") || "csv").toLowerCase();
-  const userInstScope = await getUserInstitutionScope();
-  const institutionId = url.searchParams.get("institutionId") || userInstScope || "inst_default";
 
   let predictionsData: Record<string, unknown>[] = [];
 

@@ -14,7 +14,7 @@ export const GET = requireAuth(async (req: Request) => {
   return NextResponse.json({ quotes });
 }, 'neuro:arbitrage:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, _user: any) => {
   try {
     const body = await req.json();
     const parsed = arbitrageEvaluateSchema.safeParse(body);

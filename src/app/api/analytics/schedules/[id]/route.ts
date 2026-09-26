@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { reportSchedules } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { reportScheduleCreateSchema } from "@/lib/validation/schemas";
 import { getActorInstitutionIds } from "@/lib/api/tenant-scope";
 

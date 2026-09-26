@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { syncTuningPolicies } from "@/db/schema";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (_request: Request) => {
   try {
     const policies = await db.select().from(syncTuningPolicies).all();
     

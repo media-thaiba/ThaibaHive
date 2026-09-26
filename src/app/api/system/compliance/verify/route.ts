@@ -13,7 +13,7 @@ const verifyQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50000).optional().default(10000),
 });
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, _session: any) {
   try {
     let body = {};
     if (req.method === "POST") {

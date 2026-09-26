@@ -31,7 +31,7 @@ export const GET = requireAuth(async (request: Request, user: any) => {
   }
 }, 'twin:facilities:read');
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, _user: any) => {
   try {
     const body = await request.json();
     const parse = assetCreateSchema.safeParse(body);

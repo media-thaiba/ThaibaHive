@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { PostgresClusterMonitor } from "@/lib/database/cluster-monitor";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (_request: Request, _session) => {
   try {
     const monitor = new PostgresClusterMonitor([
       { nodeId: "node-1-primary", role: "PRIMARY", endpoint: "postgresql://db1.thaibahive.org:5432", isHealthy: true, replicationLagBytes: 0, replicationLagMs: 0, lastCheckedAt: Date.now() },

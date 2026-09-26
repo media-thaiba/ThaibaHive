@@ -7,7 +7,7 @@ import { auditAnomalyDetector } from "@/lib/compliance/anomaly-detector";
 import { complianceMetrics } from "@/lib/observability/compliance-metrics";
 import { ViolationSeverity, TelemetrySummary } from "@/lib/compliance/types";
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, _session: any) {
   try {
     const { searchParams } = new URL(req.url);
     const tenantId = searchParams.get("tenantId") || undefined;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { ApprovalGateway } from "@/lib/agents/healing/approval-gateway";
 
-export const GET = requireAuth(async (request, session) => {
+export const GET = requireAuth(async (_request, _session) => {
   try {
     const gateway = ApprovalGateway.getInstance();
     const pending = gateway.getPendingRequests();
@@ -12,7 +12,7 @@ export const GET = requireAuth(async (request, session) => {
   }
 }, "agents:manage");
 
-export const POST = requireAuth(async (request, session) => {
+export const POST = requireAuth(async (request, _session) => {
   try {
     const { approvalId, action } = await request.json();
     if (!approvalId || !action) {

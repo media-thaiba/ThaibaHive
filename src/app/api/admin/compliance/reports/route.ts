@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require-auth';
 
-async function handler(req: Request) {
+async function handler(_req: Request) {
   return NextResponse.json({ reports: [] });
 }
 

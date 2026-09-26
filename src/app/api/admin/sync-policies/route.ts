@@ -5,7 +5,7 @@ import { syncTuningPolicies } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { syncPolicyUpdateSchema } from "@/lib/validation/schemas";
 
-export const GET = requireAuth(async (request, session) => {
+export const GET = requireAuth(async (_request, _session) => {
   try {
     const policies = await db.select().from(syncTuningPolicies).all();
     return NextResponse.json({ success: true, policies });

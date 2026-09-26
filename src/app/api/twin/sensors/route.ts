@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { sensorCreateSchema, sensorUpdateSchema } from '@/lib/validation/twin-schemas';
+import { sensorCreateSchema } from '@/lib/validation/twin-schemas';
 import { TwinDbStore } from '@/lib/db/twin-store';
-import { SensorHealthMonitor } from '@/lib/operations/twin/iot/sensor-health-monitor';
 
 const store = TwinDbStore.getInstance();
-const healthMonitor = new SensorHealthMonitor();
 
 export const GET = requireAuth(async (request: Request, user: any) => {
   try {
@@ -20,7 +18,7 @@ export const GET = requireAuth(async (request: Request, user: any) => {
   }
 }, 'twin:facilities:read');
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, _user: any) => {
   try {
     const body = await request.json();
     const parse = sensorCreateSchema.safeParse(body);

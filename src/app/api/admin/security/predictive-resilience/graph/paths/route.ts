@@ -3,7 +3,7 @@
  * Sprint-042 (ARES) — ARES-020
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { ThreatGraphQueryEngine } from '@/lib/security/graph/graph-query-engine';

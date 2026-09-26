@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { DatabaseHealer } from "@/lib/agents/healing/database-healer";
 
-export const POST = requireAuth(async (request, session) => {
+export const POST = requireAuth(async (request, _session) => {
   try {
     const { agentType } = await request.json();
     if (!agentType) {

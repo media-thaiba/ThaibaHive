@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { facilityStreamManager } from '@/lib/operations/facility/streaming/facility-stream-manager';
 

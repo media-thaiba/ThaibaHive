@@ -4,7 +4,7 @@ import { getDeltaChanges } from "@/lib/sync/sync-engine-service";
 import { deltaSyncQuerySchema } from "@/lib/validation/schemas";
 import { getUserInstitutionScope } from "@/lib/auth";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const parse = deltaSyncQuerySchema.safeParse({
     sinceVersion: url.searchParams.get("sinceVersion") || 0,

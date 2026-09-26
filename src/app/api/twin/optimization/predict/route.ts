@@ -17,7 +17,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
       return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
     }
 
-    const { facilityId, spaceId, forecastHours, enableHvacOptimization, institutionId } = parse.data;
+    const { facilityId, spaceId, enableHvacOptimization, institutionId } = parse.data;
     const tenantId = institutionId || user?.institutionId || 'global';
 
     const space = await store.getSpaceById(spaceId, tenantId);

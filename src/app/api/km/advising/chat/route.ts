@@ -7,7 +7,7 @@ import { cloudTranslationAdapter } from '@/lib/operations/km/localization/cloud-
 import { kmAnalyticsAggregator } from '@/lib/operations/km/analytics/km-analytics-aggregator';
 import { kmTelemetry } from '@/lib/operations/km/km-telemetry';
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, _user: any) => {
   try {
     const body = await request.json();
     const parse = kmAdvisingChatSchema.safeParse(body);

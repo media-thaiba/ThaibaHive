@@ -4,7 +4,7 @@ import { executiveAnalyticsQuerySchema } from "@/lib/validation/schemas";
 import { db } from "@/db";
 
 export async function GET(req: NextRequest) {
-  return requireAuth(async (req, user) => {
+  return requireAuth(async (req, _user) => {
     try {
       const { searchParams } = new URL(req.url);
       const queryParams = {

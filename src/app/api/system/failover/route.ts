@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifySession } from "@thaiba/auth";
 import { FailoverDetector } from "@/lib/db/failover-detector";
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   const session = await verifySession();
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });

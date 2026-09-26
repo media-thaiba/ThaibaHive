@@ -6,7 +6,7 @@ import { evaluationFormCreateSchema } from "@/lib/validation/schemas";
 import { getUserInstitutionScope } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (_request: Request, _session) => {
   const institutionId = (await getUserInstitutionScope()) || "inst_default";
   const forms = await db
     .select()
@@ -17,7 +17,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ forms });
 }, "performance:read");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const institutionId = (await getUserInstitutionScope()) || "inst_default";
     const body = await request.json();

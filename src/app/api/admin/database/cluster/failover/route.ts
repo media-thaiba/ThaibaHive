@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { PostgresClusterMonitor } from "@/lib/database/cluster-monitor";
 import { PostgresFailoverManager } from "@/lib/database/failover-manager";
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json().catch(() => ({}));
     const { failedNodeId = "node-1-primary" } = body;

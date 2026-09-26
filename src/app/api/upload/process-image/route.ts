@@ -25,8 +25,8 @@ async function getSharp() {
     // @ts-expect-error sharp is optional — install with: pnpm add sharp
     const sharp = await import("sharp");
     return sharp.default as (input: Buffer) => {
-      resize: (w: number, h: number, opts?: object) => ReturnType<typeof getSharpInstance>;
-      webp: (opts?: object) => ReturnType<typeof getSharpInstance>;
+      resize: (w: number, h: number, opts?: object) => ReturnType<typeof _getSharpInstance>;
+      webp: (opts?: object) => ReturnType<typeof _getSharpInstance>;
       toBuffer: () => Promise<Buffer>;
       metadata: () => Promise<{ format?: string }>;
     };
@@ -35,7 +35,7 @@ async function getSharp() {
   }
 }
 
-function getSharpInstance(): any { return null; }
+function _getSharpInstance(): any { return null; }
 
 export const POST = requireAuth(async (request: Request) => {
   const contentType = request.headers.get("content-type") || "";

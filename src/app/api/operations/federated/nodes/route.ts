@@ -7,7 +7,7 @@ import { AfedMetricsTracker } from '@/lib/operations/persistence/afed-metrics';
 const dbStore = AfedDbStore.getInstance();
 const metricsTracker = AfedMetricsTracker.getInstance();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (_request: Request) => {
   try {
     const nodes = dbStore.getAllNodes();
     return NextResponse.json({ success: true, nodes }, { status: 200 });

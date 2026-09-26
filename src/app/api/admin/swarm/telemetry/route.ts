@@ -53,7 +53,7 @@ async function handler(req: Request, session: any) {
     let decompressed: any;
     try {
       decompressed = await decompressPayload(buffer, method);
-    } catch (decompError) {
+    } catch {
       return NextResponse.json({ error: "Failed to decompress telemetry payload" }, { status: 400 });
     }
 

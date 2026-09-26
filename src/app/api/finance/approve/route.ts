@@ -25,7 +25,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  const { requestId, requestType, action, notes, signature } = parsed.data;
+  const { requestId, requestType, action, notes } = parsed.data;
 
   if (action === "reject" && (!notes || !notes.trim())) {
     return NextResponse.json(

@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  return requireAuth(async (req, user) => {
+  return requireAuth(async (_req, _user) => {
     try {
       return NextResponse.json({
         timestamp: new Date().toISOString(),

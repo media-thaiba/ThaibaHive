@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { RegionHealthManager } from "@/lib/mesh/region-health";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (_request: Request, _session) => {
   try {
     const manager = new RegionHealthManager([
       { regionId: "us-east", nodeName: "Primary-US", endpoint: "https://us-east.api.thaibahive.org", status: "ONLINE", latencyMs: 10, lastHeartbeat: Date.now() },

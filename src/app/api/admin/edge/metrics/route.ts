@@ -4,7 +4,7 @@ import { getCacheAnalytics } from "@/lib/monitoring/cache-analytics";
 import { getUsageSummary } from "@/lib/monitoring/usage-tracker";
 import { getRawMetrics } from "@/lib/monitoring/edge-analytics";
 
-export const GET = requireAuth(async (request, session) => {
+export const GET = requireAuth(async (request, _session) => {
   try {
     const url = new URL(request.url);
     const tenantParam = url.searchParams.get("tenantId") || undefined;

@@ -42,7 +42,7 @@ const defaultCampuses = [
   },
 ];
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (_request: Request) => {
   try {
     const benchmarks = CrossCampusBenchmarker.computeConfidentialBenchmarking(defaultCampuses);
     return NextResponse.json({ success: true, benchmarks }, { status: 200 });

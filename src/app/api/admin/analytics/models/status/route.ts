@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (_request: Request, _session) => {
   try {
     return NextResponse.json({
       success: true,

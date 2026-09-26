@@ -40,7 +40,7 @@ export const POST = withPublicApm(async function POST(request: Request) {
       status: 200,
       headers: { 'Content-Type': 'text/xml' },
     });
-  } catch (error: any) {
+  } catch {
     const fallbackTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say>Thank you for calling. Our lines are currently busy. Please visit our online portal.</Say>

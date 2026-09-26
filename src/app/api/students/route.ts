@@ -25,7 +25,7 @@ const studentCreateSchema = z.object({
   qrCode: z.string().optional(),
 });
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const institutionId = searchParams.get("institutionId") || undefined;
   const classId = searchParams.get("classId") || undefined;
@@ -45,7 +45,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ students: rows, limit, offset });
 }, "students:read");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const parsed = studentCreateSchema.safeParse(body);
   if (!parsed.success) {

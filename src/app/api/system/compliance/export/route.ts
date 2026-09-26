@@ -9,7 +9,7 @@ const exportSchema = z.object({
   format: z.enum(["json", "pdf"]).optional().default("json"),
 });
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, _session: any) {
   try {
     let body = {};
     try {

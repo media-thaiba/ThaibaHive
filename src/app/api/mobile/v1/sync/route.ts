@@ -39,7 +39,7 @@ export const POST = requireAuth(async (request: Request) => {
             processedMutations.push(mut.id);
             break;
         }
-      } catch (err) {
+      } catch {
         failedMutations.push(mut.id);
       }
     }

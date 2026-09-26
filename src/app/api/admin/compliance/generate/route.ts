@@ -13,7 +13,7 @@ const schema = z.object({
   format: z.enum(['json', 'markdown']).default('json'),
 });
 
-async function handler(req: Request, session: SessionPayload) {
+async function handler(req: Request, _session: SessionPayload) {
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
@@ -39,7 +39,7 @@ async function handler(req: Request, session: SessionPayload) {
       frameworksEvaluated: result.frameworksEvaluated,
       ...report,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

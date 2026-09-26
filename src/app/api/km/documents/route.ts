@@ -4,7 +4,7 @@ import { kmDocumentIngestSchema } from '@/lib/validation/km-schemas';
 import { meshSyncOrchestrator } from '@/lib/operations/km/ingestion/mesh-sync-orchestrator';
 import { kmStore } from '@/lib/db/km-store';
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (_request: Request) => {
   try {
     const docs = await kmStore.listDocuments('global');
     return NextResponse.json({ success: true, total: docs.length, documents: docs }, { status: 200 });

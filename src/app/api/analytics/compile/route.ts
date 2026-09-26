@@ -4,7 +4,7 @@ import { ReportGeneratorService } from "@/lib/services/report-generator";
 import { getActorInstitutionIds } from "@/lib/api/tenant-scope";
 
 export const POST = requireAuth(async (request, session) => {
-  const { role, staffId } = session;
+  const { staffId } = session;
   const body = await request.json();
 
   const { type, format, startDate, endDate, classId } = body;

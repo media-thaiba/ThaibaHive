@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { performanceReviews,  } from "@/db/schema";
+import { performanceReviews } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
 import { getUserInstitutionScope } from "@/lib/auth";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (_request: Request, _session) => {
   const institutionId = (await getUserInstitutionScope()) || "inst_default";
   const reviews = await db
     .select()

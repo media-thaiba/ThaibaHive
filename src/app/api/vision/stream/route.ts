@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { VisionStreamManager } from '@/lib/operations/vision/streaming/vision-stream-manager';
 

@@ -3,14 +3,14 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { tenantRouter, TenantRegion } from "@/db";
 import { tenantMigrationOrchestrator } from "@/lib/tenant/tenant-migration";
 
-async function getHandler(request: Request, session: any) {
+async function getHandler(_request: Request, _session: any) {
   return NextResponse.json({
     tenantMappings: tenantRouter.getAllTenantMappings(),
     history: tenantMigrationOrchestrator.getHistory(),
   });
 }
 
-async function postHandler(request: Request, session: any) {
+async function postHandler(request: Request, _session: any) {
   try {
     const body = await request.json();
     const { tenantId, targetRegion } = body;

@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     if (rawBody.length > MAX_COMPRESSED_SIZE) {
       return NextResponse.json({ error: "Payload too large (body limit exceeded)" }, { status: 413 });
     }
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to read request body" }, { status: 400 });
   }
 

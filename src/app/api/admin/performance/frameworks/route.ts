@@ -4,9 +4,9 @@ import { competencyFrameworks } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { competencyFrameworkCreateSchema } from "@/lib/validation/schemas";
 import { getUserInstitutionScope } from "@/lib/auth";
-import { eq,  } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (_request: Request, _session) => {
   const institutionId = (await getUserInstitutionScope()) || "inst_default";
   const frameworks = await db
     .select()
@@ -17,7 +17,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ frameworks });
 }, "performance:read");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const institutionId = (await getUserInstitutionScope()) || "inst_default";
     const body = await request.json();

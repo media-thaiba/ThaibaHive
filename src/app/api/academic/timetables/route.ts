@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { timetableSlots, timetableEntries, classes, staff, academicYears } from "@/db/schema";
+import { timetableSlots, timetableEntries, classes, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and, asc } from "drizzle-orm";
 

@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { globalSearchSchema } from "@/lib/validation/schemas";
 import { globalSearch } from "@/lib/api/global-search/service";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
 try {
     const { searchParams } = new URL(request.url);
 
@@ -67,7 +67,7 @@ export const OPTIONS = requireAuth(async () => {
 });
 
 // Global search distribution route for specific entity types
-const tasks = requireAuth(async (request: Request, session) => {
+export const _tasks = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -85,7 +85,7 @@ const tasks = requireAuth(async (request: Request, session) => {
   });
 });
 
-const staff = requireAuth(async (request: Request, session) => {
+export const _staff = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -103,7 +103,7 @@ const staff = requireAuth(async (request: Request, session) => {
   });
 });
 
-const students = requireAuth(async (request: Request, session) => {
+export const _students = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -121,7 +121,7 @@ const students = requireAuth(async (request: Request, session) => {
   });
 });
 
-const events = requireAuth(async (request: Request, session) => {
+export const _events = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -139,7 +139,7 @@ const events = requireAuth(async (request: Request, session) => {
   });
 });
 
-const announcements = requireAuth(async (request: Request, session) => {
+export const _announcements = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 

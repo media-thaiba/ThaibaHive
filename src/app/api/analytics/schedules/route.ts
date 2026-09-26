@@ -7,7 +7,7 @@ import { reportScheduleCreateSchema } from "@/lib/validation/schemas";
 import { getActorInstitutionIds } from "@/lib/api/tenant-scope";
 
 export const GET = requireAuth(async (request, session) => {
-  const { role, staffId } = session;
+  const { staffId } = session;
 
   const actorInstIds = await getActorInstitutionIds(staffId);
   const institutionId = Array.from(actorInstIds)[0];
@@ -31,7 +31,7 @@ export const GET = requireAuth(async (request, session) => {
 }, "reports:read");
 
 export const POST = requireAuth(async (request, session) => {
-  const { role, staffId } = session;
+  const { staffId } = session;
 
   const actorInstIds = await getActorInstitutionIds(staffId);
   const institutionId = Array.from(actorInstIds)[0];

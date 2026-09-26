@@ -12,7 +12,7 @@ const createSnapshotSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-async function getHandler(req: Request, session: any) {
+async function getHandler(req: Request, _session: any) {
   try {
     const { searchParams } = new URL(req.url);
     const tenantId = searchParams.get("tenantId") || undefined;

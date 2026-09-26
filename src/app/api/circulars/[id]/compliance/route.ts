@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { circularCampusCompliance, institutions, circulars } from "@/db/schema";
+import { circularCampusCompliance, institutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
