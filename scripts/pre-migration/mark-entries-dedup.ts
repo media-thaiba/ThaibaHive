@@ -6,7 +6,7 @@ import { inArray } from "drizzle-orm";
  * Deduplicate mark_entries on composite key (exam_schedule_id, student_id)
  * Safe and idempotent.
  */
-export async function deduplicateMarkEntries(dbClient: any = db): Promise<{ duplicateGroups: number; deletedRows: number }> {
+export async function deduplicateMarkEntries(dbClient: typeof db = db): Promise<{ duplicateGroups: number; deletedRows: number }> {
   console.log("[pre-migration] Checking mark_entries for duplicate records...");
 
   // Query all mark entries

@@ -7,6 +7,7 @@
  */
 
 import { NeuroDbStore } from '../../src/lib/db/neuro-store';
+import { NeuroJobItem } from '../../src/lib/operations/neuro/neuro-types';
 import { GpuSchedulerEngine } from '../../src/lib/operations/neuro/scheduler/gpu-scheduler-engine';
 import { SpotPriceAggregator } from '../../src/lib/operations/neuro/cloud/spot-price-aggregator';
 import { CloudArbitrageEngine } from '../../src/lib/operations/neuro/cloud/cloud-arbitrage-engine';
@@ -90,9 +91,10 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Provisioned ${clusters.length} Cluster, ${nodes.length} DGX Nodes, ${gpus.length} NVLink H100 GPUs.`);
     stageResults.push({ stage: 1, name: 'Cluster & GPU Provisioning', status: 'passed', details: `${clusters.length} Clusters, ${nodes.length} Nodes, ${gpus.length} GPUs` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 1: ${err.message}`);
-    stageResults.push({ stage: 1, name: 'Cluster & GPU Provisioning', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 1: ${errMsg}`);
+    stageResults.push({ stage: 1, name: 'Cluster & GPU Provisioning', status: 'failed', details: errMsg });
   }
 
   // Stage 2: Fair-Share Priority Queue & Gang-Scheduling
@@ -139,16 +141,39 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Evaluated queue in ${cycle.evaluationDurationMs}ms: ${cycle.scheduledCount} jobs scheduled, gang-allocated 16 GPUs.`);
     stageResults.push({ stage: 2, name: 'Fair-Share & Gang Scheduling', status: 'passed', details: `Scheduled ${cycle.scheduledCount} jobs, 16 GPUs gang-allocated` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 2: ${err.message}`);
-    stageResults.push({ stage: 2, name: 'Fair-Share & Gang Scheduling', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 2: ${errMsg}`);
+    stageResults.push({ stage: 2, name: 'Fair-Share & Gang Scheduling', status: 'failed', details: errMsg });
   }
 
   // Stage 3: Spot Price Arbitrage Matrix & Cloud Bursting
   try {
     console.log('\n--- Stage 3: Multi-Cloud Spot Arbitrage Matrix & Cloud Bursting ---');
     const _quotes = SpotPriceAggregator.getQuotes('NVIDIA-H100');
-    const dummyJob: any = { id: 'JOB-LARGE-LLM', requestedGpus: 8, gpuModelRequirement: 'NVIDIA-H100', priority: 'normal' };
+    const dummyJob: NeuroJobItem = {
+      id: 'JOB-LARGE-LLM',
+      jobId: 'JOB-LARGE-LLM',
+      jobName: 'Large-LLM-Training',
+      userId: 'staff_ai',
+      departmentId: 'dept_cs',
+      clusterId: 'CLUSTER-TITAN-01',
+      jobType: 'distributed_training',
+      priority: 'normal',
+      status: 'queued',
+      requestedGpus: 8,
+      gpuModelRequirement: 'NVIDIA-H100',
+      minVramBytes: 85899345920,
+      containerImage: 'pytorch:2.2-cuda12.1',
+      entrypointCommand: 'torchrun train.py',
+      runtimeSeconds: 0,
+      tokensCostTotal: 0,
+      carbonSavedKg: 0,
+      merkleProofHash: '',
+      institutionId: 'tenant_main',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
     // When on-premise cluster is 90% utilized
     const arbitrage = CloudArbitrageEngine.evaluateArbitrage(dummyJob, 4.0, 28, 32);
@@ -156,9 +181,10 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Arbitrage recommended: ${arbitrage.recommendedTarget.toUpperCase()} (Savings: ${arbitrage.savingsPercent}% vs on-demand)`);
     stageResults.push({ stage: 3, name: 'Spot Arbitrage Matrix', status: 'passed', details: `Target: ${arbitrage.recommendedTarget}, Savings: ${arbitrage.savingsPercent}%` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 3: ${err.message}`);
-    stageResults.push({ stage: 3, name: 'Spot Arbitrage Matrix', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 3: ${errMsg}`);
+    stageResults.push({ stage: 3, name: 'Spot Arbitrage Matrix', status: 'failed', details: errMsg });
   }
 
   // Stage 4: Spot Preemption Interception & Emergency Checkpoint Flush
@@ -183,20 +209,41 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Handled preemption in ${recovery.recoveryDurationMs}ms: Flushed emergency weights at Step ${recovery.resumedAtStep}`);
     stageResults.push({ stage: 4, name: 'Preemption Resilience', status: 'passed', details: `Emergency snapshot saved at Step ${recovery.resumedAtStep}` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 4: ${err.message}`);
-    stageResults.push({ stage: 4, name: 'Preemption Resilience', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 4: ${errMsg}`);
+    stageResults.push({ stage: 4, name: 'Preemption Resilience', status: 'failed', details: errMsg });
   }
 
   // Stage 5: Carbon-Aware Microgrid Solar Compute Scheduling
   try {
     console.log('\n--- Stage 5: Carbon-Aware Microgrid Solar Compute Scheduling ---');
+    const solarJob: NeuroJobItem = {
+      id: 'job-solar',
+      jobId: 'job-solar',
+      jobName: 'Solar-Compute-Job',
+      userId: 'staff_ai',
+      departmentId: 'dept_cs',
+      clusterId: 'CLUSTER-TITAN-01',
+      jobType: 'batch_training',
+      priority: 'normal',
+      status: 'queued',
+      requestedGpus: 8,
+      gpuModelRequirement: 'NVIDIA-H100',
+      minVramBytes: 85899345920,
+      containerImage: 'pytorch:2.2-cuda12.1',
+      entrypointCommand: 'python train.py',
+      runtimeSeconds: 0,
+      tokensCostTotal: 0,
+      carbonSavedKg: 0,
+      merkleProofHash: '',
+      institutionId: 'tenant_main',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
     const carbonRecommendation = CarbonAwareScheduler.evaluateJobCarbonFootprint(
-      {
-        id: 'job-solar',
-        requestedGpus: 8,
-        priority: 'normal',
-      } as any,
+      solarJob,
       4.0,
       {
         timestamp: new Date().toISOString(),
@@ -210,9 +257,10 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Carbon evaluation: Green Compute Certified = ${carbonRecommendation.greenComputeCertified}, Offset = ${carbonRecommendation.potentialCarbonSavingsKg} kg CO2e.`);
     stageResults.push({ stage: 5, name: 'Carbon-Aware Scheduling', status: 'passed', details: `Green Certified: ${carbonRecommendation.greenComputeCertified}, Saved: ${carbonRecommendation.potentialCarbonSavingsKg}kg CO2e` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 5: ${err.message}`);
-    stageResults.push({ stage: 5, name: 'Carbon-Aware Scheduling', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 5: ${errMsg}`);
+    stageResults.push({ stage: 5, name: 'Carbon-Aware Scheduling', status: 'failed', details: errMsg });
   }
 
   // Stage 6: Cryptographic Dataset Lineage & W3C PROV-O Dossier
@@ -249,9 +297,10 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] W3C PROV-O dossier exported with 100% Merkle DAG integrity: Score = ${audit.reproducibilityScore}%.`);
     stageResults.push({ stage: 6, name: 'Dataset Provenance & Lineage', status: 'passed', details: `Reproducibility Score: ${audit.reproducibilityScore}%` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 6: ${err.message}`);
-    stageResults.push({ stage: 6, name: 'Dataset Provenance & Lineage', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 6: ${errMsg}`);
+    stageResults.push({ stage: 6, name: 'Dataset Provenance & Lineage', status: 'failed', details: errMsg });
   }
 
   // Stage 7: Tokenized Departmental Compute Billing & Double-Entry Ledger
@@ -289,9 +338,10 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Compute debited: ${usage.tokensConsumed} tokens. Remaining balance: ${receipt?.balanceAfterTokens}. Ledger balanced: ${reconciliation.isBalanced}.`);
     stageResults.push({ stage: 7, name: 'Tokenized Compute Billing', status: 'passed', details: `Debited: ${usage.tokensConsumed} tokens, Balance: ${receipt?.balanceAfterTokens}` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 7: ${err.message}`);
-    stageResults.push({ stage: 7, name: 'Tokenized Compute Billing', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 7: ${errMsg}`);
+    stageResults.push({ stage: 7, name: 'Tokenized Compute Billing', status: 'failed', details: errMsg });
   }
 
   // Stage 8: Continuous Merkle Audit Chain & Prometheus Metrics
@@ -320,9 +370,10 @@ export async function runNeuroClusterSimulation(options: { scenario?: string } =
     console.log(`[PASS] Merkle audit chain verified (${verification.verifiedRecordsCount} records, 0 broken). OpenMetrics series formatted (${openMetricsText.length} bytes).`);
     stageResults.push({ stage: 8, name: 'Merkle Audit & OpenMetrics', status: 'passed', details: `Audit chain verified: ${verification.isValid}, Metrics exported` });
     passedStages++;
-  } catch (err: any) {
-    console.error(`[FAIL] Stage 8: ${err.message}`);
-    stageResults.push({ stage: 8, name: 'Merkle Audit & OpenMetrics', status: 'failed', details: err.message });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[FAIL] Stage 8: ${errMsg}`);
+    stageResults.push({ stage: 8, name: 'Merkle Audit & OpenMetrics', status: 'failed', details: errMsg });
   }
 
   const allPassed = passedStages === 8;

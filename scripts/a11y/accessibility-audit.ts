@@ -19,7 +19,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { chromium, type Browser } from "@playwright/test";
+import { chromium, type Browser, type BrowserContextOptions } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 type AxeViolations = Awaited<ReturnType<InstanceType<typeof AxeBuilder>["analyze"]>>["violations"];
@@ -131,7 +131,7 @@ function gatePasses(violations: AxeViolations, gate: "critical" | "serious"): bo
 }
 
 async function ensureSession(browser: Browser, role: string | null, baseUrl: string, authDir: string) {
-  const contextOptions: any = { baseURL: baseUrl };
+  const contextOptions: BrowserContextOptions = { baseURL: baseUrl };
   const statePath = role ? path.join(authDir, `${role}.json`) : null;
   if (statePath && fs.existsSync(statePath)) {
     contextOptions.storageState = statePath;

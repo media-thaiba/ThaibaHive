@@ -10,13 +10,13 @@ async function main() {
     console.log("[+] Database connection/execution test PASSED!");
     console.log("Raw Result details:", JSON.stringify(result));
     process.exit(0);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[-] Database connection test FAILED:", err);
     process.exit(1);
   }
 }
 
-main().catch(err => {
+main().catch((err: unknown) => {
   console.error("Unhandled test error:", err);
   process.exit(1);
 });

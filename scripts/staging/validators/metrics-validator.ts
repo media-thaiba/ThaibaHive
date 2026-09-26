@@ -82,13 +82,13 @@ export async function validateMetricsAndLatency(
         error: `HTTP ${res.status}: ${res.statusText}`,
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "APM & Latency",
       name: "Metrics Endpoint JSON Schema",
       passed: false,
       durationMs: Date.now() - jsonStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 
@@ -131,13 +131,13 @@ export async function validateMetricsAndLatency(
         error: `HTTP ${res.status}: ${res.statusText}`,
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "APM & Latency",
       name: "Prometheus Exposition Format",
       passed: false,
       durationMs: Date.now() - promStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 

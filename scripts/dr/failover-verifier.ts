@@ -164,7 +164,7 @@ export async function runFailoverVerification(isDryRun = false): Promise<Failove
       },
       steps,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     await new DatabasePrimaryDropInjector().reset();
     await FailoverDetector.getInstance().resetCircuit("FAILOVER_VERIFICATION_ERROR");
 
@@ -184,7 +184,7 @@ export async function runFailoverVerification(isDryRun = false): Promise<Failove
         electedCandidate: "none",
       },
       steps,
-      errorMessage: err?.message || String(err),
+      errorMessage: err instanceof Error ? err.message : String(err),
     };
   }
 }

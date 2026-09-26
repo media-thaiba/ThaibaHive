@@ -2,6 +2,7 @@ import { db } from "../../src/db";
 import { auditLogs, auditMerkleRoots } from "@thaiba/db/schema";
 import { eq, asc, count } from "drizzle-orm";
 import { verifyAuditChain } from "../../src/lib/audit/crypto-audit-engine";
+import type { AuditEntry, AuditVerificationResult } from "../../src/lib/audit/types";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -35,10 +36,10 @@ async function main() {
   let allValid = true;
   let totalVerified = 0;
   let durationMs = 0;
-  let failedResult: any = null;
+  let failedResult: (AuditVerificationResult & { tenantId: string }) | null = null;
 
   for (const [tId, groupEntries] of Object.entries(tenantGroups)) {
-    const res = verifyAuditChain(groupEntries as any);
+    const res = verifyAuditChain(groupEntries as unknown as AuditEntry[]);
     totalVerified += res.totalVerified;
     durationMs += res.durationMs;
     if (!res.valid) {

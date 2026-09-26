@@ -19,7 +19,7 @@ export interface SimulationResult {
   scenarioName: string;
   success: boolean;
   durationMs: number;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   error?: string;
 }
 
@@ -83,13 +83,13 @@ export class SoarSimulationRunner {
           quarantineActive: isQuarantined,
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         scenarioName: 'Scenario 1: Autonomous High-Confidence Botnet Mitigation',
         success: false,
         durationMs: Date.now() - start,
         details: {},
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
@@ -145,13 +145,13 @@ export class SoarSimulationRunner {
           subnetBanned: isBanned,
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         scenarioName: 'Scenario 2: Intermediate Confidence Human-in-the-Loop Approval',
         success: false,
         durationMs: Date.now() - start,
         details: {},
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
@@ -208,13 +208,13 @@ export class SoarSimulationRunner {
           quarantineCleanedUp: !isStillBanned,
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         scenarioName: 'Scenario 3: SAGA Rollback & Compensation on Downstream Failure',
         success: false,
         durationMs: Date.now() - start,
         details: {},
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
@@ -247,14 +247,14 @@ export class SoarSimulationRunner {
           actionBlocked: !isBanned,
         },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       soarOrchestrator.setEngineEnabled(true);
       return {
         scenarioName: 'Scenario 4: Emergency Killswitch Engagement',
         success: false,
         durationMs: Date.now() - start,
         details: {},
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
@@ -278,13 +278,13 @@ export class SoarSimulationRunner {
         durationMs: Date.now() - start,
         details: { totalPlaybooks: CANONICAL_SECURITY_PLAYBOOKS.length, playbooks: validated },
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       return {
         scenarioName: 'Scenario 5: 10 Canonical Playbooks Integrity & Schema Validation',
         success: false,
         durationMs: Date.now() - start,
         details: {},
-        error: err.message,
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }

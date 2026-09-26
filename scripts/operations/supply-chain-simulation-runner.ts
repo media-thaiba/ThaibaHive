@@ -116,9 +116,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
     } else {
       throw new Error('Risk assessment or sanctions filtering failed');
     }
-  } catch (err: any) {
-    stageResults.push({ stage: 1, name: 'Vendor Onboarding', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 1: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 1, name: 'Vendor Onboarding', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 1: ${errMsg}\n`);
   }
 
   // Stage 2: ESG Carbon Tracking & Ethical Supplier Scoring
@@ -146,9 +147,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
       details: `Net Scope 3 Emissions: ${emissions.netEmissionsKg} kg CO2e. ESG Composite: ${esgScore.compositeEsgScore} (Grade: ${esgScore.ratingGrade}).`,
     });
     console.log(`[PASS] Stage 2: ESG score evaluated to ${esgScore.ratingGrade} with ${emissions.netEmissionsKg} kg CO2e Scope 3 footprint.\n`);
-  } catch (err: any) {
-    stageResults.push({ stage: 2, name: 'ESG Scoring', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 2: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 2, name: 'ESG Scoring', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 2: ${errMsg}\n`);
   }
 
   // Stage 3: Autonomous Predictive Inventory Reorder & EOQ Thresholds
@@ -187,9 +189,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
     } else {
       throw new Error('Predictive reorder trigger condition failed');
     }
-  } catch (err: any) {
-    stageResults.push({ stage: 3, name: 'Predictive Inventory', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 3: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 3, name: 'Predictive Inventory', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 3: ${errMsg}\n`);
   }
 
   // Stage 4: Multi-Stage Requisition Routing & Approval Chain
@@ -233,9 +236,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
     } else {
       throw new Error('Approval workflow routing failure');
     }
-  } catch (err: any) {
-    stageResults.push({ stage: 4, name: 'Requisition Routing', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 4: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 4, name: 'Requisition Routing', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 4: ${errMsg}\n`);
   }
 
   // Stage 5: Purchase Order Issuance & Budget Encumbrance Locking
@@ -303,9 +307,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
       details: `PO ${po.poNumber} issued ($14,500). Encumbrance ${encumbrance.encumbranceNumber} locked in General Ledger.`,
     });
     console.log(`[PASS] Stage 5: Encumbrance ${encumbrance.encumbranceNumber} pre-committed in GL for PO ${po.poNumber}.\n`);
-  } catch (err: any) {
-    stageResults.push({ stage: 5, name: 'Budget Encumbrance', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 5: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 5, name: 'Budget Encumbrance', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 5: ${errMsg}\n`);
   }
 
   // Stage 6: Mobile Dock Handheld Receiving & Package Inspection
@@ -340,9 +345,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
       details: `Goods Receipt ${grn.receiptNumber} recorded. 10 units verified at Bay A2.`,
     });
     console.log(`[PASS] Stage 6: Goods Receipt ${grn.receiptNumber} verified and line item updated.\n`);
-  } catch (err: any) {
-    stageResults.push({ stage: 6, name: 'Dock Receiving', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 6: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 6, name: 'Dock Receiving', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 6: ${errMsg}\n`);
   }
 
   // Stage 7: Autonomous 3-Way Invoice Matching & Discrepancy Override
@@ -398,9 +404,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
     } else {
       throw new Error('3-way match failed on clean document test');
     }
-  } catch (err: any) {
-    stageResults.push({ stage: 7, name: '3-Way Matching', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 7: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 7, name: '3-Way Matching', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 7: ${errMsg}\n`);
   }
 
   // Stage 8: Contract SLA Lifecycle, OpenMetrics Exporter & Cryptographic Merkle Audit
@@ -451,9 +458,10 @@ export async function runSupplyChainSimulation(options: { scenario?: string } = 
     } else {
       throw new Error('Merkle audit verification failed');
     }
-  } catch (err: any) {
-    stageResults.push({ stage: 8, name: 'Contract & Audit', status: 'failed', details: err.message });
-    console.error(`[FAIL] Stage 8: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 8, name: 'Contract & Audit', status: 'failed', details: errMsg });
+    console.error(`[FAIL] Stage 8: ${errMsg}\n`);
   }
 
   const passed = passedStages === 8;

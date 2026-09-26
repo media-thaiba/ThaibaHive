@@ -7,7 +7,7 @@ import { validateMetricsAndLatency } from "../validators/metrics-validator";
 
 // Mock global fetch for deterministic testing
 const mockFetch = jest.fn();
-(global as any).fetch = mockFetch;
+global.fetch = mockFetch as unknown as typeof fetch;
 
 describe("STG-005: Staging Smoke Test Suite Unit Tests", () => {
   beforeEach(() => {

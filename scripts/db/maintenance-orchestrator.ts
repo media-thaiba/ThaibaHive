@@ -130,7 +130,7 @@ export async function runDatabaseMaintenance(force = false, dryRun = false): Pro
           durationMs: Date.now() - tableStart,
         });
       }
-    } catch (_err: any) {
+    } catch {
       results.push({
         tableName: table,
         actionTaken: "skipped",

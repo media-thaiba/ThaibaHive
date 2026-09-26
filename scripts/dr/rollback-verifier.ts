@@ -84,7 +84,7 @@ export async function runRollbackVerification(isDryRun = false): Promise<Rollbac
       },
       steps,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       timestamp: startedAt,
       verificationId,
@@ -98,7 +98,7 @@ export async function runRollbackVerification(isDryRun = false): Promise<Rollbac
         targetPrimaryId: "unknown",
       },
       steps,
-      errorMessage: err?.message || String(err),
+      errorMessage: err instanceof Error ? err.message : String(err),
     };
   }
 }

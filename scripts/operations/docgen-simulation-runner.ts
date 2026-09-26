@@ -62,9 +62,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: `Loaded ${builtInTemplates.length} standard templates across SQLite & PG dialects`,
     });
     console.log('  ✓ Stage 1 Passed: Template registry active.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 1, name: 'Dual-Store Persistence', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 1 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 1, name: 'Dual-Store Persistence', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 1 Failed: ${errMsg}\n`);
   }
 
   // STAGE 2: Token AST Evaluator & Print Media Styler
@@ -93,9 +94,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: 'HTML5 paged media compilation with CSS @page print pagination verified',
     });
     console.log('  ✓ Stage 2 Passed: Paged media styler ready.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 2, name: 'Token Evaluator', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 2 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 2, name: 'Token Evaluator', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 2 Failed: ${errMsg}\n`);
   }
 
   // STAGE 3: Examination Report Card & Tabulation Generator
@@ -122,9 +124,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: `Generated Distinction Report Card (GPA ${rc.summary.gpa}) with QR seal`,
     });
     console.log('  ✓ Stage 3 Passed: Report card generated.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 3, name: 'Report Card Generator', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 3 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 3, name: 'Report Card Generator', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 3 Failed: ${errMsg}\n`);
   }
 
   // STAGE 4: QR Examination Hall Ticket & Admit Card Engine
@@ -149,9 +152,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: `Generated Hall Ticket ${ht.serialNumber} with vector SVG QR matrix`,
     });
     console.log('  ✓ Stage 4 Passed: Hall ticket generated.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 4, name: 'Hall Ticket Generator', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 4 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 4, name: 'Hall Ticket Generator', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 4 Failed: ${errMsg}\n`);
   }
 
   // STAGE 5: Academic Certificate Production Engine
@@ -173,9 +177,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: `Issued ${cert.certificateType.toUpperCase()} Certificate ${cert.serialNumber}`,
     });
     console.log('  ✓ Stage 5 Passed: Academic certificate produced.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 5, name: 'Certificate Generator', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 5 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 5, name: 'Certificate Generator', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 5 Failed: ${errMsg}\n`);
   }
 
   // STAGE 6: Cryptographic Signature & Public Verification Resolver
@@ -193,9 +198,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: `Public lookup verified valid signature for hash ${sampleHash.slice(0, 12)}...`,
     });
     console.log('  ✓ Stage 6 Passed: Cryptographic verification validated.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 6, name: 'Verification Resolver', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 6 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 6, name: 'Verification Resolver', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 6 Failed: ${errMsg}\n`);
   }
 
   // STAGE 7: High-Throughput Universal Streaming Export Engine
@@ -233,9 +239,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: '100 records streamed with zero memory leak and asynchronous job queueing',
     });
     console.log('  ✓ Stage 7 Passed: Universal export stream completed.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 7, name: 'Streaming Export Engine', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 7 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 7, name: 'Streaming Export Engine', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 7 Failed: ${errMsg}\n`);
   }
 
   // STAGE 8: Mobile Academic Push Dispatcher & Schedule Delta Sync
@@ -263,9 +270,10 @@ export async function runDocGenSimulation(options: { scenario?: string } = {}): 
       details: 'Push notification delivered and incremental timetable delta computed',
     });
     console.log('  ✓ Stage 8 Passed: Mobile push & delta sync verified.\n');
-  } catch (err: any) {
-    stageResults.push({ stage: 8, name: 'Mobile Push & Sync', status: 'failed', details: err.message });
-    console.error(`  ✗ Stage 8 Failed: ${err.message}\n`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    stageResults.push({ stage: 8, name: 'Mobile Push & Sync', status: 'failed', details: errMsg });
+    console.error(`  ✗ Stage 8 Failed: ${errMsg}\n`);
   }
 
   const passed = passedStages === 8;

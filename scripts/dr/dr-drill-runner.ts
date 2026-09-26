@@ -5,8 +5,8 @@
  */
 
 import { DrillOrchestrator } from "../../src/lib/dr/drill-orchestrator";
-import { DrillMetricsAnalyzer } from "../../src/lib/dr/drill-metrics";
-import { DrillScenarioType } from "../../src/lib/dr/types";
+import { DrillMetricsAnalyzer, type MetricAnalysisReport } from "../../src/lib/dr/drill-metrics";
+import { DrillScenarioType, type DrillExecutionResult } from "../../src/lib/dr/types";
 import { writeJsonReport } from "../lib/reports-path";
 
 async function main() {
@@ -103,13 +103,13 @@ async function main() {
       process.exit(1);
     }
     process.exit(0);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("❌ Fatal error executing DR drill:", err);
     process.exit(1);
   }
 }
 
-function saveReport(result: any, analysis: any) {
+function saveReport(result: DrillExecutionResult, analysis: MetricAnalysisReport) {
   writeJsonReport("dr-drill-report.json", {
     result,
     analysis,

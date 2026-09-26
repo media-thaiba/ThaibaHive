@@ -55,10 +55,14 @@ export async function runAuditLogArchival(
     fs.mkdirSync(archivesDir, { recursive: true });
   }
 
-  let expiredRecords: any[] = [];
+  interface ExpiredAuditRecord {
+    id?: string;
+    [key: string]: unknown;
+  }
+  let expiredRecords: ExpiredAuditRecord[] = [];
   try {
-    expiredRecords = await db.all(sql`SELECT * FROM "auditLogs" WHERE "createdAt" < ${cutoffIso} LIMIT 5000`).catch(async () => {
-      return await db.all(sql`SELECT * FROM auditLogs WHERE createdAt < ${cutoffIso} LIMIT 5000`).catch(() => []);
+    expiredRecords = await db.all<ExpiredAuditRecord>(sql`SELECT * FROM "auditLogs" WHERE "createdAt" < ${cutoffIso} LIMIT 5000`).catch(async () => {
+      return await db.all<ExpiredAuditRecord>(sql`SELECT * FROM auditLogs WHERE createdAt < ${cutoffIso} LIMIT 5000`).catch(() => []);
     });
   } catch {
     expiredRecords = [];
@@ -100,7 +104,7 @@ export async function runAuditLogArchival(
     console.log(`🔒 [AuditArchival] Archive integrity verified (SHA-256: ${archiveChecksum}). Proceeding to batch deletion...`);
 
     // 3. Batch deletion in chunks of 500
-    const recordIds: string[] = expiredRecords.map(r => r.id).filter(Boolean);
+    const recordIds: string[] = expiredRecords.map(r => r.id).filter((id): id is string => Boolean(id));
     const BATCH_SIZE = 500;
 
     for (let i = 0; i < recordIds.length; i += BATCH_SIZE) {

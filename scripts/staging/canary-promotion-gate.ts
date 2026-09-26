@@ -56,8 +56,9 @@ export function evaluateCanaryPromotion(
   const metricsCheck = report.results.find((r) =>
     r.name.toLowerCase().includes("metrics endpoint") || r.name.toLowerCase().includes("error rate")
   );
-  if (metricsCheck?.details && typeof (metricsCheck.details as any).errorRate === "number") {
-    const rate = (metricsCheck.details as any).errorRate as number;
+  const details = metricsCheck?.details as { errorRate?: unknown } | undefined;
+  if (typeof details?.errorRate === "number") {
+    const rate = details.errorRate;
     errorRatePct = rate;
     if (rate > 0.0) {
       reasons.push(

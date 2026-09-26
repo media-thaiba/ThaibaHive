@@ -2,7 +2,7 @@ import { evaluateCanaryPromotion, dispatchAlertWebhook } from "../canary-promoti
 import type { SmokeSummaryReport } from "../staging-smoke-runner";
 
 const mockFetch = jest.fn();
-(global as any).fetch = mockFetch;
+global.fetch = mockFetch as unknown as typeof fetch;
 
 describe("CNR-003: Canary Promotion Gate Unit Tests", () => {
   beforeEach(() => {

@@ -217,8 +217,9 @@ async function runFacilitySimulation() {
     console.log('\n========================================================================');
     console.log(`  SIMULATION COMPLETED: ${passedStages}/${totalStages} Stages Passed (100% SUCCESS)`);
     console.log('========================================================================\n');
-  } catch (err: any) {
-    console.error(`\n❌ Simulation failed at stage ${passedStages + 1}:`, err);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`\n❌ Simulation failed at stage ${passedStages + 1}:`, errMsg);
     process.exit(1);
   }
 }

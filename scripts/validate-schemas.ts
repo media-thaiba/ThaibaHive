@@ -1,12 +1,12 @@
 import * as sqliteSchema from "../packages/db/schema";
 import * as pgSchema from "../packages/db/schema.pg";
-import { getTableColumns, isTable } from "drizzle-orm";
+import { getTableColumns, isTable, type Table } from "drizzle-orm";
 
 console.log("Starting structural schema validation...");
 
 let hasError = false;
 
-function validate(sqliteTableObj: any, pgTableObj: any, tableName: string) {
+function validate(sqliteTableObj: Table, pgTableObj: Table, tableName: string) {
   const sqliteColumns = getTableColumns(sqliteTableObj);
   const pgColumns = getTableColumns(pgTableObj);
 
@@ -63,8 +63,8 @@ const _pgKeys = Object.keys(pgSchema);
 for (const key of sqliteKeys) {
   if (key === "default") continue;
   
-  const sqliteExport = (sqliteSchema as any)[key];
-  const pgExport = (pgSchema as any)[key];
+  const sqliteExport = (sqliteSchema as Record<string, unknown>)[key];
+  const pgExport = (pgSchema as Record<string, unknown>)[key];
 
   if (!pgExport) {
     console.error(`[-] Export "${key}" is missing in PostgreSQL schema`);

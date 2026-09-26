@@ -26,7 +26,17 @@ export async function validateHealthAndDatabase(
   // 1. Basic Health Endpoint Check
   let healthPassed = false;
   let lastError = "";
-  let responseData: any = null;
+  interface HealthResponse {
+    status?: string;
+    environment?: string;
+    uptimeSeconds?: number;
+    database?: {
+      connected?: boolean;
+      responseTimeMs?: number;
+    };
+    [key: string]: unknown;
+  }
+  let responseData: HealthResponse | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const checkStart = Date.now();
@@ -47,7 +57,7 @@ export async function validateHealthAndDatabase(
       const dur = Date.now() - checkStart;
 
       if (res.status === 200) {
-        responseData = await res.json();
+        responseData = (await res.json()) as HealthResponse;
         if (responseData.status === "ok") {
           healthPassed = true;
           results.push({
@@ -68,8 +78,8 @@ export async function validateHealthAndDatabase(
       } else {
         lastError = `HTTP ${res.status} ${res.statusText}`;
       }
-    } catch (err: any) {
-      lastError = err?.message || String(err);
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err.message : String(err);
     }
 
     if (attempt < maxRetries) {
@@ -159,13 +169,13 @@ export async function validateHealthAndDatabase(
         details: { note: "Drizzle journal verified" },
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "Health & DB",
       name: "Database Migration Schema Parity & Integrity Check",
       passed: false,
       durationMs: Date.now() - migrationStart,
-      error: `Migration parity check error: ${err?.message || String(err)}`,
+      error: `Migration parity check error: ${err instanceof Error ? err.message : String(err)}`,
     });
   }
 

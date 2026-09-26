@@ -105,7 +105,14 @@ export async function runVulnerabilityScan(dryRun = false): Promise<Vulnerabilit
   if (fs.existsSync(allowlistPath)) {
     try {
       const data = JSON.parse(fs.readFileSync(allowlistPath, "utf8"));
-      allowlistIds = (data.allowlist || []).map((a: any) => a.id || a.cve || a);
+      allowlistIds = (data.allowlist || []).map((a: unknown) => {
+        if (typeof a === "string") return a;
+        if (a && typeof a === "object") {
+          const item = a as Record<string, unknown>;
+          return String(item.id || item.cve || "");
+        }
+        return String(a || "");
+      }).filter(Boolean);
     } catch {}
   }
 
@@ -128,9 +135,10 @@ export async function runVulnerabilityScan(dryRun = false): Promise<Vulnerabilit
   let auditJson = "";
   try {
     auditJson = execSync("pnpm audit --json", { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // pnpm audit exits with non-zero when vulnerabilities found, but outputs json to stdout
-    auditJson = err.stdout?.toString() || "";
+    const execErr = err as { stdout?: string | Buffer };
+    auditJson = execErr.stdout?.toString() || "";
   }
 
   const report = parseAuditOutput(auditJson, allowlistIds);

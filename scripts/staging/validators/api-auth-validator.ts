@@ -52,13 +52,13 @@ export async function validateApisAndAuth(
       durationMs: dur,
       error: res.status !== 200 ? `Expected 200, got HTTP ${res.status}` : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "Auth & APIs",
       name: "Mobile Handoff Nonce Endpoint",
       passed: false,
       durationMs: Date.now() - nonceStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 
@@ -77,13 +77,13 @@ export async function validateApisAndAuth(
       durationMs: dur,
       error: res.status !== 200 ? `Expected 200, got HTTP ${res.status}` : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "Auth & APIs",
       name: "Auth Session & Permissions Validation (Principal Tier)",
       passed: false,
       durationMs: Date.now() - authMeStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 
@@ -102,13 +102,13 @@ export async function validateApisAndAuth(
       durationMs: dur,
       error: res.status !== 200 ? `Expected 200, got HTTP ${res.status}` : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "Auth & APIs",
       name: "Student Roster Query (/api/students)",
       passed: false,
       durationMs: Date.now() - studentStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 
@@ -127,13 +127,13 @@ export async function validateApisAndAuth(
       durationMs: dur,
       error: res.status !== 200 ? `Expected 200, got HTTP ${res.status}` : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "Auth & APIs",
       name: "Finance Expense Claims Route (/api/expense-claims)",
       passed: false,
       durationMs: Date.now() - financeStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 
@@ -153,13 +153,13 @@ export async function validateApisAndAuth(
       durationMs: dur,
       error: !rbacEnforced ? `RBAC breach: Expected 403 Forbidden, got HTTP ${res.status}` : undefined,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     results.push({
       suite: "Auth & APIs",
       name: "RBAC Boundary Enforcement (Staff -> 403 on Admin Audit)",
       passed: false,
       durationMs: Date.now() - rbacStart,
-      error: err?.message || String(err),
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 

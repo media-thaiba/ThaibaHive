@@ -72,7 +72,7 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
       });
       primarySamples[table] = sample;
       combinedPrimaryData += JSON.stringify(sample);
-    } catch (_err: any) {
+    } catch {
       primaryRowCounts[table] = 0;
       primarySamples[table] = [];
     }
@@ -82,7 +82,7 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
 
   // 2. Query All Registered Read-Replicas
   const replicaStatuses = replicaRouter.getReplicaStatuses();
-  const replicaDbs: (typeof db)[] = (replicaRouter as any).replicaDbs || [];
+  const replicaDbs: (typeof db)[] = (replicaRouter as unknown as { replicaDbs?: (typeof db)[] }).replicaDbs || [];
   const replicaCountsByTable: Record<string, Record<string, number>> = {};
   const replicaChecksums: Record<string, string> = {};
   let allReplicasMatch = true;
@@ -113,10 +113,11 @@ export async function runReplicaParityCheck(dryRun = false): Promise<ParityRepor
           return await replicaDb.all(sql.raw(`SELECT * FROM ${table} LIMIT 10`));
         });
         combinedReplicaData += JSON.stringify(sample);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
         replicaCountsByTable[table][replicaId] = -1;
         allReplicasMatch = false;
-        mismatches.push(`Failed to query replica '${replicaId}' table '${table}': ${err?.message}`);
+        mismatches.push(`Failed to query replica '${replicaId}' table '${table}': ${errMsg}`);
       }
     }
 
