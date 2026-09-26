@@ -3,7 +3,7 @@
  * Sprint-041 (ZASM)
  */
 
-import { TrustOverride, TrustTier } from './trust-types';
+import { TrustOverride } from './trust-types';
 import { classifyTrustTier } from './trust-weights';
 
 export class TrustOverrideManager {

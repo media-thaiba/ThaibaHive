@@ -68,7 +68,7 @@ export class ThreatForecaster {
     };
   }
 
-  private getRecommendedMitigations(category: ThreatCategory, severity: AlertSeverityTier): string[] {
+  private getRecommendedMitigations(category: ThreatCategory, _severity: AlertSeverityTier): string[] {
     switch (category) {
       case 'CREDENTIAL_STUFFING':
         return [

@@ -5,7 +5,7 @@
 
 import { db } from '@/db';
 import { soarPlaybooks, soarExecutions, soarExecutionSteps, soarApprovals } from '@thaiba/db';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { SecurityPlaybook, SoarExecutionContext, SoarApprovalItem } from './soar-types';
 
 export class SoarDbStore {
@@ -48,7 +48,7 @@ export class SoarDbStore {
           createdAt: new Date().toISOString(),
         });
       }
-    } catch (err) {
+    } catch {
       // Database failure fallback / non-blocking
     }
   }

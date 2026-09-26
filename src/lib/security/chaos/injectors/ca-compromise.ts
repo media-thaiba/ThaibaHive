@@ -9,7 +9,7 @@ export class CaCompromiseInjector implements ChaosInjector {
   public faultType = 'CA_COMPROMISE' as const;
   private compromisedCAs: Set<string> = new Set();
 
-  public async inject(target: ChaosTargetDefinition, params: Record<string, unknown>): Promise<boolean> {
+  public async inject(target: ChaosTargetDefinition, _params: Record<string, unknown>): Promise<boolean> {
     this.compromisedCAs.add(target.targetIdentifier);
     return true;
   }

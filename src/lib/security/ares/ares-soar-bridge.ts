@@ -89,7 +89,7 @@ export class AresSoarBridge {
         'TRIGGER_SOAR_LOCKDOWN',
         `Autonomous mitigation dispatched via playbook ${targetPlaybook.name}`
       );
-    } catch (err) {
+    } catch {
       status = 'FAILED';
     }
 

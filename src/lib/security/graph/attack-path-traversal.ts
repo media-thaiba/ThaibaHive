@@ -4,7 +4,7 @@
  */
 
 import { Neo4jThreatGraphAdapter } from './neo4j-adapter';
-import { ThreatGraphNode, ThreatGraphEdge, AttackPathResult } from './graph-types';
+import { AttackPathResult } from './graph-types';
 
 export class AttackPathTraversal {
   private static instance: AttackPathTraversal | null = null;

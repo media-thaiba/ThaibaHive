@@ -8,7 +8,6 @@ import {
   zasmDeviceTrust,
   zasmSegmentationPolicies,
   zasmCertificates,
-  zasmSbomPackages,
   zasmSbomVulnerabilities,
   zasmForensicReports,
 } from '@thaiba/db';
@@ -62,7 +61,7 @@ export class ZasmDbStore {
           updatedAt: new Date().toISOString(),
         });
       }
-    } catch (err) {
+    } catch {
       // Non-blocking database write error handling
     }
   }
@@ -117,7 +116,7 @@ export class ZasmDbStore {
           createdAt: new Date().toISOString(),
         });
       }
-    } catch (err) {
+    } catch {
       // Non-blocking
     }
   }
@@ -161,7 +160,7 @@ export class ZasmDbStore {
         isRevoked: false,
         createdAt: new Date().toISOString(),
       });
-    } catch (err) {
+    } catch {
       // Non-blocking
     }
   }
@@ -179,7 +178,7 @@ export class ZasmDbStore {
           revokedAt: new Date().toISOString(),
         })
         .where(eq(zasmCertificates.serialNumber, serialNumber));
-    } catch (err) {
+    } catch {
       // Non-blocking
     }
   }
@@ -218,7 +217,7 @@ export class ZasmDbStore {
           });
         }
       }
-    } catch (err) {
+    } catch {
       // Non-blocking
     }
   }
@@ -250,7 +249,7 @@ export class ZasmDbStore {
         durationMs: report.durationMs,
         generatedAt: report.generatedAt,
       });
-    } catch (err) {
+    } catch {
       // Non-blocking
     }
   }

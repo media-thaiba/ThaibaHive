@@ -3,7 +3,7 @@
  * Sprint-038 / AGS-005
  */
 
-import { ThreatSignal, ThreatClassification, IpReputationState, THREAT_WEIGHTS } from "./threat-heuristics";
+import { ThreatSignal, IpReputationState, THREAT_WEIGHTS } from "./threat-heuristics";
 
 export class IpReputationEngine {
   private static instance: IpReputationEngine | null = null;

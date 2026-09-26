@@ -9,7 +9,7 @@ export class NetworkPartitionInjector implements ChaosInjector {
   public faultType = 'NETWORK_PARTITION' as const;
   private activePartitions: Set<string> = new Set();
 
-  public async inject(target: ChaosTargetDefinition, params: Record<string, unknown>): Promise<boolean> {
+  public async inject(target: ChaosTargetDefinition, _params: Record<string, unknown>): Promise<boolean> {
     this.activePartitions.add(target.targetIdentifier);
     return true;
   }

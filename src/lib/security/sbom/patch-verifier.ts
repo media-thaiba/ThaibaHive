@@ -4,7 +4,6 @@
  */
 
 import { SbomPackage, SecurityVulnerability } from './sbom-types';
-import { AdvisoryMatcher } from './advisory-matcher';
 
 export interface PatchRecommendation {
   packageName: string;

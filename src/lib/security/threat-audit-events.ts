@@ -4,7 +4,6 @@
  */
 
 import { cryptoAuditWriter } from "../audit/crypto-writer";
-import { AUDIT_EVENT_TYPES } from "../audit/audit-event-types";
 
 export type GatewayThreatEventType =
   | "gateway.ratelimit.exceeded"

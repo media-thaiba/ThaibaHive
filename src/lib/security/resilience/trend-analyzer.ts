@@ -4,7 +4,7 @@
  */
 
 import { ResilienceCalculator } from './resilience-calculator';
-import { ResilienceTrendReport, SystemResilienceSnapshot } from './resilience-types';
+import { ResilienceTrendReport } from './resilience-types';
 
 export class ResilienceTrendAnalyzer {
   private static instance: ResilienceTrendAnalyzer | null = null;

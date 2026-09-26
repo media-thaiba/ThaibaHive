@@ -4,7 +4,6 @@
  */
 
 import { DeviceTrustScore, TrustWeights } from './trust-types';
-import { DEFAULT_TRUST_WEIGHTS } from './trust-weights';
 
 export interface CalibrationReport {
   evaluatedCount: number;

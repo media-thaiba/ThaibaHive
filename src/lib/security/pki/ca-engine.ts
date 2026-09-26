@@ -7,7 +7,6 @@ import { CertGenerator } from './cert-generator';
 import {
   CaConfig,
   IssuedCertificate,
-  CertificateOptions,
   CertificateSubject,
 } from './pki-types';
 

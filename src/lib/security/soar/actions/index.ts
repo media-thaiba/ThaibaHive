@@ -3,7 +3,7 @@
  * Sprint-040 — Standard Composable Security Actions
  */
 
-import { SoarActionHandler, SoarExecutionContext } from '../soar-types';
+import { SoarActionHandler } from '../soar-types';
 import { QuarantineManager } from '../../quarantine-manager';
 import { actionRegistry } from '../action-registry';
 
@@ -97,7 +97,7 @@ export const revokeSessionAction: SoarActionHandler<{
       reason: params.reason || `[SOAR:${context.playbook_name}] Session revoked due to security event`,
     };
   },
-  compensate: async (params, output, context) => {
+  compensate: async (_params, _output, _context) => {
     // Un-revoking session is logged
   },
 };
@@ -177,7 +177,7 @@ export const webhookDispatchAction: SoarActionHandler<{
 }> = {
   name: 'dispatch_webhook',
   description: 'Dispatch outbound webhook notification to external SIEM or endpoint',
-  execute: async (params, context) => {
+  execute: async (params, _context) => {
     if (!params.url) throw new Error('url parameter is required for dispatch_webhook action');
     return {
       url: params.url,

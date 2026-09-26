@@ -6,14 +6,11 @@
 import { db } from '@/db';
 import {
   aresPredictiveThreats,
-  aresChaosExperiments,
   aresChaosExecutions,
   aresZkpProofs,
-  aresThreatGraphNodes,
-  aresThreatGraphEdges,
   aresResilienceScores,
 } from '@thaiba/db';
-import { eq, desc } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 import { PredictiveThreatForecast } from './ares-types';
 import { ChaosExecutionRecord } from '../chaos/chaos-types';
 import { ZkAuditProofPayload } from '../zkp/zkp-types';

@@ -3,7 +3,7 @@
  * Sprint-042 (ARES)
  */
 
-import { ThreatCategory, ThreatSignalEvidence } from './ares-types';
+import { ThreatCategory } from './ares-types';
 
 export interface ThreatPriorDistribution {
   category: ThreatCategory;

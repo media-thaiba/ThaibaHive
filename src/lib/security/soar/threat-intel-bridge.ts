@@ -3,7 +3,7 @@
  * Sprint-040 — Ingestion Bridge Linking Threat Feeds & Webhooks to SOAR Engine
  */
 
-import { SecurityPlaybook, SoarTargetEntity, SoarExecutionContext } from './soar-types';
+import { SecurityPlaybook, SoarTargetEntity } from './soar-types';
 import { TriggerMatcher, SoarIncomingEvent } from './trigger-matcher';
 import { triggerDeduplicator } from './trigger-deduplicator';
 import { confidenceGate } from './confidence-gate';

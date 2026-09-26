@@ -345,7 +345,7 @@ export class SoarOrchestrator {
     for (const listener of this.eventListeners) {
       try {
         listener(context);
-      } catch (err) {
+      } catch {
         // Suppress listener error from crashing orchestrator
       }
     }
