@@ -130,13 +130,15 @@ export default function TimetablePage() {
     e.preventDefault();
     if (!assignSlot || !selectedClassId || !assignSubject) return;
 
+    const currentInstitutionId = classes.find((c) => c.id === selectedClassId)?.institutionId || classes[0]?.institutionId || "inst_tgcis";
+
     try {
       const res = await fetch("/api/academic/timetables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           entry: {
-            institutionId: "inst_tgcis",
+            institutionId: currentInstitutionId,
             classId: selectedClassId,
             slotId: assignSlot.id,
             dayOfWeek: assignDay,
@@ -160,6 +162,7 @@ export default function TimetablePage() {
 
   const handleCreateSlot = async (e: React.FormEvent) => {
     e.preventDefault();
+    const currentInstitutionId = classes.find((c) => c.id === selectedClassId)?.institutionId || classes[0]?.institutionId || "inst_tgcis";
     try {
       const res = await fetch("/api/academic/timetables", {
         method: "POST",
@@ -167,7 +170,7 @@ export default function TimetablePage() {
         body: JSON.stringify({
           action: "create_slot",
           slot: {
-            institutionId: "inst_tgcis",
+            institutionId: currentInstitutionId,
             name: newSlotName,
             slotOrder: newSlotOrder,
             startTime: newSlotStart,

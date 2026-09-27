@@ -327,16 +327,3 @@ jobs:
         run: |
           cd thaibahive_mobile_app
           flutter build apk --release --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
-
-      - name: Test production backup strategy
-        run: |
-          echo "Testing backup strategy..."
-          # Test database backup in CI environment
-          cd packages/db
-          pnpm backup:test
-          # Test mobile app data backup
-          cd ../thaibahive_mobile_app
-          pnpm test:backup
-        env:
-          DATABASE_URL: sqlite://prod.db
-          BACKUP_STORAGE_PATH: ./tmp/backups

@@ -92,7 +92,7 @@ export async function GET(
       return new NextResponse(webStream, {
         headers: {
           "Content-Type": driveFile.mimeType,
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "private, no-transform, max-age=3600",
         },
       });
     }
@@ -113,7 +113,7 @@ export async function GET(
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "private, no-transform, max-age=3600",
       },
     });
   } catch (error) {

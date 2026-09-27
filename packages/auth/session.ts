@@ -45,7 +45,7 @@ export async function createSession(payload: SessionPayload, extendSession = fal
 
   const cookieOptions: Record<string, unknown> = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" && process.env.PLAYWRIGHT_TEST !== "true",
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge,
@@ -77,7 +77,7 @@ export async function createDPoPSession(payload: SessionPayload, dpopThumbprint:
 
   const cookieOptions: Record<string, unknown> = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" && process.env.PLAYWRIGHT_TEST !== "true",
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge,
@@ -115,27 +115,6 @@ export async function verifySession(): Promise<SessionPayload | null> {
   }
 
   if (!token) {
-    if (process.env.NODE_ENV === "test") {
-      let isUnauth = process.env.TEST_FORCE_UNAUTH === "true";
-      try {
-        const headersList = await headers();
-        const authHeader = headersList.get("authorization");
-        if (authHeader === "Bearer unauthenticated" || headersList.get("x-unauthenticated") === "true") {
-          isUnauth = true;
-        }
-      } catch {
-        // Fallback for tests without request store context
-      }
-      if (isUnauth) return null;
-      return {
-        staffId: "staff_admin_01",
-        email: "admin@thaiba.edu",
-        role: "super_admin",
-        employeeId: "EMP001",
-        name: "Test Admin",
-        tokenVersion: 0,
-      };
-    }
     return null;
   }
 

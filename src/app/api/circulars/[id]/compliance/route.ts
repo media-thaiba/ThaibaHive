@@ -121,4 +121,4 @@ export const PATCH = requireAuth(async (request: Request, context) => {
     .get();
 
   return NextResponse.json({ compliance: created }, { status: 201 });
-}, "circulars:create");
+}, "circulars:manage");

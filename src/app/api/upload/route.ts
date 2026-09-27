@@ -26,7 +26,7 @@ const MIME_TO_EXTENSIONS: Record<string, string[]> = {
 
 const ALLOWED_TYPES = new Set(Object.keys(MIME_TO_EXTENSIONS));
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const ip = extractIp(request);
   const rl = checkRateLimit(ip, "upload");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
@@ -41,7 +41,7 @@ export const POST = requireAuth(async (request: Request, _session) => {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `File size exceeds limit of ${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB` },
+        { error: `File size exceeds limit of ${MAX_FILE_SIZE / (1024 * 1024)} MB` },
         { status: 400 }
       );
     }
@@ -97,4 +97,4 @@ export const POST = requireAuth(async (request: Request, _session) => {
       { status: 500 }
     );
   }
-});
+}, "media:create");

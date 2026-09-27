@@ -28,6 +28,7 @@ type Class = {
   id: string;
   name: string;
   section: string | null;
+  institutionId?: string | null;
 };
 
 export default function StudentsPage() {
@@ -147,7 +148,7 @@ export default function StudentsPage() {
       <StudentBulkImportDialog
         open={isBulkImportOpen}
         onOpenChange={setIsBulkImportOpen}
-        institutionId="inst_tgcis"
+        institutionId={classes[0]?.institutionId || "inst_tgcis"}
         classes={classes}
         onSuccess={() => fetchStudents()}
       />
