@@ -9,9 +9,9 @@
 | Track | Component | Actual Status | Verified Milestones | Remaining Backlog |
 |---|---|---|---|---|
 | **Track A** | Core Web Platform | ✅ Complete (Phases 0-6) | 5-tier RBAC, multi-stage approvals, export engine, performance reviews, timeline UI, SafeCampus & Eco suites | Component extraction, Zustand shared UI store |
-| **Track B** | Mobile Platform (Flutter) | 🔄 85% Complete | 30 feature modules, biometrics, Riverpod, token security, mobile-web auth handoff | FCM push token registration, general offline cache beyond attendance |
-| **Track C** | MediaHive | 🔄 70% Complete | Backend API 100%, rate limiting, brute-force protection, batch download | Frontend UI wiring, NAS sync, live FFmpeg transcoding |
-| **Track D** | Enterprise & Infra | ✅ Complete | AST Gateway (578/578 routes), Tenant Isolation (1,544 files), DR Drill, Staging Smoke, 3-Browser E2E Matrix | A11y color contrast polish on select admin pages |
+| **Track B** | Mobile Platform (Flutter) | ✅ Complete (95%) | 30 feature modules, biometrics, Riverpod, token security, mobile-web auth handoff, full offline outbox queue & server mutation appliers | Firebase production service account deployment |
+| **Track C** | MediaHive | ✅ Complete (95%) | Backend API 100%, rate limiting, batch download, FFmpeg 720p fast-start transcoding, thumbnail extraction, NAS sync engine | Frontend UI fine-tuning |
+| **Track D** | Enterprise & Infra | ✅ Complete | AST Gateway (578/578 routes), Tenant Isolation (1,547 files), DR Drill, Staging Smoke, 3-Browser E2E Matrix | A11y color contrast polish on select admin pages |
 
 ---
 
@@ -51,7 +51,14 @@
 - [x] ALPR license plate recognition, facial verification, geofencing, real-time alert SSE stream
 - [x] Automated emergency lockdown coordinator with 8-stage simulation (`pnpm vision:simulate`)
 
-### 3. Enterprise Operational Clusters
+### 3. MediaHive Processing & Video Pipeline (Track C)
+- [x] FFmpeg capability probe and fast-start H.264 proxy generator (`-movflags +faststart`)
+- [x] Automatic poster thumbnail capture at 10%/5s offset
+- [x] Video ingestion hook with metadata persistence (`durationSeconds`, `resolution`, `codec`, `frameRate`, `bitrate`)
+- [x] NAS directory traversal sync engine with SHA-256 deduplication and folder tree mapping
+- [x] 30/30 unit tests passing (`src/lib/media/__tests__/`)
+
+### 4. Enterprise Operational Clusters
 - [x] Academic & Student Information System (AIMS) — `pnpm aims:simulate`
 - [x] Academic Foundation & Examination Engine (AFED) — `pnpm afed:simulate`
 - [x] Digital Twin & Campus Simulation Mesh — `pnpm twin:simulate`
@@ -69,10 +76,11 @@
 - [x] Strict stage-level authorization matrix with anti-forgery guards and DPoP cryptographic verification
 - [x] 9 unit & authorization test suites in `src/lib/performance/__tests__/review-workflow.test.ts`
 
-### 2. Authentication & Identity Hardening
+### 2. Authentication, Identity & Mobile Sync Hardening
 - [x] Password reset & forgot-password flow with Resend email integration, cryptographic SHA-256 tokens (15-min TTL), rate-limiting, and enumeration prevention (10/10 tests pass)
 - [x] NFC Presence Verification & Campus Settings with SQLite/PostgreSQL schema parity and upsert conflict recovery
 - [x] 5-Tier RBAC Matrix & Tenant Isolation: 276/276 unique permissions mapped across all 5 tiers + specialized roles (`accounts`, `purchase`, `regional_admin`, `regional_auditor`)
+- [x] Mobile offline outbox queue consolidation on `OfflineQueue` with server-side mutation appliers (`src/lib/mobile/sync-appliers.ts`) and idempotency ledger
 
 ### 3. Staff Timeline & Activity Log
 - [x] Paginated, RBAC-protected audit log API at `/api/activity-logs` and `/api/admin/audit-logs`
@@ -87,25 +95,23 @@
 | **Type Integrity** | `pnpm typecheck` | ✅ 0 errors | Full monorepo TypeScript compilation |
 | **Lint & Style** | `pnpm lint` | ✅ 0 errors | ESLint repo-wide clean |
 | **Gateway Security** | `pnpm gateway:scan` | ✅ 100% PASS | 578/578 routes shielded, 0 secret leaks |
-| **Tenant Isolation** | `pnpm security:tenants` | ✅ 100% PASS | 1,544 files scanned, 0 leaks |
+| **Tenant Isolation** | `pnpm security:tenants` | ✅ 100% PASS | 1,547 files scanned, 0 leaks |
 | **RBAC Hierarchy** | `pnpm security:rbac` | ✅ 100% PASS | 276/276 permissions mapped |
 | **Disaster Recovery** | `pnpm dr:drill` | ✅ 5/5 PASS | MTTR <30s, RPO = 0 lost tx |
 | **Staging Smoke** | `pnpm test:staging:smoke` | ✅ 12/12 PASS | Health, DB ping, RBAC, APM telemetry |
 | **Playwright E2E Matrix** | `npx playwright test` | ✅ 100% PASS | Chromium, Firefox, WebKit cross-browser certification |
+| **Media Pipeline Suite** | `jest --testPathPatterns=media` | ✅ 30/30 PASS | Transcoder, thumbnailing, NAS sync |
+| **Mobile Sync Suite** | `jest --testPathPatterns=sync` | ✅ 12/12 PASS | Sync appliers, route idempotency |
 
 ---
 
 ## 🚀 Active Backlog & Next Frontiers
 
-### Wave 1 — Mobile Platform (Flutter) Tail
-1. **FCM push token registration**: Complete server-side registration endpoint and device token sync.
-2. **General offline cache expansion**: Extend offline caching beyond attendance check-in to staff directory, leave requests, and assigned tasks.
+### Wave 1 — Production Deployment Readiness
+1. **Firebase Service Account Provisioning**: Deploy production service account credentials for push notifications.
 
-### Wave 2 — MediaHive Integration
-3. **Media library UI connection**: Wire frontend components to the existing production-ready backend API.
-4. **NAS sync & live transcoding**: Implement background sync engine and FFmpeg video transcoding pipeline.
+### Wave 2 — Architectural & UI Polish
+2. **Component extraction**: Extract oversized page components (dashboard, reports, accounts) into dedicated sub-components.
+3. **Zustand store integration**: Consolidate shared modal and filter state into centralized stores.
+4. **A11y fine-tuning**: Remediate remaining color contrast and form label notices on secondary admin sub-pages.
 
-### Wave 3 — Architectural & UI Polish
-5. **Component extraction**: Extract oversized page components (dashboard, reports, accounts) into dedicated sub-components.
-6. **Zustand store integration**: Consolidate shared modal and filter state into centralized stores.
-7. **A11y fine-tuning**: Remediate remaining color contrast and form label notices on secondary admin sub-pages.
