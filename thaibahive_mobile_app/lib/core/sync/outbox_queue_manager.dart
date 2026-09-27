@@ -28,6 +28,16 @@ class OutboxAction {
       };
 }
 
+/// In-memory outbox store.
+///
+/// @Deprecated: no feature producer writes to this store (producers enqueue
+/// into `OfflineQueue` in `core/services/offline_queue.dart`), so anything
+/// added here is lost on restart and never drained by `AutoSyncService`.
+/// Kept for backward compatibility only.
+@Deprecated(
+  'Enqueue into offlineQueue (core/services/offline_queue.dart) instead. '
+  'This in-memory store has no producers and is never drained.',
+)
 class OutboxQueueManager {
   static final List<OutboxAction> _queue = [];
 

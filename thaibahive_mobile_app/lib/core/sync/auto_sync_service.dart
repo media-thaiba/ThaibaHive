@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../services/offline_queue.dart';
 import 'network_state_detector.dart';
 import 'offline_sync_queue.dart';
 
@@ -19,21 +20,19 @@ class AutoSyncService {
     });
   }
 
+  /// Drain the consolidated [OfflineQueue] (the encrypted Hive store that
+  /// feature producers enqueue into) to `POST /mobile/v1/sync`.
+  ///
+  /// Only server-confirmed events leave the queue; everything else is
+  /// re-queued with backoff. Returns the count of confirmed events.
   Future<int> triggerSync() async {
     if (isSyncing) return 0;
     isSyncing = true;
     try {
-      final batch = await syncQueue.getOutboxBatch();
-      if (batch.isEmpty) {
-        isSyncing = false;
-        return 0;
-      }
-
-      final syncedIds = batch.map((r) => r.id).toList();
-      await syncQueue.markSynced(syncedIds);
+      final syncedCount = await offlineQueue.flush();
       isSyncing = false;
-      return batch.length;
-    } catch (e) {
+      return syncedCount;
+    } catch (_) {
       isSyncing = false;
       return 0;
     }

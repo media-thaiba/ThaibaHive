@@ -4,6 +4,16 @@ import '../config/app_config.dart';
 import '../../features/auth/services/token_storage_service.dart';
 import 'outbox_queue_manager.dart';
 
+/// Drain-only engine for the in-memory [OutboxQueueManager] store.
+///
+/// @Deprecated: this engine drains a store that no feature producer writes
+/// to. The consolidated offline path is `OfflineQueue.flush()` in
+/// `core/services/offline_queue.dart` (encrypted Hive store, drained by
+/// `AutoSyncService` on reconnect). Kept for backward compatibility only.
+@Deprecated(
+  'Use offlineQueue.flush() from core/services/offline_queue.dart instead. '
+  'This engine reads OutboxQueueManager, which has no producers.',
+)
 class OfflineSyncEngine {
   final OutboxQueueManager _outboxManager;
   final TokenStorageService _tokenStorage;

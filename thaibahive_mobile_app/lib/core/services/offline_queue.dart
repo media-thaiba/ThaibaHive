@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:math';
 
+import 'package:dio/dio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:crypto/crypto.dart';
+import '../network/api_client.dart';
 import 'offline_cache_service.dart';
 
 /// Offline queue item status
@@ -196,11 +198,82 @@ class OfflineQueue {
   /// Get all pending events for sync
   List<OfflineEvent> getPendingEvents() {
     if (!_initialized) return [];
-    
+
     return _box.values
         .where((e) => e.status == QueueStatus.pending)
         .toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  /// Drain pending events to the server (`POST /mobile/v1/sync`).
+  ///
+  /// Only server-confirmed event IDs are removed from the queue. Events the
+  /// server does not confirm are re-queued through [markFailed] (retry with
+  /// exponential backoff, terminal rollback after max retries). Transport
+  /// failures leave every event queued for the next drain.
+  ///
+  /// The optional [httpClient] override exists for tests; production callers
+  /// use the authenticated shared client.
+  ///
+  /// Returns the number of server-confirmed events.
+  Future<int> flush({Dio? httpClient}) async {
+    if (!_initialized) await init();
+
+    final pending = getPendingEvents();
+    if (pending.isEmpty) return 0;
+
+    for (final event in pending) {
+      await markSyncing(event.clientEventId);
+    }
+
+    try {
+      final dio = httpClient ?? ApiClient().dio;
+      final response = await dio.post(
+        '/mobile/v1/sync',
+        data: {
+          'lastSyncedAt': DateTime.now().toIso8601String(),
+          'mutations': pending
+              .map((event) => {
+                    'id': event.clientEventId,
+                    'action': event.type,
+                    'timestamp': event.createdAt.toIso8601String(),
+                    'payload': event.payload,
+                  })
+              .toList(),
+        },
+      );
+
+      final body = response.data;
+      final List<dynamic> processed = body is Map
+          ? (body['processedMutations'] as List? ?? const [])
+          : const [];
+      final confirmedIds =
+          processed.map((id) => id.toString()).toSet();
+
+      var confirmed = 0;
+      for (final event in pending) {
+        if (confirmedIds.contains(event.clientEventId)) {
+          await markCompleted(event.clientEventId);
+          confirmed++;
+        } else {
+          await markFailed(
+            event.clientEventId,
+            'Server did not confirm mutation',
+          );
+        }
+      }
+      return confirmed;
+    } on DioException catch (error) {
+      for (final event in pending) {
+        await markFailed(event.clientEventId, error.toString());
+      }
+      return 0;
+    } catch (error) {
+      for (final event in pending) {
+        await markFailed(event.clientEventId, error.toString());
+      }
+      return 0;
+    }
   }
 
   /// Get all events (for debugging)
@@ -254,11 +327,12 @@ class OfflineQueue {
     await _box.deleteAll(completedKeys);
   }
 
-  /// Generate a unique client event ID
+  /// Generate a unique client event ID (16 cryptographically random bytes).
   String _generateClientId() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
     final timestamp = DateTime.now().microsecondsSinceEpoch;
-    final random = List<int>.generate(16, (i) => timestamp.hashCode ^ i);
-    return base64Url.encode(random);
+    return '${timestamp.toRadixString(36)}_${base64Url.encode(bytes)}';
   }
 
   /// Get queue statistics
