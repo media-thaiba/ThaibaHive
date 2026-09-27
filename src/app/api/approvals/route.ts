@@ -14,6 +14,8 @@ import {
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { WorkflowEngine } from "@/lib/finance/workflow-engine";
+import type { Role } from "@/lib/finance/models/approval-state";
 import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -641,7 +643,7 @@ export const GET = requireAuth(async (request, session) => {
 }, "leaves:approve");
 
 export const PATCH = requireAuth(async (request, session) => {
-  const { staffId } = session;
+  const { staffId, role } = session;
   const rl = checkRateLimit(`approval-action:${staffId}`, { windowMs: 60_000, max: 40 });
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
@@ -660,6 +662,7 @@ export const PATCH = requireAuth(async (request, session) => {
   }
 
   const now = new Date().toISOString();
+  const elevated = role === "super_admin" || role === "admin";
 
   try {
     if (type === "leave") {
@@ -673,8 +676,26 @@ export const PATCH = requireAuth(async (request, session) => {
         return NextResponse.json({ error: "Leave request not found" }, { status: 404 });
       }
 
+      // Anti-self-approval: requesters cannot review their own leave requests
+      if (!elevated && leave.staffId === staffId) {
+        return NextResponse.json(
+          { error: "Requesters cannot review their own leave requests" },
+          { status: 403 }
+        );
+      }
+
+      // Role & Stage authority validation
+      const validation = WorkflowEngine.validateTransition(
+        leave.status as any,
+        action,
+        role as Role
+      );
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 403 });
+      }
+
       let nextStatus = action === "approve" ? "approved" : "rejected";
-      if (action === "approve" && (session.role === "hod" || session.role === "principal")) {
+      if (action === "approve" && (role === "hod" || role === "principal")) {
         nextStatus = "hod_approved";
       }
 
@@ -723,29 +744,76 @@ export const PATCH = requireAuth(async (request, session) => {
         }
       }
     } else if (type === "expense") {
+      const claim = await db
+        .select()
+        .from(expenseClaims)
+        .where(eq(expenseClaims.id, id))
+        .get();
+
+      if (!claim) {
+        return NextResponse.json({ error: "Expense claim not found" }, { status: 404 });
+      }
+
+      // Anti-self-approval: requesters cannot review their own expense claims
+      if (!elevated && claim.staffId === staffId) {
+        return NextResponse.json(
+          { error: "Requesters cannot review their own expense claims" },
+          { status: 403 }
+        );
+      }
+
+      // Role & Stage authority validation using WorkflowEngine
+      const validation = WorkflowEngine.validateTransition(
+        claim.status as any,
+        action,
+        role as Role
+      );
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error }, { status: 403 });
+      }
+
+      const nextStatus = WorkflowEngine.getNextStatus(
+        claim.status as any,
+        action,
+        "expense",
+        claim.amount ?? 0
+      );
+
       const updated = await db
         .update(expenseClaims)
         .set({
-          status: action === "approve" ? "approved" : "rejected",
+          status: nextStatus,
           reviewedById: staffId,
           reviewedAt: now,
           reviewNotes: notes || null,
           updatedAt: now,
         })
-        .where(
-          and(
-            eq(expenseClaims.id, id),
-            ne(expenseClaims.status, "approved"),
-            ne(expenseClaims.status, "rejected")
-          )
-        )
+        .where(and(eq(expenseClaims.id, id), eq(expenseClaims.status, claim.status)))
         .returning()
         .get();
 
       if (!updated) {
-        return NextResponse.json({ error: "Expense claim is already in a terminal state" }, { status: 400 });
+        return NextResponse.json({ error: "Expense claim status changed by a concurrent request" }, { status: 409 });
       }
     } else if (type === "purchase") {
+      const purchase = await db
+        .select()
+        .from(purchaseRequests)
+        .where(eq(purchaseRequests.id, id))
+        .get();
+
+      if (!purchase) {
+        return NextResponse.json({ error: "Purchase request not found" }, { status: 404 });
+      }
+
+      // Anti-self-approval: requesters cannot review their own purchase requests
+      if (!elevated && purchase.requesterId === staffId) {
+        return NextResponse.json(
+          { error: "Requesters cannot review their own purchase requests" },
+          { status: 403 }
+        );
+      }
+
       if (action === "reject") {
         const updated = await db
           .update(purchaseRequests)
@@ -762,16 +830,25 @@ export const PATCH = requireAuth(async (request, session) => {
           return NextResponse.json({ error: "Purchase request is already rejected" }, { status: 400 });
         }
       } else {
-        const current = await db
-          .select({ status: purchaseRequests.status })
-          .from(purchaseRequests)
-          .where(eq(purchaseRequests.id, id))
-          .get();
-        if (!current) {
-          return NextResponse.json({ error: "Not found" }, { status: 404 });
+        // Role & Stage authority validation using WorkflowEngine
+        const validation = WorkflowEngine.validateTransition(
+          purchase.status as any,
+          action,
+          role as Role
+        );
+        if (!validation.valid) {
+          return NextResponse.json({ error: validation.error }, { status: 403 });
         }
+
+        WorkflowEngine.getNextStatus(
+          purchase.status as any,
+          action,
+          "purchase",
+          purchase.estimatedCost ?? 0
+        );
+
         const updates: Record<string, unknown> = { updatedAt: now };
-        switch (current.status) {
+        switch (purchase.status) {
           case "pending_hod":
             updates.status = "pending_accounts";
             updates.approvedByHodId = staffId;
@@ -797,7 +874,7 @@ export const PATCH = requireAuth(async (request, session) => {
         const updated = await db
           .update(purchaseRequests)
           .set(updates)
-          .where(and(eq(purchaseRequests.id, id), eq(purchaseRequests.status, current.status)))
+          .where(and(eq(purchaseRequests.id, id), eq(purchaseRequests.status, purchase.status)))
           .returning()
           .get();
 
@@ -806,6 +883,33 @@ export const PATCH = requireAuth(async (request, session) => {
         }
       }
     } else if (type === "booking") {
+      const booking = await db
+        .select()
+        .from(bookings)
+        .where(eq(bookings.id, id))
+        .get();
+
+      if (!booking) {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+      }
+
+      // Anti-self-approval: bookers cannot approve their own bookings
+      if (!elevated && booking.bookerId === staffId) {
+        return NextResponse.json(
+          { error: "Bookers cannot approve their own bookings" },
+          { status: 403 }
+        );
+      }
+
+      // Role validation for bookings: hod, principal, super_admin, admin can approve
+      const allowedRoles = ["super_admin", "admin", "principal", "hod"];
+      if (!elevated && !allowedRoles.includes(role)) {
+        return NextResponse.json(
+          { error: `Role '${role}' is not authorized to review bookings` },
+          { status: 403 }
+        );
+      }
+
       const updated = await db
         .update(bookings)
         .set({
