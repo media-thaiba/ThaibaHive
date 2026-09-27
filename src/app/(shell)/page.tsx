@@ -24,6 +24,7 @@ import { FocusLinks } from "@/components/dashboard/focus-links";
 import { GuidedTour } from "@/components/dashboard/guided-tour";
 import { LeaveDialog } from "@/components/dashboard/leave-dialog";
 import { TaskDialog } from "@/components/dashboard/task-dialog";
+import { PermissionGate } from "@/components/ui/permission-gate";
 
 type DashboardData = {
   staffCount: number;
@@ -162,14 +163,17 @@ export default function DashboardPage() {
       {/* Top Metrics */}
       <section className="animate-slide-up" style={{ animationDelay: "40ms" }}>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          {isAdmin ? (
+          <PermissionGate anyRole={["super_admin", "admin", "principal", "hod"]} fallback={null}>
             <StatCard id="tour-profile" label="Staff Present" value={data?.todayPresent ?? 0} suffix={` / ${data?.staffCount ?? 0}`} progress={data && data.staffCount > 0 ? data.todayPresent / data.staffCount : 0} href="/admin/attendance-locations" icon={<Users className="h-4 w-4" />} color="success" />
-          ) : (
+          </PermissionGate>
+          <PermissionGate anyRole={["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"]} fallback={null}>
             <StatCard id="tour-profile" label="Profile Completion" value={data?.profileFields.filled ?? 0} suffix={` / ${data?.profileFields.total ?? 7}`} progress={data ? data.profileFields.filled / data.profileFields.total : 0} href={staff ? `/staff/${staff.id}/edit` : "/staff"} icon={<ShieldCheck className="h-4 w-4" />} color="primary" />
-          )}
+          </PermissionGate>
           <StatCard label="Tasks Done" value={data?.completedTasks ?? 0} suffix={` / ${data?.totalTasks ?? 0}`} progress={data && data.totalTasks > 0 ? data.completedTasks / data.totalTasks : 0} href="/tasks" icon={<ClipboardCheck className="h-4 w-4" />} color="info" />
           <StatCard label="Leave Remaining" value={data?.leaveRemaining ?? 0} suffix=" days" progress={data && data.leaveTotal > 0 ? (data.leaveTotal - data.leaveRemaining) / data.leaveTotal : 0} href="/leaves" icon={<Calendar className="h-4 w-4" />} color="warning" />
-          <StatCard label="Pending Approvals" value={data?.pendingApprovals ?? 0} href={isAdmin ? "/admin/leave-approvals" : "/approvals"} icon={<CheckSquare className="h-4 w-4" />} color={data?.pendingApprovals ? "destructive" : "muted"} />
+          <PermissionGate anyOf={["approvals:approve", "approvals:view"]} fallback={null}>
+  <StatCard label="Pending Approvals" value={data?.pendingApprovals ?? 0} href={isAdmin ? "/admin/leave-approvals" : "/approvals"} icon={<CheckSquare className="h-4 w-4" />} color={data?.pendingApprovals ? "destructive" : "muted"} />
+</PermissionGate>
         </div>
       </section>
 

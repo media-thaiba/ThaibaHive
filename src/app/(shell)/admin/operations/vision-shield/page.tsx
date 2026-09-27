@@ -11,6 +11,7 @@ import { AlprAccessTab } from '@/components/operations/vision/alpr-access-tab';
 import { PrivacyAuditTab } from '@/components/operations/vision/privacy-audit-tab';
 import { LockdownModal } from '@/components/operations/vision/lockdown-modal';
 import { Activity, ShieldAlert, Navigation, Car, Lock, AlertTriangle } from 'lucide-react';
+import { PermissionGate } from '@/components/ui/permission-gate';
 
 export default function VisionShieldCockpitPage() {
   const [activeTab, setActiveTab] = useState('radar');
@@ -47,67 +48,91 @@ export default function VisionShieldCockpitPage() {
         <div className="flex items-center space-x-2">
           <Badge variant="success">YOLOv11x + DeepSORT Active</Badge>
           <Badge variant="info">v3.34.0 SafeCampus OS</Badge>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setIsLockdownModalOpen(true)}
-            className="flex items-center gap-1.5 font-semibold"
-          >
-            <AlertTriangle className="h-4 w-4" /> LOCKDOWN
-          </Button>
+          <PermissionGate permission="vision:lockdown:trigger" fallback={null}>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsLockdownModalOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+            >
+              <AlertTriangle className="h-4 w-4" /> LOCKDOWN
+            </Button>
+          </PermissionGate>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full max-w-4xl">
-          <TabsTrigger value="radar" className="flex items-center gap-1.5">
-            <Activity className="h-4 w-4" />
-            3D Vision Radar
-          </TabsTrigger>
-          <TabsTrigger value="threats" className="flex items-center gap-1.5">
-            <ShieldAlert className="h-4 w-4" />
-            Threat Alerts &amp; Incidents
-          </TabsTrigger>
-          <TabsTrigger value="guards" className="flex items-center gap-1.5">
-            <Navigation className="h-4 w-4" />
-            Guard Dispatch
-          </TabsTrigger>
-          <TabsTrigger value="alpr" className="flex items-center gap-1.5">
-            <Car className="h-4 w-4" />
-            ALPR &amp; Gate Access
-          </TabsTrigger>
-          <TabsTrigger value="privacy" className="flex items-center gap-1.5">
-            <Lock className="h-4 w-4" />
-            Privacy Vault
-          </TabsTrigger>
+<TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full max-w-4xl">
+          <PermissionGate permission="vision:radar:view" fallback={null}>
+            <TabsTrigger value="radar" className="flex items-center gap-1.5">
+              <Activity className="h-4 w-4" />
+              3D Vision Radar
+            </TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="vision:alerts:view" fallback={null}>
+            <TabsTrigger value="threats" className="flex items-center gap-1.5">
+              <ShieldAlert className="h-4 w-4" />
+              Threat Alerts & Incidents
+            </TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="vision:guards:view" fallback={null}>
+            <TabsTrigger value="guards" className="flex items-center gap-1.5">
+              <Navigation className="h-4 w-4" />
+              Guard Dispatch
+            </TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="vision:alpr:view" fallback={null}>
+            <TabsTrigger value="alpr" className="flex items-center gap-1.5">
+              <Car className="h-4 w-4" />
+              ALPR & Gate Access
+            </TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="vision:privacy:view" fallback={null}>
+            <TabsTrigger value="privacy" className="flex items-center gap-1.5">
+              <Lock className="h-4 w-4" />
+              Privacy Vault
+            </TabsTrigger>
+          </PermissionGate>
         </TabsList>
 
-        <TabsContent value="radar">
-          <VisionRadarTab onTriggerLockdownClick={() => setIsLockdownModalOpen(true)} />
-        </TabsContent>
+        <PermissionGate permission="vision:radar:view" fallback={null}>
+          <TabsContent value="radar">
+            <VisionRadarTab onTriggerLockdownClick={() => setIsLockdownModalOpen(true)} />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="threats">
-          <ThreatDetectionTab />
-        </TabsContent>
+        <PermissionGate permission="vision:alerts:view" fallback={null}>
+          <TabsContent value="threats">
+            <ThreatDetectionTab />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="guards">
-          <GuardDispatchTab />
-        </TabsContent>
+        <PermissionGate permission="vision:guards:view" fallback={null}>
+          <TabsContent value="guards">
+            <GuardDispatchTab />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="alpr">
-          <AlprAccessTab />
-        </TabsContent>
+        <PermissionGate permission="vision:alpr:view" fallback={null}>
+          <TabsContent value="alpr">
+            <AlprAccessTab />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="privacy">
-          <PrivacyAuditTab />
-        </TabsContent>
+        <PermissionGate permission="vision:privacy:view" fallback={null}>
+          <TabsContent value="privacy">
+            <PrivacyAuditTab />
+          </TabsContent>
+        </PermissionGate>
       </Tabs>
 
-      <LockdownModal
-        isOpen={isLockdownModalOpen}
-        onClose={() => setIsLockdownModalOpen(false)}
-        onConfirmLockdown={handleConfirmLockdown}
-      />
+      <PermissionGate permission="vision:lockdown:trigger" fallback={null}>
+        <LockdownModal
+          isOpen={isLockdownModalOpen}
+          onClose={() => setIsLockdownModalOpen(false)}
+          onConfirmLockdown={handleConfirmLockdown}
+        />
+      </PermissionGate>
     </div>
   );
 }

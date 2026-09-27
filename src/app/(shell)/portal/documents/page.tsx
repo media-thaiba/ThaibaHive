@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ensureArray } from '@/lib/utils';
+import { PermissionGate } from '@/components/ui/permission-gate';
 
 export default function StudentDocumentPortalPage() {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -69,12 +70,13 @@ export default function StudentDocumentPortalPage() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Student &amp; Parent Document Center"
-        description="View, verify, and download official examination hall tickets, term report cards, and bonafide certificates."
-      />
+return (
+    <PermissionGate anyOf={["documents:read", "documents:verify"]} fallback={<div className="p-8 text-center text-muted-foreground">Access requires document permissions.</div>}>
+      <div className="space-y-6">
+        <PageHeader
+          title="Student & Parent Document Center"
+          description="View, verify, and download official examination hall tickets, term report cards, and bonafide certificates."
+        />
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -152,5 +154,6 @@ export default function StudentDocumentPortalPage() {
         </Dialog>
       )}
     </div>
+    </PermissionGate>
   );
 }

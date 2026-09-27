@@ -12,6 +12,8 @@ const publicPaths = [
   "/auth/signup",
   "/_next",
   "/Logo",
+  "/portal",
+  "/api/public/",
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/google",
@@ -23,6 +25,11 @@ const publicPaths = [
   "/api/media/share-links/",
   "/share/",
   "/downloads",
+  "/about",
+  "/mission",
+  "/enquiry",
+  "/affiliation",
+  "/verify/",
   "/favicon.ico",
 ];
 
@@ -68,6 +75,13 @@ function handleProxy(request: NextRequest): NextResponse {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
+          pathname
+        );
+      }
+      if (pathname === "/" || pathname === "") {
+        return addSecurityHeaders(
+          request,
+          NextResponse.redirect(new URL("/portal/tgcis", request.url)),
           pathname
         );
       }

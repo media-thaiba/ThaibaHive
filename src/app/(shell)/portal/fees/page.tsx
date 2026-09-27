@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { ParentFeeCard } from '@/components/operations/finance/parent-fee-card';
 import { PaymentHistoryTable } from '@/components/operations/finance/payment-history-table';
 import { CheckoutModal } from '@/components/operations/finance/checkout-modal';
+import { PermissionGate } from '@/components/ui/permission-gate';
 
 export default function ParentFeesPortalPage() {
   const { allocation, paymentHistory, loading, error, refresh } = useParentFees();
@@ -45,40 +46,44 @@ export default function ParentFeesPortalPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Student Fee & Online Payment Portal
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Review outstanding dues, schedule installments, execute payments, and download certified receipts
-        </p>
+    <PermissionGate anyOf={["finance:fees:view", "finance:payments:create"]} fallback={<div className="p-8 text-center text-muted-foreground">Access requires finance permissions.</div>}>
+      <div className="p-8 space-y-6 max-w-5xl mx-auto">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Student Fee & Online Payment Portal
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Review outstanding dues, schedule installments, execute payments, and download certified receipts
+          </p>
+        </div>
+
+        {error && <Alert variant="error">{error}</Alert>}
+
+        {successReceipt && (
+          <Alert variant="success" className="bg-emerald-50 border-emerald-300 text-emerald-900">
+            Payment successful! Your cryptographically signed receipt has been issued: <strong>{successReceipt}</strong>
+          </Alert>
+        )}
+
+        {allocation && (
+          <ParentFeeCard allocation={allocation} onPayClick={handlePayClick} />
+        )}
+
+        <PaymentHistoryTable payments={paymentHistory} />
+
+        {allocation && (
+          <PermissionGate permission="finance:payments:create" fallback={null}>
+            <CheckoutModal
+              isOpen={checkoutOpen}
+              onClose={() => setCheckoutOpen(false)}
+              allocationId={allocation.id}
+              installmentId={selectedInstallmentId}
+              amount={payAmount}
+              onPaymentSuccess={handlePaymentSuccess}
+            />
+          </PermissionGate>
+        )}
       </div>
-
-      {error && <Alert variant="error">{error}</Alert>}
-
-      {successReceipt && (
-        <Alert variant="success" className="bg-emerald-50 border-emerald-300 text-emerald-900">
-          Payment successful! Your cryptographically signed receipt has been issued: <strong>{successReceipt}</strong>
-        </Alert>
-      )}
-
-      {allocation && (
-        <ParentFeeCard allocation={allocation} onPayClick={handlePayClick} />
-      )}
-
-      <PaymentHistoryTable payments={paymentHistory} />
-
-      {allocation && (
-        <CheckoutModal
-          isOpen={checkoutOpen}
-          onClose={() => setCheckoutOpen(false)}
-          allocationId={allocation.id}
-          installmentId={selectedInstallmentId}
-          amount={payAmount}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
-    </div>
+    </PermissionGate>
   );
 }

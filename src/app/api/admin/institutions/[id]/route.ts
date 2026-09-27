@@ -38,14 +38,32 @@ export const PUT = requireAuth(async (request: Request, _session, context) => {
   return NextResponse.json({ institution: updated });
 }, "org:manage");
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
+export const DELETE = requireAuth(async (request: Request, _session, context) => {
   const { id } = await context!.params;
+  const url = new URL(request.url);
+  const force = url.searchParams.get("force") === "true";
 
-  const deptCount = await db.select().from(departments).where(eq(departments.institutionId, id)).all();
-  if (deptCount.length > 0) {
-    return NextResponse.json({ error: "Remove all departments first" }, { status: 400 });
+  const inst = await db.select().from(institutions).where(eq(institutions.id, id)).get();
+  if (!inst) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (force) {
+    const deptCount = await db.select().from(departments).where(eq(departments.institutionId, id)).all();
+    if (deptCount.length > 0) {
+      return NextResponse.json({ error: "Remove all departments first" }, { status: 400 });
+    }
+    await db.delete(institutions).where(eq(institutions.id, id)).run();
+    return NextResponse.json({ success: true, message: "Institution permanently deleted" });
   }
 
-  await db.delete(institutions).where(eq(institutions.id, id)).run();
-  return NextResponse.json({ success: true });
+  // Default: Soft deactivation to preserve historical academic and student records
+  await db
+    .update(institutions)
+    .set({
+      isActive: false,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(institutions.id, id))
+    .run();
+
+  return NextResponse.json({ success: true, message: "Institution deactivated successfully" });
 }, "org:manage");

@@ -4,6 +4,28 @@ import * as path from "path";
 
 const AUTH_DIR = path.join(process.cwd(), ".auth");
 
+type E2ERole = "super_admin" | "admin" | "principal" | "hod" | "staff" | "accounts" | "purchase";
+
+const ROLE_EMAILS: Record<E2ERole, string> = {
+  super_admin: "test-superadmin@thaibahive.local",
+  admin: "test-admin@thaibahive.local",
+  principal: "test-principal@thaibahive.local",
+  hod: "test-hod@thaibahive.local",
+  staff: "test-staff@thaibahive.local",
+  accounts: "test-accounts@thaibahive.local",
+  purchase: "test-purchase@thaibahive.local",
+};
+
+const ROLE_EMPLOYEE_IDS: Record<E2ERole, string> = {
+  super_admin: "TEST-SUPERADMIN-99",
+  admin: "TEST-ADMIN-99",
+  principal: "TEST-PRIN-99",
+  hod: "TEST-HOD-99",
+  staff: "TEST-STAFF-99",
+  accounts: "TEST-ACCOUNTS-99",
+  purchase: "TEST-PURCHASE-99",
+};
+
 /**
  * Ensures that the authentication state directory exists.
  */
@@ -17,16 +39,11 @@ function ensureAuthDir() {
  * Performs login for a given role and saves the browser storage state to a file.
  * Returns the path to the saved storage state file.
  */
-export async function loginAndSaveState(page: Page, role: "super_admin" | "admin" | "principal" | "hod" | "staff"): Promise<string> {
+export async function loginAndSaveState(page: Page, role: E2ERole): Promise<string> {
   ensureAuthDir();
   const statePath = path.join(AUTH_DIR, `${role}.json`);
 
-  let email = "test-staff@thaibahive.local";
-  if (role === "super_admin") email = "test-superadmin@thaibahive.local";
-  else if (role === "admin") email = "test-admin@thaibahive.local";
-  else if (role === "principal") email = "test-principal@thaibahive.local";
-  else if (role === "hod") email = "test-hod@thaibahive.local";
-
+  const email = ROLE_EMAILS[role];
   const password = "Password123";
 
   await page.goto("/auth/login");
@@ -50,4 +67,36 @@ export async function loginAndSaveState(page: Page, role: "super_admin" | "admin
   console.log(`Saved auth state for ${role} to ${statePath}`);
 
   return statePath;
+}
+
+export function getAuthStatePath(role: E2ERole): string {
+  return path.join(AUTH_DIR, `${role}.json`);
+}
+
+export function getRoleEmail(role: E2ERole): string {
+  return ROLE_EMAILS[role];
+}
+
+export function getRoleEmployeeId(role: E2ERole): string {
+  return ROLE_EMPLOYEE_IDS[role];
+}
+
+export const E2E_ROLES: E2ERole[] = ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"];
+
+export const ADMIN_ROLES: E2ERole[] = ["super_admin", "admin"];
+export const PRINCIPAL_AND_ABOVE: E2ERole[] = ["super_admin", "admin", "principal"];
+export const HOD_AND_ABOVE: E2ERole[] = ["super_admin", "admin", "principal", "hod"];
+export const FINANCE_ROLES: E2ERole[] = ["super_admin", "admin", "principal", "hod", "accounts"];
+export const PURCHASE_ROLES: E2ERole[] = ["super_admin", "admin", "principal", "hod", "purchase"];
+export const ALL_STAFF_ROLES: E2ERole[] = ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"];
+
+/**
+ * Returns list of E2E roles that have cached auth state files.
+ */
+export function getAvailableRoles(): E2ERole[] {
+  return E2E_ROLES.filter(r => authStateExists(r));
+}
+
+function authStateExists(role: string): boolean {
+  return fs.existsSync(path.join(AUTH_DIR, `${role}.json`));
 }

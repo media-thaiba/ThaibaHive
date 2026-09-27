@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { primaryNav } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { PermissionGate } from "@/components/ui/permission-gate";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -19,34 +20,35 @@ export function BottomNav() {
           const Icon = item.icon;
           const active = isActive(item.href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.label}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-xl transition-all duration-200 min-w-[44px] min-h-[44px] relative",
-                active
-                  ? "text-primary"
-                  : "text-muted-foreground active:bg-muted/60"
-              )}
-            >
-              {active && (
-                <span className="absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full bg-primary animate-scale-in" />
-              )}
-              <Icon
+            <PermissionGate key={item.href} anyRole={item.roles} fallback={null}>
+              <Link
+                href={item.href}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "h-5 w-5 transition-all duration-200",
-                  active ? "stroke-[2.2]" : "stroke-[1.8]"
+                  "flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-xl transition-all duration-200 min-w-[44px] min-h-[44px] relative",
+                  active
+                    ? "text-primary"
+                    : "text-muted-foreground active:bg-muted/60"
                 )}
-              />
-              <span className={cn(
-                "text-[10px] font-medium leading-tight transition-colors duration-200",
-                active ? "text-primary" : ""
-              )}>
-                {item.label}
-              </span>
-            </Link>
+              >
+                {active && (
+                  <span className="absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full bg-primary animate-scale-in" />
+                )}
+                <Icon
+                  className={cn(
+                    "h-5 w-5 transition-all duration-200",
+                    active ? "stroke-[2.2]" : "stroke-[1.8]"
+                  )}
+                />
+                <span className={cn(
+                  "text-[10px] font-medium leading-tight transition-colors duration-200",
+                  active ? "text-primary" : ""
+                )}>
+                  {item.label}
+                </span>
+              </Link>
+            </PermissionGate>
           );
         })}
       </div>

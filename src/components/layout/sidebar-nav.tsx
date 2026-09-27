@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUIStore } from "@/stores";
+import { PermissionGate } from "@/components/ui/permission-gate";
 
 type SidebarNavProps = {
   onSearchOpen: () => void;
@@ -134,53 +135,66 @@ function SidebarLink({
   const enabled = isPhaseOnePath(item.href);
   const Icon = item.icon;
 
-  if (!enabled) {
+  const renderLink = () => {
+    if (!enabled) {
+      return (
+        <button
+          onClick={() =>
+            toast.info("Coming Soon", {
+              description: "This feature will be available in a future update.",
+            })
+          }
+          aria-label={`${item.label} (coming soon)`}
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150 group w-full text-left",
+            "text-muted-foreground/40 hover:bg-muted/50 hover:text-muted-foreground cursor-default",
+            collapsed && "justify-center px-2"
+          )}
+          title={collapsed ? item.label : undefined}
+        >
+          <Icon className="h-4 w-4 shrink-0" />
+          {!collapsed && (
+            <>
+              <span className="truncate flex-1">{item.label}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider rounded-full bg-muted/80 px-1.5 py-0.5 text-muted-foreground/50">
+                Soon
+              </span>
+            </>
+          )}
+        </button>
+      );
+    }
+
     return (
-      <button
-        onClick={() =>
-          toast.info("Coming Soon", {
-            description: "This feature will be available in a future update.",
-          })
-        }
-        aria-label={`${item.label} (coming soon)`}
+      <Link
+        href={item.href}
+        aria-label={item.label}
         className={cn(
-          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150 group w-full text-left",
-          "text-muted-foreground/40 hover:bg-muted/50 hover:text-muted-foreground cursor-default",
+          "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150 group relative",
+          active
+            ? "bg-primary/10 text-primary font-medium"
+            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
           collapsed && "justify-center px-2"
         )}
         title={collapsed ? item.label : undefined}
       >
-        <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && (
-          <>
-            <span className="truncate flex-1">{item.label}</span>
-            <span className="text-[9px] font-semibold uppercase tracking-wider rounded-full bg-muted/80 px-1.5 py-0.5 text-muted-foreground/50">
-              Soon
-            </span>
-          </>
+        {active && !collapsed && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary" />
         )}
-      </button>
+        <Icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </Link>
     );
-  }
+  };
 
   return (
-    <Link
-      href={item.href}
-      aria-label={item.label}
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-all duration-150 group relative",
-        active
-          ? "bg-primary/10 text-primary font-medium"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-        collapsed && "justify-center px-2"
-      )}
-      title={collapsed ? item.label : undefined}
+    <PermissionGate
+      permission={item.permission}
+      anyOf={item.anyOf}
+      anyRole={item.roles}
+      fallback={null}
     >
-      {active && !collapsed && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary" />
-      )}
-      <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed && <span className="truncate">{item.label}</span>}
-    </Link>
+      {renderLink()}
+    </PermissionGate>
   );
 }

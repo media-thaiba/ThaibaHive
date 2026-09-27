@@ -48,6 +48,8 @@ async function globalSetup() {
   const staffId = await seedUser("test-staff@thaibahive.local", "TEST-STAFF-99", "Test", "Staff", "staff", "test-nfc-tag-id-99");
   const hodId = await seedUser("test-hod@thaibahive.local", "TEST-HOD-99", "Test", "HOD", "hod");
   const principalId = await seedUser("test-principal@thaibahive.local", "TEST-PRIN-99", "Test", "Principal", "principal");
+  const accountsId = await seedUser("test-accounts@thaibahive.local", "TEST-ACCOUNTS-99", "Test", "Accounts", "accounts");
+  const purchaseId = await seedUser("test-purchase@thaibahive.local", "TEST-PURCHASE-99", "Test", "Purchase", "purchase");
 
   // Clean up existing institution by code and ID using PRAGMA foreign_keys = OFF
   const institutionId = "inst_campus_main";
@@ -202,6 +204,8 @@ async function globalSetup() {
   await assignStaffToInstitution(principalId, institutionId);
   await assignStaffToInstitution(_adminId, institutionId);
   await assignStaffToInstitution(_superAdminId, institutionId);
+  await assignStaffToInstitution(accountsId, institutionId);
+  await assignStaffToInstitution(purchaseId, institutionId);
 
   // Seed test department
   let departmentId = "";
@@ -342,6 +346,8 @@ async function globalSetup() {
   await cacheRoleSession("test-superadmin@thaibahive.local", "super_admin");
   await cacheRoleSession("test-hod@thaibahive.local", "hod");
   await cacheRoleSession("test-principal@thaibahive.local", "principal");
+  await cacheRoleSession("test-accounts@thaibahive.local", "accounts");
+  await cacheRoleSession("test-purchase@thaibahive.local", "purchase");
 
   await browser.close();
   console.log("Global setup complete. Cached E2E storageStates.");

@@ -31,6 +31,7 @@
     "security:deps": "tsx scripts/security/vuln-scanner.ts",
     "security:licenses": "tsx scripts/security/license-compliance-check.ts",
     "security:tenants": "tsx scripts/security/tenant-isolation-scan.ts",
+    "security:rbac": "tsx scripts/security/rbac-permission-audit.ts",
     "compliance:verify": "tsx scripts/compliance/verify-audit-chain.ts",
     "compliance:snapshot": "tsx scripts/compliance/snapshot-cron.ts",
     "compliance:scan": "tsx scripts/compliance/audit-coverage-scanner.ts",

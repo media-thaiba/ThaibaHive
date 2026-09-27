@@ -181,4 +181,34 @@ packages/db/         → DB package (Drizzle schema)
 - TypeScript: ✅ `tsc --noEmit` exits with 0 errors
 - Simulation: ✅ `pnpm vision:simulate` (8/8 stages passed)
 
+### 2026-09-27: Sprint-051 5-Tier RBAC & Tenant Boundary Deep Enforcement
+
+#### Fixed Issues:
+
+**Issue 1: Role Permissions Matrix Gap Across New Modules**
+- Files: `packages/auth/roles.ts`
+- Problem: 141 permission keys across Finance, Alumni, Supply Chain, Neuro Cluster, Digital Twin, Eco, and Vision Shield were only mapped implicitly to `super_admin` via wildcard `*`, causing 403 Forbidden errors when `admin`, `principal`, `hod`, `staff`, `accounts`, or `purchase` performed authorized actions.
+- Solution: Fully mapped granular permissions across all 5 tiers plus specialized roles (`accounts`, `purchase`, `regional_admin`, `regional_auditor`) with strict negative boundary enforcement.
+- Status: ✅ Fixed
+
+**Issue 2: Comprehensive 5-Tier Negative & Positive Auth Matrix Testing**
+- Files: `packages/auth/__tests__/rbac-5tier-matrix.test.ts`
+- Problem: Lack of automated unit test suites validating positive access grants and negative boundary blocks across all 5 tiers and specialized roles.
+- Solution: Created full 26-test suite covering positive permissions, negative boundaries, role validity checks, and security alerts on invalid role injection.
+- Status: ✅ Fixed
+
+**Issue 3: Automated AST RBAC Pipeline Scanner**
+- Files: `scripts/security/rbac-permission-audit.ts` and `package.json`
+- Problem: Need continuous AST-level scanning to guarantee zero unmapped permission keys across future route handlers.
+- Solution: Implemented `pnpm security:rbac` with automated zero-drift exit code verification.
+- Status: ✅ Fixed
+
+**Verification:**
+- RBAC AST Scanner: ✅ 100% Route-to-Role Permission Mapping (276/276 unique permissions mapped)
+- Tenant Scanner: ✅ 100% Tenant Isolated (1,542/1,542 files scanned, 0 leaks)
+- Gateway AST Scanner: ✅ 100% Route Shielding (577/577 endpoints shielded, 0 leaks)
+- Identity Scanner: ✅ 100% Passed (15 modules verified, 42 DPoP routes protected)
+- Jest Auth Suites: ✅ 100% Passing (26/26 tests across 3 suites)
+- TypeScript: ✅ `tsc --noEmit` exits with 0 errors
+
 <!-- END:issue-fixes -->

@@ -43,6 +43,9 @@ export const POST = requireAuth(async (request: Request, session) => {
       }
       updates.marksObtained = adjustedMarks;
       updates.status = "moderated";
+    } else if (action === "return") {
+      updates.status = "returned";
+      updates.moderationRemarks = reason || "Returned to teacher for correction";
     } else {
       return NextResponse.json({ error: "Invalid moderation action" }, { status: 400 });
     }

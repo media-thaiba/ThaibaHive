@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
-import {  } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ensureArray } from "@/lib/utils";
 import { ApprovalQueue, QueueItem } from "./ApprovalQueue";
 import { ApprovalModal } from "./ApprovalModal";
-import { Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, RefreshCw, Plus, Download } from "lucide-react";
+import { PermissionGate } from "@/components/ui/permission-gate";
 
 export function FinanceDashboard() {
   const [items, setItems] = useState<QueueItem[]>([]);
@@ -52,84 +53,98 @@ export function FinanceDashboard() {
             Multi-stage workflow queue management for expense claims and purchase requests.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchQueueData} className="gap-2">
-          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <PermissionGate permission="finance:create" fallback={null}>
+            <Button size="sm" className="gap-2">
+              <Plus className="w-4 h-4" /> New Request
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="finance:export" fallback={null}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="w-4 h-4" /> Export
+            </Button>
+          </PermissionGate>
+          <Button variant="outline" size="sm" onClick={fetchQueueData} className="gap-2">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-amber-500/10 text-amber-500 rounded-lg">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground font-medium">Pending Requests</div>
-            <div className="text-2xl font-bold">{pendingCount}</div>
-          </div>
-        </Card>
+      <PermissionGate anyOf={["finance:create", "finance:approve", "finance:export"]} fallback={<div className="space-y-4"><p className="text-muted-foreground text-center py-8">No finance permissions available for your role.</p></div>}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-amber-500/10 text-amber-500 rounded-lg">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground font-medium">Pending Requests</div>
+              <div className="text-2xl font-bold">{pendingCount}</div>
+            </div>
+          </Card>
 
-        <Card className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-lg">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground font-medium">Approved</div>
-            <div className="text-2xl font-bold">{approvedCount}</div>
-          </div>
-        </Card>
+          <Card className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-lg">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground font-medium">Approved</div>
+              <div className="text-2xl font-bold">{approvedCount}</div>
+            </div>
+          </Card>
 
-        <Card className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-rose-500/10 text-rose-500 rounded-lg">
-            <XCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground font-medium">Rejected</div>
-            <div className="text-2xl font-bold">{rejectedCount}</div>
-          </div>
-        </Card>
-      </div>
+          <Card className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-rose-500/10 text-rose-500 rounded-lg">
+              <XCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground font-medium">Rejected</div>
+              <div className="text-2xl font-bold">{rejectedCount}</div>
+            </div>
+          </Card>
+        </div>
 
-      <div className="flex items-center gap-2 border-b pb-2">
-        <Button
-          variant={statusFilter === "pending" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setStatusFilter("pending")}
-        >
-          Pending Queue
-        </Button>
-        <Button
-          variant={statusFilter === "approved" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setStatusFilter("approved")}
-        >
-          Approved History
-        </Button>
-        <Button
-          variant={statusFilter === "rejected" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setStatusFilter("rejected")}
-        >
-          Rejected
-        </Button>
-      </div>
+        <div className="flex items-center gap-2 border-b pb-2">
+          <Button
+            variant={statusFilter === "pending" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setStatusFilter("pending")}
+          >
+            Pending Queue
+          </Button>
+          <Button
+            variant={statusFilter === "approved" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setStatusFilter("approved")}
+          >
+            Approved History
+          </Button>
+          <Button
+            variant={statusFilter === "rejected" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setStatusFilter("rejected")}
+          >
+            Rejected
+          </Button>
+        </div>
 
-      <ApprovalQueue
-        items={items}
-        isLoading={isLoading}
-        onSelectItem={(item) => setSelectedItem(item)}
-        statusFilter={statusFilter}
-      />
-
-      {selectedItem && (
-        <ApprovalModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onSuccess={() => {
-            setSelectedItem(null);
-            fetchQueueData();
-          }}
+        <ApprovalQueue
+          items={items}
+          isLoading={isLoading}
+          onSelectItem={(item) => setSelectedItem(item)}
+          statusFilter={statusFilter}
         />
-      )}
+
+        {selectedItem && (
+          <ApprovalModal
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onSuccess={() => {
+              setSelectedItem(null);
+              fetchQueueData();
+            }}
+          />
+        )}
+      </PermissionGate>
     </div>
   );
 }

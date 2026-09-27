@@ -71,8 +71,8 @@ export default function PublicInstitutionPortalPage({
   const [affError, setAffError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch public circulars
-    fetch("/api/circulars")
+    // Fetch public circulars from public endpoint
+    fetch("/api/public/circulars")
       .then((r) => r.json())
       .then((data) => {
         setCirculars((data.circulars || []).slice(0, 6));

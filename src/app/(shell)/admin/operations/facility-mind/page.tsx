@@ -11,6 +11,7 @@ import { InventoryVaultTab } from '@/components/operations/facility/admin/invent
 import { EnergyLoadTab } from '@/components/operations/facility/admin/energy-load-tab';
 import { WorkOrderDispatchModal } from '@/components/operations/facility/workorders/work-order-dispatch-modal';
 import { TwinFloorMap } from '@/components/operations/facility/twin/facility-twin-types';
+import { PermissionGate } from '@/components/ui/permission-gate';
 
 export default function FacilityMindAdminPage() {
   const [activeTab, setActiveTab] = useState('equipment');
@@ -213,62 +214,84 @@ export default function FacilityMindAdminPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
-          <TabsTrigger value="equipment">Equipment Studio & Twin</TabsTrigger>
-          <TabsTrigger value="predictive">
-            Predictive Matrix ({alerts.filter((a) => a.status === 'open').length})
-          </TabsTrigger>
-          <TabsTrigger value="work_orders">Work Order Radar</TabsTrigger>
-          <TabsTrigger value="inventory">Parts Inventory</TabsTrigger>
-          <TabsTrigger value="energy">Energy & Load Shed</TabsTrigger>
+          <PermissionGate permission="facility:equipment:view" fallback={null}>
+            <TabsTrigger value="equipment">Equipment Studio & Twin</TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="facility:alerts:view" fallback={null}>
+            <TabsTrigger value="predictive">
+              Predictive Matrix ({alerts.filter((a) => a.status === 'open').length})
+            </TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="facility:workorders:view" fallback={null}>
+            <TabsTrigger value="work_orders">Work Order Radar</TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="facility:inventory:view" fallback={null}>
+            <TabsTrigger value="inventory">Parts Inventory</TabsTrigger>
+          </PermissionGate>
+          <PermissionGate permission="facility:energy:view" fallback={null}>
+            <TabsTrigger value="energy">Energy & Load Shed</TabsTrigger>
+          </PermissionGate>
         </TabsList>
 
-        <TabsContent value="equipment">
-          <EquipmentStudioTab equipmentList={equipment} floorMaps={mockFloorMaps} />
-        </TabsContent>
+        <PermissionGate permission="facility:equipment:view" fallback={null}>
+          <TabsContent value="equipment">
+            <EquipmentStudioTab equipmentList={equipment} floorMaps={mockFloorMaps} />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="predictive">
-          <PredictiveMatrixTab
-            alerts={alerts}
-            onTriageAlert={handleTriageAlert}
-            onCreateWorkOrder={handleCreateWorkOrderFromAlert}
-          />
-        </TabsContent>
+        <PermissionGate permission="facility:alerts:view" fallback={null}>
+          <TabsContent value="predictive">
+            <PredictiveMatrixTab
+              alerts={alerts}
+              onTriageAlert={handleTriageAlert}
+              onCreateWorkOrder={handleCreateWorkOrderFromAlert}
+            />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="work_orders">
-          <WorkOrderRadarTab
-            workOrders={workOrders}
-            onOpenDispatchModal={handleOpenDispatchModal}
-          />
-        </TabsContent>
+        <PermissionGate permission="facility:workorders:view" fallback={null}>
+          <TabsContent value="work_orders">
+            <WorkOrderRadarTab
+              workOrders={workOrders}
+              onOpenDispatchModal={handleOpenDispatchModal}
+            />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="inventory">
-          <InventoryVaultTab
-            parts={parts}
-            requisitions={requisitions}
-            onTriggerReorderScan={async () => {
-              const res = await fetch('/api/facility/inventory?checkReorder=true').then((r) => (r.ok ? r.json() : null));
-              if (res?.requisitions) setRequisitions(res.requisitions);
-            }}
-          />
-        </TabsContent>
+        <PermissionGate permission="facility:inventory:view" fallback={null}>
+          <TabsContent value="inventory">
+            <InventoryVaultTab
+              parts={parts}
+              requisitions={requisitions}
+              onTriggerReorderScan={async () => {
+                const res = await fetch('/api/facility/inventory?checkReorder=true').then((r) => (r.ok ? r.json() : null));
+                if (res?.requisitions) setRequisitions(res.requisitions);
+              }}
+            />
+          </TabsContent>
+        </PermissionGate>
 
-        <TabsContent value="energy">
-          <EnergyLoadTab onExecutePeakShave={handleExecutePeakShave} />
-        </TabsContent>
+        <PermissionGate permission="facility:energy:view" fallback={null}>
+          <TabsContent value="energy">
+            <EnergyLoadTab onExecutePeakShave={handleExecutePeakShave} />
+          </TabsContent>
+        </PermissionGate>
       </Tabs>
 
       {/* Autonomous Dispatch Modal */}
-      {selectedWorkOrder && (
-        <WorkOrderDispatchModal
-          isOpen={dispatchModalOpen}
-          onClose={() => setDispatchModalOpen(false)}
-          workOrderNumber={selectedWorkOrder.workOrderNumber}
-          workOrderTitle={selectedWorkOrder.title}
-          rankedTechnicians={rankedTechs}
-          availableParts={parts}
-          onConfirmDispatch={handleConfirmDispatch}
-        />
-      )}
+      <PermissionGate permission="facility:workorders:dispatch" fallback={null}>
+        {selectedWorkOrder && (
+          <WorkOrderDispatchModal
+            isOpen={dispatchModalOpen}
+            onClose={() => setDispatchModalOpen(false)}
+            workOrderNumber={selectedWorkOrder.workOrderNumber}
+            workOrderTitle={selectedWorkOrder.title}
+            rankedTechnicians={rankedTechs}
+            availableParts={parts}
+            onConfirmDispatch={handleConfirmDispatch}
+          />
+        )}
+      </PermissionGate>
     </div>
   );
 }
