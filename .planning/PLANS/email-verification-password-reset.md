@@ -1,5 +1,9 @@
 # Plan: Password Reset (Email-Based)
 
+> **STATUS: ✅ IMPLEMENTED & VERIFIED**
+> - All 11 implementation steps completed across SQLite/PG schemas (`migration 0015`), Resend email delivery, rate limiting, and password reset endpoints.
+> - Verified with 10/10 automated Jest tests (`forgot-password.test.ts` & `reset-password.test.ts`).
+
 ## Context
 
 ThaibaHive currently has no email infrastructure and no password reset flow. The "Forgot Password" UI in the login page is a stub that shows a fake success message after a 1.5s delay. Users can only change their password when logged in via the Settings page.

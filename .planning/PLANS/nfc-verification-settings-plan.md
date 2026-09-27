@@ -1,5 +1,11 @@
 # NFC Check-In & Verification Settings Implementation Plan
 
+> **STATUS: ✅ IMPLEMENTED & VERIFIED**
+> - Database schema configured in SQLite/PG schemas (`presenceVerificationSettings` with partial unique indexes & cascade foreign keys).
+> - API endpoint `src/app/api/attendance/settings/route.ts` fully implemented with fallback hierarchy, Zod validation, and audit logging.
+> - Admin UI integrated at `src/app/(shell)/admin/attendance-locations/page.tsx` via `verification-settings-form.tsx`.
+> - Verified with 9/9 automated Jest tests in `attendance-settings.test.ts`.
+
 ## Overview
 
 This plan details the implementation of administrative interfaces and API logic for managing global and campus-specific NFC check-in and background presence verification settings.
