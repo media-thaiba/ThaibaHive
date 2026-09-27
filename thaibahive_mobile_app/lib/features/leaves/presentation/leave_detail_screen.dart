@@ -9,6 +9,7 @@ import '../../../core/network/providers.dart';
 import '../../../models/leave_request_model.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../data/leaves_repository.dart';
+import '../data/leaves_provider.dart';
 
 class LeaveDetailScreen extends ConsumerStatefulWidget {
   final String id;
@@ -298,6 +299,15 @@ class _LeaveDetailScreenState extends ConsumerState<LeaveDetailScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _withdrawRequest,
+                      icon: const Icon(Icons.undo_rounded),
+                      label: const Text('Withdraw Request'),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -305,6 +315,44 @@ class _LeaveDetailScreenState extends ConsumerState<LeaveDetailScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _withdrawRequest() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Withdraw Leave'),
+        content: const Text(
+          'Are you sure you want to withdraw this leave request? '
+          'It will be queued for sync if you are offline.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final sent = await ref
+        .read(leavesListProvider.notifier)
+        .cancelLeave(widget.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(sent
+              ? 'Leave request withdrawn'
+              : 'Saved offline — withdrawal queued for sync'),
+        ),
+      );
+      setState(() => _leaveFuture = _loadLeave());
+    }
   }
 
   String _formatDate(String date) {

@@ -89,8 +89,7 @@ void main() {
     expect(offlineQueue.getPendingEvents(), isEmpty);
   });
 
-  test('flush keeps every event queued when transport fails', () async {
-    final event = await offlineQueue.enqueue(
+  test('flush keeps every event queued when transport fails', () async {    final event = await offlineQueue.enqueue(
       type: 'task_create',
       payload: {'title': 'Offline task'},
     );
@@ -106,5 +105,54 @@ void main() {
     );
 
     await offlineQueue.markCompleted(event.clientEventId);
+  });
+
+  test('flush posts leave/task mutations in the server sync contract', () async {
+    await offlineQueue.enqueue(
+      type: 'leave_apply',
+      payload: {'leave_type_id': 'lt1', 'days': 2},
+    );
+    await offlineQueue.enqueue(
+      type: 'leave_cancel',
+      payload: {'id': 'leave_9', 'status': 'cancelled'},
+    );
+
+    Map<String, dynamic>? capturedBody;
+    final capturingDio = Dio()
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            capturedBody = Map<String, dynamic>.from(options.data as Map);
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {'processedMutations': []},
+              ),
+            );
+          },
+        ),
+      );
+
+    await offlineQueue.flush(httpClient: capturingDio);
+
+    final mutations = capturedBody!['mutations'] as List;
+    expect(mutations, hasLength(2));
+    final actions = mutations
+        .map((m) => (m as Map)['action'] as String)
+        .toSet();
+    expect(actions, containsAll({'leave_apply', 'leave_cancel'}));
+    for (final mutation in mutations) {
+      final map = mutation as Map;
+      expect(map['id'], isNotEmpty);
+      expect(map['timestamp'], isNotEmpty);
+      expect(map['payload'], isA<Map>());
+    }
+
+    // Drain the unconfirmed remainder to keep tests isolated.
+    for (final event in offlineQueue.getPendingEvents()) {
+      await offlineQueue.markCompleted(event.clientEventId);
+    }
+    expect(offlineQueue.getPendingEvents(), isEmpty);
   });
 }

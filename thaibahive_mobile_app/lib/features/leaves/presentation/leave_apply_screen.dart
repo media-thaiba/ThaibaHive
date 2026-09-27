@@ -80,7 +80,7 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(leavesListProvider.notifier).applyLeave({
+      final sent = await ref.read(leavesListProvider.notifier).applyLeave({
         'leave_type_id': _selectedType!.id,
         'start_date': DateFormat('yyyy-MM-dd').format(_startDate!),
         'end_date': DateFormat('yyyy-MM-dd').format(_endDate!),
@@ -89,7 +89,11 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Leave request submitted successfully')),
+          SnackBar(
+            content: Text(sent
+                ? 'Leave request submitted successfully'
+                : 'Saved offline — queued for sync'),
+          ),
         );
         context.pop();
       }
