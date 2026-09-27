@@ -52,7 +52,7 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
           >
             <Search className="h-4 w-4 shrink-0" />
             <span className="flex-1">Search...</span>
-            <kbd className="text-[10px] font-mono bg-background border rounded px-1.5 py-0.5 text-muted-foreground/70">
+            <kbd className="text-[10px] font-mono bg-background border rounded px-1.5 py-0.5 text-muted-foreground font-medium">
               Ctrl K
             </kbd>
           </button>
@@ -77,7 +77,7 @@ export function SidebarNav({ onSearchOpen }: SidebarNavProps) {
                 <button
                   onClick={() => toggleGroup(group.label)}
                   aria-expanded={isExpanded}
-                  className="flex items-center gap-2 w-full rounded-lg px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors duration-150"
+                  className="flex items-center gap-2 w-full rounded-lg px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors duration-150"
                 >
                   <span className="flex-1 text-left">{group.label}</span>
                   <ChevronRight

@@ -5,7 +5,7 @@ import { eq, and, sql } from "drizzle-orm";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
-import { chromium } from "@playwright/test";
+import { SignJWT } from "jose";
 
 async function globalSetup() {
   console.log("Seeding test users and leave types for Playwright E2E tests...");
@@ -309,47 +309,57 @@ async function globalSetup() {
     fs.mkdirSync(authDir, { recursive: true });
   }
 
-  // Perform browser logins to cache storageState for each user role
-  console.log("Logging in test roles and caching browser storage states...");
-  const PORT = process.env.PORT || 3000;
-  const browser = await chromium.launch();
+  // Generate deterministic storageState files for each user role
+  console.log("Generating deterministic E2E storageStates for all test roles...");
+  const jwtSecret = process.env.AUTH_JWT_SECRET || "thaiba_jwt_secret_key_production_certified_2026";
+  const secretKey = new TextEncoder().encode(jwtSecret);
 
-  const cacheRoleSession = async (email: string, roleName: string) => {
-    const context = await browser.newContext({ baseURL: `http://localhost:${PORT}` });
-    const page = await context.newPage();
-    try {
-      await page.goto("/auth/login");
-      await page.waitForSelector("form[data-hydrated='true']", { timeout: 45000 });
-      await page.waitForSelector("#email");
-      await page.fill("#email", "");
-      await page.type("#email", email, { delay: 10 });
-      await page.fill("#password", "");
-      await page.type("#password", "Password123", { delay: 10 });
-      
-      await Promise.all([
-        page.waitForURL((url) => url.pathname === "/" || url.pathname.includes("/dashboard") || !url.pathname.includes("/login"), { timeout: 15000 }),
-        page.click("button[type='submit']"),
-      ]);
-      
-      const sessionPath = path.join(authDir, `${roleName}.json`);
-      await context.storageState({ path: sessionPath });
-      console.log(`Successfully cached E2E storageState for role: ${roleName}`);
-    } catch (err) {
-      console.error(`Failed to cache session for role ${roleName}:`, err);
-    } finally {
-      await context.close();
-    }
-  };
+  const testUsers = [
+    { staffId: _superAdminId, email: "test-superadmin@thaibahive.local", employeeId: "TEST-SUPERADMIN-99", name: "Test Super", role: "super_admin" },
+    { staffId: _adminId, email: "test-admin@thaibahive.local", employeeId: "TEST-ADMIN-99", name: "Test Admin", role: "admin" },
+    { staffId, email: "test-staff@thaibahive.local", employeeId: "TEST-STAFF-99", name: "Test Staff", role: "staff" },
+    { staffId: hodId, email: "test-hod@thaibahive.local", employeeId: "TEST-HOD-99", name: "Test HOD", role: "hod" },
+    { staffId: principalId, email: "test-principal@thaibahive.local", employeeId: "TEST-PRIN-99", name: "Test Principal", role: "principal" },
+    { staffId: accountsId, email: "test-accounts@thaibahive.local", employeeId: "TEST-ACCOUNTS-99", name: "Test Accounts", role: "accounts" },
+    { staffId: purchaseId, email: "test-purchase@thaibahive.local", employeeId: "TEST-PURCHASE-99", name: "Test Purchase", role: "purchase" },
+  ];
 
-  await cacheRoleSession("test-staff@thaibahive.local", "staff");
-  await cacheRoleSession("test-admin@thaibahive.local", "admin");
-  await cacheRoleSession("test-superadmin@thaibahive.local", "super_admin");
-  await cacheRoleSession("test-hod@thaibahive.local", "hod");
-  await cacheRoleSession("test-principal@thaibahive.local", "principal");
-  await cacheRoleSession("test-accounts@thaibahive.local", "accounts");
-  await cacheRoleSession("test-purchase@thaibahive.local", "purchase");
+  for (const u of testUsers) {
+    const token = await new SignJWT({
+      staffId: u.staffId,
+      email: u.email,
+      role: u.role,
+      employeeId: u.employeeId,
+      name: u.name,
+      tokenVersion: 0,
+      dpopEnabled: false,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("7d")
+      .setIssuedAt()
+      .sign(secretKey);
 
-  await browser.close();
+    const storageState = {
+      cookies: [
+        {
+          name: "thaibahive_session",
+          value: token,
+          domain: "localhost",
+          path: "/",
+          expires: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+          httpOnly: true,
+          secure: false,
+          sameSite: "Lax",
+        },
+      ],
+      origins: [],
+    };
+
+    const sessionPath = path.join(authDir, `${u.role}.json`);
+    fs.writeFileSync(sessionPath, JSON.stringify(storageState, null, 2), "utf-8");
+    console.log(`Successfully generated and cached E2E storageState for role: ${u.role}`);
+  }
+
   console.log("Global setup complete. Cached E2E storageStates.");
 }
 

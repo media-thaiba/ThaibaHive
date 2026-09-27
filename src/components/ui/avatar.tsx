@@ -28,13 +28,13 @@ export function Avatar({ src, alt, fallback, size = "md", className, ...props }:
   }, [fallback]);
 
   const bgColor = React.useMemo(() => {
-    if (!fallback) return "bg-muted";
+    if (!fallback) return "hsl(215, 65%, 35%)";
     let hash = 0;
     for (let i = 0; i < fallback.length; i++) {
       hash = fallback.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const hue = hash % 360;
-    return `bg-[hsl(${hue},60%,50%)]`;
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 65%, 35%)`;
   }, [fallback]);
 
   return (
@@ -53,10 +53,8 @@ export function Avatar({ src, alt, fallback, size = "md", className, ...props }:
       )}
       {(isLoading || error || !src) && (
         <div
-          className={cn(
-            "flex items-center justify-center font-medium text-primary-foreground",
-            bgColor
-          )}
+          className="flex h-full w-full items-center justify-center font-medium text-white"
+          style={{ backgroundColor: bgColor }}
           aria-hidden="true"
         >
           {initials}

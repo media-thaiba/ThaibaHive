@@ -35,7 +35,7 @@ export default defineConfig({
   webServer: {
     command: "node --env-file=.env .next/standalone/server.js",
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120000,
     env: {
       HEALTH_SECRET: "thaibahive_health_secret_token",

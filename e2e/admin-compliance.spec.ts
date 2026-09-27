@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Admin Compliance & Governance Radar", () => {
+  test.use({ storageState: ".auth/super_admin.json" });
+
   test("loads compliance governance page and displays telemetry cards", async ({ page }) => {
     // Intercept compliance telemetry endpoints
     await page.route("**/api/system/compliance/telemetry", async (route) => {

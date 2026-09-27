@@ -41,6 +41,8 @@ async function assertNoSeriousViolations(page: Page): Promise<void> {
 }
 
 test.describe('Phase 7.2: WCAG 2.1 AA accessibility audits', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test('login page has no serious a11y violations', async ({ page }) => {
     await page.goto('/auth/login');
     await page.waitForLoadState('domcontentloaded');

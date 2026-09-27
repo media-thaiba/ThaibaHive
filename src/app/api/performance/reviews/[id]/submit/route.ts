@@ -31,4 +31,4 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     const status = message.includes("Anti-self-approval") ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }
-}, "performance:evaluate");
+}, "performance:self");

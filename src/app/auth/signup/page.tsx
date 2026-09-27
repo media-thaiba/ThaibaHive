@@ -12,7 +12,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-muted-foreground text-xs font-medium uppercase tracking-wider animate-pulse-subtle">
+      <div className="text-foreground text-xs font-semibold uppercase tracking-wider animate-pulse-subtle">
         Redirecting to enroll secure node...
       </div>
     </div>

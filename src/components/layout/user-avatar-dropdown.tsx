@@ -23,13 +23,19 @@ export function UserAvatarDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar
-          src={staff.avatarUrl}
-          alt={fullName}
-          fallback={fullName}
-          size="md"
-          className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-        />
+        <button
+          type="button"
+          aria-label="User profile and settings menu"
+          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Avatar
+            src={staff.avatarUrl}
+            alt={fullName}
+            fallback={fullName}
+            size="md"
+            className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+          />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">

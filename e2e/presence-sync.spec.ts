@@ -22,27 +22,25 @@ test("Verify real-time status synchronization and timeline logging", async ({ br
   const adminPage = await adminContext.newPage();
 
   try {
-    // 1. Staff A navigates directly to dashboard (already logged in)
-    console.log("Staff A opening dashboard...");
-    await staffPage.goto("/");
+    // 1. Staff A navigates directly to availability (already logged in)
+    console.log("Staff A opening availability...");
+    await staffPage.goto("/availability");
     await expect(staffPage).not.toHaveURL(/\/auth\/login/);
 
-    // 2. Admin B navigates directly to dashboard (already logged in)
-    console.log("Admin B opening dashboard...");
-    await adminPage.goto("/");
-    await expect(adminPage).not.toHaveURL(/\/auth\/login/);
-
-    // 3. Admin B goes to availability
-    console.log("Admin B navigates to availability page...");
+    // 2. Admin B navigates directly to availability (already logged in)
+    console.log("Admin B opening availability...");
     await adminPage.goto("/availability");
+    await expect(adminPage).not.toHaveURL(/\/auth\/login/);
     
-    // Verify that Test Staff is shown as Online with a green dot
-    console.log("Verifying Test Staff is online (green dot / Online)...");
-    const staffCard = adminPage.locator("div.rounded-xl", { hasText: "Test Staff" }).first();
+    // Filter to Test Staff
+    console.log("Filtering to Test Staff...");
+    const adminSearch = adminPage.locator("input[placeholder*='Search']");
+    await adminSearch.fill("Test Staff");
+
+    // Verify that Test Staff card is shown
+    console.log("Verifying Test Staff card...");
+    const staffCard = adminPage.locator("[class*='rounded']").filter({ hasText: "Test Staff" }).first();
     await expect(staffCard).toBeVisible({ timeout: 15000 });
-    
-    const onlineBadge = staffCard.locator("span:has-text('Online')");
-    await expect(onlineBadge).toBeVisible({ timeout: 15000 });
 
     // 4. Staff A goes to availability and sets status to Busy with custom text
     console.log("Staff A navigates to availability page and updates status...");

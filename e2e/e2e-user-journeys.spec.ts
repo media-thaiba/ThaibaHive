@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { db } from "../packages/db";
+import { staff } from "../packages/db/schema";
+import { eq } from "drizzle-orm";
 
 test.describe("End-to-End User Journey Certification Suite", () => {
   test.describe("Journey 1: Multi-tenant Login & Dashboard Navigation", () => {
@@ -124,10 +127,13 @@ test.describe("End-to-End User Journey Certification Suite", () => {
       const cycleId = cycleData.cycle?.id || cycleData.id;
 
       // 2. Initiate performance review for staff
+      const staffUser = await db.select().from(staff).where(eq(staff.email, "test-staff@thaibahive.local")).get();
+      const staffId = staffUser?.id || "test-staff-id";
+
       const reviewRes = await page.request.post("/api/performance/reviews", {
         data: {
           cycleId,
-          staffId: "test-staff-id",
+          staffId,
           period: "2026-Q1",
         },
       });

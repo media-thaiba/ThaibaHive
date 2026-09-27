@@ -358,6 +358,7 @@ export default function CircularsPage() {
                 <Select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  aria-label="Document Category"
                 >
                   <option value="general">General</option>
                   <option value="policy">Policy / HR</option>
@@ -370,6 +371,7 @@ export default function CircularsPage() {
                 <Select
                   value={form.targetRole}
                   onChange={(e) => setForm({ ...form, targetRole: e.target.value })}
+                  aria-label="Target Role"
                 >
                   <option value="">All Roles</option>
                   {roleOptions.map((r) => (
@@ -383,6 +385,7 @@ export default function CircularsPage() {
                 <Select
                   value={form.targetDepartmentId}
                   onChange={(e) => setForm({ ...form, targetDepartmentId: e.target.value })}
+                  aria-label="Target Department"
                 >
                   <option value="">All Departments</option>
                   {departments.map((d) => (
@@ -394,6 +397,7 @@ export default function CircularsPage() {
                 <Select
                   value={form.targetInstitutionId}
                   onChange={(e) => setForm({ ...form, targetInstitutionId: e.target.value })}
+                  aria-label="Target Institution"
                 >
                   <option value="">All Institutions</option>
                   {institutions.map((i) => (
@@ -426,6 +430,7 @@ export default function CircularsPage() {
           className="w-48"
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
+          aria-label="Filter by category"
         >
           <option value="">All Categories</option>
           {categories.map((c) => (

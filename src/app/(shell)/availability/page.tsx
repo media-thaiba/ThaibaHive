@@ -40,7 +40,7 @@ export default function AvailabilityPage() {
   const [currentStaffId, setCurrentStaffId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/staff")
+    fetch("/api/staff?limit=100")
       .then((r) => r.json())
       .then((data) => {
         setStaff(Array.isArray(data) ? data : data.staff ?? []);
