@@ -24,12 +24,12 @@
 
 ### 2. Expense Claims — Multi-Stage Approval
 - [x] In-flow receipt upload with file validation & receipt drawer (`Dialog`, `Button`, `Badge`)
-- [x] Multi-tier approval chain (`pending → pending_hod → pending_finance → approved → disbursed`)
-- [x] Mandatory receipt upload for claims ≥ ₹1,000
+- [x] Multi-tier approval chain (`pending -> pending_hod -> pending_finance -> approved -> disbursed`)
+- [x] Mandatory receipt upload for claims >= Rs. 1,000
 - [x] Strict anti-self-approval enforcement (`requester !== approver`)
 
 ### 3. Purchase Requests — 3-Tier Approval
-- [x] Multi-tier approval machine (`pending_hod → pending_accounts → pending_purchase → approved → ordered → received`)
+- [x] Multi-tier approval machine (`pending_hod -> pending_accounts -> pending_purchase -> approved -> ordered -> received`)
 - [x] Role-gated approval actions for specialized roles (`accounts`, `purchase`, `admin`, `super_admin`)
 - [x] Institution budget tracking with campus allocations and remaining balance calculation
 - [x] Anti-self-approval protection across all tiers
@@ -65,7 +65,7 @@
 
 ### 1. Quarterly Performance Appraisals
 - [x] Database schema (`performanceReviews`) with rubric scoring and goal alignment
-- [x] 4-stage evaluation workflow: `self_assessment → manager_review → hr_approval → signed_off`
+- [x] 4-stage evaluation workflow: `self_assessment -> manager_review -> hr_approval -> signed_off`
 - [x] Strict stage-level authorization matrix with anti-forgery guards and DPoP cryptographic verification
 - [x] 9 unit & authorization test suites in `src/lib/performance/__tests__/review-workflow.test.ts`
 
@@ -109,4 +109,3 @@
 5. **Component extraction**: Extract oversized page components (dashboard, reports, accounts) into dedicated sub-components.
 6. **Zustand store integration**: Consolidate shared modal and filter state into centralized stores.
 7. **A11y fine-tuning**: Remediate remaining color contrast and form label notices on secondary admin sub-pages.
-
