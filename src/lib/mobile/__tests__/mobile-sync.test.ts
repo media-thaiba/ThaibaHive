@@ -1,13 +1,36 @@
 import { POST } from "@/app/api/mobile/v1/sync/route";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 
-jest.mock("@/lib/auth", () => ({
+jest.mock("@thaiba/auth", () => ({
+  ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
   hasPermission: jest.fn().mockReturnValue(true),
 }));
 
+jest.mock("@/lib/mobile/sync-appliers", () => ({
+  applySyncMutation: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock("@/db", () => ({
+  db: {
+    select: jest.fn().mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnValue({
+          get: jest.fn().mockResolvedValue(null),
+        }),
+      }),
+    }),
+    insert: jest.fn().mockReturnValue({
+      values: jest.fn().mockReturnValue({
+        run: jest.fn().mockResolvedValue({}),
+      }),
+    }),
+  },
+}));
+
 describe("Mobile Sync Reconciliation API", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     (verifySession as jest.Mock).mockResolvedValue({
       staffId: "usr_mock",
       email: "mock@thaibahive.edu",

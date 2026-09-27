@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySession, type SessionPayload, hasPermission } from "../../../packages/auth";
+import { verifySession, type SessionPayload, hasPermission } from "@thaiba/auth";
 import type { StaffRole } from "@/types";
 import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
