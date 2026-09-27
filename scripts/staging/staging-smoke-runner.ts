@@ -7,6 +7,11 @@
 
 import fs from "fs";
 import path from "path";
+try {
+  process.loadEnvFile?.();
+} catch {
+  // Ignore if .env doesn't exist or already loaded
+}
 import { validateHealthAndDatabase, type ValidationResult } from "./validators/health-db-validator";
 import { validateApisAndAuth, createTestToken } from "./validators/api-auth-validator";
 import { validateMetricsAndLatency } from "./validators/metrics-validator";
