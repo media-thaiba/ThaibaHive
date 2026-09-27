@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { performanceReviews } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { hasPermission, type StaffRole } from "@thaiba/auth";
 
 export interface MetricRating {
   metricId: string;
@@ -61,6 +62,21 @@ export class ReviewWorkflowService {
       if ((stage === "manager_review" || stage === "hr_approval") && submittingStaffId === existing.staffId) {
         throw new Error("Anti-self-approval: Reviewee cannot evaluate or approve their own performance review");
       }
+    }
+
+    // Stage-level authorization. The route gateway requires only
+    // `performance:self` (reachable by all staff so reviewees can file
+    // self-assessments), therefore stage-appropriate authority is enforced
+    // here rather than at the gateway.
+    if (stage === "self_assessment") {
+      if (submittingStaffId && submittingStaffId !== existing.staffId && userRole !== "super_admin") {
+        throw new Error("Forbidden: only the reviewee can submit a self-assessment");
+      }
+    } else if (
+      userRole !== "super_admin" &&
+      !hasPermission((userRole || "staff") as StaffRole, "performance:evaluate")
+    ) {
+      throw new Error("Forbidden: this review stage requires performance:evaluate permission");
     }
 
     const calculatedScore = this.calculateFinalScore(ratings);

@@ -3,8 +3,9 @@
   "version": "3.31.0",
   "private": true,
   "scripts": {
-"dev":  "next dev",
+    "dev": "next dev",
     "build": "next build",
+    "postbuild": "tsx scripts/copy-standalone-assets.ts",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

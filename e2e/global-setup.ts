@@ -6,8 +6,10 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { SignJWT } from "jose";
+import { copyStandaloneAssets } from "../scripts/copy-standalone-assets";
 
 async function globalSetup() {
+  copyStandaloneAssets();
   console.log("Seeding test users and leave types for Playwright E2E tests...");
   const passwordHash = await hashPassword("Password123");
 

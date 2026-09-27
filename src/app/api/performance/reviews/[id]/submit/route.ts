@@ -28,7 +28,7 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Review submission failed";
-    const status = message.includes("Anti-self-approval") ? 403 : 400;
+    const status = message.includes("Anti-self-approval") || message.includes("Forbidden") ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }
 }, "performance:self");
