@@ -3,6 +3,9 @@ import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { tmpdir } from "os";
+import { join } from "path";
+import { writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 import {
   downloadFromSupabase,
   uploadToSupabase,
@@ -10,6 +13,7 @@ import {
   deleteFromSupabase,
   isStorageConfigured,
 } from "@/lib/storage";
+import { videoTranscoder } from "@/lib/media/video-transcoder";
 
 // ─── MP4 Container Walker ───────────────────────────────────────────────────
 
@@ -316,19 +320,102 @@ export async function POST(req: NextRequest) {
     // 4. Re-upload mutated buffer to same private_tmp path
     await uploadToSupabase(storagePath, fileData.mimeType, buf);
 
-    // 5. Promote: copy to assets path, delete private_tmp
+    // 5. Write temp file for transcoding (only for video files)
+    let transcodedProxyPath: string | undefined;
+    let thumbnailPath: string | undefined;
+    let videoMetadata: {
+      durationSeconds: number;
+      width: number;
+      height: number;
+      codec: string;
+      bitrate: number;
+      frameRate: number;
+      format: string;
+    } | null = null;
+
+    const isVideo = fileData.mimeType.startsWith("video/");
+    if (isVideo && assetId) {
+      const workDir = join(tmpdir(), "mediahive-transcode", assetId);
+      if (existsSync(workDir)) {
+        rmSync(workDir, { recursive: true, force: true });
+      }
+      const { mkdirSync } = await import("fs");
+      mkdirSync(workDir, { recursive: true });
+
+      const tempVideoPath = join(workDir, `${assetId}_source.mp4`);
+      writeFileSync(tempVideoPath, buf);
+
+      try {
+        const result = await videoTranscoder.processVideo(tempVideoPath, assetId);
+        if (result.success) {
+          transcodedProxyPath = result.outputPath;
+          thumbnailPath = result.thumbnailPath;
+          videoMetadata = result.metadata || null;
+        } else {
+          console.warn("[process-video] Transcoding failed, continuing without proxy/thumbnail:", result.error);
+        }
+      } catch (transcodeErr) {
+        console.warn("[process-video] Transcoding error, continuing without proxy/thumbnail:", transcodeErr);
+      }
+    }
+
+    // 6. Promote: copy to assets path, delete private_tmp
     const assetStoragePath = storagePath.replace("private_tmp", "assets");
     await copySupabaseObject(storagePath, assetStoragePath);
     await deleteFromSupabase([storagePath]);
 
-    // 6. Update DB: mark ready with new public asset URL
+    // 7. Upload proxy and thumbnail if generated
+    let proxyUrl: string | undefined;
+    let thumbnailUrl: string | undefined;
+
+    if (transcodedProxyPath && existsSync(transcodedProxyPath)) {
+      const proxyStoragePath = assetStoragePath.replace(/\.[^.]+$/, "_proxy.mp4");
+      const proxyBuffer = readFileSync(transcodedProxyPath);
+      await uploadToSupabase(proxyStoragePath, "video/mp4", proxyBuffer);
+      proxyUrl = `/api/upload/files/${proxyStoragePath}`;
+    }
+
+    if (thumbnailPath && existsSync(thumbnailPath)) {
+      const thumbnailStoragePath = assetStoragePath.replace(/\.[^.]+$/, "_thumb.jpg");
+      const thumbnailBuffer = readFileSync(thumbnailPath);
+      await uploadToSupabase(thumbnailStoragePath, "image/jpeg", thumbnailBuffer);
+      thumbnailUrl = `/api/upload/files/${thumbnailStoragePath}`;
+    }
+
+    // 8. Cleanup temp transcoding files
+    if (assetId) {
+      videoTranscoder.cleanupTempDir(assetId);
+    }
+
+    // 9. Update DB: mark ready with new public asset URL, thumbnail, proxy, and metadata
     const newFileUrl = `/api/upload/files/${assetStoragePath}`;
+    const updateData: Record<string, unknown> = {
+      status: "ready",
+      fileUrl: newFileUrl,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (thumbnailUrl) updateData.thumbnailUrl = thumbnailUrl;
+    if (proxyUrl) {
+      const existingAsset = await db.select().from(mediaAssets).where(eq(mediaAssets.id, assetId!)).get();
+      const metadata = existingAsset?.metadata as Record<string, unknown> | undefined;
+      updateData.metadata = {
+        ...metadata,
+        proxyUrl,
+        durationSeconds: videoMetadata?.durationSeconds,
+        resolution: videoMetadata ? `${videoMetadata.width}x${videoMetadata.height}` : undefined,
+        codec: videoMetadata?.codec,
+        frameRate: videoMetadata?.frameRate,
+        bitrate: videoMetadata?.bitrate,
+      };
+    }
+
     await db.update(mediaAssets)
-      .set({ status: "ready", fileUrl: newFileUrl, updatedAt: new Date().toISOString() })
-      .where(eq(mediaAssets.id, assetId))
+      .set(updateData)
+      .where(eq(mediaAssets.id, assetId!))
       .run();
 
-    return NextResponse.json({ success: true, assetId, opsApplied: ops.length });
+    return NextResponse.json({ success: true, assetId, opsApplied: ops.length, hasProxy: !!proxyUrl, hasThumbnail: !!thumbnailUrl });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Video processing failed";
