@@ -26,7 +26,7 @@ const MIME_TO_EXTENSIONS: Record<string, string[]> = {
 
 const ALLOWED_TYPES = new Set(Object.keys(MIME_TO_EXTENSIONS));
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const ip = extractIp(request);
   const rl = checkRateLimit(ip, "upload");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);

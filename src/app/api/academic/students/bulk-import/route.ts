@@ -23,7 +23,8 @@ interface StudentImportRow {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  let { institutionId, rows } = body as { institutionId?: string; rows: StudentImportRow[] };
+  const { rows } = body as { rows: StudentImportRow[] };
+  let { institutionId } = body as { institutionId?: string };
 
   if (!institutionId) {
     institutionId = (session as any)?.institutionId || (session as any)?.institutionIds?.[0];

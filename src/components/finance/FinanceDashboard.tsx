@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ensureArray } from "@/lib/utils";
 import { ApprovalQueue, QueueItem } from "./ApprovalQueue";

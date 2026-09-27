@@ -25,7 +25,7 @@ export function PermissionGate({
   children,
   loadingFallback = <Skeleton className="h-10 w-48" />,
 }: PermissionGateProps) {
-  const { can, canAny, canAll, isLoading, role: userRole, isSuperAdmin, isAdmin, isPrincipal, isHod, isStaff, isOneOf } = useUnifiedPermissions();
+  const { can, canAny, canAll, isLoading, role: userRole, isOneOf } = useUnifiedPermissions();
 
   if (isLoading) {
     return <>{loadingFallback}</>;

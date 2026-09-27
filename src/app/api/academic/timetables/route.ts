@@ -74,7 +74,8 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   // Handle creating a standard slot definition
   if (action === "create_slot") {
-    let { institutionId, name, slotOrder, startTime, endTime, isBreak } = slot || {};
+    const { name, slotOrder, startTime, endTime, isBreak } = slot || {};
+    let institutionId = slot?.institutionId;
     if (!institutionId) {
       institutionId = (session as any)?.institutionId || (session as any)?.institutionIds?.[0];
     }
@@ -100,8 +101,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   // Handle assigning an entry to the weekly matrix
-  let {
-    institutionId,
+  const {
     academicYearId,
     classId,
     slotId,
@@ -110,6 +110,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     teacherId,
     roomNumber,
   } = entry || body;
+  let institutionId = (entry || body)?.institutionId;
 
   if (!institutionId && classId) {
     const cls = await db.select({ institutionId: classes.institutionId }).from(classes).where(eq(classes.id, classId)).get();
