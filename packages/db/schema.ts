@@ -1293,6 +1293,17 @@ export const passwordResetTokens = sqliteTable("password_reset_tokens", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
+// ─── Mobile offline sync idempotency ───
+
+export const mobileSyncProcessed = sqliteTable("mobile_sync_processed", {
+  clientEventId: text("client_event_id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  staffIdx: index("idx_mobile_sync_processed_staff").on(t.staffId),
+}));
+
 // ─── WebAuthn / FIDO2 ───
 
 export const webauthnCredentials = sqliteTable("webauthn_credentials", {

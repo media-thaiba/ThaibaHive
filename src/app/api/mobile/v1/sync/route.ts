@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { mobileSyncProcessed } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { applySyncMutation } from "@/lib/mobile/sync-appliers";
+import { eq } from "drizzle-orm";
 
 export interface SyncMutation {
   id: string;
@@ -8,7 +12,7 @@ export interface SyncMutation {
   payload: Record<string, unknown>;
 }
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     let body: { lastSyncedAt?: string; mutations?: SyncMutation[] } = {};
     try {
@@ -27,19 +31,34 @@ export const POST = requireAuth(async (request: Request) => {
         continue;
       }
 
-      // Process offline actions using Last-Write-Wins (LWW) logic
       try {
-        switch (mut.action) {
-          case "STAFF_CHECKIN":
-          case "VOUCHER_APPROVAL":
-          case "STUDENT_ATTENDANCE":
-            processedMutations.push(mut.id);
-            break;
-          default:
-            processedMutations.push(mut.id);
-            break;
+        // Idempotency: already-processed client event IDs are acknowledged
+        // without re-executing (safe replay after transport retries).
+        const alreadyProcessed = await db
+          .select({ clientEventId: mobileSyncProcessed.clientEventId })
+          .from(mobileSyncProcessed)
+          .where(eq(mobileSyncProcessed.clientEventId, mut.id))
+          .get();
+
+        if (!alreadyProcessed) {
+          await applySyncMutation(
+            { staffId: session.staffId, role: session.role },
+            mut.action,
+            mut.payload || {}
+          );
+
+          await db
+            .insert(mobileSyncProcessed)
+            .values({ clientEventId: mut.id, staffId: session.staffId, action: mut.action })
+            .run();
         }
-      } catch {
+
+        processedMutations.push(mut.id);
+      } catch (error: unknown) {
+        console.error(
+          `Mobile sync mutation failed (action=${mut.action} id=${mut.id}):`,
+          error instanceof Error ? error.message : error
+        );
         failedMutations.push(mut.id);
       }
     }
