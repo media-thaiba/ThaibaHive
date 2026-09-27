@@ -130,7 +130,7 @@ export default function TimetablePage() {
     e.preventDefault();
     if (!assignSlot || !selectedClassId || !assignSubject) return;
 
-    const currentInstitutionId = classes.find((c) => c.id === selectedClassId)?.institutionId || classes[0]?.institutionId || "inst_tgcis";
+    const currentInstitutionId = classes.find((c) => c.id === selectedClassId)?.institutionId || classes[0]?.institutionId || undefined;
 
     try {
       const res = await fetch("/api/academic/timetables", {
@@ -162,7 +162,7 @@ export default function TimetablePage() {
 
   const handleCreateSlot = async (e: React.FormEvent) => {
     e.preventDefault();
-    const currentInstitutionId = classes.find((c) => c.id === selectedClassId)?.institutionId || classes[0]?.institutionId || "inst_tgcis";
+    const currentInstitutionId = classes.find((c) => c.id === selectedClassId)?.institutionId || classes[0]?.institutionId || undefined;
     try {
       const res = await fetch("/api/academic/timetables", {
         method: "POST",

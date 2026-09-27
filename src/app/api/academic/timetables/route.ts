@@ -68,13 +68,16 @@ export const GET = requireAuth(async (request) => {
   return NextResponse.json({ slots, entries });
 }, "timetables:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { action, slot, entry } = body;
 
   // Handle creating a standard slot definition
   if (action === "create_slot") {
-    const { institutionId, name, slotOrder, startTime, endTime, isBreak } = slot || {};
+    let { institutionId, name, slotOrder, startTime, endTime, isBreak } = slot || {};
+    if (!institutionId) {
+      institutionId = (session as any)?.institutionId || (session as any)?.institutionIds?.[0];
+    }
     if (!institutionId || !name || !startTime || !endTime) {
       return NextResponse.json({ error: "Missing required slot parameters" }, { status: 400 });
     }
@@ -97,7 +100,7 @@ export const POST = requireAuth(async (request: Request) => {
   }
 
   // Handle assigning an entry to the weekly matrix
-  const {
+  let {
     institutionId,
     academicYearId,
     classId,
@@ -107,6 +110,14 @@ export const POST = requireAuth(async (request: Request) => {
     teacherId,
     roomNumber,
   } = entry || body;
+
+  if (!institutionId && classId) {
+    const cls = await db.select({ institutionId: classes.institutionId }).from(classes).where(eq(classes.id, classId)).get();
+    institutionId = cls?.institutionId;
+  }
+  if (!institutionId) {
+    institutionId = (session as any)?.institutionId || (session as any)?.institutionIds?.[0];
+  }
 
   if (!institutionId || !classId || !slotId || !dayOfWeek || !subjectName) {
     return NextResponse.json({ error: "Missing required timetable entry parameters" }, { status: 400 });

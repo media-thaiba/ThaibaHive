@@ -21,9 +21,13 @@ interface StudentImportRow {
   guardianRelation?: string;
 }
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { institutionId, rows } = body as { institutionId: string; rows: StudentImportRow[] };
+  let { institutionId, rows } = body as { institutionId?: string; rows: StudentImportRow[] };
+
+  if (!institutionId) {
+    institutionId = (session as any)?.institutionId || (session as any)?.institutionIds?.[0];
+  }
 
   if (!institutionId || !Array.isArray(rows) || rows.length === 0) {
     return NextResponse.json({ error: "institutionId and non-empty rows array are required" }, { status: 400 });

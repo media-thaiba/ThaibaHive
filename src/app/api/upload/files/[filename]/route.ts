@@ -75,7 +75,7 @@ export async function GET(
       return new NextResponse(supabaseFile.stream, {
         headers: {
           "Content-Type": supabaseFile.mimeType,
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "private, no-transform, max-age=3600",
         },
       });
     }

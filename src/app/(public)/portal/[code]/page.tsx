@@ -90,7 +90,7 @@ export default function PublicInstitutionPortalPage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          institutionId: "inst_tgcis",
+          institutionId: code === "tgcis" ? "inst_tgcis" : `inst_${code}`,
           applicantName,
           guardianName,
           email,

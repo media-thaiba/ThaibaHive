@@ -148,7 +148,7 @@ export default function StudentsPage() {
       <StudentBulkImportDialog
         open={isBulkImportOpen}
         onOpenChange={setIsBulkImportOpen}
-        institutionId={classes[0]?.institutionId || "inst_tgcis"}
+        institutionId={classes[0]?.institutionId || ""}
         classes={classes}
         onSuccess={() => fetchStudents()}
       />
