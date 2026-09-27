@@ -1,12 +1,20 @@
-export type Role = "super_admin" | "admin" | "principal" | "hod" | "staff";
+import type { StaffRole } from "@thaiba/auth";
+
+export type Role = StaffRole;
 
 export type ApprovalStatus =
   | "draft"
   | "submitted"
+  | "pending"
   | "pending_hod"
   | "pending_accounts"
+  | "pending_finance"
+  | "pending_purchase"
   | "pending_principal"
   | "approved"
+  | "ordered"
+  | "received"
+  | "disbursed"
   | "rejected"
   | "returned";
 

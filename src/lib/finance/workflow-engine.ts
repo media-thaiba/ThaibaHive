@@ -25,12 +25,20 @@ export class WorkflowEngine {
    */
   static getRequiredApproverRole(status: ApprovalStatus): Role | null {
     switch (status) {
+      case "pending":
       case "pending_hod":
         return "hod";
       case "pending_accounts":
-        return "admin";
+      case "pending_finance":
+        return "accounts";
+      case "pending_purchase":
+        return "purchase";
       case "pending_principal":
         return "principal";
+      case "approved":
+        return "purchase";
+      case "ordered":
+        return "accounts";
       default:
         return null;
     }
@@ -44,11 +52,27 @@ export class WorkflowEngine {
       return true;
     }
 
-    if (status === "pending_hod" && role === "hod") {
+    if ((status === "pending" || status === "pending_hod") && (role === "hod" || role === "principal" || role === "institutional_head")) {
+      return true;
+    }
+
+    if ((status === "pending_accounts" || status === "pending_finance") && role === "accounts") {
+      return true;
+    }
+
+    if (status === "pending_purchase" && role === "purchase") {
       return true;
     }
 
     if (status === "pending_principal" && role === "principal") {
+      return true;
+    }
+
+    if (status === "approved" && (role === "purchase" || role === "accounts")) {
+      return true;
+    }
+
+    if (status === "ordered" && (role === "purchase" || role === "accounts")) {
       return true;
     }
 
@@ -74,26 +98,48 @@ export class WorkflowEngine {
     }
 
     if (action === "approve") {
-      if (currentStatus === "pending_hod") {
-        if (type === "expense") {
+      if (type === "expense") {
+        if (currentStatus === "pending" || currentStatus === "pending_hod") {
           if (amount > AMOUNT_THRESHOLDS.HOD_APPROVE_MAX) {
             return "pending_accounts";
           }
           return "approved";
         }
-        // Purchase request
-        return "pending_accounts";
-      }
 
-      if (currentStatus === "pending_accounts") {
-        if (type === "expense" && amount > AMOUNT_THRESHOLDS.HOD_APPROVE_MAX) {
-          return "pending_principal";
+        if (currentStatus === "pending_accounts" || currentStatus === "pending_finance") {
+          if (amount > AMOUNT_THRESHOLDS.HOD_APPROVE_MAX) {
+            return "pending_principal";
+          }
+          return "approved";
         }
-        return "approved";
-      }
 
-      if (currentStatus === "pending_principal") {
-        return "approved";
+        if (currentStatus === "pending_principal") {
+          return "approved";
+        }
+
+        if (currentStatus === "approved") {
+          return "disbursed";
+        }
+      } else if (type === "purchase") {
+        if (currentStatus === "pending" || currentStatus === "pending_hod") {
+          return "pending_accounts";
+        }
+
+        if (currentStatus === "pending_accounts" || currentStatus === "pending_finance") {
+          return "pending_purchase";
+        }
+
+        if (currentStatus === "pending_purchase") {
+          return "approved";
+        }
+
+        if (currentStatus === "approved") {
+          return "ordered";
+        }
+
+        if (currentStatus === "ordered") {
+          return "received";
+        }
       }
     }
 
@@ -108,7 +154,7 @@ export class WorkflowEngine {
     action: "approve" | "reject" | "return",
     role: Role
   ): { valid: boolean; error?: string } {
-    if (["approved", "rejected", "returned"].includes(currentStatus)) {
+    if (["rejected", "returned", "disbursed", "received"].includes(currentStatus)) {
       return { valid: false, error: `Cannot modify request in terminal status: ${currentStatus}` };
     }
 

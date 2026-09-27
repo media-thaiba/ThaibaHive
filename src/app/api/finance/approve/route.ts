@@ -49,6 +49,14 @@ export const POST = requireAuth(async (request: Request, session) => {
         return NextResponse.json({ error: "Expense claim not found" }, { status: 404 });
       }
 
+      // Anti-Self-Approval Enforcement
+      if (claim.staffId === session.staffId && session.role !== "super_admin") {
+        return NextResponse.json(
+          { error: "Requesters cannot review or approve their own expense claims." },
+          { status: 403 }
+        );
+      }
+
       const currentStatus = claim.status as any;
       const validation = WorkflowEngine.validateTransition(currentStatus, action, userRole);
       if (!validation.valid) {
@@ -99,6 +107,14 @@ export const POST = requireAuth(async (request: Request, session) => {
 
       if (!purchase) {
         return NextResponse.json({ error: "Purchase request not found" }, { status: 404 });
+      }
+
+      // Anti-Self-Approval Enforcement
+      if (purchase.requesterId === session.staffId && session.role !== "super_admin") {
+        return NextResponse.json(
+          { error: "Requesters cannot review or approve their own purchase requests." },
+          { status: 403 }
+        );
       }
 
       const currentStatus = purchase.status as any;

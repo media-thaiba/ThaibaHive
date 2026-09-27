@@ -1,8 +1,8 @@
 import { WorkflowEngine } from "../workflow-engine";
 
 describe("Finance Workflow Engine Thorough Transitions", () => {
-  it("rejects transition on completed or approved requests", () => {
-    const res1 = WorkflowEngine.validateTransition("approved", "approve", "super_admin");
+  it("rejects transition on terminal status requests", () => {
+    const res1 = WorkflowEngine.validateTransition("disbursed", "approve", "super_admin");
     expect(res1.valid).toBe(false);
     expect(res1.error).toContain("terminal status");
 

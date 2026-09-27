@@ -18,6 +18,8 @@ export interface QueueItem {
   status: string;
   institutionId?: string;
   isEmergency?: boolean;
+  receiptUrl?: string | null;
+  notes?: string | null;
 }
 
 interface ApprovalQueueProps {
