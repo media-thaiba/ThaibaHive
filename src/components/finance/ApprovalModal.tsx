@@ -67,6 +67,7 @@ export function ApprovalModal({ item, onClose, onSuccess }: ApprovalModalProps) 
         requestType: item.type,
         action,
         notes,
+        receiptUrl: receiptUrl || undefined,
       }),
     })
       .then((res) => {

@@ -13,6 +13,7 @@ const approvalPayloadSchema = z.object({
   action: z.enum(["approve", "reject", "return"]),
   notes: z.string().optional(),
   signature: z.string().optional(),
+  receiptUrl: z.string().optional(),
 });
 
 export const POST = requireAuth(async (request: Request, session) => {
@@ -25,7 +26,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  const { requestId, requestType, action, notes } = parsed.data;
+  const { requestId, requestType, action, notes, receiptUrl } = parsed.data;
 
   if (action === "reject" && (!notes || !notes.trim())) {
     return NextResponse.json(
@@ -74,6 +75,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         .update(expenseClaims)
         .set({
           status: nextStatus,
+          receiptUrl: receiptUrl || claim.receiptUrl || null,
           reviewedById: session.staffId,
           reviewedAt: now,
           reviewNotes: notes || null,

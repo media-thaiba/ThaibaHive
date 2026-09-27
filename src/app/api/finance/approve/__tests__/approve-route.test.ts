@@ -201,4 +201,36 @@ describe("POST /api/finance/approve Route Integration", () => {
     const claim = await db.select().from(expenseClaims).where(eq(expenseClaims.id, expenseId)).get();
     expect(claim?.status).toBe("returned");
   });
+
+  it("persists reviewer-attached receiptUrl during claim approval", async () => {
+    // Reset expense claim to pending_accounts
+    await db.update(expenseClaims).set({ status: "pending_accounts", receiptUrl: null }).where(eq(expenseClaims.id, expenseId)).run();
+
+    const { verifySession } = require("@thaiba/auth");
+    verifySession.mockResolvedValueOnce({
+      staffId: accountsId,
+      role: "accounts",
+      email: `accounts-${timestamp}@test.local`,
+    });
+
+    const testReceiptUrl = "/api/upload/files/invoice-sample-receipt.pdf";
+    const req = new Request("http://localhost/api/finance/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestId: expenseId,
+        requestType: "expense",
+        action: "approve",
+        notes: "Verified receipt attached",
+        receiptUrl: testReceiptUrl,
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const claim = await db.select().from(expenseClaims).where(eq(expenseClaims.id, expenseId)).get();
+    expect(claim?.status).toBe("approved");
+    expect(claim?.receiptUrl).toBe(testReceiptUrl);
+  });
 });
