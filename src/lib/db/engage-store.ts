@@ -28,6 +28,7 @@ export interface InMemoryEngageStore {
 
 export class EngageDbStore {
   private static instance: EngageDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
   private memoryStore: InMemoryEngageStore = {
     templates: new Map(),
     messages: new Map(),
@@ -83,7 +84,7 @@ export class EngageDbStore {
     this.memoryStore.templates.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageTemplates).where(eq(engageTemplates.templateId, template.templateId));
         if (existing && existing.length > 0) {
           await db.update(engageTemplates).set(payload).where(eq(engageTemplates.templateId, template.templateId));
@@ -98,7 +99,7 @@ export class EngageDbStore {
 
   public async getTemplateAsync(templateId: string, institutionId = 'global'): Promise<any | null> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageTemplates).where(
           and(
             eq(engageTemplates.templateId, templateId),
@@ -120,7 +121,7 @@ export class EngageDbStore {
 
   public async listTemplatesAsync(institutionId = 'global'): Promise<any[]> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageTemplates).where(eq(engageTemplates.institutionId, institutionId));
         if (rows && rows.length > 0) return rows;
       }
@@ -159,7 +160,7 @@ export class EngageDbStore {
     this.memoryStore.messages.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageMessages).where(eq(engageMessages.messageId, message.messageId));
         if (existing && existing.length > 0) {
           await db.update(engageMessages).set(payload).where(eq(engageMessages.messageId, message.messageId));
@@ -174,7 +175,7 @@ export class EngageDbStore {
 
   public async getMessageAsync(messageId: string, institutionId = 'global'): Promise<any | null> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageMessages).where(
           and(
             eq(engageMessages.messageId, messageId),
@@ -196,7 +197,7 @@ export class EngageDbStore {
 
   public async listMessagesAsync(institutionId = 'global', limit = 50): Promise<any[]> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageMessages).where(eq(engageMessages.institutionId, institutionId)).limit(limit);
         if (rows && rows.length > 0) return rows;
       }
@@ -233,7 +234,7 @@ export class EngageDbStore {
     this.memoryStore.deliveries.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageDeliveries).where(eq(engageDeliveries.deliveryId, delivery.deliveryId));
         if (existing && existing.length > 0) {
           await db.update(engageDeliveries).set(payload).where(eq(engageDeliveries.deliveryId, delivery.deliveryId));
@@ -248,7 +249,7 @@ export class EngageDbStore {
 
   public async getDeliveryAsync(deliveryId: string, institutionId = 'global'): Promise<any | null> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageDeliveries).where(
           and(
             eq(engageDeliveries.deliveryId, deliveryId),
@@ -289,7 +290,7 @@ export class EngageDbStore {
     this.memoryStore.preferences.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engagePreferences).where(eq(engagePreferences.recipientId, preferences.recipientId));
         if (existing && existing.length > 0) {
           await db.update(engagePreferences).set(payload).where(eq(engagePreferences.recipientId, preferences.recipientId));
@@ -304,7 +305,7 @@ export class EngageDbStore {
 
   public async getPreferencesAsync(recipientId: string, institutionId = 'global'): Promise<any | null> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engagePreferences).where(
           and(
             eq(engagePreferences.recipientId, recipientId),
@@ -343,7 +344,7 @@ export class EngageDbStore {
     this.memoryStore.workflows.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageWorkflows).where(eq(engageWorkflows.workflowId, workflow.workflowId));
         if (existing && existing.length > 0) {
           await db.update(engageWorkflows).set(payload).where(eq(engageWorkflows.workflowId, workflow.workflowId));
@@ -358,7 +359,7 @@ export class EngageDbStore {
 
   public async listWorkflowsAsync(institutionId = 'global'): Promise<any[]> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageWorkflows).where(eq(engageWorkflows.institutionId, institutionId));
         if (rows && rows.length > 0) return rows;
       }
@@ -390,7 +391,7 @@ export class EngageDbStore {
     this.memoryStore.workflowRuns.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageWorkflowRuns).where(eq(engageWorkflowRuns.runId, run.runId));
         if (existing && existing.length > 0) {
           await db.update(engageWorkflowRuns).set(payload).where(eq(engageWorkflowRuns.runId, run.runId));
@@ -424,7 +425,7 @@ export class EngageDbStore {
     this.memoryStore.chatSessions.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageChatSessions).where(eq(engageChatSessions.sessionId, session.sessionId));
         if (existing && existing.length > 0) {
           await db.update(engageChatSessions).set(payload).where(eq(engageChatSessions.sessionId, session.sessionId));
@@ -439,7 +440,7 @@ export class EngageDbStore {
 
   public async getChatSessionAsync(sessionId: string, institutionId = 'global'): Promise<any | null> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageChatSessions).where(
           and(
             eq(engageChatSessions.sessionId, sessionId),
@@ -477,7 +478,7 @@ export class EngageDbStore {
     this.memoryStore.chatMessages.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(engageChatMessages).values(payload);
       }
     } catch {
@@ -487,7 +488,7 @@ export class EngageDbStore {
 
   public async listChatMessagesAsync(sessionId: string, institutionId = 'global'): Promise<any[]> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageChatMessages).where(
           and(
             eq(engageChatMessages.sessionId, sessionId),
@@ -523,7 +524,7 @@ export class EngageDbStore {
     this.memoryStore.translations.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const existing = await db.select().from(engageTranslations).where(eq(engageTranslations.contentHash, translation.contentHash));
         if (existing && existing.length > 0) {
           await db.update(engageTranslations).set(payload).where(eq(engageTranslations.contentHash, translation.contentHash));
@@ -538,7 +539,7 @@ export class EngageDbStore {
 
   public async getTranslationAsync(contentHash: string, institutionId = 'global'): Promise<any | null> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageTranslations).where(
           and(
             eq(engageTranslations.contentHash, contentHash),
@@ -579,7 +580,7 @@ export class EngageDbStore {
     this.memoryStore.analyticsEvents.set(id, payload);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(engageAnalyticsEvents).values(payload);
       }
     } catch {
@@ -589,7 +590,7 @@ export class EngageDbStore {
 
   public async listAnalyticsEventsAsync(institutionId = 'global', limit = 500): Promise<any[]> {
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         const rows = await db.select().from(engageAnalyticsEvents).where(eq(engageAnalyticsEvents.institutionId, institutionId)).limit(limit);
         if (rows && rows.length > 0) return rows;
       }

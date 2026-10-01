@@ -13,6 +13,8 @@
  * Writes reports/preflight-report.json; exits 1 on any failed check.
  */
 
+import fs from "fs";
+import dotenv from "dotenv";
 import {
   validatePreflightEnv,
   validateWorkspaceLinks,
@@ -27,7 +29,19 @@ async function main() {
   const baseUrlFlag = args.find((a) => a.startsWith("--base-url="));
   const baseUrl = baseUrlFlag ? baseUrlFlag.split("=")[1] : undefined;
 
-  const envChecks = validatePreflightEnv({ ...process.env });
+  const envFileFlag = args.find((a) => a.startsWith("--env-file="));
+  const envFilePath = envFileFlag ? envFileFlag.split("=")[1] : undefined;
+
+  const mergedEnv: Record<string, string | undefined> = { ...process.env };
+  if (envFilePath && fs.existsSync(envFilePath)) {
+    const loaded = dotenv.parse(fs.readFileSync(envFilePath, "utf8"));
+    Object.assign(mergedEnv, loaded);
+  } else if (fs.existsSync(".env.production.local")) {
+    const loaded = dotenv.parse(fs.readFileSync(".env.production.local", "utf8"));
+    Object.assign(mergedEnv, loaded);
+  }
+
+  const envChecks = validatePreflightEnv(mergedEnv);
   const wsChecks = validateWorkspaceLinks();
   const buildChecks = validateBuildArtifact();
   const liveChecks = baseUrl ? await validateLiveHealth(baseUrl) : { passed: true, checks: [] };

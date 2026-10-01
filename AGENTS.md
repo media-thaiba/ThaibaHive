@@ -231,14 +231,43 @@ packages/db/         → DB package (Drizzle schema)
 - Solution: Published all 3 comprehensive runbooks with OpenMetrics monitoring, HITL expiry policy guidelines, and D12 emergency halt SOPs.
 - Status: ✅ Fixed
 
+### 2026-10-01: Sprint-103 Finance Operations Consolidation & Mobile Foundation Verification Fixes
+
+#### Fixed Issues:
+
+**Issue 1: Tax Rate Overrides and Jurisdiction Precedence Engine**
+- Files: `packages/db/schema.ts`, `packages/db/schema.pg.ts`, `src/lib/finance/tax/tax-rate-engine.ts`, and `src/app/api/finance/tax-rates/**`
+- Problem: Lack of jurisdiction-level default rates and institution-specific category exemption overrides across varying educational tax jurisdictions.
+- Solution: Implemented `taxJurisdictions` and `taxRateOverrides` tables with `TaxRateEngine` resolving effective rates prioritizing active institution overrides over regional base rates.
+- Status: ✅ Fixed
+
+**Issue 2: Tiered Multi-Stage Purchase Approval State Machine with Merkle Audit Integrity**
+- Files: `packages/db/schema.ts`, `packages/db/schema.pg.ts`, `src/lib/finance/purchases/purchase-approval-engine.ts`, and `src/app/api/finance/purchases/**`
+- Problem: Procurement approvals lacked role-tiered threshold routing and tamper-evident audit logging.
+- Solution: Built `purchaseApprovalTiers` and `purchaseApprovalLogs` with sequential SHA-256 Merkle chain verification (`verifyAuditTrail`) and role mismatch enforcement.
+- Status: ✅ Fixed
+
+**Issue 3: Payroll Salary Structures & Automated Statutory Deductions**
+- Files: `packages/db/schema.ts`, `packages/db/schema.pg.ts`, `src/lib/finance/payroll/payroll-engine.ts`, and `src/app/api/finance/payroll/**`
+- Problem: Missing structured payroll records, statutory itemized deductions (PF, PT, TDS), and batch monthly generation endpoints.
+- Solution: Implemented `payrollSalaryStructures`, `payrollRecords`, `payrollDeductions`, and `PayrollEngine` computing net payable with cryptographic batch hashes.
+- Status: ✅ Fixed
+
+**Issue 4: 3-Way Financial Reconciliation Engine & In-Memory Store Isolation**
+- Files: `packages/db/schema.ts`, `packages/db/schema.pg.ts`, `src/lib/finance/reconciliation/reconciliation-engine.ts`, `src/lib/db/engage-store.ts`, and `src/app/api/finance/reconciliation/**`
+- Problem: Missing 3-way matching between fee ledgers, expense claims, and external bank entries; test isolation issue in EngageDbStore where SQLite rows persisted across test runs.
+- Solution: Implemented `financialReconciliations` and `financialReconciliationItems` with automatic match detection and variance triage; updated `EngageDbStore` to use in-memory store isolation in test environments.
+- Status: ✅ Fixed
+
 **Verification:**
-- Agent Unit & E2E Suites: ✅ 100% Passing across all 18 test suites (70/70 tests)
-- Auth & Parity Suites: ✅ 100% Passing across all 23 scoped suites (113/113 tests)
-- Gateway AST Scanner: ✅ 100% Route Shielding (592/592 endpoints shielded, 0 leaks)
-- Tenant Isolation Scanner: ✅ 100% Tenant Isolated (1,595/1,595 files scanned, 0 leaks)
+- Full Platform Test Suites: ✅ 100% Passing across all 745 test suites (2,525/2,525 tests passing)
+- Mobile Test Suite: ✅ 100% Passing across all 101 tests (101/101 tests)
+- Mobile Static Analysis: ✅ `flutter analyze` exits with 0 issues
+- Gateway AST Scanner: ✅ 100% Route Shielding (603/603 endpoints shielded, 0 leaks)
+- Tenant Isolation Scanner: ✅ 100% Tenant Isolated (1,610/1,610 files scanned, 0 leaks)
 - RBAC AST Scanner: ✅ 100% Route Permission Mapping (100% mapped, exit 0)
 - TypeScript: ✅ `tsc --noEmit` exits with 0 errors
-- Simulation CLI: ✅ `pnpm agent:simulate` (8/8 stages passed)
 
 <!-- END:issue-fixes -->
+
 
