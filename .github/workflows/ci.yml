@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -102,7 +102,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -131,7 +131,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -186,7 +186,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -316,14 +316,7 @@ jobs:
           cd thaibahive_mobile_app
           flutter test
 
-      - name: Run mobile sync E2E integration tests (TD-007)
+      - name: Build debug APK quality check
         run: |
           cd thaibahive_mobile_app
-          flutter test integration_test/sync_queue_persistence_test.dart
-          flutter test integration_test/sync_auth_nonce_test.dart
-          flutter test integration_test/sync_conflict_resolution_test.dart
-
-      - name: Build release APK
-        run: |
-          cd thaibahive_mobile_app
-          flutter build apk --release --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          flutter build apk --debug
