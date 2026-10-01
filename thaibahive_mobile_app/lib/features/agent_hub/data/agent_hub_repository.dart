@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/providers.dart';
 import 'models/agent_models.dart';
 
@@ -14,81 +15,73 @@ class AgentHubRepository {
   AgentHubRepository(this._api);
 
   Future<List<MobileAgentInfo>> getAgents() async {
-    try {
-      final data = await _api.get(
-        '/agents',
-        fromJson: (json) {
-          final list = (json is Map ? (json['agents'] ?? json['data']) : json) as List<dynamic>? ?? [];
-          return list.map((e) => MobileAgentInfo.fromJson(e as Map<String, dynamic>)).toList();
-        },
-      );
-      return data;
-    } catch (_) {
-      // Fallback default domain agents if network is unseeded or offline
-      return const [
-        MobileAgentInfo(id: 'academic-agent', role: 'Academic Orchestrator', domain: 'academic', status: 'idle', currentLoad: 0, maxConcurrency: 5),
-        MobileAgentInfo(id: 'finance-agent', role: 'Finance Reconciliation', domain: 'finance', status: 'idle', currentLoad: 0, maxConcurrency: 5),
-        MobileAgentInfo(id: 'security-agent', role: 'Perimeter Safety Agent', domain: 'security', status: 'idle', currentLoad: 0, maxConcurrency: 5),
-        MobileAgentInfo(id: 'facilities-agent', role: 'Campus IoT & HVAC', domain: 'facilities', status: 'idle', currentLoad: 0, maxConcurrency: 5),
-        MobileAgentInfo(id: 'hr-agent', role: 'Faculty Operations', domain: 'hr', status: 'idle', currentLoad: 0, maxConcurrency: 5),
-      ];
-    }
+    final data = await _api.get(
+      '/agents',
+      fromJson: (json) {
+        final list = (json is Map ? (json['agents'] ?? json['data']) : json) as List<dynamic>? ?? [];
+        return list.map((e) => MobileAgentInfo.fromJson(e as Map<String, dynamic>)).toList();
+      },
+    );
+    return data;
   }
 
   Future<List<MobileApprovalGate>> getPendingApprovals() async {
-    try {
-      final data = await _api.get(
-        '/agents/approvals',
-        fromJson: (json) {
-          final list = (json is Map ? (json['gates'] ?? json['approvals'] ?? json['data']) : json) as List<dynamic>? ?? [];
-          return list.map((e) => MobileApprovalGate.fromJson(e as Map<String, dynamic>)).toList();
-        },
-      );
-      return data;
-    } catch (_) {
-      return const [];
-    }
+    final data = await _api.get(
+      '/agents/approvals',
+      fromJson: (json) {
+        final list = (json is Map
+            ? (json['approvalGates'] ?? json['gates'] ?? json['approvals'] ?? json['data'])
+            : json) as List<dynamic>? ?? [];
+        return list.map((e) => MobileApprovalGate.fromJson(e as Map<String, dynamic>)).toList();
+      },
+    );
+    return data;
   }
 
   Future<List<MobileWorkflowRun>> getActiveRuns() async {
-    try {
-      final data = await _api.get(
-        '/agents/runs',
-        fromJson: (json) {
-          final list = (json is Map ? (json['runs'] ?? json['data']) : json) as List<dynamic>? ?? [];
-          return list.map((e) => MobileWorkflowRun.fromJson(e as Map<String, dynamic>)).toList();
-        },
-      );
-      return data;
-    } catch (_) {
-      return const [];
-    }
+    final data = await _api.get(
+      '/agents/runs',
+      fromJson: (json) {
+        final list = (json is Map ? (json['runs'] ?? json['data']) : json) as List<dynamic>? ?? [];
+        return list.map((e) => MobileWorkflowRun.fromJson(e as Map<String, dynamic>)).toList();
+      },
+    );
+    return data;
   }
 
   Future<bool> decideApproval(
     String gateId, {
     required String decision, // "approved" or "rejected"
-    String? notes,
+    String? reason,
   }) async {
-    await _api.post(
-      '/agents/approvals',
-      data: {
-        'gateId': gateId,
-        'decision': decision,
-        if (notes != null) 'notes': notes,
-        'actorSource': 'mobile',
-      },
-    );
-    return true;
+    try {
+      await _api.post(
+        '/agents/approvals/$gateId/decide',
+        data: {
+          'decision': decision,
+          'reason': reason ?? 'Decided via ThaibaHive mobile companion',
+        },
+      );
+      return true;
+    } on AppException catch (e) {
+      if (e.statusCode == 409) {
+        throw ApprovalConflictException(
+          e.message.isNotEmpty
+              ? e.message
+              : 'Approval conflict (D14): gate has already been resolved or expired.',
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<bool> getKillSwitchStatus() async {
     try {
       final data = await _api.get(
-        '/agents/killswitch',
+        '/agents/guardrails/killswitch',
         fromJson: (json) {
           if (json is Map) {
-            return json['isEngaged'] == true || json['halted'] == true;
+            return json['engaged'] == true || json['isEngaged'] == true || json['halted'] == true;
           }
           return false;
         },
@@ -98,4 +91,12 @@ class AgentHubRepository {
       return false;
     }
   }
+}
+
+class ApprovalConflictException implements Exception {
+  final String message;
+  const ApprovalConflictException(this.message);
+
+  @override
+  String toString() => message;
 }

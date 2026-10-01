@@ -8,6 +8,7 @@ import '../data/agent_hub_repository.dart';
 import '../data/models/agent_models.dart';
 
 export '../data/models/agent_models.dart';
+export '../data/agent_hub_repository.dart' show ApprovalConflictException;
 
 class MobileAgentHubState {
   final List<MobileAgentInfo> agents;
@@ -99,7 +100,9 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
       if (kDebugMode) print('[AgentHubNotifier] Load error: $e');
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Unable to sync agent hub data. Using local cache.',
+        errorMessage: e.toString().contains('403')
+            ? 'Agentic Workflows are currently disabled or restricted for your role.'
+            : 'Unable to sync agent hub: ${e.toString().replaceAll('Exception:', '').trim()}',
       );
     }
   }
@@ -111,7 +114,7 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
   Future<bool> decideApproval(
     MobileApprovalGate gate, {
     required String decision, // "approved" or "rejected"
-    String? notes,
+    String? reason,
   }) async {
     // Step 1: Biometric step-up verification for critical / high severity gates
     if (gate.isCritical || gate.isHigh) {
@@ -121,7 +124,7 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
           localizedReason: 'Biometric authorization required to $decision high-severity workflow action: ${gate.requiredPermission}',
         );
         if (!authResult.success) {
-          state = state.copyWith(errorMessage: 'Biometric authorization failed. Decision not submitted.');
+          state = state.copyWith(errorMessage: 'Biometric authorization cancelled or failed. Decision not submitted.');
           return false;
         }
       }
@@ -130,19 +133,28 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
     // Step 2: Optimistic UI dismissal
     final previousApprovals = state.pendingApprovals;
     final updated = state.pendingApprovals.where((g) => g.id != gate.id).toList();
-    state = state.copyWith(pendingApprovals: updated, isLoading: true);
+    state = state.copyWith(pendingApprovals: updated, isLoading: true, errorMessage: null);
 
     try {
-      await _repository.decideApproval(gate.id, decision: decision, notes: notes);
+      await _repository.decideApproval(gate.id, decision: decision, reason: reason);
       state = state.copyWith(isLoading: false);
       return true;
+    } on ApprovalConflictException catch (conflict) {
+      // Revert on D14 409 conflict
+      if (kDebugMode) print('[AgentHubNotifier] D14 Conflict: ${conflict.message}');
+      state = state.copyWith(
+        pendingApprovals: previousApprovals,
+        isLoading: false,
+        errorMessage: conflict.message,
+      );
+      return false;
     } catch (e) {
-      // Revert on error / 409 conflict
+      // Revert on generic error
       if (kDebugMode) print('[AgentHubNotifier] Approval decision error: $e');
       state = state.copyWith(
         pendingApprovals: previousApprovals,
         isLoading: false,
-        errorMessage: 'Gate decision conflict or network error. Please refresh.',
+        errorMessage: 'Decision failed: ${e.toString().replaceAll('Exception:', '').trim()}',
       );
       return false;
     }

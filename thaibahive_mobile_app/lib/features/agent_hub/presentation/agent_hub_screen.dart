@@ -63,7 +63,7 @@ class _AgentHubScreenState extends ConsumerState<AgentHubScreen> with SingleTick
               ref.read(agentHubProvider.notifier).decideApproval(
                     gate,
                     decision: 'rejected',
-                    notes: textController.text.trim().isNotEmpty ? textController.text.trim() : null,
+                    reason: textController.text.trim().isNotEmpty ? textController.text.trim() : null,
                   );
             },
             child: const Text('Confirm Rejection'),

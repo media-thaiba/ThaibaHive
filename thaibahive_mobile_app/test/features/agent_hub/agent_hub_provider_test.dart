@@ -58,7 +58,7 @@ class FakeAgentHubRepository extends AgentHubRepository {
   Future<bool> decideApproval(
     String gateId, {
     required String decision,
-    String? notes,
+    String? reason,
   }) async {
     return true;
   }
