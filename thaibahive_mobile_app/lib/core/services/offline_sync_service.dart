@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:thaibahive_mobile/core/network/api_client.dart';
 import 'offline_queue.dart';
@@ -72,6 +73,12 @@ class OfflineSyncService {
           break;
         case 'expense_create':
           await _handleExpenseCreate(event, clientEventId);
+          break;
+        case 'finance_purchase_action':
+          await _handleFinancePurchaseAction(event, clientEventId);
+          break;
+        case 'finance_reconciliation_match':
+          await _handleFinanceReconciliationMatch(event, clientEventId);
           break;
         default:
           // Unsupported event type, mark completed to avoid blocking the queue
@@ -173,6 +180,93 @@ class OfflineSyncService {
     } else {
       throw Exception('Expense create failed: ${response.statusCode}');
     }
+  }
+
+  /// Replay a queued purchase approval/rejection decision (Sprint-103).
+  ///
+  /// Replays are idempotent: a request already in a terminal state means the
+  /// decision already landed server-side, so the event is confirmed instead
+  /// of retried.
+  Future<void> _handleFinancePurchaseAction(
+      OfflineEvent event, String clientEventId) async {
+    final id = event.payload['purchaseRequestId'] as String?;
+    if (id == null) throw Exception('Missing purchaseRequestId');
+    final action = event.payload['action'] as String? ?? 'approve';
+
+    final body = <String, dynamic>{
+      'purchaseRequestId': id,
+      'action': action,
+      if (event.payload['comments'] != null)
+        'comments': event.payload['comments'],
+      if (event.payload['tierLevel'] != null)
+        'tierLevel': event.payload['tierLevel'],
+    };
+
+    try {
+      final response =
+          await _apiClient.dio.post('/finance/purchases/approvals', data: body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await offlineQueue.markCompleted(clientEventId);
+        debugPrint('[OfflineSyncService] Finance approval synced: $clientEventId');
+      } else {
+        throw Exception('Finance approval failed: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (_isReplayAlreadyApplied(e)) {
+        await offlineQueue.markCompleted(clientEventId);
+        debugPrint(
+            '[OfflineSyncService] Finance approval already applied: $clientEventId');
+        return;
+      }
+      rethrow;
+    }
+  }
+
+  /// Replay a queued manual reconciliation match/override (Sprint-103).
+  Future<void> _handleFinanceReconciliationMatch(
+      OfflineEvent event, String clientEventId) async {
+    final itemId = event.payload['itemId'] as String?;
+    if (itemId == null) throw Exception('Missing reconciliation itemId');
+
+    final body = <String, dynamic>{
+      'matchStatus': event.payload['matchStatus'] ?? 'manual_override',
+      'varianceAmount': event.payload['varianceAmount'] ?? 0,
+      if (event.payload['matchedWithId'] != null &&
+          (event.payload['matchedWithId'] as String).isNotEmpty)
+        'matchedWithId': event.payload['matchedWithId'],
+      if (event.payload['resolutionNotes'] != null &&
+          (event.payload['resolutionNotes'] as String).isNotEmpty)
+        'resolutionNotes': event.payload['resolutionNotes'],
+    };
+
+    try {
+      final response = await _apiClient.dio
+          .patch('/finance/reconciliation/$itemId/match', data: body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await offlineQueue.markCompleted(clientEventId);
+        debugPrint(
+            '[OfflineSyncService] Reconciliation match synced: $clientEventId');
+      } else {
+        throw Exception('Reconciliation match failed: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (_isReplayAlreadyApplied(e)) {
+        await offlineQueue.markCompleted(clientEventId);
+        return;
+      }
+      rethrow;
+    }
+  }
+
+  /// True when a replayed mutation is already reflected server-side (or its
+  /// target no longer exists) — treat as success so the outbox can drain.
+  bool _isReplayAlreadyApplied(DioException error) {
+    final status = error.response?.statusCode;
+    if (status == 404) return true;
+    final data = error.response?.data;
+    final message = data is Map ? (data['error']?.toString() ?? '') : '';
+    return message.contains('already in terminal state') ||
+        message.toLowerCase().contains('not found');
   }
 
   /// Retry all failed events by resetting them to pending and triggering sync

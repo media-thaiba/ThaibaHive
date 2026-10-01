@@ -1,0 +1,60 @@
+import { NextResponse } from "next/server";
+import { db, payrollRecords, payrollDeductions, eq, and, desc } from "@/db";
+import { requireAuth } from "@/lib/api/auth-guard";
+import { payrollRecordStatusUpdateSchema } from "@/lib/validation/schemas";
+import { payrollEngine } from "@/lib/finance/payroll/payroll-engine";
+import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
+
+export const GET = requireAuth(async (request: Request, session: any) => {
+  try {
+    const { searchParams } = new URL(request.url);
+    const institutionId = await resolveScopedInstitutionId(searchParams.get("institutionId"));
+    const year = searchParams.get("year");
+    const month = searchParams.get("month");
+    const staffId = searchParams.get("staffId") || (session.role === "staff" ? session.staffId : undefined);
+
+    const conditions: any[] = [eq(payrollRecords.institutionId, institutionId)];
+    if (year) conditions.push(eq(payrollRecords.payPeriodYear, parseInt(year, 10)));
+    if (month) conditions.push(eq(payrollRecords.payPeriodMonth, parseInt(month, 10)));
+    if (staffId) conditions.push(eq(payrollRecords.staffId, staffId));
+
+    const records = await db
+      .select()
+      .from(payrollRecords)
+      .where(and(...conditions))
+      .orderBy(desc(payrollRecords.createdAt));
+
+    return NextResponse.json({ records });
+  } catch (error: any) {
+    const status = error.message?.includes("scope mismatch") ? 403 : 500;
+    return NextResponse.json({ error: error.message || "Failed to fetch payroll records" }, { status });
+  }
+}, "finance:payroll:view");
+
+export const PATCH = requireAuth(async (request: Request, session: any) => {
+  try {
+    const { searchParams } = new URL(request.url);
+    const recordId = searchParams.get("id");
+
+    if (!recordId) {
+      return NextResponse.json({ error: "Record ID is required" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const parsed = payrollRecordStatusUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid payload" }, { status: 400 });
+    }
+
+    const updated = await payrollEngine.updateRecordStatus(
+      recordId,
+      parsed.data.status,
+      session.staffId,
+      parsed.data.paymentReference
+    );
+
+    return NextResponse.json({ record: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Failed to update payroll status" }, { status: 500 });
+  }
+}, "finance:payroll:manage");

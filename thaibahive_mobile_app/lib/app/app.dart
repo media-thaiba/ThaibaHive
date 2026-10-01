@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +26,8 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
   late final GoRouter _router;
   bool _routeFlushed = false;
   ProviderSubscription<AuthState>? _deepLinkAuthListener;
+  AppLinks? _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
 
   @visibleForTesting
   GoRouter get router => _router;
@@ -37,6 +42,7 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
     );
     _router = buildRouter();
     _router.routerDelegate.addListener(_onRouteChange);
+    _initDeepLinks();
 
     // Flush any persisted deep-link route from a cold-start notification tap.
     // Fires once per session on first AuthStatus.authenticated transition.
@@ -71,9 +77,35 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
     if (mounted) setState(() {});
   }
 
+  /// Custom-scheme deep links (`thaibahive://finance/approvals/:id`).
+  ///
+  /// Authenticated sessions navigate immediately; otherwise the target is
+  /// buffered by [FCMService] and flushed on the first authenticated state.
+  void _initDeepLinks() {
+    try {
+      _appLinks = AppLinks();
+      _linkSubscription = _appLinks!.uriLinkStream.listen(
+        _handleDeepLinkUri,
+        onError: (_) {},
+      );
+      _appLinks?.getInitialLink().then((uri) {
+        if (uri != null) _handleDeepLinkUri(uri);
+      }).catchError((_) {});
+    } catch (_) {
+      // Deep-link plumbing is optional — never block app startup.
+    }
+  }
+
+  void _handleDeepLinkUri(Uri uri) {
+    final isAuthenticated =
+        ref.read(authProvider).status == AuthStatus.authenticated;
+    FCMService.handleUriLink(uri, router: isAuthenticated ? _router : null);
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _linkSubscription?.cancel();
     _deepLinkAuthListener?.close();
     _router.routerDelegate.removeListener(_onRouteChange);
     _router.dispose();

@@ -290,6 +290,7 @@ class FCMService {
     '/polls',
     '/canteen',
     '/vehicles',
+    '/finance',
   ];
 
   /// Validate incoming route path against strict allowlist to prevent open redirects
@@ -370,6 +371,37 @@ class FCMService {
   }
 
   static String? _bufferedRoute;
+
+  /// Custom-scheme / universal-link entry point (e.g.
+  /// `thaibahive://finance/approvals/:id`).
+  ///
+  /// Custom-scheme URIs put the first path segment in [Uri.host], so
+  /// `thaibahive://finance/approvals/abc` is rebuilt as
+  /// `/finance/approvals/abc` before allowlist validation.
+  ///
+  /// When no [router] is supplied (cold start, user not authenticated yet)
+  /// the target is buffered and flushed after sign-in.
+  static Future<void> handleUriLink(Uri uri, {GoRouter? router}) async {
+    if (uri.scheme != 'thaibahive') return;
+
+    final host = uri.host;
+    final rawPath = (host.isNotEmpty && !host.contains('.'))
+        ? '/$host${uri.path}'
+        : uri.path;
+
+    final target = validateAndWhitelistRoute(rawPath.isEmpty ? '/' : rawPath);
+    if (target == '/') return;
+
+    if (router != null) {
+      router.go(target);
+      return;
+    }
+
+    _bufferedRoute = target;
+    const storage = FlutterSecureStorage();
+    await storage.write(key: 'pending_deeplink_route', value: target);
+    if (kDebugMode) print('[FCMService] Buffered app-link route: $target');
+  }
 
   /// Flush buffered deep-link route and immediately clear from storage
   static Future<void> flushBufferedRoute(GoRouter router) async {

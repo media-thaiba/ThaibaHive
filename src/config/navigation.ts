@@ -5,7 +5,7 @@ import {
   DoorOpen, MessageSquare, Award, CircleDot, LayoutDashboard,
   Store, FolderOpen, ClipboardCheck,
   GraduationCap, Users as UsersIcon, Layers, CalendarDays,
-  Smartphone, Bot,
+  Smartphone, Bot, Landmark, Percent, Wallet, Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -84,6 +84,16 @@ export const navGroups: NavGroup[] = [
       { href: "/recognition", label: "Recognition", desc: "Send kudos to colleagues and view birthday reminders", icon: Award, roles: ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"] },
       { href: "/availability", label: "Availability", desc: "Set your availability status for team visibility", icon: CircleDot, roles: ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"] },
       { href: "/media", label: "Media Library", desc: "Browse, upload, and share institutional media assets", icon: FolderOpen, roles: ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"] },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { href: "/finance", label: "Finance Dashboard", desc: "Revenue, receivables, and institutional finance overview", icon: Landmark, permission: "finance:read" },
+      { href: "/finance/tax", label: "Tax Rates", desc: "Jurisdiction tax rates, institution overrides, and calculators", icon: Percent, permission: "finance:tax:view" },
+      { href: "/finance/purchases", label: "Purchase Approvals", desc: "Multi-stage purchase approvals with Merkle audit verification", icon: ShoppingCart, anyOf: ["finance:purchases:create", "finance:purchases:approve:tier1", "finance:purchases:approve:tier2", "finance:purchases:approve:final"] },
+      { href: "/finance/payroll", label: "Payroll", desc: "Salary structures, period generation, and disbursement tracking", icon: Wallet, permission: "finance:payroll:view" },
+      { href: "/finance/reconciliation", label: "Reconciliation", desc: "3-way bank reconciliation across fee, expense, and bank ledgers", icon: Scale, permission: "finance:reconciliation:view" },
     ],
   },
   {

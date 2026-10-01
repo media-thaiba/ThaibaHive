@@ -1008,6 +1008,104 @@ export const afedBenchmarkQuerySchema = z.object({
   reportingYear: z.string().default("2026"),
 });
 
+// ─── Sprint-103: Finance Operations Validation Schemas ───
+
+export const taxJurisdictionCreateSchema = z.object({
+  countryCode: z.string().min(2).max(3),
+  regionCode: z.string().min(1).max(10),
+  jurisdictionName: z.string().min(1),
+  defaultTaxRate: z.number().min(0).max(1),
+  taxCode: z.string().min(1),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+export type TaxJurisdictionCreateInput = z.infer<typeof taxJurisdictionCreateSchema>;
+
+export const taxRateOverrideCreateSchema = z.object({
+  institutionId: z.string().min(1).optional(),
+  jurisdictionId: z.string().min(1),
+  category: z.enum(["tuition", "hostel", "transport", "supplies", "services", "general"]),
+  overrideRate: z.number().min(0).max(1),
+  exemptionReason: z.string().optional(),
+  effectiveFrom: z.string().min(1),
+  effectiveTo: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+export type TaxRateOverrideCreateInput = z.infer<typeof taxRateOverrideCreateSchema>;
+
+export const purchaseApprovalTierCreateSchema = z.object({
+  institutionId: z.string().min(1).optional(),
+  tierLevel: z.number().int().min(1).max(10),
+  name: z.string().min(1),
+  minAmount: z.number().min(0).default(0),
+  maxAmount: z.number().positive().optional(),
+  requiredRole: z.enum(["hod", "principal", "admin", "super_admin", "accounts", "purchase"]),
+  requiresSequentialApproval: z.boolean().default(true),
+  autoEscalateHours: z.number().int().min(1).default(48),
+});
+export type PurchaseApprovalTierCreateInput = z.infer<typeof purchaseApprovalTierCreateSchema>;
+
+export const purchaseApprovalActionSchema = z.object({
+  purchaseRequestId: z.string().min(1),
+  action: z.enum(["approved", "rejected", "escalated", "delegated"]),
+  comments: z.string().optional(),
+  tierLevel: z.number().int().min(1).optional(),
+});
+export type PurchaseApprovalActionInput = z.infer<typeof purchaseApprovalActionSchema>;
+
+export const payrollSalaryStructureCreateSchema = z.object({
+  institutionId: z.string().min(1).optional(),
+  staffId: z.string().min(1),
+  baseSalary: z.number().positive(),
+  hraAllowance: z.number().min(0).default(0),
+  daAllowance: z.number().min(0).default(0),
+  specialAllowance: z.number().min(0).default(0),
+  pfDeductionRate: z.number().min(0).max(1).default(0.12),
+  taxBracketCode: z.string().default("STANDARD"),
+  currency: z.string().default("INR"),
+  effectiveDate: z.string().min(1),
+});
+export type PayrollSalaryStructureCreateInput = z.infer<typeof payrollSalaryStructureCreateSchema>;
+
+export const payrollGeneratePeriodSchema = z.object({
+  institutionId: z.string().min(1).optional(),
+  payPeriodMonth: z.number().int().min(1).max(12),
+  payPeriodYear: z.number().int().min(2020).max(2100),
+  staffIds: z.array(z.string().min(1)).optional(),
+});
+export type PayrollGeneratePeriodInput = z.infer<typeof payrollGeneratePeriodSchema>;
+
+export const payrollRecordStatusUpdateSchema = z.object({
+  status: z.enum(["draft", "approved", "disbursed", "voided"]),
+  paymentReference: z.string().optional(),
+});
+export type PayrollRecordStatusUpdateInput = z.infer<typeof payrollRecordStatusUpdateSchema>;
+
+export const financialReconciliationCreateSchema = z.object({
+  institutionId: z.string().min(1).optional(),
+  periodStart: z.string().min(1),
+  periodEnd: z.string().min(1),
+  bankStatementEntries: z.array(
+    z.object({
+      referenceId: z.string().min(1),
+      transactionDate: z.string().min(1),
+      amount: z.number(),
+      description: z.string().optional(),
+    })
+  ).optional().default([]),
+  notes: z.string().optional(),
+});
+export type FinancialReconciliationCreateInput = z.infer<typeof financialReconciliationCreateSchema>;
+
+export const financialReconciliationItemMatchSchema = z.object({
+  matchStatus: z.enum(["matched", "unmatched", "manual_override", "variance"]),
+  matchedWithId: z.string().optional(),
+  varianceAmount: z.number().optional().default(0),
+  resolutionNotes: z.string().optional(),
+});
+export type FinancialReconciliationItemMatchInput = z.infer<typeof financialReconciliationItemMatchSchema>;
+
+
 
 
 

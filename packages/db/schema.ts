@@ -6885,6 +6885,173 @@ export const agentOutboxMessages = sqliteTable("agent_outbox_messages", {
   outboxSchedIdx: index("idx_outbox_sched").on(t.scheduledFor),
 }));
 
+// ─── Sprint-103: Finance Operations Consolidation ───
+
+// ─── Tax Rate Overrides & Jurisdictions ───
+export const taxJurisdictions = sqliteTable("tax_jurisdictions", {
+  id: text("id").primaryKey(),
+  countryCode: text("country_code").notNull(),
+  regionCode: text("region_code").notNull(),
+  jurisdictionName: text("jurisdiction_name").notNull(),
+  defaultTaxRate: real("default_tax_rate").notNull().default(0.0), // e.g. 0.18 for 18%
+  taxCode: text("tax_code").notNull(), // e.g. 'GST_18', 'VAT_STANDARD', 'SALES_TAX'
+  description: text("description"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  jurisdictionCodeIdx: uniqueIndex("idx_tax_jur_country_region").on(t.countryCode, t.regionCode, t.taxCode),
+  jurisdictionActiveIdx: index("idx_tax_jur_active").on(t.isActive),
+}));
+
+export const taxRateOverrides = sqliteTable("tax_rate_overrides", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  jurisdictionId: text("jurisdiction_id").notNull().references(() => taxJurisdictions.id, { onDelete: "cascade" }),
+  category: text("category").notNull(), // 'tuition' | 'hostel' | 'transport' | 'supplies' | 'services' | 'general'
+  overrideRate: real("override_rate").notNull(), // e.g. 0.05 for 5%
+  exemptionReason: text("exemption_reason"),
+  effectiveFrom: text("effective_from").notNull(), // ISO date string
+  effectiveTo: text("effective_to"), // optional expiry ISO date string
+  approvedById: text("approved_by_id").references(() => staff.id),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  taxOverrideInstCatIdx: index("idx_tax_override_inst_cat").on(t.institutionId, t.category, t.isActive),
+  taxOverrideJurIdx: index("idx_tax_override_jur").on(t.jurisdictionId),
+  taxOverrideDatesIdx: index("idx_tax_override_dates").on(t.effectiveFrom, t.effectiveTo),
+}));
+
+// ─── Purchase Approvals Multi-Stage Engine ───
+export const purchaseApprovalTiers = sqliteTable("purchase_approval_tiers", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  tierLevel: integer("tier_level").notNull(), // 1, 2, 3, etc.
+  name: text("name").notNull(), // e.g. 'HOD Approval', 'Principal Approval', 'Board / Super Admin'
+  minAmount: real("min_amount").notNull().default(0.0),
+  maxAmount: real("max_amount"), // null means unlimited upper bound
+  requiredRole: text("required_role").notNull(), // 'hod' | 'principal' | 'admin' | 'super_admin' | 'accounts' | 'purchase'
+  requiresSequentialApproval: integer("requires_sequential_approval", { mode: "boolean" }).notNull().default(true),
+  autoEscalateHours: integer("auto_escalate_hours").notNull().default(48),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  purchaseTierInstLevelIdx: uniqueIndex("idx_purchase_tier_inst_level").on(t.institutionId, t.tierLevel),
+}));
+
+export const purchaseApprovalLogs = sqliteTable("purchase_approval_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  purchaseRequestId: text("purchase_request_id").notNull().references(() => purchaseRequests.id, { onDelete: "cascade" }),
+  tierLevel: integer("tier_level").notNull(),
+  approverId: text("approver_id").notNull().references(() => staff.id),
+  action: text("action").notNull(), // 'approved' | 'rejected' | 'escalated' | 'delegated'
+  comments: text("comments"),
+  merkleAuditHash: text("merkle_audit_hash").notNull(),
+  prevAuditHash: text("prev_audit_hash"),
+  actionTimestamp: text("action_timestamp").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  purchaseLogReqIdx: index("idx_purchase_log_req").on(t.purchaseRequestId),
+  purchaseLogApproverIdx: index("idx_purchase_log_approver").on(t.approverId),
+  purchaseLogInstTimeIdx: index("idx_purchase_log_inst_time").on(t.institutionId, t.actionTimestamp),
+}));
+
+// ─── Payroll & Salary Structures ───
+export const payrollSalaryStructures = sqliteTable("payroll_salary_structures", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  baseSalary: real("base_salary").notNull(),
+  hraAllowance: real("hra_allowance").notNull().default(0.0),
+  daAllowance: real("da_allowance").notNull().default(0.0),
+  specialAllowance: real("special_allowance").notNull().default(0.0),
+  pfDeductionRate: real("pf_deduction_rate").notNull().default(0.12),
+  taxBracketCode: text("tax_bracket_code").notNull().default("STANDARD"),
+  currency: text("currency").notNull().default("INR"),
+  effectiveDate: text("effective_date").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  payrollSalaryStaffIdx: uniqueIndex("idx_payroll_salary_staff_date").on(t.staffId, t.effectiveDate),
+  payrollSalaryInstIdx: index("idx_payroll_salary_inst").on(t.institutionId),
+}));
+
+export const payrollRecords = sqliteTable("payroll_records", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  payPeriodMonth: integer("pay_period_month").notNull(), // 1 - 12
+  payPeriodYear: integer("pay_period_year").notNull(), // e.g. 2026
+  grossEarnings: real("gross_earnings").notNull(),
+  totalDeductions: real("total_deductions").notNull(),
+  taxDeduction: real("tax_deduction").notNull().default(0.0),
+  netPayable: real("net_payable").notNull(),
+  status: text("status").notNull().default("draft"), // 'draft' | 'approved' | 'disbursed' | 'voided'
+  paymentReference: text("payment_reference"),
+  disbursedAt: text("disbursed_at"),
+  approvedById: text("approved_by_id").references(() => staff.id),
+  auditHash: text("audit_hash").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  payrollRecordStaffPeriodIdx: uniqueIndex("idx_payroll_rec_staff_period").on(t.staffId, t.payPeriodYear, t.payPeriodMonth),
+  payrollRecordInstStatusIdx: index("idx_payroll_rec_inst_status").on(t.institutionId, t.status),
+  payrollRecordPeriodIdx: index("idx_payroll_rec_period").on(t.payPeriodYear, t.payPeriodMonth),
+}));
+
+export const payrollDeductions = sqliteTable("payroll_deductions", {
+  id: text("id").primaryKey(),
+  payrollRecordId: text("payroll_record_id").notNull().references(() => payrollRecords.id, { onDelete: "cascade" }),
+  deductionType: text("deduction_type").notNull(), // 'provident_fund' | 'professional_tax' | 'income_tax' | 'health_insurance' | 'loan_repayment' | 'other'
+  amount: real("amount").notNull(),
+  description: text("description"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  payrollDeductionRecIdx: index("idx_payroll_deduction_rec").on(t.payrollRecordId),
+}));
+
+// ─── 3-Way Financial Reconciliation ───
+export const financialReconciliations = sqliteTable("financial_reconciliations", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  periodStart: text("period_start").notNull(), // ISO Date
+  periodEnd: text("period_end").notNull(),     // ISO Date
+  totalFeeLedgerAmount: real("total_fee_ledger_amount").notNull().default(0.0),
+  totalExpenseLedgerAmount: real("total_expense_ledger_amount").notNull().default(0.0),
+  totalBankStatementAmount: real("total_bank_statement_amount").notNull().default(0.0),
+  unreconciledVariance: real("unreconciled_variance").notNull().default(0.0),
+  matchedItemCount: integer("matched_item_count").notNull().default(0),
+  unmatchedItemCount: integer("unmatched_item_count").notNull().default(0),
+  status: text("status").notNull().default("in_progress"), // 'in_progress' | 'reconciled' | 'flagged_variance' | 'closed'
+  reconciledById: text("reconciled_by_id").references(() => staff.id),
+  auditHash: text("audit_hash").notNull(),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  reconciliationInstPeriodIdx: index("idx_recon_inst_period").on(t.institutionId, t.periodStart, t.periodEnd),
+  reconciliationStatusIdx: index("idx_recon_status").on(t.status),
+}));
+
+export const financialReconciliationItems = sqliteTable("financial_reconciliation_items", {
+  id: text("id").primaryKey(),
+  reconciliationId: text("reconciliation_id").notNull().references(() => financialReconciliations.id, { onDelete: "cascade" }),
+  sourceType: text("source_type").notNull(), // 'fee_transaction' | 'expense_claim' | 'purchase_order' | 'bank_statement'
+  sourceReferenceId: text("source_reference_id").notNull(),
+  transactionDate: text("transaction_date").notNull(),
+  amount: real("amount").notNull(),
+  matchStatus: text("match_status").notNull().default("unmatched"), // 'matched' | 'unmatched' | 'manual_override' | 'variance'
+  matchedWithId: text("matched_with_id"),
+  varianceAmount: real("variance_amount").notNull().default(0.0),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  reconItemRecStatusIdx: index("idx_recon_item_rec_status").on(t.reconciliationId, t.matchStatus),
+  reconItemSourceIdx: index("idx_recon_item_source").on(t.sourceType, t.sourceReferenceId),
+}));
+
+
 
 
 

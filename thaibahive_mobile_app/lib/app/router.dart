@@ -41,6 +41,11 @@ import '../features/assets/presentation/assets_screen.dart';
 import '../features/assets/presentation/asset_detail_screen.dart';
 import '../features/expenses/presentation/expenses_screen.dart';
 import '../features/purchases/presentation/purchases_screen.dart';
+import '../features/finance/presentation/finance_screen.dart';
+import '../features/finance/presentation/purchase_approvals_screen.dart';
+import '../features/finance/presentation/purchase_approval_detail_screen.dart';
+import '../features/finance/presentation/reconciliation_screen.dart';
+import '../features/finance/presentation/reconciliation_detail_screen.dart';
 import '../features/visitors/presentation/visitors_screen.dart';
 import '../features/vehicles/presentation/vehicles_screen.dart';
 import '../features/checklists/presentation/checklists_screen.dart';
@@ -400,6 +405,50 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const PurchasesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/finance',
+        name: 'finance',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const FinanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/finance/approvals',
+        name: 'financeApprovals',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const PurchaseApprovalsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/finance/approvals/:id',
+        name: 'financeApprovalDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: PurchaseApprovalDetailScreen(
+            purchaseRequestId: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/finance/reconciliation',
+        name: 'financeReconciliation',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ReconciliationScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/finance/reconciliation/:id',
+        name: 'financeReconciliationDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: ReconciliationDetailScreen(
+            reconciliationId: state.pathParameters['id']!,
+          ),
         ),
       ),
       GoRoute(

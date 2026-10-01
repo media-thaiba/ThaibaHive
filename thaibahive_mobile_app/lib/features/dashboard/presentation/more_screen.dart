@@ -39,6 +39,7 @@ class MoreScreen extends StatelessWidget {
     '/admin',
     '/media',
     '/agent-hub',
+    '/finance',
   };
 
   static const _communicationFeatures = [
@@ -62,6 +63,7 @@ class MoreScreen extends StatelessWidget {
   ];
 
   static const _operationsFinanceFeatures = [
+    _FeatureItem(name: 'Finance', icon: Icons.currency_rupee_rounded, route: '/finance', color: Color(0xFF00695C)),
     _FeatureItem(name: 'Approvals', icon: Icons.approval_rounded, route: '/approvals', color: Color(0xFF00838F)),
     _FeatureItem(name: 'Reports', icon: Icons.assignment_rounded, route: '/reports', color: Color(0xFF558B2F)),
     _FeatureItem(name: 'Assets', icon: Icons.inventory_2_rounded, route: '/assets', color: Color(0xFF795548)),

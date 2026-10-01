@@ -60,6 +60,8 @@ dependencies:
   latlong2: ^0.9.1
   http: ^1.2.0
   speech_to_text: ^7.0.0
+  # Deep links (Sprint-103: thaibahive://finance/approvals/:id)
+  app_links: ^7.0.0
 
 
 
