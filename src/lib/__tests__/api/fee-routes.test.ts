@@ -5,6 +5,22 @@ import { POST as handleWebhook } from '../../../app/api/finance/fees/webhooks/ro
 import { GET as getVerifyReceipt } from '../../../app/api/finance/fees/verify/[hash]/route';
 import { FeeDbStore } from '../../../db/fee-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Fee Management REST API Routes (Sprint-057 - FEE-016)', () => {
   beforeEach(() => {
     FeeDbStore.getInstance().clearMemoryStore();

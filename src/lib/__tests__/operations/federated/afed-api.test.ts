@@ -6,6 +6,22 @@ import { POST as resetBudget } from '@/app/api/operations/federated/privacy/budg
 import { POST as predictInference } from '@/app/api/operations/federated/inference/predict/route';
 import { GET as getBenchmarks } from '@/app/api/operations/federated/benchmarks/route';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('A-FED REST API Endpoints Integration Test Suite', () => {
   it('should register and retrieve federated models via API', async () => {
     const reqPost = new Request('http://localhost/api/operations/federated/models', {

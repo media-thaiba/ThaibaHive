@@ -5,6 +5,22 @@
 import { GET, POST } from "../../../app/api/admin/security/identity/deprecation-stats/route";
 import { LegacyTokenDeprecationEngine } from "../../identity/legacy-token-deprecation";
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe("Deprecation Stats Admin API (TIF-009)", () => {
   beforeEach(() => {
     LegacyTokenDeprecationEngine.getInstance().setMode("WARN");

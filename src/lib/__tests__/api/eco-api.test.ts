@@ -8,6 +8,22 @@ import { GET as getOffsets, POST as postOffsets } from '../../../app/api/eco/off
 import { GET as getReports, POST as postReports } from '../../../app/api/eco/reports/esg/route';
 import { EcoDbStore } from '../../db/eco-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('ECO-MESH REST API Endpoints Unit Tests', () => {
   beforeEach(() => {
     EcoDbStore.getInstance().clearMemoryStore();

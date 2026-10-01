@@ -7,6 +7,22 @@ import { GET as getAnalytics } from '@/app/api/engage/analytics/route';
 import { POST as postDispatch } from '@/app/api/engage/dispatch/route';
 import { EngageDbStore } from '@/lib/db/engage-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('EngageOS REST API Suite Integration Tests', () => {
   beforeEach(() => {
     EngageDbStore.getInstance().clearMemoryStore();

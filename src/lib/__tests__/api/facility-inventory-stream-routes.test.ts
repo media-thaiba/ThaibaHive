@@ -3,6 +3,22 @@ import { GET as getContractors, POST as postContractors } from '../../../app/api
 import { GET as getStream } from '../../../app/api/facility/stream/route';
 import { facilityStore } from '../../db/facility-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Facility Inventory, Contractors & SSE Stream API Routes (Sprint-052 FACILITY-017)', () => {
   beforeEach(() => {
     facilityStore.clearMemoryStore();

@@ -9,6 +9,22 @@ import { POST as scanSbom } from '@/app/api/admin/security/zero-trust/sbom/scan/
 import { GET as getForensics, POST as triggerForensics } from '@/app/api/admin/security/zero-trust/forensics/route';
 import { GET as getMetrics } from '@/app/api/admin/security/zero-trust/metrics/route';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('ZASM REST APIs — Authorized & Unauthorized Access Paths', () => {
   // ─── Authorized Happy Paths ───
   describe('Authorized Access Paths (Super Admin / Admin)', () => {

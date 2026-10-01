@@ -1,14 +1,20 @@
 import { validateQrCheckIn, AttendanceValidationError } from "@/lib/attendance/validation";
 import { db } from "@/db";
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    staffId: "admin-1",
-    role: "admin",
-    email: "admin@test.com",
-  }),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      staffId: "admin-1",
+      role: "admin",
+      email: "admin@test.com",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn(() => true),
+  };
+});
 
 jest.mock("@/db", () => {
   const ok = (val: unknown) => ({ get: () => val, all: () => (val ? [val] : []), run: () => ({ changes: val ? 1 : 0 }) });
@@ -251,8 +257,8 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
 
       const response = await PATCH(mockRequest({ type: "leave", id: "leave-2", action: "reject" }));
       const body = await response.json();
-      expect(body).toEqual({ error: "Leave request is already in a terminal state" });
-      expect(response.status).toBe(400);
+      expect(body).toEqual({ error: "Cannot modify request in terminal status: rejected" });
+      expect(response.status).toBe(403);
     });
 
     it("should approve a pending expense claim via real handler", async () => {
@@ -275,8 +281,8 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
 
       const response = await PATCH(mockRequest({ type: "expense", id: "exp-1", action: "approve" }));
       const body = await response.json();
-      expect(body).toEqual({ error: "Expense claim is already in a terminal state" });
-      expect(response.status).toBe(400);
+      expect(body).toEqual({ error: "Expense claim status changed by a concurrent request" });
+      expect(response.status).toBe(409);
     });
 
     it("should return 400 when re-rejecting an already-rejected expense claim via real handler WHERE guard", async () => {
@@ -287,8 +293,8 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
 
       const response = await PATCH(mockRequest({ type: "expense", id: "exp-2", action: "reject" }));
       const body = await response.json();
-      expect(body).toEqual({ error: "Expense claim is already in a terminal state" });
-      expect(response.status).toBe(400);
+      expect(body).toEqual({ error: "Cannot modify request in terminal status: rejected" });
+      expect(response.status).toBe(403);
     });
 
     it("should advance a purchase request through multi-step state machine via real handler", async () => {

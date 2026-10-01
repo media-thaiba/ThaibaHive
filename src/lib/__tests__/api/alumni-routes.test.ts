@@ -7,6 +7,22 @@ import { POST as processDonation } from '../../../app/api/alumni/endowments/dona
 import { GET as verifyDonation } from '../../../app/api/alumni/verify/donation/[hash]/route';
 import { AlumniDbStore } from '../../../db/alumni-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Alumni Management REST API Routes (Sprint-058 - ALUM-013)', () => {
   beforeEach(() => {
     AlumniDbStore.getInstance().clearMemoryStore();

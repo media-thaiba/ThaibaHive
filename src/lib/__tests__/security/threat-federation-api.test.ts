@@ -6,6 +6,22 @@ import { FederationService } from "../../security/threat-intel/federation-servic
 import { QuarantineManager } from "../../security/quarantine-manager";
 import { GET, POST } from "../../../app/api/security/threat-intel/federation/route";
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe("Federated Threat Sharing (TIF-012)", () => {
   beforeEach(() => {
     QuarantineManager.getInstance().reset();

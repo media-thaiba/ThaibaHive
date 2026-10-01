@@ -5,6 +5,22 @@ import { GET as getJobs, POST as postJobs } from '../../../app/api/neuro/jobs/ro
 import { GET as getScheduler, POST as postScheduler } from '../../../app/api/neuro/scheduler/route';
 import { NeuroDbStore } from '../../db/neuro-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('NEURO-CLUSTER REST API Endpoints — Cluster, Node, GPU & Job (NEURO-016)', () => {
   beforeEach(() => {
     NeuroDbStore.getInstance().clearMemoryStore();

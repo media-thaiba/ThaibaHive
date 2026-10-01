@@ -4,6 +4,22 @@ import { GET as getBilling, POST as postBilling } from '../../../app/api/neuro/b
 import { GET as getMetrics } from '../../../app/api/neuro/metrics/route';
 import { NeuroDbStore } from '../../db/neuro-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('NEURO-CLUSTER REST API Endpoints — Arbitrage, Provenance, Billing & Metrics (NEURO-017)', () => {
   beforeEach(() => {
     NeuroDbStore.getInstance().clearMemoryStore();

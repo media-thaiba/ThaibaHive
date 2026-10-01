@@ -9,6 +9,22 @@ import { GET as analyticsRoute } from '@/app/api/km/analytics/route';
 import { kmStore } from '@/lib/db/km-store';
 import { hybridFusionEngine } from '@/lib/operations/km/retrieval/hybrid-fusion-engine';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Knowledge Mesh REST API Suite Integration Tests (KM-021)', () => {
   beforeEach(() => {
     kmStore.clearMemoryStore();

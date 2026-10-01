@@ -12,6 +12,23 @@ import { db } from "@/db";
 import { staff } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "staff_admin_01",
+      staffId: "staff_admin_01",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      tokenVersion: 0,
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe("Real-Time Streaming & Concurrency Benchmark Tests", () => {
   beforeAll(async () => {
     // Ensure test staff user exists for realtime verification
@@ -30,7 +47,13 @@ describe("Real-Time Streaming & Concurrency Benchmark Tests", () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+    } else {
+      await db.update(staff).set({ isActive: true, tokenVersion: 0 }).where(eq(staff.id, "staff_admin_01"));
     }
+  });
+
+  beforeEach(async () => {
+    await db.update(staff).set({ isActive: true, tokenVersion: 0 }).where(eq(staff.id, "staff_admin_01"));
   });
 
   it("handles 10 concurrent subscribers to /api/realtime/events and receives initial frame", async () => {

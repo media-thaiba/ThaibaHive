@@ -10,6 +10,22 @@ import { GET as getMeshById, DELETE as deleteMeshById } from '@/app/api/admin/op
 import { POST as postMarlOverride } from '@/app/api/admin/operations/marl/override/route';
 import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('AIMS-021 — Admin Operations REST APIs & Authentication Suite', () => {
   beforeEach(() => {
     AimsDbStore.getInstance().clear();

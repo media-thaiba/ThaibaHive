@@ -9,6 +9,22 @@ import { GET as getAssets, POST as createAsset } from '@/app/api/twin/assets/rou
 import { POST as emergencySimulate } from '@/app/api/twin/emergency/simulate/route';
 import { TwinDbStore } from '@/lib/db/twin-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Spatial Digital Twin REST API Suite Integration Tests (TWIN-016)', () => {
   const store = TwinDbStore.getInstance();
 

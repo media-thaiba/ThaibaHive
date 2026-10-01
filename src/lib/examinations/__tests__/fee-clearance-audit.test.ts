@@ -1,15 +1,17 @@
 import { POST as issueHallTicket } from "@/app/api/examinations/hall-tickets/route";
 import { checkStudentFeeClearance } from "../hall-ticket-service";
-import {  } from "@/lib/auth";
-
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    staffId: "admin_01",
-    role: "admin",
-    institutionId: "inst_campus_main",
-  }),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      staffId: "admin_01",
+      role: "admin",
+      institutionId: "inst_campus_main",
+    }),
+    hasPermission: jest.fn(() => true),
+  };
+});
 
 jest.mock("../hall-ticket-service", () => ({
   ...jest.requireActual("../hall-ticket-service"),

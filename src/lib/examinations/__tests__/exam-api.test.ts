@@ -1,14 +1,18 @@
 import { GET as getExams, POST as createExam } from "@/app/api/examinations/exams/route";
 import { GET as getExamById } from "@/app/api/examinations/exams/[id]/route";
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    staffId: "staff_admin_01",
-    role: "admin",
-    institutionId: "inst_campus_main",
-  }),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      staffId: "staff_admin_01",
+      role: "admin",
+      institutionId: "inst_campus_main",
+    }),
+    hasPermission: jest.fn(() => true),
+  };
+});
 
 jest.mock("@/db", () => {
   const mockExam = {

@@ -1,6 +1,6 @@
 import { POST } from "@/app/api/expense-claims/route";
 import { PATCH } from "@/app/api/expense-claims/[id]/route";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 
 const mockGet = jest.fn();
 const mockAll = jest.fn();
@@ -54,10 +54,14 @@ jest.mock("@/db", () => ({
   },
 }));
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(() => true),
+  };
+});
 
 jest.mock("@/lib/api/rate-limit", () => ({
   checkRateLimit: jest.fn(() => ({ allowed: true })),

@@ -1,7 +1,7 @@
 import { POST } from "@/app/api/purchases/route";
 import { PATCH } from "@/app/api/purchases/[id]/route";
 import { GET as getBudget } from "@/app/api/purchases/budget/route";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 
 const mockGet = jest.fn();
 const mockAll = jest.fn();
@@ -64,10 +64,14 @@ jest.mock("@/db", () => ({
   },
 }));
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(() => true),
+  };
+});
 
 jest.mock("@/lib/auth/department-scope", () => ({
   getManagedStaffIds: jest.fn().mockResolvedValue(["staff_1", "staff_2"]),

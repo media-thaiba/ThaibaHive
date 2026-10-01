@@ -1,14 +1,18 @@
 import { GET as getMarks } from "@/app/api/examinations/marks/route";
 import { POST as batchMarks } from "@/app/api/examinations/marks/batch/route";
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    staffId: "staff_teacher_01",
-    role: "staff",
-    institutionId: "inst_campus_main",
-  }),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      staffId: "staff_teacher_01",
+      role: "staff",
+      institutionId: "inst_campus_main",
+    }),
+    hasPermission: jest.fn(() => true),
+  };
+});
 
 jest.mock("@/db", () => {
   const mockMark = {

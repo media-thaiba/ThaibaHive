@@ -8,6 +8,22 @@ import { GET as getLockdown, POST as postLockdown } from '../../../app/api/visio
 import { GET as getPrivacy, POST as postPrivacy } from '../../../app/api/vision/privacy/route';
 import { VisionDbStore } from '../../db/vision-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('VISION-SHIELD REST API Endpoints Unit Tests', () => {
   beforeEach(() => {
     VisionDbStore.getInstance().clearMemoryStore();

@@ -3,6 +3,22 @@ import { GET as getAudit } from '../../../app/api/curriculum/audit/route';
 import { GET as getTransfer, POST as handleTransfer } from '../../../app/api/curriculum/transfer/route';
 import { curriculumStore } from '../../db/curriculum-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Curriculum Plans, Audit & Transfer Routes (ADVISE-016)', () => {
   const mockUser = { id: 'advisor_1', role: 'admin', institutionId: 'inst_plan_api' };
 

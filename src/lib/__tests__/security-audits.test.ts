@@ -3,7 +3,7 @@ import { POST as systemUpdatePost } from "../../app/api/system/update/route";
 import { GET as fileGet } from "../../app/api/upload/files/[filename]/route";
 import { GET as avatarGet } from "../../app/api/upload/files/avatars/[filename]/route";
 import { GET as exportGet } from "../../app/api/export/route";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 import { db } from "@/db";
 
 // Mock jose ESM package
@@ -13,13 +13,17 @@ jest.mock("jose", () => ({
 }));
 
 // Mock the Auth library
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn((role, perm) => {
-    // Forward to the real hasPermission from packages/auth/roles
-    return require("../../../packages/auth/roles").hasPermission(role, perm);
-  }),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn((role, perm) => {
+      // Forward to the real hasPermission from packages/auth/roles
+      return require("../../../packages/auth/roles").hasPermission(role, perm);
+    }),
+  };
+});
 
 // Mock the DB library
 jest.mock("@/db", () => {

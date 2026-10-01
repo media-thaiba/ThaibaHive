@@ -3,6 +3,22 @@ import { GET as getSensors, POST as postSensors } from '../../../app/api/facilit
 import { POST as postTelemetry } from '../../../app/api/facility/telemetry/route';
 import { facilityStore } from '../../db/facility-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Facility Equipment & Telemetry Ingestion API Routes (Sprint-052 FACILITY-015)', () => {
   beforeEach(() => {
     facilityStore.clearMemoryStore();

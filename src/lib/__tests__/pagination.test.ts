@@ -3,15 +3,19 @@ jest.mock("jose", () => ({
   SignJWT: jest.fn(),
 }));
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    userId: "user-admin-1",
-    staffId: "staff-admin-1",
-    email: "admin@example.com",
-    role: "super_admin",
-  }),
-  hasPermission: jest.fn().mockReturnValue(true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "user-admin-1",
+      staffId: "staff-admin-1",
+      email: "admin@example.com",
+      role: "super_admin",
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
 
 import { GET as getTasks } from "@/app/api/tasks/route";
 import { GET as getAccounts } from "@/app/api/accounts/route";

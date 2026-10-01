@@ -3,19 +3,25 @@ jest.mock("jose", () => ({
   SignJWT: jest.fn(),
 }));
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    userId: "user-staff-1",
-    staffId: "staff-1",
-    email: "staff@example.com",
-    role: "staff",
-  }),
-  hasPermission: jest.fn((role: string, permission: string) => {
-    // Return true for marketplace permissions, false for attendance:read if testing mismatch
-    if (permission.startsWith("marketplace:")) return true;
-    return false;
-  }),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "user-staff-1",
+      staffId: "staff-1",
+      email: "staff@example.com",
+      role: "staff",
+      institutionId: "inst_alpha",
+      permissions: ["marketplace:install", "marketplace:read"],
+    }),
+    hasPermission: jest.fn((role: string, permission: string) => {
+      // Return true for marketplace permissions, false for attendance:read if testing mismatch
+      if (permission.startsWith("marketplace:")) return true;
+      return false;
+    }),
+  };
+});
 
 import { GET as getMarketplaceApps } from "@/app/api/marketplace/apps/route";
 import { GET as getAccessRequests } from "@/app/api/marketplace/access-requests/route";

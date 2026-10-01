@@ -2,6 +2,22 @@ import { GET as getAdvising, POST as sendAdvisingMsg } from '../../../app/api/cu
 import { GET as getRetention, POST as triggerRetention, PATCH as updateRetention } from '../../../app/api/curriculum/retention/route';
 import { curriculumStore } from '../../db/curriculum-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_adv_api",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Curriculum Advising Dialogue & Retention Routes (ADVISE-017)', () => {
   const mockUser = { id: 'counselor_1', role: 'admin', institutionId: 'inst_adv_api' };
 

@@ -4,6 +4,22 @@ import { GET as getPrereqs, POST as createPrereq } from '../../../app/api/curric
 import { GET as getDag } from '../../../app/api/curriculum/dag/route';
 import { curriculumStore } from '../../db/curriculum-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Curriculum Core API Routes (ADVISE-015)', () => {
   const mockUser = { id: 'admin_1', role: 'admin', institutionId: 'inst_core_api' };
 

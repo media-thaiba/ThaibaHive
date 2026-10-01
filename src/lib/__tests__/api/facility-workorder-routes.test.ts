@@ -3,6 +3,22 @@ import { GET as getWorkOrders, POST as postWorkOrders, PATCH as patchWorkOrders 
 import { POST as postDispatch } from '../../../app/api/facility/dispatch/route';
 import { facilityStore } from '../../db/facility-store';
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "usr_admin",
+      staffId: "usr_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_alpha",
+      permissions: ["*"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
+
 describe('Facility Work Order & Dispatch API Routes (Sprint-052 FACILITY-016)', () => {
   beforeEach(() => {
     facilityStore.clearMemoryStore();
