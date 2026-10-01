@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, payrollRecords, payrollDeductions, eq, and, desc } from "@/db";
+import { db, payrollRecords, eq, and, desc } from "@/db";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { payrollRecordStatusUpdateSchema } from "@/lib/validation/schemas";
 import { payrollEngine } from "@/lib/finance/payroll/payroll-engine";

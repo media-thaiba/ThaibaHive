@@ -17,7 +17,7 @@ export const academicTools: AgentTool[] = [
       totalAnomalies: z.number(),
       flaggedStudents: z.array(z.object({ studentId: z.string(), attendanceRate: z.number() })),
     }),
-    execute: async (input) => {
+    execute: async (_input) => {
       return {
         totalAnomalies: 2,
         flaggedStudents: [
@@ -42,7 +42,7 @@ export const academicTools: AgentTool[] = [
       reconciledCount: z.number(),
       status: z.string(),
     }),
-    execute: async (input) => {
+    execute: async (_input) => {
       return {
         reconciledCount: 38,
         status: "reconciled",

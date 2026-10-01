@@ -20,7 +20,7 @@ export class GuardrailsRollbackCoordinator {
   }
 
   public async initiateRollback(request: RollbackRequest): Promise<RollbackSummary> {
-    const { runId, tenant, reason, requestedBy } = request;
+    const { runId, tenant, reason } = request;
 
     // Retrieve steps from store if not directly supplied
     let stepsToRollback = request.steps;

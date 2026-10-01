@@ -3,10 +3,7 @@ import {
   payrollSalaryStructures,
   payrollRecords,
   payrollDeductions,
-  staff,
   eq,
-  and,
-  inArray,
 } from "@/db";
 import { createHash, randomUUID } from "crypto";
 
@@ -134,7 +131,7 @@ export class PayrollEngine {
     specificStaffIds?: string[]
   ) {
     // 1. Fetch relevant salary structures
-    let query = db
+    const query = db
       .select()
       .from(payrollSalaryStructures)
       .where(eq(payrollSalaryStructures.institutionId, institutionId));

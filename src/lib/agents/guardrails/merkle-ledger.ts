@@ -181,7 +181,7 @@ export class MerkleAuditLedger {
 
     const sorted = [...rawEntries];
 
-    let expectedPrevHash = "GENESIS_HASH_000000000000000000000000000000000000000000000000000000000000";
+    const expectedPrevHash = "GENESIS_HASH_000000000000000000000000000000000000000000000000000000000000";
 
     for (let i = 0; i < sorted.length; i++) {
       const entry = sorted[i];

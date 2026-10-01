@@ -5,7 +5,6 @@
 
 import { AgentRegistry } from "../src/lib/agents/core/registry";
 import { ToolRegistry } from "../src/lib/agents/tools/tool-registry";
-import { ToolExecutor } from "../src/lib/agents/tools/executor";
 import { validateToolContract } from "../src/lib/agents/tools/contract";
 import { academicTools } from "../src/lib/agents/tools/adapters/academic-tools";
 import { financeTools } from "../src/lib/agents/tools/adapters/finance-tools";

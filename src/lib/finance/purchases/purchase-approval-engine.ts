@@ -4,10 +4,8 @@ import {
   purchaseApprovalTiers,
   purchaseApprovalLogs,
   eq,
-  and,
   asc,
   desc,
-  sql,
 } from "@/db";
 import { createHash, randomUUID } from "crypto";
 

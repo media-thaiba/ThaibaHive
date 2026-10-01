@@ -17,9 +17,9 @@ import { Alert } from "@/components/ui/alert";
 import { PermissionGate } from "@/components/ui/permission-gate";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Landmark, Percent, Plus, Calculator, RefreshCw } from "lucide-react";
+import { Landmark, Percent, Plus, Calculator } from "lucide-react";
 import { ensureArray, formatDate } from "@/lib/utils";
-import { formatCurrency, formatRate, fromPercentInput, toPercentInput } from "@/lib/finance/format";
+import { formatCurrency, formatRate, fromPercentInput } from "@/lib/finance/format";
 
 type TaxJurisdiction = {
   id: string;

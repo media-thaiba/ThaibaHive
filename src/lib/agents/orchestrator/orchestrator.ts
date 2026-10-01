@@ -1,6 +1,6 @@
 import { AgentRegistry } from "../core/registry";
 import { AgentMessageBus } from "../core/message-bus";
-import { ReasoningPort, StubReasoningPort, ReasoningRequest, ReasoningResponse } from "./reasoning-port";
+import { ReasoningPort, StubReasoningPort, ReasoningResponse } from "./reasoning-port";
 import { agentDbStore, AgentDbStore } from "../../db/agent-store";
 
 export interface TaskDelegationRequest {

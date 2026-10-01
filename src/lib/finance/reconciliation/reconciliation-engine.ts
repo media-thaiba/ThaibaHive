@@ -1,7 +1,6 @@
 import {
   db,
   financialTransactions,
-  expenseClaims,
   financialReconciliations,
   financialReconciliationItems,
   eq,
@@ -94,7 +93,7 @@ export class ReconciliationEngine {
     const status = Math.abs(unreconciledVariance) < 0.01 ? "reconciled" : "flagged_variance";
 
     // 5. Create Parent Reconciliation Record
-    const [reconSession] = await db
+    await db
       .insert(financialReconciliations)
       .values({
         id: reconciliationId,

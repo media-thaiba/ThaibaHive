@@ -45,7 +45,7 @@ export const securityTools: AgentTool[] = [
       status: z.string(),
       requiresPhysicalConfirmation: z.boolean(),
     }),
-    execute: async (input) => {
+    execute: async (_input) => {
       return {
         lockdownEventId: `lock_${Date.now()}`,
         status: "pending_physical_confirmation",
@@ -76,7 +76,7 @@ export const securityTools: AgentTool[] = [
       actionsCompleted: z.array(z.string()),
       status: z.string(),
     }),
-    execute: async (input) => {
+    execute: async (_input) => {
       return {
         executionId: `soar_${Date.now()}`,
         actionsCompleted: ["guard_dispatched", "ptz_locked_on_target", "log_anchored"],

@@ -1,4 +1,4 @@
-import { ReasoningPort, ReasoningRequest, ReasoningResponse } from "../orchestrator/reasoning-port";
+import { ReasoningPort, ReasoningResponse } from "../orchestrator/reasoning-port";
 import { ToolExecutor } from "../tools/executor";
 import { ToolRegistry } from "../tools/tool-registry";
 import { TenantContext } from "../tools/contract";

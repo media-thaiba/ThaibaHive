@@ -77,7 +77,7 @@ export class ApprovalGateEngine {
       };
     }
 
-    const updated = await this.store.updateApprovalGate(
+    await this.store.updateApprovalGate(
       gateId,
       {
         status: decision,
@@ -120,7 +120,7 @@ export class ApprovalGateEngine {
     const pendingGates = await this.store.listApprovalGates(tenantId, undefined, "pending");
 
     let escalatedCount = 0;
-    let rejectedCount = 0;
+    const rejectedCount = 0;
 
     for (const gate of pendingGates) {
       if (gate.expiresAt && gate.expiresAt < now) {
