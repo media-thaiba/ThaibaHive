@@ -20,7 +20,7 @@ export function PaymentHistoryTable({ payments }: PaymentHistoryTableProps) {
     <Card className="border border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle className="text-lg font-bold text-slate-900">Payment & Receipt History</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">Payment &amp; Receipt History</CardTitle>
           <p className="text-xs text-slate-500 mt-1">Download official cryptographically verified fee receipts</p>
         </div>
         <Badge variant="secondary">{payments.length} Receipts</Badge>

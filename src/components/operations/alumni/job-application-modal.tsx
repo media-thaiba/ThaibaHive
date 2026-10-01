@@ -58,7 +58,7 @@ export function JobApplicationModal({ job, open, onOpenChange, onSubmitSuccess }
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-700">Cover Letter & Referral Notes</label>
+            <label className="text-xs font-medium text-slate-700">Cover Letter &amp; Referral Notes</label>
             <Input
               value={coverLetter}
               onChange={(e) => setCoverLetter(e.target.value)}

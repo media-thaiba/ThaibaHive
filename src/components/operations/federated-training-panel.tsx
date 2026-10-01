@@ -27,7 +27,7 @@ export function FederatedTrainingPanel() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Federated Learning Model Registry & Training Rounds</CardTitle>
+          <CardTitle>Federated Learning Model Registry &amp; Training Rounds</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">

@@ -66,7 +66,7 @@ export default function StudentCopilotPage() {
             </div>
             <div>
               <h2 className="font-semibold text-slate-900 text-sm">Campus AI Copilot</h2>
-              <p className="text-xs text-slate-500">Autonomous Degree & Academic Advisory Assistant</p>
+              <p className="text-xs text-slate-500">Autonomous Degree &amp; Academic Advisory Assistant</p>
             </div>
           </div>
           <Badge variant="success" className="text-xs">Edge WebSocket Ready</Badge>

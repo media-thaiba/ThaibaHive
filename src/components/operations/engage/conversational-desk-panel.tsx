@@ -23,7 +23,7 @@ export function ConversationalDeskPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center justify-between">
-            <span>Conversational Hub & Human-in-the-Loop Desk</span>
+            <span>Conversational Hub &amp; Human-in-the-Loop Desk</span>
             <Badge variant={sessionStatus === 'agent_pending' ? 'warning' : 'success'}>
               {sessionStatus === 'agent_pending' ? 'Escalation Pending' : 'AI Bot Active'}
             </Badge>

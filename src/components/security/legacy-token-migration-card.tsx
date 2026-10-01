@@ -53,7 +53,7 @@ export function LegacyTokenMigrationCard({ stats, onModeChange }: LegacyTokenMig
     <Card className="col-span-1 md:col-span-2 lg:col-span-3">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
-          <CardTitle className="text-lg font-bold">Legacy Token Sunset & DPoP Migration</CardTitle>
+          <CardTitle className="text-lg font-bold">Legacy Token Sunset &amp; DPoP Migration</CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             RFC 8594 Sunset enforcement for transitioning all platform sessions to Zero-Trust DPoP attestation
           </p>

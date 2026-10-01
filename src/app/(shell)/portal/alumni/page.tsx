@@ -41,7 +41,7 @@ export default function AlumniPortalPage() {
       <div className="flex flex-row items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Alumni & Career Advancement Portal
+            Alumni &amp; Career Advancement Portal
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Connect with verified alumni mentors, explore alumni-referred career opportunities, and support endowment funds
@@ -66,7 +66,7 @@ export default function AlumniPortalPage() {
             <TabsTrigger value="endowments">Endowments</TabsTrigger>
           </PermissionGate>
           <PermissionGate anyOf={["alumni:events:view", "alumni:events:rsvp"]} fallback={null}>
-            <TabsTrigger value="events">Homecoming & Events</TabsTrigger>
+            <TabsTrigger value="events">Homecoming &amp; Events</TabsTrigger>
           </PermissionGate>
         </TabsList>
 
@@ -97,7 +97,7 @@ export default function AlumniPortalPage() {
           <TabsContent value="jobs" className="space-y-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">
-                Alumni-Referred Careers & Placements
+                Alumni-Referred Careers &amp; Placements
               </h3>
               <p className="text-xs text-slate-500">
                 Fast-track opportunities posted directly by alumni and vetted employer partners.
@@ -169,7 +169,7 @@ export default function AlumniPortalPage() {
           <TabsContent value="events" className="space-y-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">
-                Upcoming Alumni Events & Reunions
+                Upcoming Alumni Events &amp; Reunions
               </h3>
               <p className="text-xs text-slate-500">
                 Reserve tickets and passes for global chapters and campus gatherings.

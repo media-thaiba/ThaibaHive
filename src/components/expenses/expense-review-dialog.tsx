@@ -145,7 +145,7 @@ export function ExpenseReviewDialog({ claim, onClose, onReviewed }: Props) {
                 )}
                 {canFinanceApprove && (
                   <Button type="button" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleReviewAction("approved")} disabled={reviewSubmitting}>
-                    Approve & Pay
+                    Approve &amp; Pay
                   </Button>
                 )}
               </div>

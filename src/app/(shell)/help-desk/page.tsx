@@ -291,7 +291,7 @@ export default function HelpDeskPage() {
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Wrench className="h-6 w-6 text-primary" /> IT Help Desk & Support
+          <Wrench className="h-6 w-6 text-primary" /> IT Help Desk &amp; Support
         </h1>
         <Button onClick={() => setShowForm(!showForm)}>
           {showForm ? "Cancel" : <><Plus className="h-4 w-4 mr-1.5" /> Create Ticket</>}

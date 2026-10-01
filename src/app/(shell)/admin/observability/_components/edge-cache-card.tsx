@@ -48,7 +48,7 @@ export function EdgeCacheCard({ isLoading = false }: EdgeCacheCardProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-emerald-500" />
-          <h3 className="text-sm font-semibold tracking-tight">Multi-Region Edge Caching & Replication</h3>
+          <h3 className="text-sm font-semibold tracking-tight">Multi-Region Edge Caching &amp; Replication</h3>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-xs">

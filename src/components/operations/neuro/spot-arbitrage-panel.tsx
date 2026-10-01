@@ -20,7 +20,7 @@ export const SpotArbitragePanel: React.FC<SpotArbitragePanelProps> = ({
         <div>
           <CardTitle className="text-sm font-semibold">Real-Time Cloud Spot Arbitrage Matrix</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Live spot instances across AWS, GCP, RunPod & On-Premise with auto-migration resilience
+            Live spot instances across AWS, GCP, RunPod &amp; On-Premise with auto-migration resilience
           </p>
         </div>
         <Badge variant="info" className="text-xs">

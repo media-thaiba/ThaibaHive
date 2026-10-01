@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Bot,
-  Play,
   CheckCircle2,
   AlertTriangle,
   ShieldAlert,
@@ -73,7 +72,7 @@ export default function AgentsCockpitPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">Agentic Workflows & Multi-Agent Cockpit</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Agentic Workflows &amp; Multi-Agent Cockpit</h1>
             <Badge variant={connectedStream ? "success" : "secondary"}>
               <Radio className="mr-1 size-3 animate-pulse" />
               {connectedStream ? "Live Telemetry Connected" : "Telemetry Standby"}
@@ -292,7 +291,7 @@ export default function AgentsCockpitPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="size-4" />
-            Live Agent Event & Telemetry Stream (SSE)
+            Live Agent Event &amp; Telemetry Stream (SSE)
           </CardTitle>
           <CardDescription>Real-time distributed bus messages, tool invocations, and saga state transitions</CardDescription>
         </CardHeader>

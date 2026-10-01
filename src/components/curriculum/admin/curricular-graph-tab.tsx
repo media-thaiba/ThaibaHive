@@ -102,7 +102,7 @@ export const CurricularGraphTab: React.FC<CurricularGraphTabProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center justify-between">
-            <span>Curriculum Bottlenecks & Gateway Courses</span>
+            <span>Curriculum Bottlenecks &amp; Gateway Courses</span>
             <Badge variant="warning">Top Delay Factors</Badge>
           </CardTitle>
         </CardHeader>

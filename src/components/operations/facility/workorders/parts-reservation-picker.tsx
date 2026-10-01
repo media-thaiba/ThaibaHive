@@ -41,7 +41,7 @@ export function PartsReservationPicker({
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Required Parts & Consumables Allocation
+          Required Parts &amp; Consumables Allocation
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

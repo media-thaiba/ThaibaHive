@@ -30,7 +30,7 @@ export function PrivacyBudgetTab() {
       <div>
         <h3 className="text-lg font-medium">Differential Privacy ($\epsilon, \delta$-DP) Budget Accountant</h3>
         <p className="text-sm text-muted-foreground">
-          Real-time Moments Accountant tracking institutional privacy guarantees under GDPR & FERPA.
+          Real-time Moments Accountant tracking institutional privacy guarantees under GDPR &amp; FERPA.
         </p>
       </div>
 

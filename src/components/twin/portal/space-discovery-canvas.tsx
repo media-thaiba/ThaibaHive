@@ -89,7 +89,7 @@ export function SpaceDiscoveryCanvas() {
         </div>
         <div className="flex items-center gap-2 text-xs">
           <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">Quiet Zones</Badge>
-          <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">Labs & Equipment</Badge>
+          <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">Labs &amp; Equipment</Badge>
           <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">Available Now</Badge>
         </div>
       </div>

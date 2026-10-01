@@ -54,7 +54,7 @@ export function FeeLockNotice({ pendingAmount, onOverrideRequest }: FeeLockNotic
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={handleApplyOverride}>
-                Confirm Override & Issue Ticket
+                Confirm Override &amp; Issue Ticket
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setShowOverrideInput(false)}>
                 Cancel

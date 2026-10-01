@@ -72,7 +72,7 @@ export default function VisionShieldCockpitPage() {
           <PermissionGate permission="vision:alerts:view" fallback={null}>
             <TabsTrigger value="threats" className="flex items-center gap-1.5">
               <ShieldAlert className="h-4 w-4" />
-              Threat Alerts & Incidents
+              Threat Alerts &amp; Incidents
             </TabsTrigger>
           </PermissionGate>
           <PermissionGate permission="vision:guards:view" fallback={null}>
@@ -84,7 +84,7 @@ export default function VisionShieldCockpitPage() {
           <PermissionGate permission="vision:alpr:view" fallback={null}>
             <TabsTrigger value="alpr" className="flex items-center gap-1.5">
               <Car className="h-4 w-4" />
-              ALPR & Gate Access
+              ALPR &amp; Gate Access
             </TabsTrigger>
           </PermissionGate>
           <PermissionGate permission="vision:privacy:view" fallback={null}>

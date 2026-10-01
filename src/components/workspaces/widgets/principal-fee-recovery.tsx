@@ -46,7 +46,7 @@ export function PrincipalFeeRecovery({ data: initialData }: { data?: PrincipalFe
     <Card data-testid="widget-principal-fee-recovery" role="region" aria-label="Fee Recovery Summary">
       <CardHeader>
         <div className="flex items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Fee Recovery & Efficiency</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Fee Recovery &amp; Efficiency</CardTitle>
           <IndianRupee className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </div>
       </CardHeader>

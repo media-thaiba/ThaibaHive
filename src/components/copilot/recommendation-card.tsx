@@ -56,7 +56,7 @@ export function RecommendationCard({
           {humanApprovalStatus === "REQUIRES_HUMAN_APPROVAL" && (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" className="text-emerald-400 border-emerald-500 hover:bg-emerald-950" onClick={() => onApprove?.(id)}>
-                Approve & Execute
+                Approve &amp; Execute
               </Button>
               <Button size="sm" variant="outline" className="text-rose-400 border-rose-500 hover:bg-rose-950" onClick={() => onReject?.(id)}>
                 Reject

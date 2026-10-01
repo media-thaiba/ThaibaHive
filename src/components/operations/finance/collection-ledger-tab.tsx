@@ -15,7 +15,7 @@ export function CollectionLedgerTab({ payments }: CollectionLedgerTabProps) {
     <Card className="border border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle className="text-lg font-bold text-slate-900">Real-Time Fee Collection & Payment Ledger</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">Real-Time Fee Collection &amp; Payment Ledger</CardTitle>
           <p className="text-xs text-slate-500 mt-1">Multi-channel online and counter transaction ledger with gateway audit tokens</p>
         </div>
         <Badge variant="info" className="px-3 py-1">

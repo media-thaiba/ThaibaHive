@@ -58,7 +58,7 @@ export function VendorPortalView({
                 <Badge variant="outline" className="font-mono">{vendorCode}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Authorized Institution Supplier • Verified Sanctions & Compliance Clean
+                Authorized Institution Supplier • Verified Sanctions &amp; Compliance Clean
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -83,7 +83,7 @@ export function VendorPortalView({
       <div className="space-y-4">
         <h3 className="text-base font-semibold flex items-center gap-2">
           <FileCheck2 className="h-4 w-4 text-emerald-500" />
-          Active Contracts & Milestone Deliverables
+          Active Contracts &amp; Milestone Deliverables
         </h3>
 
         {activeContracts.map((contract) => (

@@ -40,7 +40,7 @@ export function HvacEnergyOptimizerCard({
         <div className="flex items-center space-x-2">
           <Zap className="h-5 w-5 text-amber-400" />
           <CardTitle className="text-base font-semibold text-slate-100">
-            Autonomous HVAC & Energy Grid
+            Autonomous HVAC &amp; Energy Grid
           </CardTitle>
         </div>
         <Badge variant="success">ISO 7730 Compliant</Badge>

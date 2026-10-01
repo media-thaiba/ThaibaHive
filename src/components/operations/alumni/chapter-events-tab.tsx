@@ -15,7 +15,7 @@ export function ChapterEventsTab({ chapters, events, onRefresh: _onRefresh }: Ch
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-base font-semibold text-slate-800 mb-3">Regional & International Chapters</h3>
+        <h3 className="text-base font-semibold text-slate-800 mb-3">Regional &amp; International Chapters</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {chapters.map((chap) => (
             <Card key={chap.id} className="hover:shadow-md transition-shadow">
@@ -41,7 +41,7 @@ export function ChapterEventsTab({ chapters, events, onRefresh: _onRefresh }: Ch
       </div>
 
       <div>
-        <h3 className="text-base font-semibold text-slate-800 mb-3">Homecoming Reunions & Events</h3>
+        <h3 className="text-base font-semibold text-slate-800 mb-3">Homecoming Reunions &amp; Events</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {events.map((evt) => (
             <Card key={evt.id} className="hover:shadow-md transition-shadow">

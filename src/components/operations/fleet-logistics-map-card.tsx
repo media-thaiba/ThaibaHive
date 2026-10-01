@@ -40,7 +40,7 @@ export function FleetLogisticsMapCard({
         <div className="flex items-center space-x-2">
           <Truck className="h-5 w-5 text-indigo-400" />
           <CardTitle className="text-base font-semibold text-slate-100">
-            Autonomous Fleet & Route Logistics
+            Autonomous Fleet &amp; Route Logistics
           </CardTitle>
         </div>
         <Badge variant={activeCount > 0 ? 'info' : 'secondary'}>

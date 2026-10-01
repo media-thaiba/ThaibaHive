@@ -77,7 +77,7 @@ export function ManagerEvaluationForm({
         </div>
 
         <div>
-          <Label>Evaluator Feedback & Justification</Label>
+          <Label>Evaluator Feedback &amp; Justification</Label>
           <Input value={comments} onChange={(e) => setComments(e.target.value)} placeholder="Provide constructive feedback for staff member..." />
         </div>
 

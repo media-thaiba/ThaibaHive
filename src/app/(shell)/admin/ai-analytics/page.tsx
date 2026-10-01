@@ -168,7 +168,7 @@ export default function AiAnalyticsDashboardPage() {
             </p>
           </div>
           <Link href="/admin/ai-analytics/early-warning">
-            <Button className="w-full">View At-Risk Roster & Assign Counselors</Button>
+            <Button className="w-full">View At-Risk Roster &amp; Assign Counselors</Button>
           </Link>
         </div>
       </div>

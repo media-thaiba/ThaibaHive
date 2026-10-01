@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Lock,
   ArrowLeft,
-  CheckCircle2,
   ShieldCheck,
   ShieldAlert,
   RefreshCw,
@@ -57,7 +56,7 @@ export default function MerkleAuditLedgerPage() {
                 <ArrowLeft className="size-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight">Merkle Audit Ledger & Chain Integrity</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Merkle Audit Ledger &amp; Chain Integrity</h1>
           </div>
           <p className="text-muted-foreground text-sm">
             Cryptographic SHA-256 tamper-evident verification across all tool invocations and state changes.
@@ -115,7 +114,7 @@ export default function MerkleAuditLedgerPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <Hash className="size-4" />
-              Genesis Pointer & Root State
+              Genesis Pointer &amp; Root State
             </CardTitle>
             <CardDescription className="text-xs">Initial baseline anchor for tenant Merkle tree</CardDescription>
           </CardHeader>

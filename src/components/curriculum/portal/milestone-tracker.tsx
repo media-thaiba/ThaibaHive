@@ -17,7 +17,7 @@ export const MilestoneTracker: React.FC = () => {
     <Card>
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm font-semibold flex items-center justify-between">
-          <span>Academic Milestones & Residency Checklist</span>
+          <span>Academic Milestones &amp; Residency Checklist</span>
           <Badge variant="outline">2/5 Cleared</Badge>
         </CardTitle>
       </CardHeader>

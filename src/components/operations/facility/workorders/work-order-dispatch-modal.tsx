@@ -53,7 +53,7 @@ export function WorkOrderDispatchModal({
             <span className="font-mono text-xs text-muted-foreground">{workOrderNumber}</span>
           </DialogTitle>
           <DialogDescription className="text-xs">
-            {workOrderTitle} &bull; Select technician candidate based on 3D spatial routing & skill fit.
+            {workOrderTitle} &bull; Select technician candidate based on 3D spatial routing &amp; skill fit.
           </DialogDescription>
         </DialogHeader>
 
@@ -88,7 +88,7 @@ export function WorkOrderDispatchModal({
             Cancel
           </Button>
           <Button size="sm" disabled={!selectedTechId} onClick={handleConfirm}>
-            Confirm Dispatch & Reserve Parts
+            Confirm Dispatch &amp; Reserve Parts
           </Button>
         </DialogFooter>
       </DialogContent>

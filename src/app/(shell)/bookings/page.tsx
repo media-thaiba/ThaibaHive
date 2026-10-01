@@ -253,7 +253,7 @@ export default function BookingsPage() {
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <CalendarIcon className="h-6 w-6 text-primary" /> Room & Resource Bookings
+          <CalendarIcon className="h-6 w-6 text-primary" /> Room &amp; Resource Bookings
         </h1>
         <div className="flex gap-2">
           {isAdmin && (

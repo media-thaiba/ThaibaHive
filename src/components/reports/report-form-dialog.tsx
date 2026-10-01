@@ -159,7 +159,7 @@ export function ReportFormDialog({ open, onOpenChange, editingReport, onSubmitte
 
           <div className="space-y-3 pt-2 border-t">
             <div className="flex justify-between items-center">
-              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Linked Tasks & Hours</h4>
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Linked Tasks &amp; Hours</h4>
               <Button type="button" variant="outline" size="sm" onClick={addTask} className="gap-1 text-xs">
                 <PlusCircle className="h-3.5 w-3.5" /> Add Task
               </Button>

@@ -47,7 +47,7 @@ export function InterventionModal({
         <DialogHeader>
           <DialogTitle>Record Intervention Plan</DialogTitle>
           <DialogDescription>
-            Assign counselor & define action items for {record.studentName || record.studentId} ({record.domain} risk).
+            Assign counselor &amp; define action items for {record.studentName || record.studentId} ({record.domain} risk).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-2">

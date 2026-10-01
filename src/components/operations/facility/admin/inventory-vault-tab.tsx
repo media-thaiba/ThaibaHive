@@ -68,7 +68,7 @@ export function InventoryVaultTab({
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
-            <CardTitle className="text-base font-semibold">Spare Parts & Consumables Catalog</CardTitle>
+            <CardTitle className="text-base font-semibold">Spare Parts &amp; Consumables Catalog</CardTitle>
             <div className="text-xs text-muted-foreground mt-0.5">
               Real-time stock counts, work order allocations, and replenishment tracking
             </div>

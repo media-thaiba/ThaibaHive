@@ -37,7 +37,7 @@ export function BiometricAttendancePanel({
         <div className="flex items-center space-x-2">
           <Fingerprint className="h-5 w-5 text-emerald-400" />
           <CardTitle className="text-base font-semibold text-slate-100">
-            Edge Biometrics & ZKP Attestation
+            Edge Biometrics &amp; ZKP Attestation
           </CardTitle>
         </div>
         <Badge variant="success">Zero-Knowledge Verified</Badge>

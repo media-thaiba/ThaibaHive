@@ -171,7 +171,7 @@ export function RegisterVisitorModal({
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Register & Check-In
+              Register &amp; Check-In
             </Button>
           </DialogFooter>
         </form>

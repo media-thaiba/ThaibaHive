@@ -38,10 +38,10 @@ export default function AlumniHubPage() {
       <div className="flex flex-row items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            ALUMNI-HUB & EndowmentOS Central Cockpit
+            ALUMNI-HUB &amp; EndowmentOS Central Cockpit
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Multi-campus verified alumni network, AI career mentorship mesh, institutional job board & Section 80G endowment fund management
+            Multi-campus verified alumni network, AI career mentorship mesh, institutional job board &amp; Section 80G endowment fund management
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -59,7 +59,7 @@ export default function AlumniHubPage() {
           <TabsTrigger value="mentorship">Mentorship Mesh</TabsTrigger>
           <TabsTrigger value="jobs">Job Placement</TabsTrigger>
           <TabsTrigger value="endowments">Endowment Funds</TabsTrigger>
-          <TabsTrigger value="chapters">Chapters & Events</TabsTrigger>
+          <TabsTrigger value="chapters">Chapters &amp; Events</TabsTrigger>
         </TabsList>
 
         <TabsContent value="directory">

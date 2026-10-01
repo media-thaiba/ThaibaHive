@@ -206,7 +206,7 @@ export function ThreeWayMatchStudio({ matchQueue }: { matchQueue: ReconcileStudi
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setOverrideModalOpen(false)}>Cancel</Button>
-              <Button variant="default" onClick={handleApplyOverride}>Authorize & Release Voucher</Button>
+              <Button variant="default" onClick={handleApplyOverride}>Authorize &amp; Release Voucher</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

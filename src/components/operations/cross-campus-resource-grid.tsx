@@ -37,7 +37,7 @@ export function CrossCampusResourceGrid({
         <div className="flex items-center space-x-2">
           <Share2 className="h-5 w-5 text-indigo-400" />
           <CardTitle className="text-base font-semibold text-slate-100">
-            Cross-Campus Resource Mesh & CRDT Sync
+            Cross-Campus Resource Mesh &amp; CRDT Sync
           </CardTitle>
         </div>
         <Badge variant="info">Mesh Active</Badge>

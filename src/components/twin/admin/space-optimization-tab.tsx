@@ -62,7 +62,7 @@ export function SpaceOptimizationTab() {
           <CardContent className="pt-4 pb-4">
             <div className="text-xs text-slate-500 font-medium">Estimated Monthly Savings</div>
             <div className="text-2xl font-bold text-emerald-600 mt-1">$4,850</div>
-            <div className="text-xs text-slate-500 mt-1">Energy & maintenance</div>
+            <div className="text-xs text-slate-500 mt-1">Energy &amp; maintenance</div>
           </CardContent>
         </Card>
 

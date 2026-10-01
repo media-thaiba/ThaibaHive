@@ -15,7 +15,7 @@ export function CounterRegisterTab({ registers }: CounterRegisterTabProps) {
     <Card className="border border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle className="text-lg font-bold text-slate-900">Campus Cash Counter & Shift Register</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">Campus Cash Counter &amp; Shift Register</CardTitle>
           <p className="text-xs text-slate-500 mt-1">Physical cashier shift balances, drawer floats, and supervisor handover verifications</p>
         </div>
         <Badge variant="secondary" className="px-3 py-1">

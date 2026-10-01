@@ -51,7 +51,7 @@ export function AssetRadarTab() {
         <div>
           <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
             <Shield className="h-4 w-4 text-indigo-600" />
-            Physical Asset RTLS Radar & Geofence Perimeter Security
+            Physical Asset RTLS Radar &amp; Geofence Perimeter Security
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Real-time BLE/RFID triangulation, perimeter breach alarms, and automated inventory tracking

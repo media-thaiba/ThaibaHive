@@ -36,7 +36,7 @@ export function RealTimeStreamWorkspace({ activeConnectionsCount, metrics }: Rea
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary font-mono">{activeConnectionsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">WebSocket & SSE channels</p>
+            <p className="text-xs text-muted-foreground mt-1">WebSocket &amp; SSE channels</p>
           </CardContent>
         </Card>
 

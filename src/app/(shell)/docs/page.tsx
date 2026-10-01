@@ -24,7 +24,7 @@ export default function ApiDocsPage() {
             <span>⚡</span> ThaibaHive API Documentation
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            OpenAPI 3.1.0 Interactive Swagger UI Documentation & Testing Console
+            OpenAPI 3.1.0 Interactive Swagger UI Documentation &amp; Testing Console
           </p>
         </div>
         <div className="flex items-center gap-3">

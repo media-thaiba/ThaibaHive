@@ -217,7 +217,7 @@ export default function PollsPage() {
   return (
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Surveys & Polls</h1>
+        <h1 className="text-2xl font-bold">Surveys &amp; Polls</h1>
         {canCreate && (
           <Button onClick={() => setShowForm(!showForm)}>
             {showForm ? "Cancel" : <><Plus className="h-4 w-4 mr-1.5" /> Create Poll</>}

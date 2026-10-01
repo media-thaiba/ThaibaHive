@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   AlertCircle,
-  Plus,
   RefreshCw,
 } from "lucide-react";
 
@@ -50,7 +49,7 @@ export default function WorkflowsCatalogPage() {
                 <ArrowLeft className="size-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold tracking-tight">Institutional Workflow Catalog & DSL</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Institutional Workflow Catalog &amp; DSL</h1>
           </div>
           <p className="text-muted-foreground text-sm">
             Catalog of autonomous multi-agent DAG pipelines, triggers, and execution parameters.

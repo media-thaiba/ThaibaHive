@@ -50,7 +50,7 @@ export default function AdminGatewayRadarPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">API Gateway Security Shield & Threat Radar</h1>
+          <h1 className="text-2xl font-bold tracking-tight">API Gateway Security Shield &amp; Threat Radar</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Real-time multi-dimensional rate limiting, automated IP reputation, and edge threat mitigation.
           </p>
@@ -111,7 +111,7 @@ export default function AdminGatewayRadarPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
-            <CardTitle className="text-lg font-semibold">Active IP Quarantines & Edge Bans</CardTitle>
+            <CardTitle className="text-lg font-semibold">Active IP Quarantines &amp; Edge Bans</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
               Temporarily isolated addresses blocked across edge mesh and synchronized with upstream WAF.
             </p>

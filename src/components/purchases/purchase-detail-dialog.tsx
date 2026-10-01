@@ -144,7 +144,7 @@ export function PurchaseDetailDialog({ request, staffRole, onClose, onReviewed }
 
             {request.notes && (
               <div className="rounded-lg bg-muted/60 p-3 text-xs border border-border/40">
-                <span className="font-semibold text-muted-foreground flex items-center gap-1 mb-1"><FileText className="h-3.5 w-3.5" /> Comments & Notes</span>
+                <span className="font-semibold text-muted-foreground flex items-center gap-1 mb-1"><FileText className="h-3.5 w-3.5" /> Comments &amp; Notes</span>
                 <p className="leading-relaxed">{request.notes}</p>
               </div>
             )}

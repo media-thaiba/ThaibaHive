@@ -58,7 +58,7 @@ export default function SmartCampusOperationsPage() {
             AIMS Smart Campus Operations Radar
           </h2>
           <p className="text-sm text-slate-400">
-            Multi-Agent Autonomous Resource Optimization, Zero-Trust Biometrics & ESG Intelligence
+            Multi-Agent Autonomous Resource Optimization, Zero-Trust Biometrics &amp; ESG Intelligence
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function SmartCampusOperationsPage() {
           </TabsTrigger>
           <TabsTrigger value="energy" className="flex items-center gap-1.5 text-xs">
             <Zap className="h-4 w-4 text-amber-400" />
-            <span>HVAC & Energy</span>
+            <span>HVAC &amp; Energy</span>
           </TabsTrigger>
           <TabsTrigger value="fleet" className="flex items-center gap-1.5 text-xs">
             <Truck className="h-4 w-4 text-indigo-400" />
@@ -97,11 +97,11 @@ export default function SmartCampusOperationsPage() {
           </TabsTrigger>
           <TabsTrigger value="biometrics" className="flex items-center gap-1.5 text-xs">
             <Fingerprint className="h-4 w-4 text-teal-400" />
-            <span>Edge Biometrics & ZKP</span>
+            <span>Edge Biometrics &amp; ZKP</span>
           </TabsTrigger>
           <TabsTrigger value="sustainability" className="flex items-center gap-1.5 text-xs">
             <Share2 className="h-4 w-4 text-sky-400" />
-            <span>Cloud ESG & Mesh</span>
+            <span>Cloud ESG &amp; Mesh</span>
           </TabsTrigger>
         </TabsList>
 

@@ -136,7 +136,7 @@ export function RenewableArbitrageTab() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">24-Hour Microgrid Dispatch & Arbitrage Horizon</CardTitle>
+            <CardTitle className="text-base">24-Hour Microgrid Dispatch &amp; Arbitrage Horizon</CardTitle>
             <p className="text-xs text-slate-500">Autonomous battery setpoints matched to utility pricing tiers</p>
           </div>
           <Button variant="outline" size="sm" onClick={runOptimization}>

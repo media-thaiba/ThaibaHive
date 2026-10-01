@@ -75,7 +75,7 @@ export function IotSensorMeshTab() {
         <div>
           <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
             <Radio className="h-4 w-4 text-sky-600" />
-            Campus IoT Sensor Mesh Telemetry & Health Radar
+            Campus IoT Sensor Mesh Telemetry &amp; Health Radar
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Real-time monitoring of 1,200+ multi-protocol environmental and occupancy sensors
@@ -92,7 +92,7 @@ export function IotSensorMeshTab() {
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
               <tr>
                 <th className="p-3">Sensor ID</th>
-                <th className="p-3">Facility & Space</th>
+                <th className="p-3">Facility &amp; Space</th>
                 <th className="p-3">Type</th>
                 <th className="p-3">Protocol</th>
                 <th className="p-3">Battery</th>

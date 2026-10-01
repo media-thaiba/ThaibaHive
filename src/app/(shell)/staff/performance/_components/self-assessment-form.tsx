@@ -61,17 +61,17 @@ export function SelfAssessmentForm({ reviewId, onSuccess }: SelfAssessmentFormPr
         {message && <Alert variant="info">{message}</Alert>}
 
         <div>
-          <Label>Core Job Execution & Quality (1 - 5 Scale)</Label>
+          <Label>Core Job Execution &amp; Quality (1 - 5 Scale)</Label>
           <Input type="number" min="1" max="5" value={q1Score} onChange={(e) => setQ1Score(Number(e.target.value))} />
         </div>
 
         <div>
-          <Label>Collaboration & Institutional Contribution (1 - 5 Scale)</Label>
+          <Label>Collaboration &amp; Institutional Contribution (1 - 5 Scale)</Label>
           <Input type="number" min="1" max="5" value={q2Score} onChange={(e) => setQ2Score(Number(e.target.value))} />
         </div>
 
         <div>
-          <Label>Self Reflection & Accomplishments</Label>
+          <Label>Self Reflection &amp; Accomplishments</Label>
           <Input value={comments} onChange={(e) => setComments(e.target.value)} placeholder="Summarize your key achievements this quarter..." />
         </div>
 

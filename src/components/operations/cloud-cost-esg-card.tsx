@@ -35,7 +35,7 @@ export function CloudCostEsgCard({ cloudData, carbonData, isLoading }: CloudCost
         <div className="flex items-center space-x-2">
           <Leaf className="h-5 w-5 text-emerald-400" />
           <CardTitle className="text-base font-semibold text-slate-100">
-            Cloud Cost & ESG Sustainability
+            Cloud Cost &amp; ESG Sustainability
           </CardTitle>
         </div>
         <Badge variant="success">GRI 305 Compliant</Badge>

@@ -16,7 +16,7 @@ export function TeacherHomeworkTracker({ data }: { data?: TeacherTaskData }) {
     <Card data-testid="widget-teacher-homework-tracker" role="region" aria-label="Homework Tracker">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Tasks & Homework</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Tasks &amp; Homework</CardTitle>
           <ClipboardList className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </div>
       </CardHeader>

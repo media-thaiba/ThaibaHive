@@ -42,34 +42,34 @@ export function MentorshipMeshTab({ onRefresh: _onRefresh }: MentorshipMeshTabPr
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-600">94.2%</div>
-            <p className="text-xs text-slate-500 mt-1">AI Skill Graph & Career compatibility</p>
+            <p className="text-xs text-slate-500 mt-1">AI Skill Graph &amp; Career compatibility</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Mentorship Mesh Telemetry & Capacity</CardTitle>
+          <CardTitle className="text-base font-semibold">Mentorship Mesh Telemetry &amp; Capacity</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
               <div>
-                <div className="font-medium text-slate-800">Artificial Intelligence & Cloud Architecture</div>
+                <div className="font-medium text-slate-800">Artificial Intelligence &amp; Cloud Architecture</div>
                 <div className="text-xs text-slate-500">18 Active Mentors • 42 Mentees Enrolled</div>
               </div>
               <Badge variant="success">High Capacity</Badge>
             </div>
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
               <div>
-                <div className="font-medium text-slate-800">Investment Banking & Corporate Finance</div>
+                <div className="font-medium text-slate-800">Investment Banking &amp; Corporate Finance</div>
                 <div className="text-xs text-slate-500">12 Active Mentors • 28 Mentees Enrolled</div>
               </div>
               <Badge variant="info">Optimal</Badge>
             </div>
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
               <div>
-                <div className="font-medium text-slate-800">Robotics & Embedded Systems</div>
+                <div className="font-medium text-slate-800">Robotics &amp; Embedded Systems</div>
                 <div className="text-xs text-slate-500">10 Active Mentors • 24 Mentees Enrolled</div>
               </div>
               <Badge variant="warning">Near Capacity</Badge>

@@ -100,7 +100,7 @@ export function DonationCheckoutCard({ campaign, onDonationSuccess }: DonationCh
         </Button>
         {receiptUrl && (
           <div className="p-2 bg-emerald-50 text-emerald-800 text-xs rounded border border-emerald-200 text-center font-medium">
-            ✓ 80G Receipt Issued & GL Balanced!
+            ✓ 80G Receipt Issued &amp; GL Balanced!
           </div>
         )}
       </CardContent>

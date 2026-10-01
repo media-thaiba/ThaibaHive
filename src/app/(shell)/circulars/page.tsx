@@ -195,7 +195,7 @@ export default function CircularsPage() {
   return (
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Circulars & Documents</h1>
+        <h1 className="text-2xl font-bold">Circulars &amp; Documents</h1>
         {canCreate && (
           <Button onClick={() => setShowForm(!showForm)}>
             {showForm ? "Cancel" : <><Plus className="h-4 w-4 mr-1.5" /> Upload Document</>}

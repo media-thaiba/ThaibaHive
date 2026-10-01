@@ -93,7 +93,7 @@ export function ForensicCopilotPanel({
                           <TableRow>
                             <TableHead className="w-12">#</TableHead>
                             <TableHead>Layer</TableHead>
-                            <TableHead>ATT&CK Stage</TableHead>
+                            <TableHead>ATT&amp;CK Stage</TableHead>
                             <TableHead>Signal / Description</TableHead>
                             <TableHead>Severity</TableHead>
                           </TableRow>

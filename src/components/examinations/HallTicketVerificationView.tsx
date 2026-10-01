@@ -42,7 +42,7 @@ export function HallTicketVerificationView({ open, onOpenChange }: HallTicketVer
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Invigilator Entrance Scanner & QR Verification</DialogTitle>
+          <DialogTitle>Invigilator Entrance Scanner &amp; QR Verification</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

@@ -49,7 +49,7 @@ export function CampaignStudioPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center justify-between">
-            <span>Campaign Studio & Multi-Variant Composer</span>
+            <span>Campaign Studio &amp; Multi-Variant Composer</span>
             <Badge variant="secondary">Studio v3.30</Badge>
           </CardTitle>
         </CardHeader>

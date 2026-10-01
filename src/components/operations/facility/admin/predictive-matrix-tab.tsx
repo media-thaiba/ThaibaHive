@@ -70,9 +70,9 @@ export function PredictiveMatrixTab({
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
-            <CardTitle className="text-base font-semibold">Active Anomaly & Degradation Alerts</CardTitle>
+            <CardTitle className="text-base font-semibold">Active Anomaly &amp; Degradation Alerts</CardTitle>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Automated anomaly detection with Weibull RUL estimates & root cause hypotheses
+              Automated anomaly detection with Weibull RUL estimates &amp; root cause hypotheses
             </div>
           </div>
         </CardHeader>

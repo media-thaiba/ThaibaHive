@@ -38,7 +38,7 @@ export default function FeeHubPage() {
       <div className="flex flex-row items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            FinanceOS & Centralized Fee Management
+            FinanceOS &amp; Centralized Fee Management
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Centralized fee collection, multi-gateway reconciliation, counter shifts, and aging accounts receivable mesh
@@ -61,8 +61,8 @@ export default function FeeHubPage() {
         <TabsList className="grid grid-cols-5 w-full max-w-3xl">
           <TabsTrigger value="structures">Fee Structures</TabsTrigger>
           <TabsTrigger value="ledger">Collection Ledger</TabsTrigger>
-          <TabsTrigger value="counter">Counter & Shifts</TabsTrigger>
-          <TabsTrigger value="aging">Aging & Defaulters</TabsTrigger>
+          <TabsTrigger value="counter">Counter &amp; Shifts</TabsTrigger>
+          <TabsTrigger value="aging">Aging &amp; Defaulters</TabsTrigger>
           <TabsTrigger value="reconcile">Reconciliation</TabsTrigger>
         </TabsList>
 

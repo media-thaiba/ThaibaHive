@@ -210,7 +210,7 @@ export default function PublicInstitutionPortalPage({
           </Badge>
 
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
-            Excellence in Integrated Higher Education & Character Building
+            Excellence in Integrated Higher Education &amp; Character Building
           </h1>
 
           <p className="text-base md:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
@@ -225,7 +225,7 @@ export default function PublicInstitutionPortalPage({
             <a href="#downloads">
               <Button size="lg" variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
-                Download Prospectus & Circulars
+                Download Prospectus &amp; Circulars
               </Button>
             </a>
           </div>
@@ -264,7 +264,7 @@ export default function PublicInstitutionPortalPage({
         <div className="max-w-6xl mx-auto px-4 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Official Circulars & Downloads</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Official Circulars &amp; Downloads</h2>
               <p className="text-xs text-muted-foreground">Access institutional notices, academic calendars, and syllabi.</p>
             </div>
             <Badge variant="outline">{circulars.length} Documents</Badge>
@@ -476,7 +476,7 @@ export default function PublicInstitutionPortalPage({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold">Campus Address & Location</label>
+              <label className="text-xs font-semibold">Campus Address &amp; Location</label>
               <Textarea
                 placeholder="Street address, district, state, pin code"
                 value={affAddress}

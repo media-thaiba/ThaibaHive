@@ -153,7 +153,7 @@ export default function SettingsPage() {
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8 max-w-3xl">
       <div className="space-y-1 animate-slide-up">
-        <h1 className="text-2xl font-bold tracking-tight">Profile & Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Profile &amp; Settings</h1>
         <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
       </div>
 

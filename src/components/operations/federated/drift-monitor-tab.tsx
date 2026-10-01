@@ -26,7 +26,7 @@ export function DriftMonitorTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Statistical Drift & Covariate Shift Radar</h3>
+        <h3 className="text-lg font-medium">Statistical Drift &amp; Covariate Shift Radar</h3>
         <p className="text-sm text-muted-foreground">
           Kolmogorov-Smirnov (KS) test, Population Stability Index (PSI), and Wasserstein distance metrics.
         </p>

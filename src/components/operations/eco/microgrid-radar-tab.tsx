@@ -102,7 +102,7 @@ export function MicrogridRadarTab() {
           </div>
           <div>
             <h2 className="text-lg font-semibold">Campus Microgrid Telemetry Radar</h2>
-            <p className="text-xs text-slate-400">Live 15-second downsampled SunSpec & Modbus telemetry stream</p>
+            <p className="text-xs text-slate-400">Live 15-second downsampled SunSpec &amp; Modbus telemetry stream</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

@@ -49,7 +49,7 @@ export function SoarMetricsOverview({ metrics, loading }: SoarMetricsOverviewPro
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{metrics.totalExecutions}</div>
-          <p className="text-xs text-muted-foreground mt-1">Autonomous & manual runs</p>
+          <p className="text-xs text-muted-foreground mt-1">Autonomous &amp; manual runs</p>
         </CardContent>
       </Card>
 

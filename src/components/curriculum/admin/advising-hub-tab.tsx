@@ -39,7 +39,7 @@ export const AdvisingHubTab: React.FC<AdvisingHubTabProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center justify-between">
-            <span>Active AI & Human Advising Sessions</span>
+            <span>Active AI &amp; Human Advising Sessions</span>
             <Badge variant="outline">{safeSessions.length} Active</Badge>
           </CardTitle>
         </CardHeader>

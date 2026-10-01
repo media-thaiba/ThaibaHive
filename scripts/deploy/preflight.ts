@@ -14,7 +14,6 @@
  */
 
 import fs from "fs";
-import dotenv from "dotenv";
 import {
   validatePreflightEnv,
   validateWorkspaceLinks,
@@ -23,6 +22,24 @@ import {
   writePreflightReport,
   renderChecks,
 } from "./preflight-core";
+
+function parseEnvFile(content: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eqIdx = line.indexOf("=");
+    if (eqIdx !== -1) {
+      const key = line.slice(0, eqIdx).trim();
+      let val = line.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      result[key] = val;
+    }
+  }
+  return result;
+}
 
 async function main() {
   const args = process.argv.slice(2);
@@ -34,10 +51,10 @@ async function main() {
 
   const mergedEnv: Record<string, string | undefined> = { ...process.env };
   if (envFilePath && fs.existsSync(envFilePath)) {
-    const loaded = dotenv.parse(fs.readFileSync(envFilePath, "utf8"));
+    const loaded = parseEnvFile(fs.readFileSync(envFilePath, "utf8"));
     Object.assign(mergedEnv, loaded);
   } else if (fs.existsSync(".env.production.local")) {
-    const loaded = dotenv.parse(fs.readFileSync(".env.production.local", "utf8"));
+    const loaded = parseEnvFile(fs.readFileSync(".env.production.local", "utf8"));
     Object.assign(mergedEnv, loaded);
   }
 

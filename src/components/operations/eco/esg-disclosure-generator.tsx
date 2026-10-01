@@ -89,7 +89,7 @@ export function EsgDisclosureGenerator({ onReportGenerated }: EsgDisclosureGener
               onChange={(e) => setFramework(e.target.value)}
               className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white"
             >
-              <option value="ghg_protocol_gri305">GHG Protocol & GRI 305 (Global Standard)</option>
+              <option value="ghg_protocol_gri305">GHG Protocol &amp; GRI 305 (Global Standard)</option>
               <option value="csrd_esrs_e1">EU CSRD / ESRS E1 Climate Standard</option>
               <option value="sec_climate">SEC Climate Disclosure Rules</option>
               <option value="tcfd">TCFD Taskforce Framework</option>
@@ -123,7 +123,7 @@ export function EsgDisclosureGenerator({ onReportGenerated }: EsgDisclosureGener
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
                 {lastReport.title}
               </div>
-              <Badge variant="success">Published & Signed</Badge>
+              <Badge variant="success">Published &amp; Signed</Badge>
             </div>
             <div className="text-xs text-slate-600 font-mono">
               Merkle Root: {lastReport.merkleRoot}

@@ -16,7 +16,7 @@ export const AgentBadge: React.FC<AgentBadgeProps> = ({ domain }) => {
     case 'transfer_articulation':
       return <Badge variant="warning">🔄 Transfer Articulation Agent</Badge>;
     case 'financial_aid_load':
-      return <Badge variant="secondary">💰 Financial Aid & Load Agent</Badge>;
+      return <Badge variant="secondary">💰 Financial Aid &amp; Load Agent</Badge>;
     case 'academic_recovery':
       return <Badge variant="destructive">🛡️ Academic Recovery Agent</Badge>;
     default:

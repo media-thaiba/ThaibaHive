@@ -36,7 +36,7 @@ export function WorkOrderRadarTab({
           <div>
             <CardTitle className="text-base font-semibold">Autonomous Work Order Radar</CardTitle>
             <div className="text-xs text-muted-foreground mt-0.5">
-              Live lifecycle state tracking, 3D indoor technician routing & SLA monitoring
+              Live lifecycle state tracking, 3D indoor technician routing &amp; SLA monitoring
             </div>
           </div>
         </CardHeader>

@@ -215,7 +215,7 @@ export default function FacilityMindAdminPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
           <PermissionGate permission="facility:equipment:view" fallback={null}>
-            <TabsTrigger value="equipment">Equipment Studio & Twin</TabsTrigger>
+            <TabsTrigger value="equipment">Equipment Studio &amp; Twin</TabsTrigger>
           </PermissionGate>
           <PermissionGate permission="facility:alerts:view" fallback={null}>
             <TabsTrigger value="predictive">
@@ -229,7 +229,7 @@ export default function FacilityMindAdminPage() {
             <TabsTrigger value="inventory">Parts Inventory</TabsTrigger>
           </PermissionGate>
           <PermissionGate permission="facility:energy:view" fallback={null}>
-            <TabsTrigger value="energy">Energy & Load Shed</TabsTrigger>
+            <TabsTrigger value="energy">Energy &amp; Load Shed</TabsTrigger>
           </PermissionGate>
         </TabsList>
 

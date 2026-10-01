@@ -119,7 +119,7 @@ export const Datacenter3DTopology: React.FC<Datacenter3DTopologyProps> = ({
     <Card className="border border-border/60 bg-card/90 shadow-sm">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-sm font-semibold">3D Interactive Datacenter & NVLink Fabric Visualizer</CardTitle>
+          <CardTitle className="text-sm font-semibold">3D Interactive Datacenter &amp; NVLink Fabric Visualizer</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
             Real-time thermal hotspots, power draw, and InfiniBand fat-tree topology
           </p>

@@ -9,7 +9,7 @@ export default function ManagerEvaluationPage() {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Manager & HOD Evaluation Workspace</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Manager &amp; HOD Evaluation Workspace</h1>
         <p className="text-muted-foreground text-sm">
           Review subordinate self-assessments, enter manager ratings, aggregate 360 feedback, and draft development plans.
         </p>

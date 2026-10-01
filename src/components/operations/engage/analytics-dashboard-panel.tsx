@@ -46,7 +46,7 @@ export function AnalyticsDashboardPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center justify-between">
-            <span>Stakeholder Engagement & Channel Performance Analytics</span>
+            <span>Stakeholder Engagement &amp; Channel Performance Analytics</span>
             <Badge variant="info">Real-time Telemetry</Badge>
           </CardTitle>
         </CardHeader>
@@ -70,7 +70,7 @@ export function AnalyticsDashboardPanel() {
             </div>
           </div>
 
-          <h3 className="font-semibold text-sm mb-3">Channel Efficacy & Unit Cost Breakdown</h3>
+          <h3 className="font-semibold text-sm mb-3">Channel Efficacy &amp; Unit Cost Breakdown</h3>
           <div className="border rounded-md overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted text-muted-foreground font-medium border-b">

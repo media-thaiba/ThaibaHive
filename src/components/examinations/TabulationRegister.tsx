@@ -79,7 +79,7 @@ export function TabulationRegister({ examId = "exam_100", onExportClick }: Tabul
           <thead className="bg-muted/50 font-semibold uppercase text-muted-foreground">
             <tr>
               <th className="px-3 py-3 w-12">Rank</th>
-              <th className="px-3 py-3">Roll No & Student Name</th>
+              <th className="px-3 py-3">Roll No &amp; Student Name</th>
               {schedules.map((s: any) => (
                 <th key={s.id} className="px-3 py-3 text-center">
                   {s.subjectName}

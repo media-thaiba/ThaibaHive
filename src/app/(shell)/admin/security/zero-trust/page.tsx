@@ -116,18 +116,18 @@ export default function ZeroTrustDashboardPage() {
           </TabsTrigger>
           <TabsTrigger value="pki" className="flex items-center gap-2 py-2">
             <KeyRound className="h-4 w-4" />
-            <span>PKI & mTLS Mesh</span>
+            <span>PKI &amp; mTLS Mesh</span>
           </TabsTrigger>
           <TabsTrigger value="supply-chain" className="flex items-center gap-2 py-2">
             <Cpu className="h-4 w-4" />
-            <span>Supply Chain & Forensics</span>
+            <span>Supply Chain &amp; Forensics</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Device Posture & Trust Matrix */}
         <TabsContent value="devices" className="space-y-4">
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Continuous Device Posture & Trust Matrix</h2>
+            <h2 className="text-lg font-bold tracking-tight">Continuous Device Posture &amp; Trust Matrix</h2>
             <p className="text-xs text-muted-foreground">
               Multi-factor composite 0–100 trust scoring with dynamic behavioral penalties and administrative override controls.
             </p>
@@ -157,7 +157,7 @@ export default function ZeroTrustDashboardPage() {
         {/* Tab 3: PKI & Continuous mTLS Mesh */}
         <TabsContent value="pki" className="space-y-4">
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Internal PKI & Continuous mTLS Mesh</h2>
+            <h2 className="text-lg font-bold tracking-tight">Internal PKI &amp; Continuous mTLS Mesh</h2>
             <p className="text-xs text-muted-foreground">
               Zero-downtime automated certificate rotation and distributed revocation mesh across all internal microservices.
             </p>

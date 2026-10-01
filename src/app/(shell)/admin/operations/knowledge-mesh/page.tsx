@@ -16,7 +16,7 @@ export default function KnowledgeMeshRadarPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Knowledge Mesh & Campus Copilot Radar
+            Knowledge Mesh &amp; Campus Copilot Radar
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Autonomous institutional knowledge graph, hybrid RAG retrieval, and academic advising studio
@@ -63,7 +63,7 @@ export default function KnowledgeMeshRadarPage() {
         <TabsContent value="ingest">
           <Card>
             <CardHeader>
-              <CardTitle>Document Ingestion & Chunk Inspector</CardTitle>
+              <CardTitle>Document Ingestion &amp; Chunk Inspector</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600">
@@ -76,7 +76,7 @@ export default function KnowledgeMeshRadarPage() {
         <TabsContent value="degree">
           <Card>
             <CardHeader>
-              <CardTitle>Curriculum & Prerequisite Rule Studio</CardTitle>
+              <CardTitle>Curriculum &amp; Prerequisite Rule Studio</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600">
@@ -89,7 +89,7 @@ export default function KnowledgeMeshRadarPage() {
         <TabsContent value="analytics">
           <Card>
             <CardHeader>
-              <CardTitle>Cognitive Telemetry & Knowledge Gaps</CardTitle>
+              <CardTitle>Cognitive Telemetry &amp; Knowledge Gaps</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600">

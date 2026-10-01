@@ -84,7 +84,7 @@ export function DiagnosticsButton() {
           <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="fixed bottom-0 right-0 z-50 m-4 w-full max-w-xl rounded-lg border bg-background shadow-xl">
             <div className="flex items-center justify-between border-b p-3">
-              <h3 className="font-semibold text-sm">Diagnostics & Bug Report</h3>
+              <h3 className="font-semibold text-sm">Diagnostics &amp; Bug Report</h3>
               <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground text-lg font-bold">&times;</button>
             </div>
 

@@ -50,7 +50,7 @@ export function Campus3dExplorerTab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Building className="h-5 w-5 text-slate-700" />
-            <span className="font-semibold text-slate-900 text-sm">Science & Engineering Complex (SEC)</span>
+            <span className="font-semibold text-slate-900 text-sm">Science &amp; Engineering Complex (SEC)</span>
           </div>
           <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setSelectedSpace(null)}>
             <RefreshCw className="h-3 w-3" /> Clear Selection

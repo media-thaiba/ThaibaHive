@@ -102,7 +102,7 @@ export default function ResearchExperimentsPage() {
       ) : (
         <Card className="border border-border/60 bg-card/90 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Submitted Compute Experiments & Jobs</CardTitle>
+            <CardTitle className="text-sm font-semibold">Submitted Compute Experiments &amp; Jobs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

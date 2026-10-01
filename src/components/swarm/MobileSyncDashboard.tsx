@@ -300,7 +300,7 @@ export function MobileSyncDashboard() {
         {/* Anomalies Table */}
         <Card className="md:col-span-3 border-border bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold">Compression & Latency Anomalies</CardTitle>
+            <CardTitle className="text-sm font-bold">Compression &amp; Latency Anomalies</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="max-h-[140px] overflow-y-auto border border-border rounded">

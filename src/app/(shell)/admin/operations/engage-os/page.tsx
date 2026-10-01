@@ -15,7 +15,7 @@ export default function EngageOsPage() {
     <div className="space-y-8 p-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">
-          Unified Multi-Modal Communication & Stakeholder Engagement (EngageOS)
+          Unified Multi-Modal Communication &amp; Stakeholder Engagement (EngageOS)
         </h1>
         <p className="text-muted-foreground">
           Omnichannel dispatch orchestration, AI personalization, event-driven workflows, conversational chatbots, and GDPR-compliant consent management.
@@ -25,7 +25,7 @@ export default function EngageOsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
           <TabsTrigger value="radar">Live Dispatch Radar</TabsTrigger>
-          <TabsTrigger value="studio">Campaign Studio & A/B</TabsTrigger>
+          <TabsTrigger value="studio">Campaign Studio &amp; A/B</TabsTrigger>
           <TabsTrigger value="workflows">Workflow Canvas</TabsTrigger>
           <TabsTrigger value="chat">Conversational Hub</TabsTrigger>
           <TabsTrigger value="analytics">Engagement Analytics</TabsTrigger>

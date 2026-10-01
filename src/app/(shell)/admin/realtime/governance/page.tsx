@@ -31,7 +31,7 @@ export default function RealTimeGovernancePage() {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Real-Time Event Stream & Redis Cluster Governance</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Real-Time Event Stream &amp; Redis Cluster Governance</h1>
         <p className="text-muted-foreground mt-1">
           Monitor WebSocket/SSE streaming session topography, live copilot event feeds, and multi-region Redis Cluster node sharding.
         </p>

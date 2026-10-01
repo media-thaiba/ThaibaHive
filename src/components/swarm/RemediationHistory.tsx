@@ -152,7 +152,7 @@ export const RemediationHistory: React.FC<RemediationHistoryProps> = ({ history,
                       }
                     }}
                   >
-                    Approve & Execute
+                    Approve &amp; Execute
                   </Button>
                 </div>
               )}

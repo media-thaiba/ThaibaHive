@@ -27,7 +27,7 @@ export function SmpcMeshPanel() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>SMPC Cryptographic Mesh & Node Topology</CardTitle>
+          <CardTitle>SMPC Cryptographic Mesh &amp; Node Topology</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">

@@ -14,7 +14,7 @@ export default function FacilitiesDiscoveryPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <Compass className="h-6 w-6 text-sky-600" />
-              Campus Space Discovery & Smart Booking
+              Campus Space Discovery &amp; Smart Booking
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Explore live study spaces, view environmental comfort metrics, and reserve rooms with real-time 3D wayfinding

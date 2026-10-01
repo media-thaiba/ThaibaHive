@@ -206,7 +206,7 @@ export default function TimetablePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <Calendar className="h-6 w-6 text-primary" />
-            Academic Timetable & Schedule
+            Academic Timetable &amp; Schedule
           </h1>
           <p className="text-sm text-muted-foreground">
             Configure weekly period slots, assign subject teachers, and manage daily substitutions.
@@ -290,7 +290,7 @@ export default function TimetablePage() {
                 <thead className="bg-muted/50 border-b">
                   <tr>
                     <th className="p-2.5">Date</th>
-                    <th className="p-2.5">Class & Subject</th>
+                    <th className="p-2.5">Class &amp; Subject</th>
                     <th className="p-2.5">Regular Teacher</th>
                     <th className="p-2.5">Substitute Assigned</th>
                     <th className="p-2.5">Reason</th>

@@ -425,14 +425,14 @@ export default function SwarmIntelligencePage() {
           onClick={() => setActiveTab("agents")}
           className="rounded-b-none h-10"
         >
-          Agent Swarm & Observability
+          Agent Swarm &amp; Observability
         </Button>
         <Button
           variant={activeTab === "queue" ? "default" : "outline"}
           onClick={() => setActiveTab("queue")}
           className="rounded-b-none h-10"
         >
-          Queue & Worker Telemetry
+          Queue &amp; Worker Telemetry
         </Button>
         <Button
           variant={activeTab === "mobile" ? "default" : "outline"}

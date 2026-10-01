@@ -25,7 +25,7 @@ export function SupplyCockpitKpiCards({
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card className="border border-border/60 bg-card/50 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Total Spend & Orders</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Spend &amp; Orders</CardTitle>
           <ShoppingCart className="h-4 w-4 text-primary" />
         </CardHeader>
         <CardContent>
@@ -65,7 +65,7 @@ export function SupplyCockpitKpiCards({
 
       <Card className="border border-border/60 bg-card/50 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Supply Risk & ESG</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Supply Risk &amp; ESG</CardTitle>
           <ShieldCheck className="h-4 w-4 text-cyan-500" />
         </CardHeader>
         <CardContent>

@@ -22,7 +22,7 @@ export const DegreeProgressRadar: React.FC<DegreeProgressRadarProps> = ({
     <Card>
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm font-semibold flex items-center justify-between">
-          <span>Degree Progress & Graduation Velocity</span>
+          <span>Degree Progress &amp; Graduation Velocity</span>
           <Badge variant="success">On Track for Spring 2030</Badge>
         </CardTitle>
       </CardHeader>

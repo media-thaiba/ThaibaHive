@@ -90,7 +90,7 @@ export default function ResearchComputePage() {
           <Datacenter3DTopology nodes={nodes} gpus={gpus} />
 
           <div>
-            <h2 className="text-base font-semibold mb-3 text-foreground">Physical Compute Nodes & GPU Fabrics</h2>
+            <h2 className="text-base font-semibold mb-3 text-foreground">Physical Compute Nodes &amp; GPU Fabrics</h2>
             <NodeTopologyGrid nodes={nodes} gpusByNode={gpusByNode} />
           </div>
         </div>

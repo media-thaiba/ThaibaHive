@@ -15,7 +15,7 @@ export function ReconciliationStudioTab({ batches }: ReconciliationStudioTabProp
     <Card className="border border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle className="text-lg font-bold text-slate-900">Bank Statement & Gateway Settlement Reconciliation</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">Bank Statement &amp; Gateway Settlement Reconciliation</CardTitle>
           <p className="text-xs text-slate-500 mt-1">Automated 3-way matching and discrepancy resolution batches</p>
         </div>
         <Badge variant="info" className="px-3 py-1">

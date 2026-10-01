@@ -27,7 +27,7 @@ export function DriftMonitorPanel() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Continuous Drift Radar & Retraining Trigger Monitor</CardTitle>
+          <CardTitle>Continuous Drift Radar &amp; Retraining Trigger Monitor</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

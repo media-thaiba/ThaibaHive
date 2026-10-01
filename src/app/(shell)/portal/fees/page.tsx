@@ -50,7 +50,7 @@ export default function ParentFeesPortalPage() {
       <div className="p-8 space-y-6 max-w-5xl mx-auto">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Student Fee & Online Payment Portal
+            Student Fee &amp; Online Payment Portal
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Review outstanding dues, schedule installments, execute payments, and download certified receipts

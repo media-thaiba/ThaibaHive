@@ -101,7 +101,7 @@ export function CheckoutModal({
                     : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                 }`}
               >
-                <div className="font-bold">Cards & Net Banking</div>
+                <div className="font-bold">Cards &amp; Net Banking</div>
                 <div className="text-[11px] opacity-75 mt-0.5">Razorpay Gateway</div>
               </button>
 

@@ -34,7 +34,7 @@ export function ChatWidgetDrawer({ stakeholderId = 'student_portal_user' }: { st
               <CardTitle className="text-base font-bold">Campus Virtual Assistant</CardTitle>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs text-primary-foreground/80">Online & Ready</span>
+                <span className="text-xs text-primary-foreground/80">Online &amp; Ready</span>
               </div>
             </div>
             <Button

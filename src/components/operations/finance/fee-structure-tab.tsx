@@ -15,7 +15,7 @@ export function FeeStructureTab({ structures }: FeeStructureTabProps) {
     <Card className="border border-slate-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <div>
-          <CardTitle className="text-lg font-bold text-slate-900">Fee Structures & Component Matrix</CardTitle>
+          <CardTitle className="text-lg font-bold text-slate-900">Fee Structures &amp; Component Matrix</CardTitle>
           <p className="text-xs text-slate-500 mt-1">Configured fee schedules across academic programs, quotas, and terms</p>
         </div>
         <Badge variant="secondary" className="px-3 py-1">

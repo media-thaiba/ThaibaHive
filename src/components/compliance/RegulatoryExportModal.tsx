@@ -68,7 +68,7 @@ export function RegulatoryExportModal({
                   value={standard}
                   onChange={(e) => setStandard(e.target.value as "SOC2" | "ISO27001" | "GDPR" | "HIPAA")}
                 >
-                  <option value="SOC2">SOC 2 Type II (Security & Access)</option>
+                  <option value="SOC2">SOC 2 Type II (Security &amp; Access)</option>
                   <option value="ISO27001">ISO/IEC 27001:2022 (ISMS Controls)</option>
                   <option value="GDPR">GDPR (Art. 30, 32, 33 Data Protection)</option>
                   <option value="HIPAA">HIPAA (164.312 Technical Safeguards)</option>

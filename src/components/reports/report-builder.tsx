@@ -198,8 +198,8 @@ export function ReportBuilder() {
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none dark:border-slate-800 dark:bg-slate-950"
                 >
                   <option value="attendance">Student/Staff Attendance</option>
-                  <option value="finance">Collections & Cash Ledger</option>
-                  <option value="academics">Academic Grades & GPA</option>
+                  <option value="finance">Collections &amp; Cash Ledger</option>
+                  <option value="academics">Academic Grades &amp; GPA</option>
                 </select>
               </div>
 

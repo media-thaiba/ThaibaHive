@@ -35,7 +35,7 @@ export default function FinancialForecastingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
-            Predictive Budgeting & Financial Realization Workspace
+            Predictive Budgeting &amp; Financial Realization Workspace
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Multi-campus revenue realization trajectory forecasting with P10/P50/P90 confidence bounds

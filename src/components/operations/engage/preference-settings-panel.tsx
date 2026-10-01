@@ -69,7 +69,7 @@ export function PreferenceSettingsPanel({ recipientId = 'student_current_user' }
     <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle className="text-lg font-semibold flex items-center justify-between">
-          <span>Communication & Privacy Preferences (GDPR/FERPA)</span>
+          <span>Communication &amp; Privacy Preferences (GDPR/FERPA)</span>
           <Badge variant="info">Consent Center</Badge>
         </CardTitle>
       </CardHeader>

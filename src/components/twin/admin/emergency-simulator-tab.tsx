@@ -34,7 +34,7 @@ export function EmergencySimulatorTab() {
         <div>
           <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
             <Flame className="h-4 w-4 text-rose-600" />
-            Dynamic 3D Emergency Evacuation & Hazard Simulator
+            Dynamic 3D Emergency Evacuation &amp; Hazard Simulator
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Test multi-floor graph shortest-path re-routing with real-time hazard avoidance and crowd egress modeling
@@ -100,7 +100,7 @@ export function EmergencySimulatorTab() {
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">Simulated Incident:</span> Fire & Smoke in Stairwell East (Floor 1-2). Graph algorithm dynamically blocks edge <span className="font-mono font-semibold">STAIR_EAST_E1</span> and reroutes traffic to Central Elevators & South Fire Escape.
+              <span className="font-bold">Simulated Incident:</span> Fire &amp; Smoke in Stairwell East (Floor 1-2). Graph algorithm dynamically blocks edge <span className="font-mono font-semibold">STAIR_EAST_E1</span> and reroutes traffic to Central Elevators &amp; South Fire Escape.
             </div>
           </div>
         </CardContent>

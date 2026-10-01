@@ -49,7 +49,7 @@ export function PrincipalAttendanceTrends({ data: initialData }: { data?: Princi
     <Card data-testid="widget-principal-attendance-trends" role="region" aria-label="Staff Attendance Trends">
       <CardHeader>
         <div className="flex items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Staff Attendance & Trends</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Staff Attendance &amp; Trends</CardTitle>
           <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </div>
       </CardHeader>

@@ -99,7 +99,7 @@ export function FederatedGovernanceWorkspace() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Federated Governance & Self-Healing Center</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Federated Governance &amp; Self-Healing Center</h1>
         <Button variant="outline" onClick={fetchData}>
           Refresh Hub
         </Button>

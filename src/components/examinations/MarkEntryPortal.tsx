@@ -73,7 +73,7 @@ export function MarkEntryPortal({
             <Badge variant="secondary">Max Marks: {maxMarks}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Subject Evaluation & Mark Entry Workspace (Schedule ID: {examScheduleId})
+            Subject Evaluation &amp; Mark Entry Workspace (Schedule ID: {examScheduleId})
           </p>
         </div>
 

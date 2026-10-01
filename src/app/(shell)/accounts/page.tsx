@@ -136,7 +136,7 @@ export default function AccountsPage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
               You do not have the necessary accounting permissions to view institutional financial metrics.
-              Please contact the Finance & IT Administrator if you require access.
+              Please contact the Finance &amp; IT Administrator if you require access.
             </p>
             <Button variant="outline" onClick={() => window.location.href = "/"}>Return to Dashboard</Button>
           </CardContent>
