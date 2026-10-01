@@ -63,6 +63,7 @@ import '../features/curriculum/screens/mobile_advising_chat_screen.dart';
 import '../features/facility/screens/technician_workorder_screen.dart';
 import '../features/facility/screens/qr_asset_scanner_screen.dart';
 import '../features/facility/screens/work_order_detail_screen.dart';
+import '../features/agent_hub/presentation/agent_hub_screen.dart';
 import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/widgets/bottom_nav_bar.dart';
 import '../shared/screens/coming_soon_screen.dart';
@@ -600,6 +601,14 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const QrAssetScannerScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/agent-hub',
+        name: 'agentHub',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const AgentHubScreen(),
         ),
       ),
     ],

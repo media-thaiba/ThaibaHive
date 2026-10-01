@@ -38,6 +38,7 @@ class MoreScreen extends StatelessWidget {
     '/accounts',
     '/admin',
     '/media',
+    '/agent-hub',
   };
 
   static const _communicationFeatures = [
@@ -52,6 +53,7 @@ class MoreScreen extends StatelessWidget {
   static const _supportAdminFeatures = [
     _FeatureItem(name: 'Settings', icon: Icons.settings_rounded, route: '/settings', color: Color(0xFF37474F)),
     _FeatureItem(name: 'Help Desk', icon: Icons.support_agent_rounded, route: '/help-desk', color: Color(0xFFE91E63)),
+    _FeatureItem(name: 'Agent Hub', icon: Icons.smart_toy_rounded, route: '/agent-hub', color: Color(0xFF00897B)),
     _FeatureItem(name: 'Bookings', icon: Icons.book_online_rounded, route: '/bookings', color: Color(0xFF00BCD4)),
     _FeatureItem(name: 'Checklists', icon: Icons.checklist_rounded, route: '/checklists', color: Color(0xFF2E7D32)),
     _FeatureItem(name: 'Availability', icon: Icons.schedule_rounded, route: '/availability', color: Color(0xFF6A1B9A)),
