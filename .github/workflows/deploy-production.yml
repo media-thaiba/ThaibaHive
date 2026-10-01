@@ -54,7 +54,6 @@ jobs:
   deploy:
     name: Deploy to Vercel Production
     runs-on: ubuntu-latest
-    if: ${{ secrets.VERCEL_TOKEN != '' }}
     needs: [ preflight ]
     environment: production
     timeout-minutes: 30
@@ -80,19 +79,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Pull Vercel environment information
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-
-      - name: Build project artifacts (Vercel)
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-
       - name: Deploy project artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN secret is not configured; skipping Vercel deployment."
+            exit 0
+          fi
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
 
   verify:
     name: Post-Deploy Health Verification
     runs-on: ubuntu-latest
-    if: ${{ secrets.VERCEL_TOKEN != '' }}
     needs: [ deploy ]
     steps:
       - name: Checkout repository
@@ -113,7 +112,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify production deployment is healthy
-        run: pnpm deploy:preflight --base-url="https://${{ secrets.NEXT_PUBLIC_APP_URL }}"
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "VERCEL_TOKEN secret is not configured; skipping post-deploy health check."
+            exit 0
+          fi
+          pnpm deploy:preflight --base-url="https://${{ secrets.NEXT_PUBLIC_APP_URL }}"
         env:
           NODE_ENV: production
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}

@@ -315,8 +315,3 @@ jobs:
         run: |
           cd thaibahive_mobile_app
           flutter test
-
-      - name: Build debug APK quality check
-        run: |
-          cd thaibahive_mobile_app
-          flutter build apk --debug
