@@ -7,7 +7,9 @@ import 'widgets/approval_gate_card.dart';
 import 'widgets/workflow_run_card.dart';
 
 class AgentHubScreen extends ConsumerStatefulWidget {
-  const AgentHubScreen({super.key});
+  final String? initialGateId;
+
+  const AgentHubScreen({super.key, this.initialGateId});
 
   @override
   ConsumerState<AgentHubScreen> createState() => _AgentHubScreenState();
@@ -20,6 +22,11 @@ class _AgentHubScreenState extends ConsumerState<AgentHubScreen> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    if (widget.initialGateId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(agentHubProvider.notifier).selectGate(widget.initialGateId);
+      });
+    }
   }
 
   @override

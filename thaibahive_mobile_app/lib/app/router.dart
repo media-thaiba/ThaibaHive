@@ -608,7 +608,9 @@ GoRouter buildRouter() {
         name: 'agentHub',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const AgentHubScreen(),
+          child: AgentHubScreen(
+            initialGateId: state.uri.queryParameters['gateId'],
+          ),
         ),
       ),
     ],

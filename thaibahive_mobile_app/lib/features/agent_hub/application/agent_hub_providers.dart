@@ -1,14 +1,23 @@
 // Flutter Riverpod Providers for Agentic Workflows & Multi-Agent Cockpit (MOB-003 & MOB-004)
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/biometric_service.dart';
 import '../data/agent_hub_repository.dart';
+import '../data/agent_stream_service.dart';
 import '../data/models/agent_models.dart';
 
 export '../data/models/agent_models.dart';
 export '../data/agent_hub_repository.dart' show ApprovalConflictException;
+export '../data/agent_stream_service.dart' show AgentStreamEvent, AgentStreamService;
+
+final agentStreamServiceProvider = Provider<AgentStreamService>((ref) {
+  final service = AgentStreamService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
 
 class MobileAgentHubState {
   final List<MobileAgentInfo> agents;
@@ -18,6 +27,7 @@ class MobileAgentHubState {
   final bool isKillSwitchEngaged;
   final bool isLoading;
   final String? errorMessage;
+  final String? selectedGateId;
 
   const MobileAgentHubState({
     required this.agents,
@@ -27,6 +37,7 @@ class MobileAgentHubState {
     required this.isKillSwitchEngaged,
     required this.isLoading,
     this.errorMessage,
+    this.selectedGateId,
   });
 
   MobileAgentHubState copyWith({
@@ -37,6 +48,7 @@ class MobileAgentHubState {
     bool? isKillSwitchEngaged,
     bool? isLoading,
     String? errorMessage,
+    String? selectedGateId,
   }) {
     return MobileAgentHubState(
       agents: agents ?? this.agents,
@@ -46,6 +58,7 @@ class MobileAgentHubState {
       isKillSwitchEngaged: isKillSwitchEngaged ?? this.isKillSwitchEngaged,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      selectedGateId: selectedGateId ?? this.selectedGateId,
     );
   }
 }
@@ -53,9 +66,15 @@ class MobileAgentHubState {
 class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
   final AgentHubRepository _repository;
   final BiometricService _biometricService;
+  final AgentStreamService? _streamService;
+  StreamSubscription<AgentStreamEvent>? _streamSubscription;
 
-  AgentHubNotifier(this._repository, {BiometricService? biometricService})
-      : _biometricService = biometricService ?? BiometricService(),
+  AgentHubNotifier(
+    this._repository, {
+    BiometricService? biometricService,
+    AgentStreamService? streamService,
+  })  : _biometricService = biometricService ?? BiometricService(),
+        _streamService = streamService,
         super(const MobileAgentHubState(
           agents: [
             MobileAgentInfo(id: 'academic-agent', role: 'Academic Orchestrator', domain: 'academic', status: 'idle', currentLoad: 0, maxConcurrency: 5),
@@ -71,6 +90,27 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
           isLoading: false,
         )) {
     loadHub();
+    _initStream();
+  }
+
+  void _initStream() {
+    if (_streamService != null) {
+      _streamService!.connect();
+      _streamSubscription = _streamService!.eventStream.listen((event) {
+        if (kDebugMode) print('[AgentHubNotifier] SSE Event received: ${event.type}');
+        refreshHub();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _streamSubscription?.cancel();
+    super.dispose();
+  }
+
+  void selectGate(String? gateId) {
+    state = state.copyWith(selectedGateId: gateId);
   }
 
   Future<void> loadHub() async {
@@ -163,5 +203,6 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
 
 final agentHubProvider = StateNotifierProvider<AgentHubNotifier, MobileAgentHubState>((ref) {
   final repository = ref.watch(agentHubRepositoryProvider);
-  return AgentHubNotifier(repository);
+  final streamService = ref.watch(agentStreamServiceProvider);
+  return AgentHubNotifier(repository, streamService: streamService);
 });
