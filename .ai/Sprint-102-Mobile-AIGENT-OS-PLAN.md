@@ -13,15 +13,15 @@ Sprint-102 completes the end-to-end Human-in-the-Loop (HITL) approval lifecycle 
 
 ---
 
-## 2. 3-AI Multi-Perspective Plan Review
+## 2. Multi-Perspective Review & Verification Pipeline
 
-In compliance with the **Plan Review Rule** (`plan-review-rule`), the architecture and implementation design was reviewed across three distinct AI models (Qwen, OpenCode, Claude Code):
+In compliance with the **Plan Review Rule** (`plan-review-rule`), the architecture, contracts, and implementation were reviewed and verified across multi-agent verification passes:
 
-| AI Reviewer | Key Feedback & Perspective | Resolution & Action Taken |
+| Review / Verification Stage | Focus & Perspective | Resolution & Action Taken |
 | :--- | :--- | :--- |
-| **Qwen** (Architectural / Systems) | Flagged potential race conditions in mobile optimistic dismissal during concurrent multi-supervisor approval triage. Recommended strict HTTP 409 handling and local rollback. | Implemented `ApprovalConflictException` catching HTTP 409 and rolling back optimistic removal with clear supervisor toast. |
-| **OpenCode** (Contract & Codebase Gatekeeper) | Identified 4 critical contract drifts in legacy mock assumptions: (1) `/approvals/{id}/decide` vs `/approvals`, (2) `{approvalGates}` key vs `{gates}`, (3) `/agents/guardrails/killswitch` vs `/agents/killswitch`, (4) Missing SSE stream client. | Fully refactored `AgentHubRepository`, added `AgentStreamService` connecting to `/api/agents/stream?topics=*`, and added `CapturingApiClient` contract tests. |
-| **Claude Code** (Security & UX Lead) | Emphasized zero-friction supervisor workflow via deep-links (`thaiba://agent-hub?gateId=...`) combined with biometric step-up authentication on critical/high severity actions. | Implemented `initialGateId` deep-link parsing in `router.dart` and `BiometricService` biometric gate prior to decision dispatch. |
+| **Architectural Review** (Qwen / Systems) | Concurrency and race conditions in mobile optimistic dismissal during multi-supervisor approval triage. Recommended strict HTTP 409 handling and local rollback. | Implemented `ApprovalConflictException` catching HTTP 409 and rolling back optimistic removal with clear supervisor error surfacing. |
+| **Contract & Verification Gate** (OpenCode Gatekeeper) | Audited live server contracts against client endpoints: (1) `/approvals/{id}/decide` `{decision, reason}`, (2) `{approvalGates}` key parsing, (3) `/agents/guardrails/killswitch`, (4) Dedicated SSE stream client, (5) Event filtering (`isHeartbeatOrSystem`) and exponential reconnect backoff with 401/403 halt. | Fully refactored `AgentHubRepository`, added `AgentStreamService` connecting to `/api/agents/stream?topics=*` with exponential backoff, filtered out system heartbeats, and added `CapturingApiClient` contract tests. |
+| **Security & UX Review** (Claude Code / Mobile UX) | Emphasized zero-friction supervisor workflow via deep-links (`thaiba://agent-hub?gateId=...`) combined with biometric step-up authentication on critical/high severity actions. | Implemented `initialGateId` deep-link parsing in `router.dart` and `BiometricService` biometric gate prior to decision dispatch. |
 
 ---
 

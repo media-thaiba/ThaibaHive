@@ -19,6 +19,9 @@ class AgentStreamEvent {
     required this.timestamp,
   });
 
+  bool get isHeartbeatOrSystem =>
+      type == 'heartbeat' || type == 'connected' || type == 'ping' || type == 'unknown';
+
   factory AgentStreamEvent.fromJson(Map<String, dynamic> json) {
     return AgentStreamEvent(
       type: json['type']?.toString() ?? 'unknown',
@@ -35,7 +38,11 @@ class AgentStreamService {
   http.Client? _client;
   StreamSubscription<String>? _subscription;
   Timer? _reconnectTimer;
+  int _retryCount = 0;
   bool _isDisposed = false;
+
+  static const int _initialBackoffSeconds = 2;
+  static const int _maxBackoffSeconds = 30;
 
   final _eventController = StreamController<AgentStreamEvent>.broadcast();
   Stream<AgentStreamEvent> get eventStream => _eventController.stream;
@@ -67,15 +74,13 @@ class AgentStreamService {
       final response = await _client!.send(request);
 
       if (response.statusCode == 200) {
-        String currentEvent = 'message';
+        _retryCount = 0; // Reset backoff upon successful connection
         _subscription = response.stream
             .transform(utf8.decoder)
             .transform(const LineSplitter())
             .listen(
           (line) {
-            if (line.startsWith('event:')) {
-              currentEvent = line.substring(6).trim();
-            } else if (line.startsWith('data:')) {
+            if (line.startsWith('data:')) {
               final rawData = line.substring(5).trim();
               try {
                 final json = jsonDecode(rawData);
@@ -98,6 +103,11 @@ class AgentStreamService {
           },
           cancelOnError: true,
         );
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        if (kDebugMode) {
+          print('[AgentStreamService] SSE connection rejected (HTTP ${response.statusCode}). Halting reconnect.');
+        }
+        // Permanent rejection: do not hammer the server indefinitely
       } else {
         if (kDebugMode) print('[AgentStreamService] Failed to connect SSE: ${response.statusCode}');
         _scheduleReconnect();
@@ -111,7 +121,18 @@ class AgentStreamService {
   void _scheduleReconnect() {
     if (_isDisposed) return;
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 5), () {
+
+    // Exponential backoff with jitter: 2s, 4s, 8s, 16s, max 30s
+    final delaySeconds = (_initialBackoffSeconds * (1 << _retryCount)).clamp(2, _maxBackoffSeconds);
+    if (_retryCount < 10) {
+      _retryCount++;
+    }
+
+    if (kDebugMode) {
+      print('[AgentStreamService] Scheduling SSE reconnect in ${delaySeconds}s (attempt #$_retryCount)');
+    }
+
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       connect();
     });
   }

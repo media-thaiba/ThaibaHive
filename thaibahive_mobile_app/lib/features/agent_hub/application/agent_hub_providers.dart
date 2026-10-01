@@ -97,7 +97,11 @@ class AgentHubNotifier extends StateNotifier<MobileAgentHubState> {
     if (_streamService != null) {
       _streamService!.connect();
       _streamSubscription = _streamService!.eventStream.listen((event) {
-        if (kDebugMode) print('[AgentHubNotifier] SSE Event received: ${event.type}');
+        if (event.isHeartbeatOrSystem) {
+          // Ignore heartbeat, ping, and initial connection frames to avoid superfluous API refetches
+          return;
+        }
+        if (kDebugMode) print('[AgentHubNotifier] Actionable SSE Event received: ${event.type}');
         refreshHub();
       });
     }
