@@ -8,13 +8,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Plus, AlertTriangle } from "lucide-react";
+import dynamic from "next/dynamic";
 import { ensureArray } from "@/lib/utils";
 import { AccountsFilterBar } from "@/components/accounts/accounts-filter-bar";
 import { AccountsSummaryCards } from "@/components/accounts/accounts-summary-cards";
 import { AccountsLedger } from "@/components/accounts/accounts-ledger";
 import { AccountsTaxPanel } from "@/components/accounts/accounts-tax-panel";
-import { TransactionFormDialog } from "@/components/accounts/transaction-form-dialog";
-import { ExportDialog } from "@/components/export-dialog";
+import { useAccountsStore } from "@/stores";
+
+const TransactionFormDialog = dynamic(
+  () => import("@/components/accounts/transaction-form-dialog").then((m) => m.TransactionFormDialog),
+  { ssr: false }
+);
+const ExportDialog = dynamic(
+  () => import("@/components/export-dialog").then((m) => m.ExportDialog),
+  { ssr: false }
+);
 
 type Transaction = {
   id: string; institutionId: string; type: string; category: string; amount: number;
@@ -34,21 +43,27 @@ export default function AccountsPage() {
   const isAuthorized = staff ? ["super_admin", "admin", "principal", "hod"].includes(staff.role) : false;
   const isWriter = staff ? ["super_admin", "admin"].includes(staff.role) : false;
 
+  const {
+    selectedInst,
+    setSelectedInst,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
+    showAddForm,
+    setShowAddForm,
+    showExportModal,
+    setShowExportModal,
+    taxRatePercent,
+    setTaxRatePercent,
+    taxCategoryOverrides,
+    setTaxCategoryOverrides,
+  } = useAccountsStore();
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryData, setSummaryData] = useState({ totalIncome: 0, totalExpense: 0, netBalance: 0 });
-
-  const today = new Date();
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
-  const [selectedInst, setSelectedInst] = useState("");
-  const [fromDate, setFromDate] = useState(firstOfMonth);
-  const [toDate, setToDate] = useState(today.toISOString().split("T")[0]);
-
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [taxRatePercent, setTaxRatePercent] = useState("18");
-  const [taxCategoryOverrides, setTaxCategoryOverrides] = useState<Record<string, number>>({});
 
   const fetchInstitutions = () => {
     fetch("/api/institutions")
@@ -148,30 +163,39 @@ export default function AccountsPage() {
         open={showExportModal}
         onOpenChange={setShowExportModal}
         type="accounts"
-        defaultParams={{
-          ...(selectedInst ? { institutionId: selectedInst } : {}),
-          ...(fromDate ? { dateFrom: fromDate } : {}),
-          ...(toDate ? { dateTo: toDate } : {}),
-        }}
+        defaultParams={{ institutionId: selectedInst, from: fromDate, to: toDate }}
       />
 
-      <AccountsSummaryCards {...summaryData} />
+      <AccountsSummaryCards
+        totalIncome={summaryData.totalIncome}
+        totalExpense={summaryData.totalExpense}
+        netBalance={summaryData.netBalance}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <AccountsLedger transactions={transactions} isWriter={isWriter} onDelete={deleteTransaction} />
-        <AccountsTaxPanel
-          taxRatePercent={taxRatePercent} taxCategoryOverrides={taxCategoryOverrides} transactions={transactions}
-          onRateChange={setTaxRatePercent}
-          onOverrideChange={(cat, rate) => {
-            if (rate === -1) { const copy = { ...taxCategoryOverrides }; delete copy[cat]; setTaxCategoryOverrides(copy); }
-            else setTaxCategoryOverrides(prev => ({ ...prev, [cat]: rate }));
-          }}
-          onResetOverrides={() => setTaxCategoryOverrides({})}
-          taxCalcs={getTaxCalculations()}
-        />
-      </div>
+      <AccountsTaxPanel
+        taxRatePercent={taxRatePercent}
+        taxCategoryOverrides={taxCategoryOverrides}
+        transactions={transactions}
+        onRateChange={setTaxRatePercent}
+        onOverrideChange={(cat: string, rate: number) => {
+          setTaxCategoryOverrides(prev => ({ ...prev, [cat]: rate }));
+        }}
+        onResetOverrides={() => setTaxCategoryOverrides({})}
+        taxCalcs={getTaxCalculations()}
+      />
 
-      <TransactionFormDialog open={showAddForm} onOpenChange={setShowAddForm} institutions={institutions} onRecorded={fetchLedgerAndSummary} />
+      <AccountsLedger
+        transactions={transactions}
+        isWriter={isWriter}
+        onDelete={deleteTransaction}
+      />
+
+      <TransactionFormDialog
+        open={showAddForm}
+        onOpenChange={setShowAddForm}
+        institutions={institutions}
+        onRecorded={fetchLedgerAndSummary}
+      />
     </div>
   );
 }

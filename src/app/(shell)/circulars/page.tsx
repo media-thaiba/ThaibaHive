@@ -1,97 +1,50 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { CircularComplianceDrawer } from "@/components/circulars/CircularComplianceDrawer";
-import { 
-  FileText, 
-  File, 
-  Image as ImageIcon, 
-  FileSpreadsheet, 
-  Download, 
-  Search, 
-  Plus, 
-  Upload,
-  User,
-  Calendar,
-  Layers,
-  Building,
-  Building2,
-  Users,
-  Eye,
-  Loader2
-} from "lucide-react";
-
-type Circular = {
-  id: string;
-  title: string;
-  description: string | null;
-  fileUrl: string;
-  fileType: string | null;
-  fileSize: number | null;
-  category: string;
-  targetRole?: string | null;
-  targetDepartmentId?: string | null;
-  targetInstitutionId?: string | null;
-  uploadedByName: string;
-  uploadedByLastName: string;
-  createdAt: string;
-  downloadCount?: number;
-};
+import { Plus } from "lucide-react";
+import { CircularFilterBar } from "@/components/circulars/circular-filter-bar";
+import { CircularPublishForm } from "@/components/circulars/circular-publish-form";
+import { CircularFeedGrid, Circular } from "@/components/circulars/circular-feed-grid";
+import { useCircularStore } from "@/stores";
 
 type Department = { id: string; name: string };
 type Institution = { id: string; name: string };
 type Permissions = { role: string; permissions: string[] };
 
-const roleOptions = [
-  { value: "super_admin", label: "Super Admin" },
-  { value: "admin", label: "Admin" },
-  { value: "principal", label: "Principal" },
-  { value: "hod", label: "HOD" },
-  { value: "staff", label: "Staff" },
-];
-
 export default function CircularsPage() {
+  const {
+    search,
+    setSearch,
+    categoryFilter,
+    setCategoryFilter,
+    showForm,
+    setShowForm,
+    form,
+    setForm,
+    resetForm,
+    uploading,
+    setUploading,
+    submitting,
+    setSubmitting,
+    selectedComplianceCircular,
+    setSelectedComplianceCircular,
+    isComplianceOpen,
+    setIsComplianceOpen,
+  } = useCircularStore();
+
   const [circulars, setCirculars] = useState<Circular[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  
-  // Form State
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    fileUrl: "",
-    fileType: "pdf",
-    fileSize: 0,
-    category: "general",
-    targetRole: "",
-    targetDepartmentId: "",
-    targetInstitutionId: "",
-  });
-
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
-
-  // Campus Compliance Drawer State
-  const [selectedComplianceCircular, setSelectedComplianceCircular] = useState<Circular | null>(null);
-  const [isComplianceOpen, setIsComplianceOpen] = useState(false);
 
   const canCreate = permissions?.role === "super_admin" || (permissions?.permissions.includes("circulars:create") ?? false);
   const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("announcements:manage") ?? false);
@@ -139,7 +92,6 @@ export default function CircularsPage() {
 
       if (res.ok) {
         const data = await res.json();
-        // Determine file type category from name or type
         const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
         let resolvedType = "other";
         if (["pdf"].includes(ext)) resolvedType = "pdf";
@@ -149,7 +101,7 @@ export default function CircularsPage() {
 
         setForm((prev) => ({
           ...prev,
-          title: prev.title || file.name.replace(/\.[^/.]+$/, ""), // Autofill title
+          title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
           fileUrl: data.url,
           fileType: resolvedType,
           fileSize: file.size,
@@ -200,17 +152,7 @@ export default function CircularsPage() {
         setSuccess("Document published successfully.");
         toast.success("Document published successfully");
         setShowForm(false);
-        setForm({
-          title: "",
-          description: "",
-          fileUrl: "",
-          fileType: "pdf",
-          fileSize: 0,
-          category: "general",
-          targetRole: "",
-          targetDepartmentId: "",
-          targetInstitutionId: "",
-        });
+        resetForm();
         fetchData();
       } else {
         const d = await res.json();
@@ -221,32 +163,6 @@ export default function CircularsPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const getFileIcon = (fileType: string | null) => {
-    switch (fileType?.toLowerCase()) {
-      case "pdf":
-        return <FileText className="h-8 w-8 text-rose-500 shrink-0" />;
-      case "xls":
-      case "xlsx":
-        return <FileSpreadsheet className="h-8 w-8 text-emerald-500 shrink-0" />;
-      case "doc":
-      case "docx":
-        return <File className="h-8 w-8 text-blue-500 shrink-0" />;
-      case "image":
-        return <ImageIcon className="h-8 w-8 text-violet-500 shrink-0" />;
-      default:
-        return <File className="h-8 w-8 text-muted-foreground shrink-0" />;
-    }
-  };
-
-  const formatBytes = (bytes: number | null) => {
-    if (!bytes) return "";
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const filtered = circulars.filter(
@@ -300,254 +216,36 @@ export default function CircularsPage() {
       )}
 
       {showForm && canCreate && (
-        <Card className="max-w-2xl border bg-card shadow-sm animate-in fade-in duration-200">
-          <CardHeader>
-            <CardTitle>Publish a Document</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Dropzone File Selector */}
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 bg-muted/20 hover:bg-muted/40 transition-colors relative cursor-pointer group">
-                <input
-                  type="file"
-                  id="circular-file"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  disabled={uploading}
-                />
-                {uploading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm font-medium">Uploading file to server...</p>
-                  </div>
-                ) : form.fileUrl ? (
-                  <div className="flex items-center gap-3 w-full">
-                    {getFileIcon(form.fileType)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate text-foreground">{form.title || "File Uploaded"}</p>
-                      <p className="text-xs text-muted-foreground">{form.fileSize ? formatBytes(form.fileSize) : ""}</p>
-                    </div>
-                    <Badge variant="success">Uploaded</Badge>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                    <p className="text-sm font-semibold">Click or drag file here to upload</p>
-                    <p className="text-xs text-muted-foreground">PDF, Word, Excel, Images up to 2GB</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Title & Description */}
-              <Input
-                placeholder="Document Title"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-              />
-
-              <Textarea
-                placeholder="Description / Purpose of this document..."
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* File Type Category */}
-                <Select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  aria-label="Document Category"
-                >
-                  <option value="general">General</option>
-                  <option value="policy">Policy / HR</option>
-                  <option value="circular">Circular</option>
-                  <option value="form">Form Template</option>
-                  <option value="notice">Official Notice</option>
-                </Select>
-
-                {/* Target Audience: Role */}
-                <Select
-                  value={form.targetRole}
-                  onChange={(e) => setForm({ ...form, targetRole: e.target.value })}
-                  aria-label="Target Role"
-                >
-                  <option value="">All Roles</option>
-                  {roleOptions.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Target Audience: Department */}
-                <Select
-                  value={form.targetDepartmentId}
-                  onChange={(e) => setForm({ ...form, targetDepartmentId: e.target.value })}
-                  aria-label="Target Department"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </Select>
-
-                {/* Target Audience: Institution */}
-                <Select
-                  value={form.targetInstitutionId}
-                  onChange={(e) => setForm({ ...form, targetInstitutionId: e.target.value })}
-                  aria-label="Target Institution"
-                >
-                  <option value="">All Institutions</option>
-                  {institutions.map((i) => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
-                  ))}
-                </Select>
-              </div>
-
-              <Button type="submit" disabled={submitting || uploading} className="w-full">
-                {submitting ? "Publishing..." : "Publish Document"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <CircularPublishForm
+          form={form}
+          setForm={setForm}
+          onSubmit={handleSubmit}
+          onFileUpload={handleFileUpload}
+          uploading={uploading}
+          submitting={submitting}
+          departments={departments}
+          institutions={institutions}
+        />
       )}
 
-      {/* Filter Bar */}
-      <div className="flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search documents..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select
-          className="w-48"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          aria-label="Filter by category"
-        >
-          <option value="">All Categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </Select>
-      </div>
+      <CircularFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        categories={categories}
+      />
 
-      {/* List Layout with Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((c) => (
-          <Card key={c.id} className="flex flex-col justify-between hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-start gap-3">
-                {getFileIcon(c.fileType)}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge variant="outline" className="capitalize text-[10px] py-0">{c.category}</Badge>
-                    {c.fileSize && (
-                      <span className="text-[10px] text-muted-foreground">{formatBytes(c.fileSize)}</span>
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-sm truncate mt-1" title={c.title}>{c.title}</h3>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0 text-xs">
-              {c.description ? (
-                <p className="text-muted-foreground line-clamp-2 h-8">{c.description}</p>
-              ) : (
-                <p className="text-muted-foreground/45 italic line-clamp-2 h-8">No description provided</p>
-              )}
-
-              {/* Targeting Details (for admins/HODs) */}
-              {isAdmin && (c.targetRole || c.targetDepartmentId || c.targetInstitutionId) && (
-                <div className="p-2 rounded bg-muted/40 space-y-1 text-[10px] text-muted-foreground">
-                  <p className="font-medium text-foreground flex items-center gap-1">
-                    <Layers className="h-3 w-3" /> Target Audience:
-                  </p>
-                  {c.targetRole && (
-                    <span className="inline-flex items-center gap-1 bg-background border px-1 rounded mr-1">
-                      <Users className="h-2.5 w-2.5" /> {roleOptions.find(r => r.value === c.targetRole)?.label || c.targetRole}
-                    </span>
-                  )}
-                  {c.targetDepartmentId && departments.length > 0 && (
-                    <span className="inline-flex items-center gap-1 bg-background border px-1 rounded mr-1">
-                      <Layers className="h-2.5 w-2.5" /> {departments.find(d => d.id === c.targetDepartmentId)?.name || "Department"}
-                    </span>
-                  )}
-                  {c.targetInstitutionId && institutions.length > 0 && (
-                    <span className="inline-flex items-center gap-1 bg-background border px-1 rounded mr-1">
-                      <Building className="h-2.5 w-2.5" /> {institutions.find(i => i.id === c.targetInstitutionId)?.name || "Institution"}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between text-muted-foreground border-t pt-2 mt-auto">
-                <div className="flex flex-col gap-0.5">
-                  <span className="flex items-center gap-1 text-[10px]">
-                    <User className="h-3 w-3" /> {c.uploadedByName} {c.uploadedByLastName}
-                  </span>
-                  <span className="flex items-center gap-1 text-[9px]">
-                    <Calendar className="h-3 w-3" /> {c.createdAt?.split("T")[0]}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {isAdmin && c.downloadCount !== undefined && (
-                    <span className="flex items-center gap-1 text-[10px] text-foreground font-medium bg-muted px-1.5 py-0.5 rounded">
-                      <Eye className="h-3 w-3" /> {c.downloadCount} downloads
-                    </span>
-                  )}
-
-                  {/* Campus Compliance Tracker Button for Coordinators & Admins */}
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-[10px] gap-1 text-primary border-primary/30 hover:bg-primary/10"
-                      onClick={() => {
-                        setSelectedComplianceCircular(c);
-                        setIsComplianceOpen(true);
-                      }}
-                      title="View Campus Compliance"
-                    >
-                      <Building2 className="h-3 w-3" />
-                      Compliance
-                    </Button>
-                  )}
-
-                  {/* Download Tracking Link */}
-                  <a
-                    href={`/api/circulars/${c.id}/download`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-                    title="Download Document"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {filtered.length === 0 && (
-          <div className="col-span-full py-8">
-            <EmptyState
-              icon={<FileText className="h-12 w-12" />}
-              title="No documents found"
-              description="Upload files or check filters to find documents."
-            />
-          </div>
-        )}
-      </div>
+      <CircularFeedGrid
+        circulars={filtered}
+        isAdmin={isAdmin}
+        departments={departments}
+        institutions={institutions}
+        onOpenCompliance={(c) => {
+          setSelectedComplianceCircular(c);
+          setIsComplianceOpen(true);
+        }}
+      />
 
       {/* Campus Compliance Summary Drawer */}
       <CircularComplianceDrawer

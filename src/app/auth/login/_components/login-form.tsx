@@ -234,13 +234,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         {mode === "signin" && (
           <form onSubmit={handleLoginSubmit} className="space-y-4" data-hydrated={isHydrated}>
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="signin-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  id="email"
+                  id="signin-email"
                   type="email"
                   placeholder="admin@thaibahive.local"
                   value={email}
@@ -253,13 +253,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
             
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="signin-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  id="password"
+                  id="signin-password"
                   type="password"
                   placeholder="••••••••••••"
                   value={password}
@@ -272,14 +272,16 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer group">
+              <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer group">
                 <input
+                  id="remember-me"
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
+                  aria-label="Keep me signed in"
                   className="sr-only"
                 />
-                <div className={`w-[18px] h-[18px] rounded border ${rememberMe ? 'bg-primary border-primary' : 'border-border bg-background/80'} flex items-center justify-center transition-all duration-200`}>
+                <div aria-hidden="true" className={`w-[18px] h-[18px] rounded border ${rememberMe ? 'bg-primary border-primary' : 'border-border bg-background/80'} flex items-center justify-center transition-all duration-200`}>
                   {rememberMe && (
                     <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -292,23 +294,29 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               </label>
             </div>
 
-            {error && <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>}
+            {error && (
+              <div role="alert" aria-live="polite">
+                <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
+              </div>
+            )}
 
             <div className="space-y-3 pt-3">
               <button
                 type="submit"
                 disabled={loading}
+                aria-label="Sign in to your account"
                 style={{ backgroundColor: activeTheme.accent }}
-                className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md"
+                className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 {loading ? "Signing in..." : "Yes, Sign In"}
-                {!loading && <ArrowRight className="w-4 h-4" />}
+                {!loading && <ArrowRight className="w-4 h-4" aria-hidden="true" />}
               </button>
 
               <button
                 type="button"
                 onClick={() => handleModeChange("signup")}
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all"
+                aria-label="Switch to account creation mode"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 No, Create Account
               </button>
@@ -316,9 +324,10 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               <button
                 type="button"
                 onClick={() => handleModeChange("google")}
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all"
+                aria-label="Sign in with Google identity provider"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                   <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -331,10 +340,11 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 type="button"
                 onClick={handlePasskeyLogin}
                 disabled={passkeyLoading}
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all"
+                aria-label="Sign in with WebAuthn Passkey"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 {passkeyLoading ? "Authenticating..." : (
-                  <><Fingerprint className="w-4 h-4" /> Sign in with Passkey</>
+                  <><Fingerprint className="w-4 h-4" aria-hidden="true" /> Sign in with Passkey</>
                 )}
               </button>
             </div>
@@ -345,10 +355,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
           <form onSubmit={handleSignupSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">First Name</label>
+                <label htmlFor="signup-firstName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  First Name
+                </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
+                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <Input
+                    id="signup-firstName"
                     placeholder="First name"
                     value={signupForm.firstName}
                     onChange={(e) => setSignupForm({ ...signupForm, firstName: e.target.value })}
@@ -359,10 +372,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Name</label>
+                <label htmlFor="signup-lastName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Last Name
+                </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
+                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <Input
+                    id="signup-lastName"
                     placeholder="Last name"
                     value={signupForm.lastName}
                     onChange={(e) => setSignupForm({ ...signupForm, lastName: e.target.value })}
@@ -375,10 +391,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Email</label>
+              <label htmlFor="signup-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Email
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
+                  id="signup-email"
                   type="email"
                   placeholder="you@example.com"
                   value={signupForm.email}
@@ -391,10 +410,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Employee ID</label>
+              <label htmlFor="signup-employeeId" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Employee ID
+              </label>
               <div className="relative">
-                <ShieldCheck className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+                <ShieldCheck className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
+                  id="signup-employeeId"
                   placeholder="Your employee ID"
                   value={signupForm.employeeId}
                   onChange={(e) => setSignupForm({ ...signupForm, employeeId: e.target.value })}
@@ -406,12 +428,15 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Invitation Code / Token</label>
+                <label htmlFor="signup-invitationToken" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Invitation Code / Token
+                </label>
                 <span className="text-[9px] text-muted-foreground">Institutional Access</span>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
+                  id="signup-invitationToken"
                   placeholder="Invitation code provided by admin"
                   value={signupForm.invitationToken}
                   onChange={(e) => setSignupForm({ ...signupForm, invitationToken: e.target.value })}
@@ -425,10 +450,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+                <label htmlFor="signup-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Password
+                </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <Input
+                    id="signup-password"
                     type="password"
                     placeholder="Password"
                     value={signupForm.password}
@@ -440,10 +468,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Confirm</label>
+                <label htmlFor="signup-confirm" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Confirm Password
+                </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <Input
+                    id="signup-confirm"
                     type="password"
                     placeholder="Confirm"
                     value={signupForm.confirm}
@@ -456,23 +487,29 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               </div>
             </div>
 
-            {error && <Alert variant="error" className="py-2 px-3 text-xs rounded-xl">{error}</Alert>}
+            {error && (
+              <div role="alert" aria-live="polite">
+                <Alert variant="error" className="py-2 px-3 text-xs rounded-xl">{error}</Alert>
+              </div>
+            )}
 
             <div className="space-y-3 pt-3">
               <button
                 type="submit"
                 disabled={loading}
+                aria-label="Register account and sign in"
                 style={{ backgroundColor: activeTheme.accent }}
-                className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-11 flex items-center justify-center gap-1.5 transition-all shadow-md text-sm"
+                className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-11 flex items-center justify-center gap-1.5 transition-all shadow-md text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 {loading ? "Registering..." : "Register & Sign In"}
-                {!loading && <ArrowRight className="w-4 h-4" />}
+                {!loading && <ArrowRight className="w-4 h-4" aria-hidden="true" />}
               </button>
 
               <button
                 type="button"
                 onClick={() => handleModeChange("signin")}
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-11 flex items-center justify-center transition-all text-sm"
+                aria-label="Return to Sign In"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-11 flex items-center justify-center transition-all text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 Already have a profile? Sign In
               </button>
@@ -484,7 +521,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
           <form onSubmit={handleGoogleSubmit} className="space-y-4">
             <div className="flex flex-col items-center justify-center p-6 bg-muted/40 border border-border rounded-2xl space-y-4">
               <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-xl border border-border">
-                <svg className="w-7 h-7" viewBox="0 0 24 24">
+                <svg className="w-7 h-7" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
@@ -496,23 +533,29 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               </p>
             </div>
 
-            {error && <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>}
+            {error && (
+              <div role="alert" aria-live="polite">
+                <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
+              </div>
+            )}
 
             <div className="space-y-3 pt-3">
               <button
                 type="submit"
                 disabled={loading}
+                aria-label="Authenticate with Google federated credentials"
                 style={{ backgroundColor: activeTheme.accent }}
-                className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md"
+                className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 {loading ? "Federating session..." : "Continue with Google"}
-                {!loading && <ArrowRight className="w-4 h-4" />}
+                {!loading && <ArrowRight className="w-4 h-4" aria-hidden="true" />}
               </button>
 
               <button
                 type="button"
                 onClick={() => handleModeChange("signin")}
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all"
+                aria-label="Back to local credentials login"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 Back to local credentials
               </button>
@@ -525,13 +568,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             {!recoverySent ? (
               <>
                 <div className="space-y-1.5">
-                  <label htmlFor="forgotEmail" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <label htmlFor="forgot-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Group Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     <Input
-                      id="forgotEmail"
+                      id="forgot-email"
                       type="email"
                       placeholder="admin@thaibahive.local"
                       value={forgotEmail}
@@ -543,24 +586,29 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   </div>
                 </div>
 
-                {forgotError && <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{forgotError}</Alert>}
+                {forgotError && (
+                  <div role="alert" aria-live="polite">
+                    <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{forgotError}</Alert>
+                  </div>
+                )}
 
                 <div className="space-y-3 pt-3">
                   <button
                     type="submit"
                     disabled={forgotLoading}
+                    aria-label="Send password recovery reset link"
                     style={{ backgroundColor: activeTheme.accent }}
-                    className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md"
+                    className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-12 flex items-center justify-center gap-1.5 transition-all shadow-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
                   >
                     {forgotLoading ? "Sending link..." : "Send Recovery Link"}
-                    {!forgotLoading && <ArrowRight className="w-4 h-4" />}
+                    {!forgotLoading && <ArrowRight className="w-4 h-4" aria-hidden="true" />}
                   </button>
                 </div>
               </>
             ) : (
-              <div className="py-6 flex flex-col items-center justify-center text-center space-y-4">
+              <div role="status" aria-live="polite" className="py-6 flex flex-col items-center justify-center text-center space-y-4">
                 <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                  <Mail className="w-6 h-6" />
+                  <Mail className="w-6 h-6" aria-hidden="true" />
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold text-foreground">RECOVERY EMAIL TRANSMITTED</h4>
@@ -579,7 +627,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   setForgotError("");
                   handleModeChange("signin");
                 }}
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all"
+                aria-label="Return to access workspace sign in"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 Return to ACCESS WORKSPACE
               </button>

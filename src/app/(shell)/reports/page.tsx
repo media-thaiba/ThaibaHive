@@ -7,11 +7,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Plus,  } from "lucide-react";
+import dynamic from "next/dynamic";
 import { ensureArray } from "@/lib/utils";
 import { ReportList } from "@/components/reports/report-list";
-import { ReportFormDialog } from "@/components/reports/report-form-dialog";
 import { ExportButton } from "@/components/export-button";
-import { ReportDetailDialog } from "@/components/reports/report-detail-dialog";
+
+const ReportFormDialog = dynamic(
+  () => import("@/components/reports/report-form-dialog").then((m) => m.ReportFormDialog),
+  { ssr: false }
+);
+const ReportDetailDialog = dynamic(
+  () => import("@/components/reports/report-detail-dialog").then((m) => m.ReportDetailDialog),
+  { ssr: false }
+);
 
 type DailyReport = {
   id: string;

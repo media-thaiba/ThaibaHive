@@ -7,112 +7,55 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectItem } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ensureArray } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 import { toast } from "sonner";
-import {
-  Truck,
-  Car,
-  Calendar,
-  Fuel,
-  Plus,
-  Search,
-  MapPin,
-  Gauge,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Trash2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, Search } from "lucide-react";
 import type { Vehicle, VehicleBooking, VehicleLog, StaffMember, Institution, Tab } from "./_components/types";
 import { AddVehicleModal, BookVehicleModal, LogTripModal } from "./_components/modals";
+import { VehicleStats } from "./_components/vehicle-stats";
+import { FleetTable } from "./_components/fleet-table";
+import { BookingsTable } from "./_components/bookings-table";
+import { LogsTable } from "./_components/logs-table";
+import { useVehicleStore } from "@/stores";
 
 const FUEL_TYPES = ["petrol", "diesel", "electric", "hybrid"] as const;
 
-function MetricCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-}: {
-  title: string;
-  value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-}) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold tracking-tight mt-1">{value}</p>
-          </div>
-          <div className={cn("p-3 rounded-xl", color)}>
-            <Icon className="h-6 w-6 text-white" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function getFuelBadge(fuelType: string) {
-  const map: Record<string, { variant: "success" | "info" | "warning" | "secondary"; label: string }> = {
-    electric: { variant: "success", label: "Electric" },
-    hybrid: { variant: "info", label: "Hybrid" },
-    diesel: { variant: "warning", label: "Diesel" },
-    petrol: { variant: "secondary", label: "Petrol" },
-  };
-  const match = map[fuelType.toLowerCase()] || { variant: "secondary" as const, label: fuelType };
-  return <Badge variant={match.variant}>{match.label}</Badge>;
-}
-
-function getBookingStatusBadge(status: string) {
-  if (status === "approved" || status === "completed")
-    return <Badge variant="success" className="gap-1"><CheckCircle className="h-3 w-3" />{status}</Badge>;
-  if (status === "rejected" || status === "cancelled")
-    return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />{status}</Badge>;
-  return <Badge variant="warning" className="gap-1"><Clock className="h-3 w-3" />{status}</Badge>;
-}
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
-}
-
-function formatTime(timeStr: string | null | undefined): string {
-  if (!timeStr) return "—";
-  return timeStr;
-}
-
 export default function VehiclesPage() {
+  const {
+    tab,
+    setTab,
+    search,
+    setSearch,
+    fuelFilter,
+    setFuelFilter,
+    instFilter,
+    setInstFilter,
+    addVehicleOpen,
+    setAddVehicleOpen,
+    addVehicleLoading,
+    setAddVehicleLoading,
+    bookVehicleOpen,
+    setBookVehicleOpen,
+    bookVehicleLoading,
+    setBookVehicleLoading,
+    logTripOpen,
+    setLogTripOpen,
+    logTripLoading,
+    setLogTripLoading,
+  } = useVehicleStore();
+
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [bookings, setBookings] = useState<VehicleBooking[]>([]);
   const [logs, setLogs] = useState<VehicleLog[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("fleet");
-  const [search, setSearch] = useState("");
-  const [fuelFilter, setFuelFilter] = useState("");
-  const [instFilter, setInstFilter] = useState("");
-
-  const [addVehicleOpen, setAddVehicleOpen] = useState(false);
-  const [addVehicleLoading, setAddVehicleLoading] = useState(false);
-  const [bookVehicleOpen, setBookVehicleOpen] = useState(false);
-  const [bookVehicleLoading, setBookVehicleLoading] = useState(false);
-  const [logTripOpen, setLogTripOpen] = useState(false);
-  const [logTripLoading, setLogTripLoading] = useState(false);
 
   const fetchVehicles = useCallback(async () => {
     try {
@@ -217,6 +160,7 @@ export default function VehiclesPage() {
       if (res.ok && res.data) {
         toast.success("Vehicle added successfully");
         setVehicles((prev) => [res.data!.vehicle, ...prev]);
+        setAddVehicleOpen(false);
       } else {
         toast.error("Failed to add vehicle");
       }
@@ -251,6 +195,7 @@ export default function VehiclesPage() {
       if (res.ok && res.data) {
         toast.success("Vehicle booked successfully");
         setBookings((prev) => [res.data!.booking, ...prev]);
+        setBookVehicleOpen(false);
       } else {
         toast.error("Failed to book vehicle");
       }
@@ -290,6 +235,7 @@ export default function VehiclesPage() {
       if (res.ok && res.data) {
         toast.success("Trip logged successfully");
         setLogs((prev) => [res.data!.log, ...prev]);
+        setLogTripOpen(false);
       } else {
         toast.error("Failed to log trip");
       }
@@ -360,12 +306,12 @@ export default function VehiclesPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Vehicles" value={vehicles.length} icon={Truck} color="bg-primary" />
-        <MetricCard title="Active Fleet" value={activeFleet} icon={Car} color="bg-success" />
-        <MetricCard title="Assigned / In Trip" value={assignedCount} icon={Calendar} color="bg-info" />
-        <MetricCard title="Total Mileage (km)" value={Math.round(totalMileage)} icon={Gauge} color="bg-warning" />
-      </div>
+      <VehicleStats
+        totalVehicles={vehicles.length}
+        activeFleet={activeFleet}
+        assignedCount={assignedCount}
+        totalMileage={totalMileage}
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -425,189 +371,23 @@ export default function VehiclesPage() {
               ))}
             </div>
           ) : tab === "fleet" ? (
-            filteredVehicles.length === 0 ? (
-              <EmptyState
-                icon={<Truck className="h-12 w-12" />}
-                title="No vehicles found"
-                description={search || fuelFilter || instFilter ? "No vehicles match your filters." : "Add your first vehicle to get started."}
-                action={!search && !fuelFilter && !instFilter ? { label: "Add Vehicle", onClick: () => setAddVehicleOpen(true) } : undefined}
-              />
-            ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vehicle</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Fuel</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Capacity</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">Institution</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {filteredVehicles.map((v) => (
-                      <tr key={v.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium font-mono text-sm">{v.registrationNumber}</p>
-                            <p className="text-xs text-muted-foreground">{v.model}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <span className="text-sm capitalize">{v.type}</span>
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">{getFuelBadge(v.fuelType)}</td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <span className="text-sm">{v.capacity} seats</span>
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          <span className="text-sm">{v.institutionName || "—"}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={v.isActive ? "success" : "secondary"}>
-                            {v.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
+            <FleetTable
+              vehicles={filteredVehicles}
+              hasFilter={Boolean(search || fuelFilter || instFilter)}
+              onAddVehicle={() => setAddVehicleOpen(true)}
+            />
           ) : tab === "bookings" ? (
-            bookings.length === 0 ? (
-              <EmptyState
-                icon={<Calendar className="h-12 w-12" />}
-                title="No bookings found"
-                description="Book a vehicle to see reservations here."
-                action={{ label: "Book Vehicle", onClick: () => setBookVehicleOpen(true) }}
-              />
-            ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vehicle</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Date & Time</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Purpose</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Booked By</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {bookings.map((b) => (
-                      <tr key={b.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="font-medium font-mono text-sm">{b.vehicleReg || "—"}</p>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <div className="text-sm">
-                            <p>{formatDate(b.date)}</p>
-                            <p className="text-muted-foreground text-xs">{formatTime(b.startTime)}{b.endTime ? ` – ${formatTime(b.endTime)}` : ""}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <div className="text-sm">
-                            <p className="truncate max-w-[200px]">{b.purpose}</p>
-                            {b.destination && <p className="text-muted-foreground text-xs flex items-center gap-1"><MapPin className="h-3 w-3" />{b.destination}</p>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <span className="text-sm">
-                            {b.bookedByName ? `${b.bookedByName} ${b.bookedByLastName || ""}`.trim() : "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">{getBookingStatusBadge(b.status)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleDeleteBooking(b.id)}
-                            className="h-8 w-8 text-destructive"
-                            aria-label="Cancel booking"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
+            <BookingsTable
+              bookings={bookings}
+              onBookVehicle={() => setBookVehicleOpen(true)}
+              onDeleteBooking={handleDeleteBooking}
+            />
           ) : (
-            logs.length === 0 ? (
-              <EmptyState
-                icon={<Fuel className="h-12 w-12" />}
-                title="No trip logs found"
-                description="Log a trip to see mileage records here."
-                action={{ label: "Log Trip", onClick: () => setLogTripOpen(true) }}
-              />
-            ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vehicle</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Odometer</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Fuel</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden xl:table-cell">Route</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {logs.map((l) => (
-                      <tr key={l.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <p className="font-medium font-mono text-sm">{l.vehicleReg || "—"}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {l.driverName ? `${l.driverName} ${l.driverLastName || ""}`.trim() : ""}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell text-sm">{formatDate(l.date)}</td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <div className="text-sm">
-                            {l.startOdometer != null && l.endOdometer != null ? (
-                              <>
-                                <span>{l.startOdometer.toLocaleString()} → {l.endOdometer.toLocaleString()} km</span>
-                                {l.distanceKm != null && (
-                                  <span className="ml-2 text-muted-foreground">({l.distanceKm.toLocaleString()} km)</span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <div className="text-sm">
-                            {l.fuelLitres != null ? <span>{l.fuelLitres} L</span> : <span className="text-muted-foreground">—</span>}
-                            {l.fuelCost != null && <span className="ml-2 text-muted-foreground">₹{l.fuelCost.toLocaleString()}</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          <span className="text-sm truncate max-w-[200px] block">{l.route || "—"}</span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleDeleteLog(l.id)}
-                            className="h-8 w-8 text-destructive"
-                            aria-label="Delete log"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
+            <LogsTable
+              logs={logs}
+              onLogTrip={() => setLogTripOpen(true)}
+              onDeleteLog={handleDeleteLog}
+            />
           )}
         </CardContent>
       </Card>

@@ -76,6 +76,12 @@ const nextConfig: NextConfig = {
       "@radix-ui/react-icons",
       "date-fns",
       "lodash",
+      "@tanstack/react-query",
+      "recharts",
+      "framer-motion",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+      "sonner",
     ],
   },
 

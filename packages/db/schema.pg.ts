@@ -6738,4 +6738,154 @@ export const alumniAuditLogs = sqliteTable("alumni_audit_logs", {
   alumAuditTimeIdx: index("idx_pg_alum_audit_time").on(t.timestamp),
 }));
 
+// ─── Sprint-100: AIGENT-OS Autonomous Multi-Agent Workflows & Institutional Intelligence ───
+
+export const agenticWorkflows = sqliteTable("agentic_workflows", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  definitionJson: text("definition_json").notNull(),
+  version: integer("version").notNull().default(1),
+  status: text("status").notNull().default("active"), // 'draft' | 'active' | 'paused' | 'archived'
+  createdBy: text("created_by").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  wfInstIdx: index("idx_pg_wf_inst").on(t.institutionId),
+  wfStatusIdx: index("idx_pg_wf_status").on(t.status),
+}));
+
+export const agenticWorkflowRuns = sqliteTable("agentic_workflow_runs", {
+  id: text("id").primaryKey(),
+  workflowId: text("workflow_id").notNull().references(() => agenticWorkflows.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // 'pending' | 'running' | 'awaiting_approval' | 'completed' | 'failed' | 'cancelled' | 'rolled_back'
+  triggerType: text("trigger_type").notNull().default("manual"), // 'manual' | 'schedule' | 'anomaly' | 'event'
+  triggeredBy: text("triggered_by").notNull().default("system"),
+  contextJson: text("context_json"),
+  error: text("error"),
+  traceId: text("trace_id"),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  wfRunWfIdx: index("idx_pg_wf_run_wf").on(t.workflowId),
+  wfRunInstIdx: index("idx_pg_wf_run_inst").on(t.institutionId),
+  wfRunStatusIdx: index("idx_pg_wf_run_status").on(t.status),
+  wfRunTraceIdx: index("idx_pg_wf_run_trace").on(t.traceId),
+}));
+
+export const agenticWorkflowSteps = sqliteTable("agentic_workflow_steps", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull().references(() => agenticWorkflowRuns.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  stepKey: text("step_key").notNull(),
+  agentId: text("agent_id").notNull(),
+  toolName: text("tool_name"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'running' | 'awaiting_approval' | 'completed' | 'failed' | 'skipped' | 'compensated'
+  inputJson: text("input_json"),
+  outputJson: text("output_json"),
+  compensationJson: text("compensation_json"),
+  attempt: integer("attempt").notNull().default(0),
+  error: text("error"),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  wfStepRunIdx: index("idx_pg_wf_step_run").on(t.runId),
+  wfStepKeyIdx: index("idx_pg_wf_step_key").on(t.runId, t.stepKey),
+  wfStepStatusIdx: index("idx_pg_wf_step_status").on(t.status),
+}));
+
+export const agentApprovalGates = sqliteTable("agent_approval_gates", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull().references(() => agenticWorkflowRuns.id, { onDelete: "cascade" }),
+  stepId: text("step_id").references(() => agenticWorkflowSteps.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  requiredPermission: text("required_permission").notNull().default("agent:workflows:approve"),
+  severity: text("severity").notNull().default("medium"), // 'critical' | 'high' | 'medium' | 'low'
+  status: text("status").notNull().default("pending"), // 'pending' | 'approved' | 'rejected' | 'expired'
+  approverId: text("approver_id").references(() => staff.id, { onDelete: "set null" }),
+  decisionReason: text("decision_reason"),
+  expiresAt: text("expires_at"),
+  decidedAt: text("decided_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  gateRunIdx: index("idx_pg_gate_run").on(t.runId),
+  gateInstIdx: index("idx_pg_gate_inst").on(t.institutionId),
+  gateStatusIdx: index("idx_pg_gate_status").on(t.status),
+  gateExpiresIdx: index("idx_pg_gate_expires").on(t.expiresAt),
+}));
+
+export const agentMemoryEntries = sqliteTable("agent_memory_entries", {
+  id: text("id").primaryKey(),
+  agentId: text("agent_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull().default("episodic"), // 'episodic' | 'semantic' | 'procedural'
+  contentJson: text("content_json").notNull(),
+  importance: real("importance").notNull().default(1.0),
+  sourceRef: text("source_ref"),
+  embedding: text("embedding"),
+  lastAccessedAt: text("last_accessed_at"),
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  memAgentIdx: index("idx_pg_mem_agent").on(t.agentId),
+  memInstIdx: index("idx_pg_mem_inst").on(t.institutionId),
+  memScopeIdx: index("idx_pg_mem_scope").on(t.scope),
+  memExpiresIdx: index("idx_pg_mem_expires").on(t.expiresAt),
+}));
+
+export const agentToolInvocations = sqliteTable("agent_tool_invocations", {
+  id: text("id").primaryKey(),
+  agentId: text("agent_id").notNull(),
+  toolName: text("tool_name").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // 'success' | 'error' | 'denied'
+  durationMs: integer("duration_ms").notNull().default(0),
+  inputHash: text("input_hash").notNull(),
+  outputHash: text("output_hash"),
+  error: text("error"),
+  auditHash: text("audit_hash").notNull(),
+  prevAuditHash: text("prev_audit_hash").notNull(),
+  traceId: text("trace_id"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  toolInvInstTimeIdx: index("idx_pg_tool_inv_inst_time").on(t.institutionId, t.createdAt),
+  toolInvPrevHashIdx: index("idx_pg_tool_inv_prev_hash").on(t.prevAuditHash),
+  toolInvAgentIdx: index("idx_pg_tool_inv_agent").on(t.agentId),
+  toolInvToolIdx: index("idx_pg_tool_inv_tool").on(t.toolName),
+  toolInvTraceIdx: index("idx_pg_tool_inv_trace").on(t.traceId),
+}));
+
+export const agentOutboxMessages = sqliteTable("agent_outbox_messages", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  topic: text("topic").notNull(),
+  senderAgentId: text("sender_agent_id").notNull(),
+  recipientAgentId: text("recipient_agent_id"),
+  payloadJson: text("payload_json").notNull(),
+  priority: integer("priority").notNull().default(0), // 0: normal, 1: high, 2: critical
+  status: text("status").notNull().default("pending"), // 'pending' | 'processing' | 'delivered' | 'dead_letter' | 'failed'
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(3),
+  lastError: text("last_error"),
+  scheduledFor: text("scheduled_for"),
+  deliveredAt: text("delivered_at"),
+  traceId: text("trace_id"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  outboxInstStatusIdx: index("idx_pg_outbox_inst_status").on(t.institutionId, t.status),
+  outboxTopicIdx: index("idx_pg_outbox_topic").on(t.topic),
+  outboxPriorityIdx: index("idx_pg_outbox_priority").on(t.priority),
+  outboxSchedIdx: index("idx_pg_outbox_sched").on(t.scheduledFor),
+}));
+
+
 

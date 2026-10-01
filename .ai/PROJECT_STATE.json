@@ -1,20 +1,22 @@
 {
   "project": "ThaibaHive",
-  "version": "2.0.0",
-  "phase": 5,
+  "version": "3.32.0",
+  "phase": 6,
   "status": "active",
-  "current_track": "Track B (Mobile Phase M1: PWA / Mobile optimization)",
+  "current_track": "Track A (Modernization, Modular Architecture & Performance Tuning)",
   "tracks": {
-    "Track A (Web)": "Phase 5 - Services & Specialized (Next)",
-    "Track B (Mobile)": "Phase M1 - PWA / Mobile optimization (Next)",
-    "Track C (Media)": "Phase MD1 - Media library & upload pipeline (Next)"
+    "Track A (Web)": "Release v3.32.0 (Completed)",
+    "Track B (Mobile)": "Phase M1 - PWA / Mobile optimization",
+    "Track C (Media)": "Phase MD1 - Media library & upload pipeline"
   },
   "completed_phases": [
     "Phase 0 (Foundation Setup)",
     "Phase 1 (Core Operations Polish)",
     "Phase 2 (Mobile-Web Auth Handoff & Features Integration)",
     "Phase 3 (Admin & Operations)",
-    "Phase 4 (Finance & Reports)"
+    "Phase 4 (Finance & Reports)",
+    "Phase 5 (Services & Specialized Hubs)",
+    "Phase 6 (Component Extraction, Zustand Centralization, WCAG 2.1 AA & Performance Tuning)"
   ],
   "blocked_status": {
     "is_blocked": false,

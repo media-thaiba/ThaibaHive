@@ -163,6 +163,82 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
     });
   });
 
+  describe("Sprint-100: Agentic Workflows & Multi-Agent RBAC Permissions Matrix", () => {
+    it("super_admin has wildcard access to all 11 agent:* permissions", () => {
+      const agentPerms = [
+        "agent:workflows:view", "agent:workflows:create", "agent:workflows:execute", "agent:workflows:approve", "agent:workflows:manage",
+        "agent:memory:view", "agent:memory:manage", "agent:audit:view", "agent:guardrails:manage", "agent:killswitch:engage", "agent:telemetry:view",
+      ];
+      for (const p of agentPerms) {
+        expect(hasPermission("super_admin", p)).toBe(true);
+      }
+    });
+
+    it("admin has all 11 agent permissions including killswitch and guardrails", () => {
+      expect(hasPermission("admin", "agent:workflows:view")).toBe(true);
+      expect(hasPermission("admin", "agent:workflows:create")).toBe(true);
+      expect(hasPermission("admin", "agent:workflows:execute")).toBe(true);
+      expect(hasPermission("admin", "agent:workflows:approve")).toBe(true);
+      expect(hasPermission("admin", "agent:workflows:manage")).toBe(true);
+      expect(hasPermission("admin", "agent:memory:view")).toBe(true);
+      expect(hasPermission("admin", "agent:memory:manage")).toBe(true);
+      expect(hasPermission("admin", "agent:audit:view")).toBe(true);
+      expect(hasPermission("admin", "agent:guardrails:manage")).toBe(true);
+      expect(hasPermission("admin", "agent:killswitch:engage")).toBe(true);
+      expect(hasPermission("admin", "agent:telemetry:view")).toBe(true);
+    });
+
+    it("principal has execution, approval, memory, audit and telemetry, but NO killswitch or guardrails manage", () => {
+      expect(hasPermission("principal", "agent:workflows:view")).toBe(true);
+      expect(hasPermission("principal", "agent:workflows:execute")).toBe(true);
+      expect(hasPermission("principal", "agent:workflows:approve")).toBe(true);
+      expect(hasPermission("principal", "agent:memory:view")).toBe(true);
+      expect(hasPermission("principal", "agent:audit:view")).toBe(true);
+      expect(hasPermission("principal", "agent:telemetry:view")).toBe(true);
+
+      // Negative boundaries for principal
+      expect(hasPermission("principal", "agent:killswitch:engage")).toBe(false);
+      expect(hasPermission("principal", "agent:guardrails:manage")).toBe(false);
+      expect(hasPermission("principal", "agent:workflows:manage")).toBe(false);
+    });
+
+    it("hod has execution, approval, memory and telemetry, but NO audit view or killswitch", () => {
+      expect(hasPermission("hod", "agent:workflows:view")).toBe(true);
+      expect(hasPermission("hod", "agent:workflows:execute")).toBe(true);
+      expect(hasPermission("hod", "agent:workflows:approve")).toBe(true);
+      expect(hasPermission("hod", "agent:memory:view")).toBe(true);
+      expect(hasPermission("hod", "agent:telemetry:view")).toBe(true);
+
+      // Negative boundaries for hod
+      expect(hasPermission("hod", "agent:killswitch:engage")).toBe(false);
+      expect(hasPermission("hod", "agent:guardrails:manage")).toBe(false);
+      expect(hasPermission("hod", "agent:workflows:manage")).toBe(false);
+      expect(hasPermission("hod", "agent:audit:view")).toBe(false);
+    });
+
+    it("staff has only view and execute permissions (Negative boundary on approve & manage)", () => {
+      expect(hasPermission("staff", "agent:workflows:view")).toBe(true);
+      expect(hasPermission("staff", "agent:workflows:execute")).toBe(true);
+
+      // Negative boundaries for staff
+      expect(hasPermission("staff", "agent:workflows:approve")).toBe(false);
+      expect(hasPermission("staff", "agent:workflows:manage")).toBe(false);
+      expect(hasPermission("staff", "agent:guardrails:manage")).toBe(false);
+      expect(hasPermission("staff", "agent:killswitch:engage")).toBe(false);
+      expect(hasPermission("staff", "agent:audit:view")).toBe(false);
+    });
+
+    it("specialized accounts and purchase roles can approve workflows but cannot manage guardrails or killswitch", () => {
+      expect(hasPermission("accounts", "agent:workflows:view")).toBe(true);
+      expect(hasPermission("accounts", "agent:workflows:approve")).toBe(true);
+      expect(hasPermission("accounts", "agent:killswitch:engage")).toBe(false);
+
+      expect(hasPermission("purchase", "agent:workflows:view")).toBe(true);
+      expect(hasPermission("purchase", "agent:workflows:approve")).toBe(true);
+      expect(hasPermission("purchase", "agent:killswitch:engage")).toBe(false);
+    });
+  });
+
   describe("Role Validation & Anti-Tampering Security Guardrails", () => {
     it("should validate all declared valid staff roles", () => {
       expect(VALID_STAFF_ROLES).toContain("super_admin");

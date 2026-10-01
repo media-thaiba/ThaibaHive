@@ -133,21 +133,46 @@ export default function AttendancePage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setMyPage(1); setTeamPage(1); }} className="w-auto max-w-[160px]" />
-          <span className="text-muted-foreground text-xs">to</span>
-          <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setMyPage(1); setTeamPage(1); }} className="w-auto max-w-[160px]" />
+          <label htmlFor="attendance-date-from" className="sr-only">
+            Start date
+          </label>
+          <Input
+            id="attendance-date-from"
+            type="date"
+            aria-label="Attendance start date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setMyPage(1); setTeamPage(1); }}
+            className="w-auto max-w-[160px] focus-visible:ring-2 focus-visible:ring-primary"
+          />
+          <span className="text-muted-foreground text-xs" aria-hidden="true">to</span>
+          <label htmlFor="attendance-date-to" className="sr-only">
+            End date
+          </label>
+          <Input
+            id="attendance-date-to"
+            type="date"
+            aria-label="Attendance end date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setMyPage(1); setTeamPage(1); }}
+            className="w-auto max-w-[160px] focus-visible:ring-2 focus-visible:ring-primary"
+          />
         </div>
         <ExportButton type="attendance" params={{ dateFrom, dateTo }} />
       </div>
 
       {/* Tabs */}
       {tabs.length > 1 && (
-        <div className="flex gap-0.5 border-b">
+        <div role="tablist" aria-label="Attendance view options" className="flex gap-0.5 border-b">
           {tabs.map((tab) => (
             <button
               key={tab.key}
+              id={`attendance-tab-${tab.key}`}
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              aria-controls={`attendance-tabpanel-${tab.key}`}
+              tabIndex={activeTab === tab.key ? 0 : -1}
               onClick={() => setActiveTab(tab.key)}
-              className={`relative px-4 py-2.5 text-sm font-medium transition-colors -mb-px ${
+              className={`relative px-4 py-2.5 text-sm font-medium transition-colors -mb-px focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden ${
                 activeTab === tab.key
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -164,7 +189,13 @@ export default function AttendancePage() {
 
       {/* My Attendance */}
       {activeTab === "my" && (
-        <>
+        <div
+          role="tabpanel"
+          id="attendance-tabpanel-my"
+          aria-labelledby="attendance-tab-my"
+          tabIndex={0}
+          className="space-y-6 focus-visible:outline-hidden"
+        >
           {/* Today's Status */}
           <Card className="animate-slide-up">
             <CardHeader>
@@ -205,8 +236,8 @@ export default function AttendancePage() {
               </div>
               <div className="mt-4">
                 {todayLog && !todayLog.checkOut && (
-                  <Button variant="outline" onClick={checkOut} disabled={checkOutMutation.isPending}>
-                    <LogOut className="h-4 w-4 mr-1.5" />
+                  <Button variant="outline" onClick={checkOut} disabled={checkOutMutation.isPending} aria-label="Check out from attendance">
+                    <LogOut className="h-4 w-4 mr-1.5" aria-hidden="true" />
                     {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
                   </Button>
                 )}
@@ -229,7 +260,7 @@ export default function AttendancePage() {
             <CardContent>
               {logs.length === 0 ? (
                 <EmptyState
-                  icon={<Clock className="h-12 w-12" />}
+                  icon={<Clock className="h-12 w-12" aria-hidden="true" />}
                   title="No records yet"
                   description="Your attendance history will appear here once you check in."
                 />
@@ -262,130 +293,151 @@ export default function AttendancePage() {
               )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
 
       {/* Team Attendance */}
       {activeTab === "team" && (
-        <Card className="animate-slide-up">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <CardTitle className="text-base">Team Attendance</CardTitle>
-              <Input
-                type="text"
-                placeholder="Search by name or ID..."
-                value={teamSearch}
-                onChange={(e) => { setTeamSearch(e.target.value); setTeamPage(1); }}
-                className="w-full sm:w-64"
-              />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground">Department:</label>
-                <Select
-                  value={selectedDepartmentId}
-                  onChange={(e) => { setSelectedDepartmentId(e.target.value); setTeamPage(1); }}
-                  disabled={isHod || filtersLoading}
-                  className="w-48"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground">Institution:</label>
-                <Select
-                  value={selectedInstitutionId}
-                  onChange={(e) => { setSelectedInstitutionId(e.target.value); setTeamPage(1); }}
-                  disabled={isPrincipal || filtersLoading}
-                  className="w-48"
-                >
-                  <option value="">All Institutions</option>
-                  {institutions.map((inst) => (
-                    <option key={inst.id} value={inst.id}>{inst.name}</option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-            {teamLoading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : teamLogs.length === 0 ? (
-              <EmptyState
-                icon={<Clock className="h-12 w-12" />}
-                title="No team records"
-                description="No attendance records found for the selected date range."
-              />
-            ) : (
-              <>
-                <div className="overflow-x-auto rounded-lg border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Check-in</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Check-out</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Late (min)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamLogs.map((log) => (
-                        <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3 text-muted-foreground">{log.employeeId || "\u2014"}</td>
-                          <td className="px-4 py-3 font-medium">{[log.staffName, log.staffLastName].filter(Boolean).join(" ") || "\u2014"}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{formatDate(log.date)}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{log.checkIn ? formatTime(log.checkIn) : "\u2014"}</td>
-                          <td className="px-4 py-3 text-muted-foreground">{log.checkOut ? formatTime(log.checkOut) : "\u2014"}</td>
-                          <td className="px-4 py-3"><Badge variant={statusVariant[log.status] || "secondary"} className="capitalize">{log.status}</Badge></td>
-                          <td className="px-4 py-3 text-muted-foreground">{log.lateMinutes || 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+        <div
+          role="tabpanel"
+          id="attendance-tabpanel-team"
+          aria-labelledby="attendance-tab-team"
+          tabIndex={0}
+          className="focus-visible:outline-hidden"
+        >
+          <Card className="animate-slide-up">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <CardTitle className="text-base">Team Attendance</CardTitle>
+                <div>
+                  <label htmlFor="team-search-input" className="sr-only">
+                    Search team members
+                  </label>
+                  <Input
+                    id="team-search-input"
+                    type="text"
+                    aria-label="Search team attendance by name or ID"
+                    placeholder="Search by name or ID..."
+                    value={teamSearch}
+                    onChange={(e) => { setTeamSearch(e.target.value); setTeamPage(1); }}
+                    className="w-full sm:w-64"
+                  />
                 </div>
-
-                {teamTotal > teamLimit && (
-                  <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
-                    <p className="text-xs text-muted-foreground">
-                      Showing <span className="font-medium">{Math.min(teamTotal, (teamPage - 1) * teamLimit + 1)}</span> to{" "}
-                      <span className="font-medium">{Math.min(teamTotal, teamPage * teamLimit)}</span> of{" "}
-                      <span className="font-medium">{teamTotal}</span> entries
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setTeamPage((p) => Math.max(1, p - 1))}
-                        disabled={teamPage === 1 || teamLoading}
-                        aria-label="Go to previous page"
-                      >
-                        Previous
-                      </Button>
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Page {teamPage} of {Math.ceil(teamTotal / teamLimit)}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setTeamPage((p) => Math.min(Math.ceil(teamTotal / teamLimit), p + 1))}
-                        disabled={teamPage >= Math.ceil(teamTotal / teamLimit) || teamLoading}
-                        aria-label="Go to next page"
-                      >
-                        Next
-                      </Button>
-                    </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="team-dept-filter" className="text-xs font-medium text-muted-foreground">Department:</label>
+                  <Select
+                    id="team-dept-filter"
+                    aria-label="Filter by department"
+                    value={selectedDepartmentId}
+                    onChange={(e) => { setSelectedDepartmentId(e.target.value); setTeamPage(1); }}
+                    disabled={isHod || filtersLoading}
+                    className="w-48"
+                  >
+                    <option value="">All Departments</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="team-inst-filter" className="text-xs font-medium text-muted-foreground">Institution:</label>
+                  <Select
+                    id="team-inst-filter"
+                    aria-label="Filter by institution"
+                    value={selectedInstitutionId}
+                    onChange={(e) => { setSelectedInstitutionId(e.target.value); setTeamPage(1); }}
+                    disabled={isPrincipal || filtersLoading}
+                    className="w-48"
+                  >
+                    <option value="">All Institutions</option>
+                    {institutions.map((inst) => (
+                      <option key={inst.id} value={inst.id}>{inst.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+              {teamLoading ? (
+                <div role="status" aria-label="Loading team attendance records">
+                  <Skeleton className="h-64 w-full" />
+                </div>
+              ) : teamLogs.length === 0 ? (
+                <EmptyState
+                  icon={<Clock className="h-12 w-12" aria-hidden="true" />}
+                  title="No team records"
+                  description="No attendance records found for the selected date range."
+                />
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full text-sm" aria-label="Team attendance records">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Employee ID</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Name</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Date</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Check-in</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Check-out</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Late (min)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teamLogs.map((log) => (
+                          <tr key={log.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 text-muted-foreground">{log.employeeId || "\u2014"}</td>
+                            <td className="px-4 py-3 font-medium">{[log.staffName, log.staffLastName].filter(Boolean).join(" ") || "\u2014"}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{formatDate(log.date)}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{log.checkIn ? formatTime(log.checkIn) : "\u2014"}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{log.checkOut ? formatTime(log.checkOut) : "\u2014"}</td>
+                            <td className="px-4 py-3"><Badge variant={statusVariant[log.status] || "secondary"} className="capitalize">{log.status}</Badge></td>
+                            <td className="px-4 py-3 text-muted-foreground">{log.lateMinutes || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+
+                  {teamTotal > teamLimit && (
+                    <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
+                      <p className="text-xs text-muted-foreground" aria-live="polite">
+                        Showing <span className="font-medium">{Math.min(teamTotal, (teamPage - 1) * teamLimit + 1)}</span> to{" "}
+                        <span className="font-medium">{Math.min(teamTotal, teamPage * teamLimit)}</span> of{" "}
+                        <span className="font-medium">{teamTotal}</span> entries
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTeamPage((p) => Math.max(1, p - 1))}
+                          disabled={teamPage === 1 || teamLoading}
+                          aria-label="Go to previous page of team attendance records"
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs text-muted-foreground font-medium">
+                          Page {teamPage} of {Math.ceil(teamTotal / teamLimit)}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTeamPage((p) => Math.min(Math.ceil(teamTotal / teamLimit), p + 1))}
+                          disabled={teamPage >= Math.ceil(teamTotal / teamLimit) || teamLoading}
+                          aria-label="Go to next page of team attendance records"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

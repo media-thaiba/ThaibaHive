@@ -9,10 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Plus, Wallet, ArrowDown, ArrowUp, Minus } from "lucide-react";
+import dynamic from "next/dynamic";
 import { ensureArray } from "@/lib/utils";
 import { PurchaseList } from "@/components/purchases/purchase-list";
-import { PurchaseFormDialog } from "@/components/purchases/purchase-form-dialog";
-import { PurchaseDetailDialog } from "@/components/purchases/purchase-detail-dialog";
+import { usePurchasesStore } from "@/stores";
+
+const PurchaseFormDialog = dynamic(
+  () => import("@/components/purchases/purchase-form-dialog").then((m) => m.PurchaseFormDialog),
+  { ssr: false }
+);
+const PurchaseDetailDialog = dynamic(
+  () => import("@/components/purchases/purchase-detail-dialog").then((m) => m.PurchaseDetailDialog),
+  { ssr: false }
+);
 
 type PurchaseRequest = {
   id: string; requesterId: string; itemName: string; quantity: number; estimatedCost: number;
@@ -30,12 +39,18 @@ type BudgetSummary = {
 
 export default function PurchasesPage() {
   const { staff } = useAuth();
+  const {
+    activeTab,
+    setActiveTab,
+    showForm,
+    setShowForm,
+    selectedRequest,
+    setSelectedRequest,
+  } = usePurchasesStore();
+
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [allPurchases, setAllPurchases] = useState<PurchaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<"my" | "team">("my");
-  const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
   const [budget, setBudget] = useState<BudgetSummary | null>(null);
   const [budgetLoading, setBudgetLoading] = useState(true);
 
@@ -150,7 +165,13 @@ export default function PurchasesPage() {
       />
 
       <PurchaseFormDialog open={showForm} onOpenChange={setShowForm} onSubmitted={fetchPurchases} />
-      <PurchaseDetailDialog request={selectedRequest} staffRole={staff?.role} onClose={() => setSelectedRequest(null)} onReviewed={fetchPurchases} />
+
+      <PurchaseDetailDialog
+        request={selectedRequest}
+        staffRole={staff?.role}
+        onClose={() => setSelectedRequest(null)}
+        onReviewed={fetchPurchases}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import {
   DoorOpen, MessageSquare, Award, CircleDot, LayoutDashboard,
   Store, FolderOpen, ClipboardCheck,
   GraduationCap, Users as UsersIcon, Layers, CalendarDays,
-  Smartphone,
+  Smartphone, Bot,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,6 +58,7 @@ export const navGroups: NavGroup[] = [
       { href: "/assets", label: "Assets", desc: "Track institutional assets and equipment assignments", icon: Briefcase, roles: ["super_admin", "admin", "principal", "hod", "staff", "purchase"] },
       { href: "/reviews", label: "Reviews", desc: "View performance reviews and submit self-evaluations", icon: ClipboardCheck, roles: ["super_admin", "admin", "principal", "hod", "staff"] },
       { href: "/settings", label: "Settings", desc: "Update your profile, password, and notification preferences", icon: Settings, roles: ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"] },
+      { href: "/admin/agents", label: "Agents Cockpit", desc: "Autonomous multi-agent workflows, safety guardrails & telemetry", icon: Bot, permission: "agent:workflows:view", roles: ["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase", "regional_admin", "regional_auditor"] },
       { href: "/admin/nfc", label: "NFC Cards", desc: "Manage NFC card inventory and assignments", icon: Smartphone, roles: ["super_admin", "admin"] },
       { href: "/admin/executive/analytics", label: "Executive Analytics", desc: "Unified governance, resilience, and mobile intelligence dashboard", icon: BarChart3, roles: ["super_admin", "admin"] },
     ],

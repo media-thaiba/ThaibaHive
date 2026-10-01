@@ -1,30 +1,28 @@
 # Current Task & Sprint Status
 
-## Current Sprint
-- **MOBILE-NETWORK-AUTO-TUNING-024**: Mobile Network-Aware Bandwidth Auto-Tuning
-- **Status**: ✅ Completed & Released (v3.8.0)
+## Current Milestone
+- **RELEASE-V3.32.0**: Modernization, Component Extraction, Zustand Centralization, WCAG 2.1 AA & Performance
+- **Status**: ✅ Completed & Certified (v3.32.0)
 
 ## Active Goal
-- **Sprint-024 Integration**: Auto-tune batch sizes, compression levels, and retry backoffs based on active client network parameters. Secure settings admin APIs and render visual settings forms in the Swarm console.
+- **Release-v3.32.0 Completion**: Decomposed 4 monolithic pages into 14 modular subcomponents, centralized UI state into 6 Zustand stores, achieved full WCAG 2.1 AA accessibility conformance, tuned dynamic import performance and query cache defaults, and authored complete architectural documentation.
 
 ## Status Breakdown
 
 ### Completed
-- [x] Create `adaptive_sync_decision_engine.dart` containing evaluation algorithms
-- [x] Integrate parameter bindings inside isolates and background managers
-- [x] Add database schemas, migrations, and default seeds for wifi, cellular, and default connection environments
-- [x] Implement REST CRUD APIs under `/api/admin/sync-policies`
-- [x] Set up local client handshake cache box and Riverpod provider with 2h circuit breaker
-- [x] Ingest metrics to EventBus and render visualization forms in `MobileSyncDashboard.tsx`
-- [x] Write Jest integration test suites and E2E Playwright specs
-- [x] Run complete suite of 195 Jest suites (all 842 tests passing)
-- [x] Document runbooks, release certificate, and execution logs
+- [x] Wave 1: Baseline Verification Suite (100% gateway, tenant, identity, and RBAC coverage)
+- [x] Wave 2: Component Extraction (14 domain subcomponents created for Media Library, Vehicles, Circulars, Grievances)
+- [x] Wave 3: Zustand State Centralization (6 centralized stores under `src/stores/`)
+- [x] Wave 4: WCAG 2.1 AA Accessibility Polish (`/signup`, `/staff`, `/attendance`, `/tasks`)
+- [x] Wave 5: Performance Optimization (`next/dynamic` code-splitting, `optimizePackageImports`, QueryClient cache tuning)
+- [x] Wave 6: Comprehensive Architectural Documentation (Developer Onboarding, Design System, OpenAPI 3.1 Guide)
+- [x] Release Preparation: Version bump to `3.32.0` in `package.json`, `CHANGELOG.md` updated, and release certificate generated
 
 ### In Progress
-- (None — Sprint-024 complete, transitioning to Sprint-025)
+- *None — Release v3.32.0 complete and certified for production merge.*
 
 ### Next Tasks (Up Next)
-- **Sprint-025**: Analyze and structure next sprint engineering technical contracts.
+- **Playwright E2E Test Expansion**: Author test suites covering critical user flows for newly extracted components.
 
 ### Blocked
 - *None*

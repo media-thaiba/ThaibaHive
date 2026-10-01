@@ -105,14 +105,18 @@ function SortableTaskCard({ task }: { task: Task }) {
         <Button
           variant="ghost"
           size="icon-xs"
-          className="mt-0.5 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-          aria-label="Drag to reorder"
+          className="mt-0.5 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+          aria-label={`Drag to reorder task: ${task.title}`}
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <Link href={`/tasks/${task.id}`} className="text-sm font-medium hover:underline flex-1 line-clamp-2">
+        <Link
+          href={`/tasks/${task.id}`}
+          aria-label={`View task details: ${task.title}, priority ${task.priority}${task.dueDate ? `, due ${task.dueDate}` : ""}`}
+          className="text-sm font-medium hover:underline flex-1 line-clamp-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden rounded-xs"
+        >
           {task.title}
         </Link>
       </div>
@@ -125,7 +129,7 @@ function SortableTaskCard({ task }: { task: Task }) {
         <Badge variant={pStyle.badge}>{task.priority}</Badge>
         {task.dueDate && (
           <span className={`text-xs px-1.5 py-0.5 rounded-md ${dueDateColor(dueStatus)}`}>
-            <Calendar className="h-3 w-3 inline mr-0.5" />
+            <Calendar className="h-3 w-3 inline mr-0.5" aria-hidden="true" />
             {dueStatus === "overdue" && "Overdue: "}
             {dueStatus === "today" && "Today: "}
             {task.dueDate}
@@ -136,7 +140,7 @@ function SortableTaskCard({ task }: { task: Task }) {
       {task.assignee && (
         <div className="pl-6">
           <div className="flex items-center gap-1.5">
-            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary">
+            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary" aria-hidden="true">
               {task.assignee.firstName[0]}{task.assignee.lastName[0]}
             </div>
             <span className="text-xs text-muted-foreground">
@@ -154,13 +158,13 @@ function TaskCardOverlay({ task }: { task: Task }) {
   return (
     <div className={`rounded-xl border bg-card p-3.5 ${pStyle.bg} shadow-lg w-[280px]`}>
       <div className="flex items-start gap-2">
-        <GripVertical className="h-4 w-4 mt-0.5 text-muted-foreground" />
+        <GripVertical className="h-4 w-4 mt-0.5 text-muted-foreground" aria-hidden="true" />
         <span className="text-sm font-medium line-clamp-2">{task.title}</span>
       </div>
       {task.assignee && (
         <div className="mt-2 pl-6">
           <div className="flex items-center gap-1.5">
-            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary">
+            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary" aria-hidden="true">
               {task.assignee.firstName[0]}{task.assignee.lastName[0]}
             </div>
             <span className="text-xs text-muted-foreground">
@@ -296,7 +300,7 @@ export default function TasksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 p-6 lg:p-8">
+      <div className="flex-1 p-6 lg:p-8 space-y-4" role="status" aria-label="Loading tasks board">
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           {[...Array(4)].map((_, i) => (
@@ -313,12 +317,13 @@ export default function TasksPage() {
         title="Tasks"
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border bg-muted/30 p-0.5">
+            <div role="group" aria-label="Task scope filter" className="flex rounded-lg border bg-muted/30 p-0.5">
               {(["all", "my", "department"] as const).map((s) => (
                 <Button
                   key={s}
                   variant={scope === s ? "default" : "ghost"}
                   size="sm"
+                  aria-pressed={scope === s}
                   onClick={() => setScope(s)}
                   className="text-xs h-7 px-2.5"
                 >
@@ -327,7 +332,7 @@ export default function TasksPage() {
               ))}
             </div>
             <Link href="/tasks/new">
-              <Button>New Task</Button>
+              <Button aria-label="Create new task">New Task</Button>
             </Link>
           </div>
         }
@@ -336,7 +341,7 @@ export default function TasksPage() {
 
       {tasks.length === 0 ? (
         <EmptyState
-          icon={<CheckSquare className="h-12 w-12" />}
+          icon={<CheckSquare className="h-12 w-12" aria-hidden="true" />}
           title="No tasks yet"
           description="Create your first task to get started. Drag tasks between columns to update their status."
           action={{ label: "Create Task", href: "/tasks/new" }}
@@ -349,12 +354,15 @@ export default function TasksPage() {
           onDragEnd={handleDragEnd}
         >
           {/* Mobile column tabs */}
-          <div className="flex sm:hidden gap-1 mb-4 overflow-x-auto">
+          <div role="tablist" aria-label="Task status columns" className="flex sm:hidden gap-1 mb-4 overflow-x-auto">
             {columns.map((col) => {
               const count = tasks.filter((t) => t.status === col).length;
               return (
                 <Button
                   key={col}
+                  role="tab"
+                  aria-selected={mobileColumn === col}
+                  aria-controls={`task-col-${col}`}
                   variant="ghost"
                   size="sm"
                   onClick={() => setMobileColumn(col)}
@@ -375,10 +383,16 @@ export default function TasksPage() {
               const colTasks = tasks.filter((t) => t.status === col);
               const isVisible = mobileColumn === col;
               return (
-                <div key={col} className={`rounded-xl border bg-muted/20 ${!isVisible ? "hidden sm:block" : ""}`}>
+                <section
+                  key={col}
+                  id={`task-col-${col}`}
+                  role="region"
+                  aria-label={`${columnLabels[col]} tasks column, ${colTasks.length} items`}
+                  className={`rounded-xl border bg-muted/20 ${!isVisible ? "hidden sm:block" : ""}`}
+                >
                   <div className={`border-b px-3.5 py-2.5 flex items-center justify-between rounded-t-xl ${columnColors[col]}`}>
                     <span className="text-sm font-medium">{columnLabels[col]}</span>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs" aria-label={`${colTasks.length} tasks`}>
                       {colTasks.length}
                     </Badge>
                   </div>
@@ -386,13 +400,15 @@ export default function TasksPage() {
                     items={colTasks.map((t) => t.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="p-2.5 space-y-2.5 min-h-[300px]">
+                    <div className="p-2.5 space-y-2.5 min-h-[300px]" role="list" aria-label={`${columnLabels[col]} task list`}>
                       {colTasks.map((task) => (
-                        <SortableTaskCard key={task.id} task={task} />
+                        <div role="listitem" key={task.id}>
+                          <SortableTaskCard task={task} />
+                        </div>
                       ))}
                     </div>
                   </SortableContext>
-                </div>
+                </section>
               );
             })}
           </div>

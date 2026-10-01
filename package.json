@@ -1,6 +1,6 @@
 {
   "name": "thaibahive",
-  "version": "3.31.0",
+  "version": "3.33.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -58,6 +58,7 @@
     "docgen:simulate": "tsx scripts/docgen-simulate.ts",
     "fee:simulate": "tsx scripts/fee-simulate.ts",
     "alumni:simulate": "tsx scripts/alumni-simulate.ts",
+    "agent:simulate": "tsx scripts/agent-simulate.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {

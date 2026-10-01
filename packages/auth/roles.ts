@@ -113,6 +113,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "alumni:chapters:view", "alumni:chapters:manage", "alumni:directory:view", "alumni:donations:view", "alumni:donations:manage", "alumni:donations:collect", "alumni:events:view", "alumni:events:manage", "alumni:events:rsvp", "alumni:events:checkin", "alumni:jobs:view", "alumni:jobs:post", "alumni:jobs:apply", "alumni:jobs:manage", "alumni:mentorship:view", "alumni:mentorship:manage", "alumni:profile:view", "alumni:profile:manage",
     "supply:contracts:manage", "supply:invoices:match", "supply:orders:approve", "supply:orders:manage", "supply:orders:view", "supply:receipts:record", "supply:requisitions:create", "supply:requisitions:view", "supply:stream:view", "supply:vendors:manage", "supply:vendors:view",
     "finance:read", "finance:create", "finance:update", "finance:delete", "finance:export", "finance:approve", "finance:fees:view", "finance:fees:manage", "finance:fees:collect", "finance:reconciliation:manage", "finance:scholarships:view", "finance:scholarships:approve", "accounts:view", "accounts:create", "accounts:manage",
+    "agent:workflows:view", "agent:workflows:manage", "agent:memory:view", "agent:audit:view", "agent:guardrails:manage", "agent:telemetry:view",
   ],
   regional_auditor: [
     "regional:view", "warehouse:export", "reports:read", "reports:review", "staff:read",
@@ -128,7 +129,8 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "neuro:clusters:view", "neuro:metrics:view", "neuro:provenance:view", "neuro:billing:view",
     "alumni:directory:view", "alumni:donations:view", "alumni:events:view",
     "supply:orders:view", "supply:vendors:view", "supply:requisitions:view",
-    "finance:read", "finance:fees:view", "finance:scholarships:view", "accounts:view"
+    "finance:read", "finance:fees:view", "finance:scholarships:view", "accounts:view",
+    "agent:workflows:view", "agent:audit:view", "agent:telemetry:view",
   ],
   admin: [
     "student.create", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -191,6 +193,8 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "classes:read", "classes:create", "classes:update", "classes:delete",
     "academic_years:manage", "student_attendance:read", "student_attendance:manage", "timetables:read", "timetables:manage", "enquiries:read", "enquiries:manage", "affiliations:manage",
     "reviews:read", "reviews:create", "reviews:update",
+    "agent:workflows:view", "agent:workflows:create", "agent:workflows:execute", "agent:workflows:approve", "agent:workflows:manage",
+    "agent:memory:view", "agent:memory:manage", "agent:audit:view", "agent:guardrails:manage", "agent:killswitch:engage", "agent:telemetry:view",
   ],
   principal: [
     "student.create", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -253,6 +257,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "curriculum:advising:chat", "curriculum:audit:execute", "curriculum:catalog:manage", "curriculum:plans:approve", "curriculum:plans:edit", "curriculum:plans:view", "curriculum:retention:intervene", "curriculum:retention:view", "curriculum:transfer:articulate",
     "km:advising:audit", "km:analytics:view", "km:knowledge:search",
     "engage:campaign:manage", "engage:campaign:view", "engage:chat:interact", "engage:preferences:manage", "engage:template:edit", "engage:workflow:manage",
+    "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:audit:view", "agent:telemetry:view",
   ],
   hod: [
     "marks.enter", "marks:enter", "exam:read", "exam:enter_marks",
@@ -297,6 +302,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "km:knowledge:search",
     "engage:chat:interact",
     "operations:read", "profile:read", "profile:write",
+    "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:telemetry:view",
   ],
   staff: [
     "marks.enter", "marks:enter", "exam:read", "exam:enter_marks",
@@ -338,6 +344,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "engage:chat:interact",
     "reviews:read", "reviews:create",
     "profile:read", "profile:write",
+    "agent:workflows:view", "agent:workflows:execute",
   ],
   accounts: [
     "staff:read",
@@ -367,6 +374,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "alumni:donations:view", "alumni:donations:collect", "alumni:donations:manage",
     "neuro:billing:view", "neuro:billing:manage",
     "profile:read", "profile:write",
+    "agent:workflows:view", "agent:workflows:approve",
   ],
   purchase: [
     "staff:read",
@@ -391,6 +399,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "workspaces:read", "workspaces:write",
     "supply:contracts:manage", "supply:invoices:match", "supply:orders:approve", "supply:orders:manage", "supply:orders:view", "supply:receipts:record", "supply:requisitions:create", "supply:requisitions:view", "supply:stream:view", "supply:vendors:manage", "supply:vendors:view",
     "profile:read", "profile:write",
+    "agent:workflows:view", "agent:workflows:approve",
   ],
 };
 

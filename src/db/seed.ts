@@ -14,7 +14,9 @@ import {
   markEntries,
   gradeScales,
   attendanceLocations,
+  agenticWorkflows,
 } from "./schema";
+import { institutionalWorkflowTemplates } from "../lib/agents/workflow/templates/institutional-templates";
 import { eq } from "drizzle-orm";
 
 
@@ -360,6 +362,49 @@ async function seedAcademic() {
   console.log("Academic, examination (exam_100), and attendance fixtures seeded successfully.");
 }
 
+async function seedAgentWorkflows() {
+  console.log("Seeding institutional agent workflow templates...");
+  try {
+    await db.run(
+      `CREATE TABLE IF NOT EXISTS agentic_workflows (
+        id text PRIMARY KEY NOT NULL,
+        institution_id text NOT NULL,
+        name text NOT NULL,
+        description text,
+        definition_json text NOT NULL,
+        version integer NOT NULL DEFAULT 1,
+        status text NOT NULL DEFAULT 'active',
+        created_by text,
+        created_at text NOT NULL DEFAULT (current_timestamp),
+        updated_at text NOT NULL DEFAULT (current_timestamp)
+      )`
+    );
+
+    const inst = await db.select().from(institutions).limit(1).get();
+    const institutionId = inst?.id || "inst_tps_majhi";
+
+    for (const tpl of institutionalWorkflowTemplates) {
+      const existing = await db.select().from(agenticWorkflows).where(eq(agenticWorkflows.id, tpl.key)).get();
+      if (!existing) {
+        await db.insert(agenticWorkflows).values({
+          id: tpl.key,
+          institutionId,
+          name: tpl.name,
+          description: tpl.description || "",
+          version: tpl.version || 1,
+          definitionJson: JSON.stringify(tpl),
+          status: "active",
+          createdBy: "system",
+        }).run();
+      }
+    }
+    console.log(`Seeded ${institutionalWorkflowTemplates.length} agent workflow templates.`);
+  } catch (err: any) {
+    console.warn("Agent workflows seeding notice:", err?.message || err);
+  }
+}
+
+
 const arg = process.argv[2];
 
 if (arg === "marketplace") {
@@ -372,9 +417,17 @@ if (arg === "marketplace") {
     console.error("Academic seed failed:", e);
     process.exit(1);
   });
-} else {
-  seed().catch((e) => {
-    console.error("Seed failed:", e);
+} else if (arg === "agents") {
+  seedAgentWorkflows().catch((e) => {
+    console.error("Agent workflows seed failed:", e);
     process.exit(1);
   });
+} else {
+  seed()
+    .then(() => seedAgentWorkflows())
+    .catch((e) => {
+      console.error("Seed failed:", e);
+      process.exit(1);
+    });
 }
+

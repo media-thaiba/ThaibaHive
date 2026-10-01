@@ -95,7 +95,15 @@
 | 2026-07-30 P3-94 Complete : Audited NFC modal components — `attendance/nfc-scanner-modal.tsx` (check-in) and `nfc/nfc-scanner-modal.tsx` (enrollment) serve distinct purposes; added `<NfcEnrollmentModal>` to unify enrollment flow. |
 | 2026-07-30 P3-95 Complete : Audited `globals.css` — confirmed all component colors use CSS custom properties (`hsl(var(--*))`); added theme compliance comment. |
 | 2026-07-30 P3-96 Complete : Added `aria-label` and `aria-current="page"` to all BottomNav `<Link>` items for screen reader navigation. |
-|                            97 Tasks Fixed, 2 Still Open (P2-46, P2-47 TanStack Query page migrations in progress), 0 Regressed. |
+| 2026-10-01 P2-46 Complete : Migrated page components to TanStack Query hooks with global cache tuning. |
+| 2026-10-01 P2-47 Complete : Unified API client calls via central `@/lib/api/client` with auth headers. |
+| 2026-10-01 Wave-01 Complete : Baseline security & quality verification certified (100% gateway, tenant, identity, RBAC). |
+| 2026-10-01 Wave-02 Complete : Extracted 4 monolithic pages into 14 domain subcomponents (Media, Vehicles, Circulars, Grievances). |
+| 2026-10-01 Wave-03 Complete : Centralized scattered UI state into 6 Zustand stores under `src/stores/`. |
+| 2026-10-01 Wave-04 Complete : Remediated WCAG 2.1 AA accessibility across secondary admin pages and auth flows. |
+| 2026-10-01 Wave-05 Complete : Implemented dynamic code-splitting via `next/dynamic` and package compiler tree-shaking. |
+| 2026-10-01 Wave-06 Complete : Authored Developer Onboarding, Design System, and OpenAPI 3.1 Specification guides. |
+|                            105 Tasks Fixed, 0 Still Open, 0 Regressed — Platform Certified (v3.32.0). |
 +---------------------------------------------------------------------------------------------------------+
 ```
 

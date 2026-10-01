@@ -15,16 +15,27 @@ import {
   ShieldCheck,
   Calendar,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActiveTasksPanel } from "@/components/dashboard/active-tasks-panel";
 import { AttendanceWidget } from "@/components/dashboard/attendance-widget";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { QuickLinks } from "@/components/dashboard/quick-links";
 import { FocusLinks } from "@/components/dashboard/focus-links";
-import { GuidedTour } from "@/components/dashboard/guided-tour";
-import { LeaveDialog } from "@/components/dashboard/leave-dialog";
-import { TaskDialog } from "@/components/dashboard/task-dialog";
 import { PermissionGate } from "@/components/ui/permission-gate";
+
+const GuidedTour = dynamic(
+  () => import("@/components/dashboard/guided-tour").then((m) => m.GuidedTour),
+  { ssr: false }
+);
+const LeaveDialog = dynamic(
+  () => import("@/components/dashboard/leave-dialog").then((m) => m.LeaveDialog),
+  { ssr: false }
+);
+const TaskDialog = dynamic(
+  () => import("@/components/dashboard/task-dialog").then((m) => m.TaskDialog),
+  { ssr: false }
+);
 
 type DashboardData = {
   staffCount: number;
