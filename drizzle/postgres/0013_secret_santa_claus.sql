@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "idx_pg_payroll_ded_rec_type" ON "payroll_deductions" USING btree ("payroll_record_id","deduction_type");
