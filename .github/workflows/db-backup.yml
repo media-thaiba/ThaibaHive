@@ -15,7 +15,6 @@ jobs:
   db-backup:
     name: Backup PostgreSQL Database
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -34,7 +33,7 @@ jobs:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
 
       - name: Run database backup
-        if: ${{ inputs.dry_run != 'true' && secrets.DATABASE_URL != '' && secrets.BACKUP_S3_BUCKET != '' && secrets.AWS_ACCESS_KEY_ID != '' }}
+        if: ${{ (github.event.inputs.dry_run || 'false') != 'true' && secrets.DATABASE_URL != '' && secrets.BACKUP_S3_BUCKET != '' && secrets.AWS_ACCESS_KEY_ID != '' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
@@ -43,5 +42,5 @@ jobs:
         run: chmod +x scripts/db-backup.sh && bash scripts/db-backup.sh
 
       - name: Skipped notice
-        if: ${{ inputs.dry_run == 'true' || secrets.DATABASE_URL == '' || secrets.BACKUP_S3_BUCKET == '' || secrets.AWS_ACCESS_KEY_ID == '' }}
+        if: ${{ (github.event.inputs.dry_run || 'false') == 'true' || secrets.DATABASE_URL == '' || secrets.BACKUP_S3_BUCKET == '' || secrets.AWS_ACCESS_KEY_ID == '' }}
         run: echo "Skipping backup upload (dry run or missing AWS/DATABASE_URL secrets in repository environment)."

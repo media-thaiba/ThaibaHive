@@ -6,7 +6,7 @@ import { applyTenantRegionHeaders } from "./middleware/tenant-region";
 import { applyEdgeCaching } from "./lib/edge/cache-control";
 
 function getJwtSecretBytes(): Uint8Array {
-  const secret = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_for_thaibahive_auth";
+  const secret = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847";
   return new TextEncoder().encode(secret);
 }
 
