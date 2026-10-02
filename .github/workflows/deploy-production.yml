@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  NODE_OPTIONS: "--max-old-space-size=6144"
+
 jobs:
   preflight:
     name: Production Preflight Gate

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, staging]
 
+env:
+  NODE_OPTIONS: "--max-old-space-size=6144"
+
 jobs:
   gateway-security-scan:
     name: Gateway Security AST & Rate Limiting Gate
