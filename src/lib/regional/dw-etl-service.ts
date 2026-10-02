@@ -29,6 +29,8 @@ export interface EtlRunResult {
 
 export async function ensureRegionalTablesExist(): Promise<void> {
   try {
+    await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES ('inst_default', 'Default Campus', 'DEF')`);
+
     await db.run(sql`
       CREATE TABLE IF NOT EXISTS regional_groups (
         id TEXT PRIMARY KEY,

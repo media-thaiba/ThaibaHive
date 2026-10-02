@@ -14,6 +14,7 @@ describe("Phase 1 Tenant Crypto & NFC Normalization", () => {
       algorithm TEXT NOT NULL DEFAULT 'AES-GCM-256',
       created_at TEXT NOT NULL DEFAULT (current_timestamp)
     )`);
+    await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES (${testInstitutionId}, 'Test Inst', 'TEST')`);
   });
 
   afterEach(async () => {
@@ -50,6 +51,7 @@ describe("Phase 1 Tenant Crypto & NFC Normalization", () => {
 
     it("should handle concurrent getOrCreateTenantKey initializations without race condition errors", async () => {
       const concurrentInstId = "concurrent-inst-" + Date.now();
+      await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES (${concurrentInstId}, 'Concurrent Inst', 'CONC')`);
       
       // Simulate two concurrent requests hitting getOrCreateTenantKey at the exact same moment
       const [key1, key2] = await Promise.all([

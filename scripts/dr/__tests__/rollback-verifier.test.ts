@@ -23,7 +23,8 @@ describe("runRollbackVerification & evaluateDRExecution", () => {
     expect(report.steps.every((s) => s.passed)).toBe(true);
   });
 
-  it("should evaluate DR canary promotion gate correctly", () => {
+  it("should evaluate DR canary promotion gate correctly", async () => {
+    await runRollbackVerification(false);
     const evaluation = evaluateDRExecution();
 
     expect(evaluation.passed).toBe(true);

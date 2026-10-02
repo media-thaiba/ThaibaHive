@@ -154,7 +154,7 @@ describe("Analytics Module Tests", () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.filePath).toContain("public\\exports\\");
+      expect(result.filePath).toMatch(/public[\\/]exports[\\/]/);
       expect(result.webPath).toContain("/exports/");
     });
   });

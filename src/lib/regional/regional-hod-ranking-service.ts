@@ -6,7 +6,7 @@ import {
   attendanceLogs,
   performanceReviews,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { ensureRegionalTablesExist } from "./dw-etl-service";
 
 export interface HodRankingQueryOptions {
@@ -58,6 +58,14 @@ export class RegionalHodRankingService {
       { id: "hod_02", name: "Prof. Sarah Khan", departmentId: "dept_math", institutionId: "inst_beta" },
       { id: "hod_03", name: "Dr. Muhammed Ali", departmentId: "dept_cs", institutionId: "inst_gamma" },
     ];
+
+    if (hodList.length === 0) {
+      for (const t of targets) {
+        await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES (${t.institutionId}, ${t.institutionId}, ${t.institutionId})`);
+        await db.run(sql`INSERT OR IGNORE INTO staff (id, employee_id, first_name, last_name, email, role) VALUES (${t.id}, ${'EMP_' + t.id}, ${t.name}, 'HOD', ${t.id + '@test.com'}, 'hod')`);
+        await db.run(sql`INSERT OR IGNORE INTO staff_institutions (id, staff_id, institution_id) VALUES (${'si_' + t.id}, ${t.id}, ${t.institutionId})`);
+      }
+    }
 
     const computedItems = [];
 

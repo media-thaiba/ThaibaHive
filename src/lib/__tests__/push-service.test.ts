@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { staffDeviceTokens, notifications, staff, institutions } from "@/db/schema";
 import { sendPushNotification, sendBulkPushNotifications } from "@/lib/notifications/push-service";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 describe("FCM PushService & Device Tokens", () => {
   let testStaffA: string;
@@ -11,6 +11,14 @@ describe("FCM PushService & Device Tokens", () => {
   const mockToken = "fcm-token-unit-test-12345";
 
   beforeAll(async () => {
+    // Ensure test institutions and staff exist for foreign key constraints
+    await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES ('inst-fallback-1', 'Inst 1', 'INS1')`);
+    await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES ('inst-fallback-2', 'Inst 2', 'INS2')`);
+    await db.run(sql`INSERT OR IGNORE INTO staff (id, employee_id, first_name, last_name, email, role) VALUES ('staff-fallback-a', 'EMP_A', 'Staff', 'A', 'staffa@test.com', 'staff')`);
+    await db.run(sql`INSERT OR IGNORE INTO staff (id, employee_id, first_name, last_name, email, role) VALUES ('staff-fallback-b', 'EMP_B', 'Staff', 'B', 'staffb@test.com', 'staff')`);
+    await db.run(sql`INSERT OR IGNORE INTO staff_institutions (id, staff_id, institution_id) VALUES ('si-1', 'staff-fallback-a', 'inst-fallback-1')`);
+    await db.run(sql`INSERT OR IGNORE INTO staff_institutions (id, staff_id, institution_id) VALUES ('si-2', 'staff-fallback-b', 'inst-fallback-1')`);
+
     // Query existing staff & institutions from seeded database
     const staffRows = await db.select({ id: staff.id }).from(staff).limit(2).all();
     const instRows = await db.select({ id: institutions.id }).from(institutions).limit(2).all();
