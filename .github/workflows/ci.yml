@@ -48,8 +48,11 @@ jobs:
 
       - name: Database Parity & Migration Check
         run: |
-          pnpm db:replica:check
           pnpm premigrate
+          pnpm db:migrate
+          pnpm db:replica:check
+        env:
+          DATABASE_URL: file:./test.db
 
       - name: Run unit & integration tests
         run: pnpm test

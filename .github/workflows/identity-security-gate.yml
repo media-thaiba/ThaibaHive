@@ -1,4 +1,4 @@
-﻿name: Identity Security Gate
+name: Identity Security Gate
 
 on:
   pull_request:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20", cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test -- --testPathPattern=identity --passWithNoTests
+      - run: pnpm test -- --testPathPatterns=identity --passWithNoTests
 
   identity-scan:
     name: Identity Security Coverage Scan
@@ -53,4 +53,4 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20", cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test -- --testPathPattern=revocation --passWithNoTests
+      - run: pnpm test -- --testPathPatterns=revocation --passWithNoTests
