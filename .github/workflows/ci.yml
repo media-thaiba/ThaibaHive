@@ -238,28 +238,7 @@ jobs:
           npx wait-on -t 30000 http://localhost:3000/api/health || sleep 5
 
           # Generate valid JWT signed with current AUTH_JWT_SECRET
-          TOKEN=$(node -e "
-            const { SignJWT } = require('jose');
-            const { createClient } = require('@libsql/client');
-            const client = createClient({ url: process.env.DATABASE_URL || 'file:./dev.db' });
-            client.execute(\"SELECT id, email, role FROM staff WHERE role = 'super_admin' LIMIT 1\").then(res => {
-              const admin = (res && res.rows && res.rows[0]) ? res.rows[0] : { id: '34c45253-9416-4512-9fb6-179e257e346b', email: 'admin@thaibahive.local', role: 'super_admin' };
-              const secretKey = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847');
-              return new SignJWT({
-                staffId: admin.id,
-                email: admin.email,
-                role: admin.role,
-                employeeId: 'EMP001',
-                name: 'Test Admin',
-                institutionId: 'inst_campus_main',
-                tokenVersion: 0
-              })
-              .setProtectedHeader({ alg: 'HS256' })
-              .setIssuedAt()
-              .setExpirationTime('24h')
-              .sign(secretKey);
-            }).then(t => process.stdout.write(t));
-          ")
+          TOKEN=$(node scripts/generate-loadtest-token.js)
 
           mkdir -p k6-reports
 

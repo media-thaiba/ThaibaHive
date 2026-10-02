@@ -1,6 +1,8 @@
 const { SignJWT } = require("jose");
 
-const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || "thaiba_jwt_secret_key_production_certified_2026");
+const secret = new TextEncoder().encode(
+  process.env.AUTH_JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847"
+);
 
 async function generate() {
   const payload = {
@@ -9,16 +11,21 @@ async function generate() {
     role: "super_admin",
     employeeId: "EMP001",
     name: "Test Admin",
+    institutionId: "inst_campus_main",
     tokenVersion: 0,
   };
 
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
+    .setExpirationTime("24h")
     .setIssuedAt()
     .sign(secret);
 
-  console.log(token);
+  process.stdout.write(token);
 }
 
-generate().catch(console.error);
+generate().catch((err) => {
+  console.error("Token generation failed:", err);
+  process.exit(1);
+});
+
