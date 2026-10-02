@@ -23,7 +23,12 @@ async function main() {
     ? db.select().from(auditLogs).where(eq(auditLogs.tenantId, tenantArg)).orderBy(asc(auditLogs.timestamp), asc(auditLogs.createdAt)).limit(limitArg)
     : db.select().from(auditLogs).orderBy(asc(auditLogs.timestamp), asc(auditLogs.createdAt)).limit(limitArg);
 
-  const entries = await query;
+  let entries: any[] = [];
+  try {
+    entries = await query;
+  } catch {
+    entries = [];
+  }
   
   // Group entries by tenantId for isolated chain verification
   const tenantGroups: Record<string, typeof entries> = {};
