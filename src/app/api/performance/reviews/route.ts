@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { performanceReviews, staff, performanceCycles, staffInstitutions } from "@/db/schema";
+import { performanceReviews, staff, performanceCycles } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";

@@ -182,20 +182,6 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-function extractRoleFromToken(token: string): string | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = atob(base64);
-    const parsed = JSON.parse(decoded);
-    return typeof parsed.role === 'string' ? parsed.role : null;
-  } catch {
-    return null;
-  }
-}
-
 const ALLOWED_ORIGIN_REGEX = /^https:\/\/(?:[a-z0-9-]+\.)*thaibahive\.com$/i;
 
 function applyCorsHeaders(request: NextRequest, response: NextResponse): NextResponse {

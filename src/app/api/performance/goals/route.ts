@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { performanceGoals, staffInstitutions } from "@/db/schema";
+import { performanceGoals } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { performanceGoalCreateSchema } from "@/lib/validation/schemas";
