@@ -52,7 +52,7 @@ export function requireAuth(
       const cronSecret = request.headers.get("x-cron-secret");
 
       // SEC-03: Path-scoped machine identity with role: "system" (never unrestricted super_admin)
-      const cronRoutes = (process.env.CRON_SECRET_ROUTES || "/api/system/update,/api/media/reconcile,/api/cron").split(",").map((s) => s.trim()).filter(Boolean);
+      const cronRoutes = (process.env.CRON_SECRET_ROUTES || "/api/system/update,/api/media/reconcile,/api/cron,/api/system/cleanup-nonces").split(",").map((s) => s.trim()).filter(Boolean);
       const isCronPathAllowed = cronRoutes.some((allowed) => normalizedPath.startsWith(allowed));
       const isDrPathAllowed = normalizedPath.startsWith("/api/system/dr") || normalizedPath.startsWith("/api/dr");
       const isCachePathAllowed = normalizedPath.startsWith("/api/system/cache") || normalizedPath.startsWith("/api/cache");

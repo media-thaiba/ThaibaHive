@@ -13,13 +13,19 @@ jobs:
     steps:
       - name: Invoke nonce cleanup endpoint
         run: |
+          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL || 'https://thaibahive.com' }}"
+          CRON_SECRET="${{ secrets.CRON_SECRET || 'thaiba_cron_secret_cert_2026' }}"
+          SESSION_TOKEN="${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}"
+          
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/system/cleanup-nonces" \
+            -X POST "$APP_URL/api/system/cleanup-nonces" \
             -H "Content-Type: application/json" \
-            -H "Cookie: thaibahive_session=${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}")
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Authorization: Bearer $SESSION_TOKEN" \
+            -H "Cookie: thaibahive_session=$SESSION_TOKEN" || echo "000")
 
           if [ "$RESPONSE" != "200" ]; then
-            echo "❌ Nonce cleanup failed with HTTP $RESPONSE"
+            echo "❌ Nonce cleanup failed with HTTP $RESPONSE against $APP_URL"
             exit 1
           fi
           echo "✅ Nonce cleanup completed successfully (HTTP $RESPONSE)"

@@ -158,6 +158,11 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
 
+      - name: Run database migrations for E2E tests
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: file:${{ github.workspace }}/dev.db
+
       - name: Run E2E tests (${{ matrix.browser }})
         run: pnpm exec playwright test --project=${{ matrix.browser }}
         env:
@@ -212,6 +217,11 @@ jobs:
 
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
+
+      - name: Run database migrations for load tests
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: file:${{ github.workspace }}/dev.db
 
       - name: Seed database for load tests
         run: pnpm db:seed
