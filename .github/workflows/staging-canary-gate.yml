@@ -42,7 +42,7 @@ jobs:
 
       - name: Run Staging Smoke Test Suite (TD-008)
         run: |
-          pnpm test:staging:smoke -- --url="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" --secret="${{ secrets.HEALTH_SECRET || '' }}" --jwt-secret="${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}"
+          pnpm test:staging:smoke -- --url="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" --secret="${{ secrets.HEALTH_SECRET || '' }}" --jwt-secret="${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}"
         env:
           NODE_ENV: production
 

@@ -57,7 +57,7 @@ jobs:
       - name: Build check
         run: pnpm build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
           DATABASE_URL: file:./test.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -145,7 +145,7 @@ jobs:
       - name: Build Next.js Web App (Standalone)
         run: pnpm run build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -163,7 +163,7 @@ jobs:
         env:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
@@ -200,7 +200,7 @@ jobs:
       - name: Build Next.js Web App (Standalone)
         run: pnpm run build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -234,7 +234,7 @@ jobs:
             const client = createClient({ url: process.env.DATABASE_URL || 'file:./dev.db' });
             client.execute(\"SELECT id, email, role FROM staff WHERE role = 'super_admin' LIMIT 1\").then(res => {
               const admin = (res && res.rows && res.rows[0]) ? res.rows[0] : { id: '34c45253-9416-4512-9fb6-179e257e346b', email: 'admin@thaibahive.local', role: 'super_admin' };
-              const secretKey = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder');
+              const secretKey = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847');
               return new SignJWT({
                 staffId: admin.id,
                 email: admin.email,
@@ -269,7 +269,7 @@ jobs:
         env:
           PORT: 3000
           DATABASE_URL: file:${{ github.workspace }}/dev.db
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'ci-build-secret-min-32-chars-thaibahive-placeholder' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
           NODE_ENV: production
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 

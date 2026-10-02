@@ -101,9 +101,10 @@ export const GET = requireAuth(async (request) => {
 }, "enquiries:read");
 
 // Protected status review handler
-export const PATCH = requireAuth(async (request: Request) => {
+export const PATCH = requireAuth(async (request: Request, session: any) => {
   const body = await request.json();
-  const { id, status, reviewedById } = body;
+  const { id, status } = body;
+  const reviewedById = session?.staffId || session?.id;
 
   if (!id || !status) {
     return NextResponse.json({ error: "id and status are required" }, { status: 400 });
