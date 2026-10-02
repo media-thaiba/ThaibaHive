@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceReviews, staff, performanceCycles, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
 import { eq, and, inArray } from "drizzle-orm";
 
@@ -85,16 +86,8 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "cycleId and staffId are required" }, { status: 400 });
     }
 
-    // Determine institution
-    let institutionId = body.institutionId;
-    if (!institutionId) {
-      const instRec = await db
-        .select({ institutionId: staffInstitutions.institutionId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.staffId, staffId))
-        .get();
-      institutionId = instRec?.institutionId || "inst_default";
-    }
+    // Resolve scoped institution
+    const institutionId = await resolveScopedInstitutionId(body.institutionId);
 
     const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newReview = {
@@ -103,7 +96,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       cycleId,
       staffId,
       evaluatorStaffId: body.evaluatorStaffId || null,
-      reviewerId: body.evaluatorStaffId || body.reviewerId || session.staffId,
+      reviewerId: session.staffId,
       formTemplateId: formTemplateId || null,
       period: period || "Quarterly",
       status: "self_assessment",

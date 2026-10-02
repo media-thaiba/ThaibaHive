@@ -73,4 +73,5 @@ export const POST = requireAuth(async (request: Request, session) => {
     console.error("Mobile sync error:", error);
     return NextResponse.json({ error: "Failed to process mobile sync batch" }, { status: 500 });
   }
-});
+}, "mobile:sync");
+

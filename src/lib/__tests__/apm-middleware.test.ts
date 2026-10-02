@@ -160,9 +160,9 @@ describe("APM Middleware & Telemetry Tests", () => {
     expect(snapshot.routes[0].status4xx).toBe(1);
   });
 
-  test("handles middleware proxy end-to-end for public route", () => {
+  test("handles middleware proxy end-to-end for public route", async () => {
     const req = new NextRequest("http://localhost:3000/api/system/health");
-    const res = proxy(req);
+    const res = await proxy(req);
 
     expect(res.headers.get("x-response-time")).toBeDefined();
     expect(res.headers.get("x-request-id")).toBeDefined();

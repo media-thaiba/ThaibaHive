@@ -40,3 +40,28 @@ export class TenantMismatchError extends Error {
     this.name = "TenantMismatchError";
   }
 }
+
+export { resolveScopedInstitutionId, getUserInstitutionScope, resolveInstitutionScopeForSession } from "@thaiba/auth";
+
+/**
+ * Server-side tenant resolution for API routes.
+ *
+ * The caller's institution scope (attached by `requireAuth`) always wins:
+ * a scoped (non-admin) user may only ever act within their own institution,
+ * regardless of what the request body or query string claims. Admins
+ * ("global" scope) may target an explicit institution from the request,
+ * defaulting to "global".
+ *
+ * Client-supplied institutionId values are NEVER trusted as a scope
+ * escalation path — they are clamped to the server-resolved scope.
+ */
+export function resolveTenantInstitutionId(
+  sessionInstitutionId: string | null | undefined,
+  requested?: string | null
+): string {
+  const scope = sessionInstitutionId || "global";
+  if (scope !== "global") {
+    return scope;
+  }
+  return requested && requested !== "global" ? requested : "global";
+}

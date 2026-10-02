@@ -31,4 +31,5 @@ export const POST = requireAuth(async (request, session) => {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-});
+}, "federated:read");
+

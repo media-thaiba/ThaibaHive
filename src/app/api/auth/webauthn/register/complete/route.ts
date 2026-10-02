@@ -49,4 +49,5 @@ export const POST = requireAuth(async (request, session) => {
     .where(eq(credentialChallenges.id, challengeRecord.id));
 
   return NextResponse.json({ verified: true, credentialId });
-});
+}, "webauthn:manage");
+

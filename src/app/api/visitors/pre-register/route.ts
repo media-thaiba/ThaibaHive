@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitorRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { visitorPreRegisterSchema } from "@/lib/validation/schemas";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
-export const GET = requireAuth(async () => {
+export const GET = requireAuth(async (request: Request) => {
+  const url = new URL(request.url);
+  const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
   const requests = await db
     .select()
     .from(visitorRequests)
+    .where(instId && instId !== "global" ? eq(visitorRequests.institutionId, instId) : undefined)
     .orderBy(desc(visitorRequests.createdAt))
     .all();
 
@@ -23,12 +27,13 @@ export const POST = requireAuth(async (request: Request) => {
   }
 
   const { visitorName, visitorPhone, visitorEmail, idType, idNumber, hostStaffId, purpose, expectedDate, expectedTimeWindow } = parsed.data;
+  const institutionId = await resolveScopedInstitutionId(body.institutionId);
 
   const requestRecord = await db
     .insert(visitorRequests)
     .values({
       id: crypto.randomUUID(),
-      institutionId: "inst_001",
+      institutionId,
       visitorName,
       visitorPhone,
       visitorEmail: visitorEmail || null,

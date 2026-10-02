@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ChatGateway } from '@/lib/operations/engage/conversational/chat-gateway';
 import { withPublicApm } from '@/lib/api/public-apm';
+import { verifySession } from '@thaiba/auth';
+import { resolveScopedInstitutionId } from '@/lib/api/tenant-scope';
 
 export const POST = withPublicApm(async function POST(request: Request) {
   try {
@@ -14,12 +16,21 @@ export const POST = withPublicApm(async function POST(request: Request) {
       );
     }
 
+    const session = await verifySession();
+    let resolvedTenant = "global";
+
+    if (session) {
+      resolvedTenant = await resolveScopedInstitutionId(institutionId);
+    } else if (typeof institutionId === "string" && institutionId.trim().length > 0) {
+      resolvedTenant = institutionId.trim();
+    }
+
     const gateway = ChatGateway.getInstance();
     const response = await gateway.handleInboundMessage(
       sessionId,
-      stakeholderId || 'anonymous_user',
+      stakeholderId || (session ? session.staffId : 'anonymous_user'),
       text,
-      institutionId || 'global'
+      resolvedTenant
     );
 
     return NextResponse.json(response);

@@ -53,7 +53,8 @@ try {
       { status: 500 }
     );
   }
-});
+}, "profile:read");
+
 
 export const OPTIONS = requireAuth(async () => {
   return new NextResponse(null, {

@@ -23,6 +23,7 @@ export interface InMemoryAgentStore {
 
 export class AgentDbStore {
   private static instance: AgentDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
   private memoryStore: InMemoryAgentStore = {
     workflows: new Map(),
     workflowRuns: new Map(),
@@ -325,12 +326,20 @@ export class AgentDbStore {
     };
     this.memoryStore.toolInvocations.set(record.id, record);
     try {
-      if (db) await db.insert(agentToolInvocations).values(record as any);
+      if (db && !this.useMemoryOnly) await db.insert(agentToolInvocations).values(record as any);
     } catch {}
     return record;
   }
 
   async listToolInvocations(tenantId: string = 'global', agentId?: string, toolName?: string): Promise<any[]> {
+    if (this.memoryStore.toolInvocations.size === 0 && db && !this.useMemoryOnly) {
+      try {
+        const rows = await db.select().from(agentToolInvocations).all();
+        for (const row of rows) {
+          this.memoryStore.toolInvocations.set(row.id, row);
+        }
+      } catch {}
+    }
     return Array.from(this.memoryStore.toolInvocations.values()).filter(
       (inv) =>
         (tenantId === 'global' || inv.institutionId === tenantId) &&

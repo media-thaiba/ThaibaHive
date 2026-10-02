@@ -1,5 +1,5 @@
 import { db } from '@thaiba/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
   docTemplates,
   docGeneratedRecords,
@@ -331,10 +331,12 @@ export class DocDbStore {
 
   public async updateExportJobStatus(
     id: string,
-    updates: Partial<Pick<ExportJobItem, 'status' | 'progressPercent' | 'processedRecords' | 'totalRecords' | 'downloadUrl' | 'fileSizeBytes' | 'errorMessage' | 'completedAt'>>
+    updates: Partial<Pick<ExportJobItem, 'status' | 'progressPercent' | 'processedRecords' | 'totalRecords' | 'downloadUrl' | 'fileSizeBytes' | 'errorMessage' | 'completedAt'>>,
+    institutionId?: string
   ): Promise<ExportJobItem | null> {
     const item = this.memoryStore.exportJobs.get(id);
     if (!item) return null;
+    if (institutionId && item.institutionId !== institutionId) return null;
     Object.assign(item, updates);
 
     if (db) {
@@ -350,7 +352,10 @@ export class DocDbStore {
         if (updates.completedAt !== undefined) dbUpdates.completedAt = updates.completedAt ?? null;
 
         if (Object.keys(dbUpdates).length > 0) {
-          await db.update(exportJobs).set(dbUpdates).where(eq(exportJobs.id, id));
+          const whereClause = institutionId
+            ? and(eq(exportJobs.id, id), eq(exportJobs.institutionId, institutionId))
+            : eq(exportJobs.id, id);
+          await db.update(exportJobs).set(dbUpdates).where(whereClause);
         }
       } catch (error) {
         handleWriteError('updateExportJobStatus', error);

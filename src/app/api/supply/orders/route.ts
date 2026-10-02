@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { purchaseOrderCreateSchema } from '@/lib/validation/supply-schemas';
 import { BudgetEncumbranceEngine } from '@/lib/operations/supply/finance/budget-encumbrance-engine';
@@ -13,7 +14,7 @@ const merkleAnchor = new SupplyMerkleAnchor(store);
 
 export const GET = requireAuth(async (req: Request, user: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
   const orders = await store.listPurchaseOrders(institutionId);
   return NextResponse.json({ orders });
 }, 'supply:orders:view');
@@ -26,7 +27,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid purchase order payload' }, { status: 400 });
     }
 
-    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
     const poId = `po-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const poNumber = `PO-${Date.now().toString().slice(-6)}`;
 

@@ -50,4 +50,5 @@ export const POST = requireAuth(async (request: Request) => {
       { status: 500 }
     );
   }
-});
+}, "system:telemetry");
+

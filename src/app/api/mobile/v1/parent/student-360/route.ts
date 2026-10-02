@@ -34,4 +34,5 @@ export const GET = requireAuth(async (request: Request, _session) => {
     console.error("Student 360 API error:", error);
     return NextResponse.json({ error: "Failed to fetch student 360 data" }, { status: 500 });
   }
-});
+}, "students:read");
+

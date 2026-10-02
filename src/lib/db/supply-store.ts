@@ -1,5 +1,5 @@
 import { db } from '@thaiba/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
   supplyVendors,
   supplyVendorCertifications,
@@ -610,10 +610,13 @@ export class SupplyDbStore {
     id: string,
     qtyReceivedDelta: number,
     qtyInvoicedDelta: number,
-    _institutionId = 'global'
+    institutionId = 'global'
   ): Promise<SupplyPoLineItemItem | null> {
     const item = this.memoryStore.lineItems.get(id);
     if (!item) return null;
+    if (institutionId && institutionId !== 'global' && item.institutionId && item.institutionId !== 'global' && item.institutionId !== institutionId) {
+      return null;
+    }
     item.quantityReceived += qtyReceivedDelta;
     item.quantityInvoiced += qtyInvoicedDelta;
     if (item.quantityReceived >= item.quantityOrdered) {
@@ -625,11 +628,14 @@ export class SupplyDbStore {
 
     if (db) {
       try {
+        const whereClause = institutionId && institutionId !== 'global'
+          ? and(eq(supplyPoLineItems.id, id), eq(supplyPoLineItems.institutionId, institutionId))
+          : eq(supplyPoLineItems.id, id);
         await db.update(supplyPoLineItems).set({
           quantityReceived: item.quantityReceived,
           quantityInvoiced: item.quantityInvoiced,
           status: item.status,
-        }).where(eq(supplyPoLineItems.id, id));
+        }).where(whereClause);
       } catch (error) {
         handleWriteError('updateLineItemQuantities', error);
       }
@@ -1020,10 +1026,13 @@ export class SupplyDbStore {
     id: string,
     status: MilestoneStatus,
     approvedByUserId?: string,
-    _institutionId = 'global'
+    institutionId = 'global'
   ): Promise<SupplyContractMilestoneItem | null> {
     const item = this.memoryStore.milestones.get(id);
     if (!item) return null;
+    if (institutionId && institutionId !== 'global' && item.institutionId && item.institutionId !== 'global' && item.institutionId !== institutionId) {
+      return null;
+    }
     item.status = status;
     if (approvedByUserId) item.approvedByUserId = approvedByUserId;
     if (status === 'approved' || status === 'paid') {
@@ -1039,7 +1048,10 @@ export class SupplyDbStore {
         if (item.approvedByUserId) dbUpdates.approvedByUserId = item.approvedByUserId;
         if (item.completionDate) dbUpdates.completionDate = item.completionDate;
 
-        await db.update(supplyContractMilestones).set(dbUpdates).where(eq(supplyContractMilestones.id, id));
+        const whereClause = institutionId && institutionId !== 'global'
+          ? and(eq(supplyContractMilestones.id, id), eq(supplyContractMilestones.institutionId, institutionId))
+          : eq(supplyContractMilestones.id, id);
+        await db.update(supplyContractMilestones).set(dbUpdates).where(whereClause);
       } catch (error) {
         handleWriteError('updateMilestoneStatus', error);
       }

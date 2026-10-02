@@ -201,6 +201,12 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
 export const DELETE = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
+
+  const authorized = await canAccessStaff(session.staffId, session.role, id);
+  if (!authorized) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const { reason } = body as { reason?: string };
 

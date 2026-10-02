@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-telemetry";
 import { applyTenantRegionHeaders } from "./middleware/tenant-region";
 import { applyEdgeCaching } from "./lib/edge/cache-control";
+
+function getJwtSecretBytes(): Uint8Array {
+  const secret = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_for_thaibahive_auth";
+  return new TextEncoder().encode(secret);
+}
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -42,13 +48,13 @@ const BLOCKED_PATHS = [
   "/phpmyadmin",
 ];
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const apmContext = startApmTracking(request);
-  const response = handleProxy(request);
+  const response = await handleProxy(request);
   return completeApmTracking(apmContext, response);
 }
 
-function handleProxy(request: NextRequest): NextResponse {
+async function handleProxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // Block known scanner/bot paths
@@ -92,9 +98,29 @@ function handleProxy(request: NextRequest): NextResponse {
       );
     }
 
+    // SEC-01: Cryptographically verify session token signature at edge
+    let verifiedRole: string | null = null;
+    try {
+      const { payload } = await jwtVerify(token, getJwtSecretBytes());
+      verifiedRole = typeof payload.role === "string" ? payload.role : null;
+    } catch {
+      if (pathname.startsWith("/api/")) {
+        return addSecurityHeaders(
+          request,
+          NextResponse.json({ error: "Invalid or expired session token" }, { status: 401 }),
+          pathname
+        );
+      }
+      return addSecurityHeaders(
+        request,
+        NextResponse.redirect(new URL("/auth/login", request.url)),
+        pathname
+      );
+    }
+
     // Workspace root redirect: /workspace → /workspace/{role}
     if (pathname === '/workspace' || pathname === '/workspace/') {
-      const role = extractRoleFromToken(token);
+      const role = verifiedRole;
       const workspaceMap: Record<string, string> = {
         principal: '/workspace/principal',
         staff: '/workspace/teacher',

@@ -10,4 +10,5 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     body: JSON.stringify(modifiedBody),
   });
   return approveHandler(fakeReq, session);
-});
+}, "finance:approve");
+

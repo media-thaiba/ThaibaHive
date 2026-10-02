@@ -106,7 +106,8 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .get();
 
   return NextResponse.json({ assignment: updated });
-});
+}, "checklists:update");
+
 
 export const DELETE = requireAuth(async (_request, _session, context) => {
   const { id } = await context!.params;

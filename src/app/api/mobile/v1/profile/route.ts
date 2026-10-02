@@ -22,4 +22,5 @@ export const GET = requireAuth(async (request: Request, session) => {
     console.error("Mobile profile API error:", error);
     return NextResponse.json({ error: "Failed to fetch profile data" }, { status: 500 });
   }
-});
+}, "profile:read");
+

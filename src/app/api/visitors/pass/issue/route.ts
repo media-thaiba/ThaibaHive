@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitorPasses } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { VisitorQrPassService } from "@/lib/visitors/qr-pass-service";
 
 export const POST = requireAuth(async (request: Request, session) => {
@@ -13,7 +14,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const passId = crypto.randomUUID();
-  const instId = "inst_001";
+  const instId = await resolveScopedInstitutionId(body.institutionId);
 
   const { qrPayload, signature } = VisitorQrPassService.issuePassPayload({
     institutionId: instId,

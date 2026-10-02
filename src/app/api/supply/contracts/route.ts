@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { contractCreateSchema } from '@/lib/validation/supply-schemas';
 
@@ -9,7 +10,7 @@ const store = SupplyDbStore.getInstance();
 
 export const GET = requireAuth(async (req: Request, user: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
   const contracts = await store.listContracts(institutionId);
   return NextResponse.json({ contracts });
 }, 'supply:contracts:manage');
@@ -22,7 +23,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid contract payload' }, { status: 400 });
     }
 
-    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
     const contractId = `cnt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     const contract = {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api/auth-guard";
 
-export async function GET(request: Request) {
+export const GET = requireAuth(async (request: Request) => {
   try {
     const { searchParams } = new URL(request.url);
     const since = searchParams.get("since") || new Date(0).toISOString();
@@ -19,4 +20,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+}, "mobile:sync");

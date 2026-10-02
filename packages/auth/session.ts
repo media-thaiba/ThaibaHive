@@ -13,6 +13,7 @@ const sessionPayloadSchema = z.object({
   name: z.string(),
   tokenVersion: z.union([z.number(), z.null(), z.undefined()]).transform((v) => v ?? 0),
   dpopEnabled: z.boolean().optional().default(false),
+  institutionId: z.string().nullable().optional(),
 });
 
 const secret = new TextEncoder().encode(authConfig.jwtSecret);
@@ -25,6 +26,7 @@ export type SessionPayload = {
   name: string;
   tokenVersion: number;
   dpopEnabled?: boolean;
+  institutionId?: string | null;
 };
 
 export type DPoPSessionPayload = SessionPayload & {

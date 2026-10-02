@@ -1,5 +1,12 @@
 import { POST as pushPOST } from "../push/route";
 import { GET as pullGET } from "../pull/route";
+import { verifySession } from "@thaiba/auth";
+
+jest.mock("@thaiba/auth", () => ({
+  ...jest.requireActual("@thaiba/auth"),
+  verifySession: jest.fn(),
+  hasPermission: jest.fn().mockReturnValue(true),
+}));
 
 function createMockRequest(url: string, method: string = "GET", body?: any): Request {
   return new Request(url, {
@@ -10,6 +17,16 @@ function createMockRequest(url: string, method: string = "GET", body?: any): Req
 }
 
 describe("FED-014: Mobile Offline Sync API Route Handlers Test Suite", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (verifySession as jest.Mock).mockResolvedValue({
+      staffId: "usr-sync-test",
+      email: "sync@thaibahive.edu",
+      role: "staff",
+      institutionId: "inst_alpha",
+    });
+  });
+
   it("processes push sync mutations via POST /api/mobile/v1/sync/push", async () => {
     const req = createMockRequest("http://localhost/api/mobile/v1/sync/push", "POST", {
       deviceId: "device-test-99",
@@ -38,5 +55,22 @@ describe("FED-014: Mobile Offline Sync API Route Handlers Test Suite", () => {
     const data = await res.json();
     expect(data.deltas).toBeDefined();
     expect(data.serverTimestamp).toBeDefined();
+  });
+
+  it("rejects unauthenticated push requests with 401", async () => {
+    (verifySession as jest.Mock).mockResolvedValue(null);
+    const req = createMockRequest("http://localhost/api/mobile/v1/sync/push", "POST", {
+      deviceId: "device-test-99",
+      mutations: [],
+    });
+    const res = await pushPOST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects unauthenticated pull requests with 401", async () => {
+    (verifySession as jest.Mock).mockResolvedValue(null);
+    const req = createMockRequest("http://localhost/api/mobile/v1/sync/pull", "GET");
+    const res = await pullGET(req);
+    expect(res.status).toBe(401);
   });
 });

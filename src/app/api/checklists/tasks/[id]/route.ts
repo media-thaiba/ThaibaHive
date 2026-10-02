@@ -65,4 +65,5 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .get();
 
   return NextResponse.json({ task: updated });
-});
+}, "checklists:update");
+

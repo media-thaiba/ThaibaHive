@@ -1,1 +1,1 @@
-export { getUserInstitutionScope } from "@thaiba/auth";
+export { getUserInstitutionScope, resolveInstitutionScopeForSession } from "@thaiba/auth";

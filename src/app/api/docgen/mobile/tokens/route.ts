@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveScopedInstitutionId } from '@thaiba/auth';
 import { registerMobileTokenSchema } from '@/lib/validation/docgen-schemas';
 import { DocDbStore } from '@/lib/db/docgen-store';
 
@@ -14,11 +15,13 @@ export const POST = requireAuth(async (request, session) => {
     const store = DocDbStore.getInstance();
     const id = `token_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const now = new Date().toISOString();
+    const isManager = session.role === 'admin' || session.role === 'super_admin' || session.role === 'principal';
+    const institutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
 
     const registered = await store.registerDeviceToken({
       id,
-      userId: parsed.data.userId || session.staffId,
-      institutionId: parsed.data.institutionId || 'global',
+      userId: isManager && parsed.data.userId ? parsed.data.userId : session.staffId,
+      institutionId,
       deviceToken: parsed.data.deviceToken,
       platform: parsed.data.platform,
       deviceModel: parsed.data.deviceModel,

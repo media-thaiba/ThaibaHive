@@ -1,8 +1,24 @@
 import { POST } from "../../app/api/mobile/v1/sync/push/route";
 import zlib from "zlib";
 import { EventBus } from "../observability/event-bus";
+import { verifySession } from "@thaiba/auth";
+
+jest.mock("@thaiba/auth", () => ({
+  ...jest.requireActual("@thaiba/auth"),
+  verifySession: jest.fn(),
+  hasPermission: jest.fn().mockReturnValue(true),
+}));
 
 describe("Mobile Sync Push Route Integration", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (verifySession as jest.Mock).mockResolvedValue({
+      staffId: "usr_mock_push",
+      email: "mock@thaibahive.edu",
+      role: "staff",
+      institutionId: "inst_001",
+    });
+  });
   const mockMutation = {
     id: "mut_001",
     mutationType: "CREATE",

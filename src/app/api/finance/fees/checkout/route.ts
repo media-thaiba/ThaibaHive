@@ -13,7 +13,7 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     const store = FeeDbStore.getInstance();
-    const allocation = await store.getAllocationById(parsed.data.allocationId);
+    const allocation = await store.getAllocationById(parsed.data.allocationId, session.institutionId || undefined);
     if (!allocation) {
       return NextResponse.json({ error: 'Fee allocation not found' }, { status: 404 });
     }

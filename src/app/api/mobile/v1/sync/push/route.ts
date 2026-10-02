@@ -3,6 +3,7 @@ import { offlineSyncPayloadSchema } from "@/lib/validation/schemas";
 import { SyncConflictResolver } from "@/lib/offline/sync-conflict-resolver";
 import { EventBus } from "@/lib/observability/event-bus";
 import { AnomalyDetector } from "@/lib/observability/anomaly-detector";
+import { requireAuth } from "@/lib/api/auth-guard";
 import zlib from "zlib";
 
 const resolver = new SyncConflictResolver();
@@ -44,7 +45,7 @@ function decompressProgressively(buffer: Buffer): Promise<Buffer> {
   });
 }
 
-export async function POST(request: Request) {
+export const POST = requireAuth(async (request: Request) => {
   const contentEncoding = request.headers.get("content-encoding") || "";
   const isGzip = contentEncoding.includes("gzip");
 
@@ -194,13 +195,13 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json(
-    {
-      message: "Sync batch processed",
-      deviceId,
-      processedCount: results.length,
-      results,
-    },
-    { status: 200 }
-  );
-}
+    return NextResponse.json(
+      {
+        message: "Sync batch processed",
+        deviceId,
+        processedCount: results.length,
+        results,
+      },
+      { status: 200 }
+    );
+  }, "mobile:sync");

@@ -60,7 +60,8 @@ export class ExportJobManager {
   }
 
   public async processJob(jobId: string, request: ExportDatasetRequest): Promise<void> {
-    await this.store.updateExportJobStatus(jobId, { status: 'processing', progressPercent: 25 });
+    const scope = request.institutionId;
+    await this.store.updateExportJobStatus(jobId, { status: 'processing', progressPercent: 25 }, scope);
 
     try {
       const result: ExportStreamResult = await this.exportEngine.exportDataset(request);
@@ -80,12 +81,12 @@ export class ExportJobManager {
         downloadUrl,
         fileSizeBytes: result.fileSizeBytes,
         completedAt: new Date().toISOString(),
-      });
+      }, scope);
     } catch (err: any) {
       await this.store.updateExportJobStatus(jobId, {
         status: 'failed',
         errorMessage: err.message || 'Export generation failed',
-      });
+      }, scope);
     }
   }
 

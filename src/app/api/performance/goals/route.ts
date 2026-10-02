@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceGoals, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { performanceGoalCreateSchema } from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
 
@@ -28,17 +29,9 @@ export const POST = requireAuth(async (request: Request, session) => {
     const body = await request.json();
     const validated = performanceGoalCreateSchema.parse(body);
 
-    const staffId = body.staffId || session.staffId;
-
-    let institutionId = body.institutionId;
-    if (!institutionId) {
-      const inst = await db
-        .select({ institutionId: staffInstitutions.institutionId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.staffId, staffId))
-        .get();
-      institutionId = inst?.institutionId || "inst_default";
-    }
+    const isManager = session.role === "admin" || session.role === "super_admin" || session.role === "principal" || session.role === "hod";
+    const staffId = isManager && body.staffId ? body.staffId : session.staffId;
+    const institutionId = await resolveScopedInstitutionId(body.institutionId);
 
     const id = `goal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newGoal = {

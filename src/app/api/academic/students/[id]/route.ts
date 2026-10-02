@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, classes } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  const row = await db
+  const query = db
     .select({
       id: students.id,
       admissionNo: students.admissionNo,
@@ -30,9 +32,11 @@ export const GET = requireAuth(async (_request, _session, context) => {
       classSection: classes.section,
     })
     .from(students)
-    .leftJoin(classes, eq(students.classId, classes.id))
-    .where(eq(students.id, id))
-    .get();
+    .leftJoin(classes, eq(students.classId, classes.id));
+
+  const row = institutionId && institutionId !== "global"
+    ? await query.where(and(eq(students.id, id), eq(students.institutionId, institutionId))).get()
+    : await query.where(eq(students.id, id)).get();
 
   if (!row) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
@@ -41,11 +45,15 @@ export const GET = requireAuth(async (_request, _session, context) => {
   return NextResponse.json({ student: row });
 }, "students:read");
 
-export const PATCH = requireAuth(async (request: Request, _session, context) => {
+export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
   const body = await request.json();
 
-  const existing = await db.select().from(students).where(eq(students.id, id)).get();
+  const existing = institutionId && institutionId !== "global"
+    ? await db.select().from(students).where(and(eq(students.id, id), eq(students.institutionId, institutionId))).get()
+    : await db.select().from(students).where(eq(students.id, id)).get();
+
   if (!existing) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
@@ -53,7 +61,7 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
   const updatableFields = [
     "firstName", "lastName", "dateOfBirth", "gender", "email", "phone",
     "address", "avatarUrl", "bloodGroup", "classId", "academicYearId",
-    "institutionId", "emergencyContactName", "emergencyContactPhone",
+    "emergencyContactName", "emergencyContactPhone",
   ];
 
   const safeFields: Record<string, unknown> = {};
@@ -61,29 +69,42 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
     if (key in body) safeFields[key] = body[key];
   }
 
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(students.id, id), eq(students.institutionId, institutionId))
+    : eq(students.id, id);
+
   const result = await db
     .update(students)
     .set({ ...safeFields, updatedAt: new Date().toISOString() })
-    .where(eq(students.id, id))
+    .where(whereClause)
     .returning()
     .get();
 
   return NextResponse.json({ student: result });
 }, "students:update");
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
+export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  const existing = await db.select().from(students).where(eq(students.id, id)).get();
+  const existing = institutionId && institutionId !== "global"
+    ? await db.select().from(students).where(and(eq(students.id, id), eq(students.institutionId, institutionId))).get()
+    : await db.select().from(students).where(eq(students.id, id)).get();
+
   if (!existing) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(students.id, id), eq(students.institutionId, institutionId))
+    : eq(students.id, id);
+
   await db
     .update(students)
     .set({ isActive: false, updatedAt: new Date().toISOString() })
-    .where(eq(students.id, id))
+    .where(whereClause)
     .run();
 
   return NextResponse.json({ success: true });
 }, "students:delete");
+

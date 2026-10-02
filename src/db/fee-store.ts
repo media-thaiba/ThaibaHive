@@ -463,19 +463,23 @@ export class FeeDbStore {
     return receipt;
   }
 
-  public async getReceiptByHash(receiptHash: string): Promise<FeeReceiptItem | null> {
+  public async getReceiptByHash(receiptHash: string, institutionId?: string): Promise<FeeReceiptItem | null> {
     for (const rcpt of this.memoryStore.receipts.values()) {
       if (rcpt.receiptHash === receiptHash) {
-        return rcpt;
+        if (!institutionId || rcpt.institutionId === institutionId) {
+          return rcpt;
+        }
       }
     }
     return null;
   }
 
-  public async getReceiptByPaymentId(paymentId: string): Promise<FeeReceiptItem | null> {
+  public async getReceiptByPaymentId(paymentId: string, institutionId?: string): Promise<FeeReceiptItem | null> {
     for (const rcpt of this.memoryStore.receipts.values()) {
       if (rcpt.paymentId === paymentId) {
-        return rcpt;
+        if (!institutionId || rcpt.institutionId === institutionId) {
+          return rcpt;
+        }
       }
     }
     return null;

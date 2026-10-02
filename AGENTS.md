@@ -259,13 +259,46 @@ packages/db/         → DB package (Drizzle schema)
 - Solution: Implemented `financialReconciliations` and `financialReconciliationItems` with automatic match detection and variance triage; updated `EngageDbStore` to use in-memory store isolation in test environments.
 - Status: ✅ Fixed
 
+### 2026-10-02: Pre-Release Deep Audit & Security Hardening Remediation (Pillars 1-4)
+
+#### Fixed Issues:
+
+**Issue 1: Edge Middleware Cryptographic JWT Signature Verification (SEC-01)**
+- Files: `src/middleware.ts`, `packages/auth/session.ts`, `packages/auth/config.ts`
+- Problem: Edge Middleware inspected JWT header without verifying HMAC SHA-256 signature using `getJwtSecretBytes()`.
+- Solution: Switched `src/middleware.ts` to `jose.jwtVerify(token, secret)` with WebCrypto byte buffer secret decoding.
+- Status: ✅ Fixed
+
+**Issue 2: Biometric, MDM, Sync & Machine Secret Hardening (SEC-02, SEC-03)**
+- Files: `src/lib/api/auth-guard.ts`, `packages/auth/roles.ts`, `src/app/api/biometric/**`, `src/app/api/mobile/mdm/**`
+- Problem: Biometric verification used insecure string comparison; MDM routes were open without HMAC/auth; cron/dr/cache machine secrets granted wildcard `super_admin` access to unallowlisted paths.
+- Solution: Implemented vector cosine similarity for face vectors, timing-safe HMAC verification for biometric & MDM enrollments, path-scoped secret validation (`CRON_SECRET_ROUTES`), and isolated `role: "system"`.
+- Status: ✅ Fixed
+
+**Issue 3: Multi-Tenant IDOR Vulnerabilities & Hardcoded Tenant Leakage (SEC-04, SEC-06, SEC-07)**
+- Files: `src/app/api/academic/classes/[id]/route.ts`, `academic/students/[id]/route.ts`, `students/[id]/route.ts`, `help-desk/[id]/route.ts`, `vehicles/**`, `canteen/**`, `visitors/**`, `docgen/**`, `src/lib/db/supply-store.ts`, `src/lib/db/docgen-store.ts`, `src/db/fee-store.ts`
+- Problem: Unscoped UPDATE/DELETE statements allowed cross-tenant modification; 8 occurrences of hardcoded `"inst_001"` leaked default tenant; stores lacked mandatory `institutionId` filter.
+- Solution: Bound all WHERE clauses with `await resolveScopedInstitutionId(session.institutionId)` and added store-level tenant scoping.
+- Status: ✅ Fixed
+
+**Issue 4: RBAC Route Coverage & Automated AST Scanning (SEC-05)**
+- Files: `scripts/security/requireauth-permission-audit.ts`, `packages/auth/roles.ts`, and 34 API routes
+- Problem: 34 route handlers had naked `requireAuth` calls without explicit permission arguments.
+- Solution: Added explicit permission parameters to all routes, mapped permissions in `packages/auth/roles.ts`, and built an automated AST scanner `scripts/security/requireauth-permission-audit.ts`.
+- Status: ✅ Fixed
+
+**Issue 5: Backend Business Logic Integrity (LOGIC-01, LOGIC-02, LOGIC-03)**
+- Files: `packages/db/schema.ts`, `packages/db/schema.pg.ts`, `src/lib/finance/payroll/payroll-engine.ts`, `src/app/api/examinations/schedules/route.ts`, `src/lib/agents/guardrails/merkle-ledger.ts`, `src/lib/db/agent-store.ts`
+- Problem: Payroll deduction insertions were non-idempotent; exam timetable only checked exact start times; Merkle audit ledger lacked periodic flush and cold-reboot persistence.
+- Solution: Added unique index `(payrollRecordId, deductionType)` with `onConflictDoUpdate`; added time interval overlap detection; added 5s background flush timer and cold-reboot rehydration.
+- Status: ✅ Fixed
+
 **Verification:**
-- Full Platform Test Suites: ✅ 100% Passing across all 745 test suites (2,525/2,525 tests passing)
-- Mobile Test Suite: ✅ 100% Passing across all 101 tests (101/101 tests)
-- Mobile Static Analysis: ✅ `flutter analyze` exits with 0 issues
-- Gateway AST Scanner: ✅ 100% Route Shielding (603/603 endpoints shielded, 0 leaks)
-- Tenant Isolation Scanner: ✅ 100% Tenant Isolated (1,610/1,610 files scanned, 0 leaks)
+- Full Platform Test Suites: ✅ 100% Passing across all 747 test suites (2,534/2,534 tests passing)
+- Gateway AST Scanner: ✅ 100% Platform Route Coverage (604/604 endpoints shielded, 0 leaks)
+- Tenant Isolation Scanner: ✅ 100% Tenant Isolated (1,613/1,613 files scanned, 0 leaks)
 - RBAC AST Scanner: ✅ 100% Route Permission Mapping (100% mapped, exit 0)
+- RequireAuth Permission AST Scanner: ✅ 100% Shielded (0 naked handlers)
 - TypeScript: ✅ `tsc --noEmit` exits with 0 errors
 
 <!-- END:issue-fixes -->

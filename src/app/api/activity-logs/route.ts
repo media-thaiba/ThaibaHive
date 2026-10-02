@@ -88,4 +88,5 @@ export const GET = requireAuth(async (request, session) => {
     page,
     limit,
   });
-});
+}, "reports:read");
+

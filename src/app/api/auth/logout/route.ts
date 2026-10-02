@@ -31,4 +31,5 @@ export const POST = requireAuth(async (request, session) => {
   // 3. Clear session
   await destroySession();
   return NextResponse.json({ success: true });
-});
+}, "profile:read");
+

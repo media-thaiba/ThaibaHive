@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { exportStreamSchema } from '@/lib/validation/docgen-schemas';
 import { ExportJobManager } from '@/lib/operations/docgen/export/export-job-manager';
 import { DocDbStore } from '@/lib/db/docgen-store';
 
 export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = resolveTenantInstitutionId(session.institutionId, url.searchParams.get('institutionId'));
   const jobId = url.searchParams.get('jobId');
 
   const store = DocDbStore.getInstance();
@@ -33,7 +34,7 @@ export const POST = requireAuth(async (request, session) => {
 
     const manager = ExportJobManager.getInstance();
     const job = await manager.submitExportJob(session.staffId, {
-      institutionId: parsed.data.institutionId,
+      institutionId: resolveTenantInstitutionId(session.institutionId, parsed.data.institutionId),
       jobType: parsed.data.jobType,
       format: parsed.data.format,
       columns: parsed.data.columns,

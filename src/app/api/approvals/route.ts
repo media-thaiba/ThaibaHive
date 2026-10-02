@@ -16,6 +16,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -684,6 +685,11 @@ export const PATCH = requireAuth(async (request, session) => {
         );
       }
 
+      const canAccess = await canAccessStaff(staffId, role, leave.staffId);
+      if (!canAccess) {
+        return NextResponse.json({ error: "Forbidden - out of scope" }, { status: 403 });
+      }
+
       // Role & Stage authority validation
       const validation = WorkflowEngine.validateTransition(
         leave.status as any,
@@ -762,6 +768,11 @@ export const PATCH = requireAuth(async (request, session) => {
         );
       }
 
+      const canAccessClaim = await canAccessStaff(staffId, role, claim.staffId);
+      if (!canAccessClaim) {
+        return NextResponse.json({ error: "Forbidden - out of scope" }, { status: 403 });
+      }
+
       // Role & Stage authority validation using WorkflowEngine
       const validation = WorkflowEngine.validateTransition(
         claim.status as any,
@@ -812,6 +823,11 @@ export const PATCH = requireAuth(async (request, session) => {
           { error: "Requesters cannot review their own purchase requests" },
           { status: 403 }
         );
+      }
+
+      const canAccessPurchase = await canAccessStaff(staffId, role, purchase.requesterId);
+      if (!canAccessPurchase) {
+        return NextResponse.json({ error: "Forbidden - out of scope" }, { status: 403 });
       }
 
       if (action === "reject") {
@@ -899,6 +915,11 @@ export const PATCH = requireAuth(async (request, session) => {
           { error: "Bookers cannot approve their own bookings" },
           { status: 403 }
         );
+      }
+
+      const canAccessBooking = await canAccessStaff(staffId, role, booking.bookerId);
+      if (!canAccessBooking) {
+        return NextResponse.json({ error: "Forbidden - out of scope" }, { status: 403 });
       }
 
       // Role validation for bookings: hod, principal, super_admin, admin can approve

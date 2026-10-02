@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { gateLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { logs } = body as {
+  const { logs, institutionId: reqInstId } = body as {
     logs: {
       passId?: string;
       actionType: string;
@@ -13,12 +14,14 @@ export const POST = requireAuth(async (request: Request, session) => {
       timestamp: string;
       deviceId?: string;
     }[];
+    institutionId?: string;
   };
 
   if (!Array.isArray(logs)) {
     return NextResponse.json({ error: "Invalid sync logs array" }, { status: 400 });
   }
 
+  const institutionId = await resolveScopedInstitutionId(reqInstId);
   const processedIds: string[] = [];
 
   for (const logItem of logs) {
@@ -27,7 +30,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       .insert(gateLogs)
       .values({
         id,
-        institutionId: "inst_001",
+        institutionId,
         passId: logItem.passId || null,
         visitorName: logItem.visitorName,
         actionType: logItem.actionType,

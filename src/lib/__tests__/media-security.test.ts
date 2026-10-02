@@ -91,13 +91,25 @@ jest.mock("next/server", () => {
   };
 });
 
+import { SignJWT } from "jose";
+
+async function createMediaTestToken() {
+  const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_for_thaibahive_auth");
+  return new SignJWT({ staffId: "test-staff", role: "admin", email: "test@example.com" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("2h")
+    .sign(secret);
+}
+
 describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
-  it("should enforce security headers on media API responses", () => {
+  it("should enforce security headers on media API responses", async () => {
+    const token = await createMediaTestToken();
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/assets",
-      { cookies: { thaibahive_session: "valid-jwt-token" } }
+      { cookies: { thaibahive_session: token } }
     );
-    const res = middleware(req as any);
+    const res = await middleware(req as any);
 
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
@@ -106,45 +118,46 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
   });
 
-  it("should redirect unauthenticated requests to login for shell media routes", () => {
+  it("should redirect unauthenticated requests to login for shell media routes", async () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/media-library"
     );
-    const res = middleware(req as any);
+    const res = await middleware(req as any);
 
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/login");
   });
 
-  it("should return 401 Unauthorized for unauthenticated API requests", () => {
+  it("should return 401 Unauthorized for unauthenticated API requests", async () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/assets"
     );
-    const res = middleware(req as any);
+    const res = await middleware(req as any);
 
     expect(res.status).toBe(401);
   });
 
-  it("should allow public access for share link routes", () => {
+  it("should allow public access for share link routes", async () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/share-links/public-token-123"
     );
-    const res = middleware(req as any);
+    const res = await middleware(req as any);
 
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(307);
   });
 
-  it("should reject payload larger than max limit on write API routes", () => {
+  it("should reject payload larger than max limit on write API routes", async () => {
+    const token = await createMediaTestToken();
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/assets",
       {
         method: "POST",
-        cookies: { thaibahive_session: "valid-token" },
-        headers: { "content-length": String(60 * 1024 * 1024) }, // 60MB
+        cookies: { thaibahive_session: token },
+        headers: { "content-length": String(60 * 1024 * 1024), "content-type": "application/json" }, // 60MB
       }
     );
-    const res = middleware(req as any);
+    const res = await middleware(req as any);
 
     expect(res.status).toBe(413);
   });

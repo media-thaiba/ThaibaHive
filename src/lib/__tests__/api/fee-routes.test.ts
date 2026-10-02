@@ -14,7 +14,7 @@ jest.mock("@thaiba/auth", () => {
       staffId: "usr_admin",
       email: "admin@thaiba.edu",
       role: "super_admin",
-      institutionId: "inst_alpha",
+      institutionId: "inst-001",
       permissions: ["*"],
     }),
     hasPermission: jest.fn().mockReturnValue(true),

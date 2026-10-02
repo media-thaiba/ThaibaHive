@@ -1,6 +1,7 @@
 import { GET, POST } from "../drill/route";
 
 jest.mock("@thaiba/auth", () => ({
+  ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
 }));
 

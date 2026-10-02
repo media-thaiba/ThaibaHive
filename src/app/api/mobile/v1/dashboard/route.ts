@@ -29,4 +29,5 @@ export const GET = requireAuth(async (request: Request, session) => {
     console.error("Mobile dashboard API error:", error);
     return NextResponse.json({ error: "Failed to fetch mobile dashboard data" }, { status: 500 });
   }
-});
+}, "reports:read");
+

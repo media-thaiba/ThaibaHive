@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { mdmEnrolledDevices } from '@/db/schema';
+import { requireAuth } from '@/lib/api/auth-guard';
 import { eq } from 'drizzle-orm';
 
-export async function GET(request: Request) {
+export const GET = requireAuth(async (request: Request) => {
   try {
     const url = new URL(request.url);
     const deviceUuid = url.searchParams.get('deviceUuid');
@@ -27,4 +28,4 @@ export async function GET(request: Request) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Verification failed' }, { status: 500 });
   }
-}
+}, "sync:device");

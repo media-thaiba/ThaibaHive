@@ -71,13 +71,16 @@ export function inspectRouteAst(filePath: string, rootDir: string = process.cwd(
   const content = fs.readFileSync(filePath, "utf-8");
   const relativePath = path.relative(rootDir, filePath).replace(/\\/g, "/");
 
+  // NOTE: "/api/mobile/" is intentionally NOT exempt — mobile routes must be
+  // shielded like every other API route (push/pull sync are wrapped with
+  // requireAuth; MDM enrollment/verify are pre-auth by design and wrapped
+  // with withRateLimit).
   const isExempt =
     normalized.includes("/api/health") ||
     normalized.includes("/api/auth/") ||
     normalized.includes("/api/biometric/") ||
     normalized.includes("/api/system/") ||
     normalized.includes("/api/media/") ||
-    normalized.includes("/api/mobile/") ||
     normalized.includes("/api/webhooks/") ||
     normalized.includes("/api/public/") ||
     normalized.includes("/api/metrics");

@@ -31,9 +31,11 @@ export class MerkleAuditLedger {
   private batchSize: number = 50;
   private maxLoadGateThreshold: number = 5000;
   private latestHashCache: Map<string, string> = new Map(); // tenantId -> latest auditHash
+  private flushTimer: NodeJS.Timeout | null = null;
 
   constructor(store?: AgentDbStore) {
     this.store = store || agentDbStore;
+    this.startFlushTimer();
   }
 
   public static getInstance(): MerkleAuditLedger {
@@ -41,6 +43,27 @@ export class MerkleAuditLedger {
       MerkleAuditLedger.instance = new MerkleAuditLedger();
     }
     return MerkleAuditLedger.instance;
+  }
+
+  public startFlushTimer(intervalMs: number = 5000): void {
+    if (this.flushTimer) return;
+    this.flushTimer = setInterval(async () => {
+      try {
+        await this.flushAll();
+      } catch (err) {
+        console.error("[MerkleAuditLedger] Periodic flush error:", err);
+      }
+    }, intervalMs);
+    if (typeof this.flushTimer?.unref === "function") {
+      this.flushTimer.unref();
+    }
+  }
+
+  public stopFlushTimer(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
   }
 
   public setBatchSize(size: number): void {

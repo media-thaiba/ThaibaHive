@@ -85,9 +85,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageTemplates).where(eq(engageTemplates.templateId, template.templateId));
+        const existing = await db.select().from(engageTemplates).where(
+          and(eq(engageTemplates.templateId, template.templateId), eq(engageTemplates.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageTemplates).set(payload).where(eq(engageTemplates.templateId, template.templateId));
+          await db.update(engageTemplates).set(payload).where(
+            and(eq(engageTemplates.templateId, template.templateId), eq(engageTemplates.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageTemplates).values(payload);
         }
@@ -161,9 +165,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageMessages).where(eq(engageMessages.messageId, message.messageId));
+        const existing = await db.select().from(engageMessages).where(
+          and(eq(engageMessages.messageId, message.messageId), eq(engageMessages.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageMessages).set(payload).where(eq(engageMessages.messageId, message.messageId));
+          await db.update(engageMessages).set(payload).where(
+            and(eq(engageMessages.messageId, message.messageId), eq(engageMessages.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageMessages).values(payload);
         }
@@ -235,9 +243,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageDeliveries).where(eq(engageDeliveries.deliveryId, delivery.deliveryId));
+        const existing = await db.select().from(engageDeliveries).where(
+          and(eq(engageDeliveries.deliveryId, delivery.deliveryId), eq(engageDeliveries.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageDeliveries).set(payload).where(eq(engageDeliveries.deliveryId, delivery.deliveryId));
+          await db.update(engageDeliveries).set(payload).where(
+            and(eq(engageDeliveries.deliveryId, delivery.deliveryId), eq(engageDeliveries.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageDeliveries).values(payload);
         }
@@ -291,9 +303,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engagePreferences).where(eq(engagePreferences.recipientId, preferences.recipientId));
+        const existing = await db.select().from(engagePreferences).where(
+          and(eq(engagePreferences.recipientId, preferences.recipientId), eq(engagePreferences.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engagePreferences).set(payload).where(eq(engagePreferences.recipientId, preferences.recipientId));
+          await db.update(engagePreferences).set(payload).where(
+            and(eq(engagePreferences.recipientId, preferences.recipientId), eq(engagePreferences.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engagePreferences).values(payload);
         }
@@ -345,9 +361,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageWorkflows).where(eq(engageWorkflows.workflowId, workflow.workflowId));
+        const existing = await db.select().from(engageWorkflows).where(
+          and(eq(engageWorkflows.workflowId, workflow.workflowId), eq(engageWorkflows.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageWorkflows).set(payload).where(eq(engageWorkflows.workflowId, workflow.workflowId));
+          await db.update(engageWorkflows).set(payload).where(
+            and(eq(engageWorkflows.workflowId, workflow.workflowId), eq(engageWorkflows.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageWorkflows).values(payload);
         }
@@ -392,9 +412,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageWorkflowRuns).where(eq(engageWorkflowRuns.runId, run.runId));
+        const existing = await db.select().from(engageWorkflowRuns).where(
+          and(eq(engageWorkflowRuns.runId, run.runId), eq(engageWorkflowRuns.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageWorkflowRuns).set(payload).where(eq(engageWorkflowRuns.runId, run.runId));
+          await db.update(engageWorkflowRuns).set(payload).where(
+            and(eq(engageWorkflowRuns.runId, run.runId), eq(engageWorkflowRuns.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageWorkflowRuns).values(payload);
         }
@@ -426,9 +450,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageChatSessions).where(eq(engageChatSessions.sessionId, session.sessionId));
+        const existing = await db.select().from(engageChatSessions).where(
+          and(eq(engageChatSessions.sessionId, session.sessionId), eq(engageChatSessions.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageChatSessions).set(payload).where(eq(engageChatSessions.sessionId, session.sessionId));
+          await db.update(engageChatSessions).set(payload).where(
+            and(eq(engageChatSessions.sessionId, session.sessionId), eq(engageChatSessions.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageChatSessions).values(payload);
         }
@@ -525,9 +553,13 @@ export class EngageDbStore {
 
     try {
       if (db && !this.useMemoryOnly) {
-        const existing = await db.select().from(engageTranslations).where(eq(engageTranslations.contentHash, translation.contentHash));
+        const existing = await db.select().from(engageTranslations).where(
+          and(eq(engageTranslations.contentHash, translation.contentHash), eq(engageTranslations.institutionId, payload.institutionId))
+        );
         if (existing && existing.length > 0) {
-          await db.update(engageTranslations).set(payload).where(eq(engageTranslations.contentHash, translation.contentHash));
+          await db.update(engageTranslations).set(payload).where(
+            and(eq(engageTranslations.contentHash, translation.contentHash), eq(engageTranslations.institutionId, payload.institutionId))
+          );
         } else {
           await db.insert(engageTranslations).values(payload);
         }

@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAuth } from "@/lib/api/auth-guard";
+import crypto from "crypto";
 
-export const POST = async (request: Request) => {
+export const POST = requireAuth(async (request: Request) => {
   const body = await request.json().catch(() => ({}));
   const { staffId, templateHash } = body as { staffId?: string; templateHash?: string };
 
@@ -21,5 +23,12 @@ export const POST = async (request: Request) => {
     return NextResponse.json({ matched: false, error: "Fingerprint not enrolled" }, { status: 400 });
   }
 
-  return NextResponse.json({ matched: true });
-};
+  const submittedBuf = Buffer.from(templateHash);
+  const enrolledBuf = Buffer.from(user.fingerprintHash);
+
+  const matched =
+    submittedBuf.length === enrolledBuf.length &&
+    crypto.timingSafeEqual(submittedBuf, enrolledBuf);
+
+  return NextResponse.json({ matched });
+}, "attendance:manage");

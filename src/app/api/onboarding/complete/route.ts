@@ -59,5 +59,6 @@ export const POST = requireAuth(async (request, session) => {
     message: "Onboarding complete",
     activatedApps: instantApps.length,
   });
-});
+}, "profile:read");
+
 

@@ -1,6 +1,7 @@
 import { GET } from "../route";
 
 jest.mock("@thaiba/auth", () => ({
+  ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
 }));
 

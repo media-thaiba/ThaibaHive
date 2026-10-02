@@ -77,4 +77,5 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   return NextResponse.json({ grievance: updated });
-});
+}, "grievances:read");
+

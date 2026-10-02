@@ -99,6 +99,16 @@ jest.mock("next/server", () => {
 });
 
 import { proxy, config } from "@/middleware";
+import { SignJWT } from "jose";
+
+async function createValidTestToken(payload: Record<string, any> = { role: "admin", staffId: "stf-1", email: "test@example.com" }) {
+  const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_key_for_testing");
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("2h")
+    .sign(secret);
+}
 
 function makeRequest(
   path: string,
@@ -142,9 +152,9 @@ describe("proxy", () => {
       "/api/auth/mobile-handoff",
     ];
 
-    it.each(publicPaths)("should pass through %s without authentication", (path) => {
+    it.each(publicPaths)("should pass through %s without authentication", async (path) => {
       const req = makeRequest(path);
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
   });
@@ -160,117 +170,142 @@ describe("proxy", () => {
       "/phpmyadmin",
     ];
 
-    it.each(blockedPaths)("should block %s with 404", (path) => {
+    it.each(blockedPaths)("should block %s with 404", async (path) => {
       const req = makeRequest(path);
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(404);
     });
   });
 
   describe("unauthenticated requests", () => {
-    it("should redirect page requests to /auth/login", () => {
+    it("should redirect page requests to /auth/login", async () => {
       const req = makeRequest("/leaves");
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.status).toBe(307);
       expect(res.get("location")).toBe("http://localhost/auth/login");
     });
 
-    it("should return 401 JSON for API requests", () => {
+    it("should return 401 JSON for API requests", async () => {
       const req = makeRequest("/api/dashboard/stats");
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.status).toBe(401);
+    });
+
+    it("should reject invalid/garbage token signature with 401 on API routes (SEC-01)", async () => {
+      const req = makeRequest("/api/dashboard/stats", {
+        authorization: "Bearer invalid.garbage.token",
+      });
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(401);
+    });
+
+    it("should redirect invalid/garbage token to login on page routes (SEC-01)", async () => {
+      const req = makeRequest("/leaves", {
+        cookie: "thaibahive_session=invalid.garbage.token",
+      });
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(307);
+      expect(res.get("location")).toBe("http://localhost/auth/login");
     });
   });
 
   describe("cookie authentication", () => {
-    it("should pass through with valid thaibahive_session cookie", () => {
-      const req = makeRequest("/leaves", { cookie: "thaibahive_session=some.jwt.token" });
-      const res = proxy(req as any);
+    it("should pass through with valid signed thaibahive_session cookie", async () => {
+      const token = await createValidTestToken();
+      const req = makeRequest("/leaves", { cookie: `thaibahive_session=${token}` });
+      const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
   });
 
   describe("bearer token authentication", () => {
-    it("should pass through with valid Bearer token", () => {
-      const req = makeRequest("/leaves", { authorization: "Bearer some.jwt.token" });
-      const res = proxy(req as any);
+    it("should pass through with valid signed Bearer token", async () => {
+      const token = await createValidTestToken();
+      const req = makeRequest("/leaves", { authorization: `Bearer ${token}` });
+      const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
   });
 
   describe("write request body size limit", () => {
-    it("should reject POST requests exceeding 50MB", () => {
+    it("should reject POST requests exceeding 50MB", async () => {
+      const token = await createValidTestToken();
       const size = 50 * 1024 * 1024 + 1;
       const req = makeRequest("/api/tasks", {
         method: "POST",
-        cookie: "thaibahive_session=token",
+        cookie: `thaibahive_session=${token}`,
         contentType: "application/json",
         contentLength: String(size),
       });
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(413);
     });
 
-    it("should reject PUT requests exceeding 50MB", () => {
+    it("should reject PUT requests exceeding 50MB", async () => {
+      const token = await createValidTestToken();
       const size = 55 * 1024 * 1024;
       const req = makeRequest("/api/tasks/1", {
         method: "PUT",
-        cookie: "thaibahive_session=token",
+        cookie: `thaibahive_session=${token}`,
         contentType: "application/json",
         contentLength: String(size),
       });
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(413);
     });
 
-    it("should allow POST requests under 50MB", () => {
+    it("should allow POST requests under 50MB", async () => {
+      const token = await createValidTestToken();
       const req = makeRequest("/api/tasks", {
         method: "POST",
-        cookie: "thaibahive_session=token",
+        cookie: `thaibahive_session=${token}`,
         contentType: "application/json",
         contentLength: String(1024),
       });
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
   });
 
   describe("content type validation on write routes", () => {
-    it("should reject non-JSON/non-multipart content types on POST", () => {
+    it("should reject non-JSON/non-multipart content types on POST", async () => {
+      const token = await createValidTestToken();
       const req = makeRequest("/api/tasks", {
         method: "POST",
-        cookie: "thaibahive_session=token",
+        cookie: `thaibahive_session=${token}`,
         contentType: "text/plain",
       });
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(415);
     });
 
-    it("should allow application/json content type on POST", () => {
+    it("should allow application/json content type on POST", async () => {
+      const token = await createValidTestToken();
       const req = makeRequest("/api/tasks", {
         method: "POST",
-        cookie: "thaibahive_session=token",
+        cookie: `thaibahive_session=${token}`,
         contentType: "application/json",
       });
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
 
-    it("should allow multipart/form-data content type on POST", () => {
+    it("should allow multipart/form-data content type on POST", async () => {
+      const token = await createValidTestToken();
       const req = makeRequest("/api/tasks", {
         method: "POST",
-        cookie: "thaibahive_session=token",
+        cookie: `thaibahive_session=${token}`,
         contentType: "multipart/form-data",
       });
-      const res = proxy(req as any);
+      const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
   });
 
   describe("security headers", () => {
-    it("should add security headers to responses", () => {
+    it("should add security headers to responses", async () => {
       const req = makeRequest("/auth/login");
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.get("x-content-type-options")).toBe("nosniff");
       expect(res.get("x-frame-options")).toBe("DENY");
       expect(res.get("x-xss-protection")).toBe("1; mode=block");
@@ -278,48 +313,47 @@ describe("proxy", () => {
       expect(res.get("permissions-policy")).toBe("camera=(self), microphone=(), geolocation=(self)");
     });
 
-    it("should add no-store cache headers for API routes", () => {
+    it("should add no-store cache headers for API routes", async () => {
       const req = makeRequest("/api/auth/login");
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.get("cache-control")).toBe("no-store, no-cache, must-revalidate");
     });
   });
 
   describe("CORS Allowlist matching in proxy.ts", () => {
-    it("should allow valid single-level subdomain (tenant1.thaibahive.com)", () => {
+    it("should allow valid single-level subdomain (tenant1.thaibahive.com)", async () => {
       const req = makeRequest("/api/auth/me", {
         headers: { origin: "https://tenant1.thaibahive.com" },
       });
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.get("access-control-allow-origin")).toBe("https://tenant1.thaibahive.com");
       expect(res.get("access-control-allow-credentials")).toBe("true");
     });
 
-    it("should allow valid multi-level subdomain (dept.campus.thaibahive.com)", () => {
+    it("should allow valid multi-level subdomain (dept.campus.thaibahive.com)", async () => {
       const req = makeRequest("/api/auth/me", {
         headers: { origin: "https://dept.campus.thaibahive.com" },
       });
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.get("access-control-allow-origin")).toBe("https://dept.campus.thaibahive.com");
     });
 
-    it("should reject malicious origin (evil-thaibahive.com)", () => {
+    it("should reject malicious origin (evil-thaibahive.com)", async () => {
       const req = makeRequest("/api/auth/me", {
         headers: { origin: "https://evil-thaibahive.com" },
       });
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.get("access-control-allow-origin")).toBeNull();
     });
 
-    it("should reject unauthorized external origin (hacker.com)", () => {
+    it("should reject unauthorized external origin (hacker.com)", async () => {
       const req = makeRequest("/api/auth/me", {
         headers: { origin: "https://hacker.com" },
       });
-      const res = proxy(req as any) as any;
+      const res = (await proxy(req as any)) as any;
       expect(res.get("access-control-allow-origin")).toBeNull();
     });
   });
-
 
   describe("config.matcher", () => {
     it("should export a matcher config", () => {

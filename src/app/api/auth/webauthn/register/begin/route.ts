@@ -30,4 +30,5 @@ export const POST = requireAuth(async (request, session) => {
   });
 
   return NextResponse.json(options);
-});
+}, "webauthn:manage");
+

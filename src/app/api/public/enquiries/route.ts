@@ -4,6 +4,8 @@ import { studentEnquiries, institutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, desc, and } from "drizzle-orm";
 
+const ALLOWED_ENQUIRY_STATUSES = new Set(["pending", "under_review", "admitted", "rejected"]);
+
 // Public admission enquiry submission handler
 export async function POST(request: Request) {
   try {
@@ -63,14 +65,19 @@ export async function POST(request: Request) {
 }
 
 // Protected management view for Coordinators / Principals
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get("institutionId");
+  const requestedInstitutionId = url.searchParams.get("institutionId");
   const status = url.searchParams.get("status");
+  const scope = session.institutionId;
 
   const conditions = [];
-  if (institutionId) {
-    conditions.push(eq(studentEnquiries.institutionId, institutionId));
+  if (scope && scope !== "global") {
+    // Scoped (non-admin) users are clamped to their own institution.
+    conditions.push(eq(studentEnquiries.institutionId, scope));
+  } else if (requestedInstitutionId) {
+    // Admins may target an explicit institution.
+    conditions.push(eq(studentEnquiries.institutionId, requestedInstitutionId));
   }
   if (status) {
     conditions.push(eq(studentEnquiries.status, status));
@@ -109,6 +116,28 @@ export const PATCH = requireAuth(async (request: Request, session: any) => {
   if (!id || !status) {
     return NextResponse.json({ error: "id and status are required" }, { status: 400 });
   }
+  if (!ALLOWED_ENQUIRY_STATUSES.has(status)) {
+    return NextResponse.json(
+      { error: `Invalid status. Allowed: ${Array.from(ALLOWED_ENQUIRY_STATUSES).join(", ")}` },
+      { status: 400 }
+    );
+  }
+
+  // Server-resolved tenant scope — never from the request body.
+  const scope = session?.institutionId;
+  const scopeWhere =
+    scope && scope !== "global"
+      ? and(eq(studentEnquiries.id, id), eq(studentEnquiries.institutionId, scope))
+      : eq(studentEnquiries.id, id);
+
+  const existing = await db
+    .select({ id: studentEnquiries.id })
+    .from(studentEnquiries)
+    .where(scopeWhere)
+    .get();
+  if (!existing) {
+    return NextResponse.json({ error: "Enquiry not found" }, { status: 404 });
+  }
 
   const updated = await db
     .update(studentEnquiries)
@@ -117,7 +146,7 @@ export const PATCH = requireAuth(async (request: Request, session: any) => {
       reviewedById: reviewedById || null,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(studentEnquiries.id, id))
+    .where(scopeWhere)
     .returning()
     .get();
 

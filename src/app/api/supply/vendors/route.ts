@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { vendorCreateSchema } from '@/lib/validation/supply-schemas';
 import { VendorRiskScreeningEngine } from '@/lib/operations/supply/risk/vendor-risk-screening-engine';
@@ -13,7 +14,7 @@ const esgEngine = EsgScoringEngine.getInstance();
 
 export const GET = requireAuth(async (req: Request, user: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
   const vendors = await store.listVendors(institutionId);
   return NextResponse.json({ vendors });
 }, 'supply:vendors:view');
@@ -26,7 +27,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid vendor payload' }, { status: 400 });
     }
 
-    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
     const vendorId = `ven-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     // Initial Risk Screening

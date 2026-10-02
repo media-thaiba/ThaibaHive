@@ -35,4 +35,5 @@ export const POST = requireAuth(async (request: Request, session) => {
       { status: 500 }
     );
   }
-});
+}, "notifications:update");
+

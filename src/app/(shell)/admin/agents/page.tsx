@@ -7,6 +7,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Bot,
   CheckCircle2,
@@ -315,45 +324,42 @@ export default function AgentsCockpitPage() {
       </Card>
 
       {/* Emergency Killswitch Modal */}
-      {showKillswitchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <Card className="w-full max-w-md border-red-500/50 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-destructive flex items-center gap-2">
-                <ShieldAlert className="size-5" />
-                Emergency Agent Kill-Switch (D12)
-              </CardTitle>
-              <CardDescription>
-                {killSwitchEngaged
-                  ? "Type 'CONFIRM RESUME AGENTS' to resume autonomous agent operations."
-                  : "Type 'CONFIRM HALT ALL AGENTS' to immediately pause all autonomous workflows and domain executions."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <input
-                type="text"
-                className="border-input bg-background w-full rounded-md border p-2 text-sm font-mono"
-                placeholder={killSwitchEngaged ? "CONFIRM RESUME AGENTS" : "CONFIRM HALT ALL AGENTS"}
-                value={killswitchConfirmInput}
-                onChange={(e) => setKillswitchConfirmInput(e.target.value)}
-              />
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowKillswitchModal(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant={killSwitchEngaged ? "default" : "destructive"}
-                  size="sm"
-                  disabled={actionLoading}
-                  onClick={() => handleKillSwitch(killSwitchEngaged ? "disengage" : "engage")}
-                >
-                  {killSwitchEngaged ? "Resume Operations" : "Halt All Agents"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={showKillswitchModal} onOpenChange={(open) => setShowKillswitchModal(open)}>
+        <DialogContent className="sm:max-w-md border-red-500/50">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <ShieldAlert className="size-5" />
+              Emergency Agent Kill-Switch (D12)
+            </DialogTitle>
+            <DialogDescription>
+              {killSwitchEngaged
+                ? "Type 'CONFIRM RESUME AGENTS' to resume autonomous agent operations."
+                : "Type 'CONFIRM HALT ALL AGENTS' to immediately pause all autonomous workflows and domain executions."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Input
+              className="font-mono text-sm"
+              placeholder={killSwitchEngaged ? "CONFIRM RESUME AGENTS" : "CONFIRM HALT ALL AGENTS"}
+              value={killswitchConfirmInput}
+              onChange={(e) => setKillswitchConfirmInput(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" size="sm" onClick={() => setShowKillswitchModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant={killSwitchEngaged ? "default" : "destructive"}
+              size="sm"
+              disabled={actionLoading}
+              onClick={() => handleKillSwitch(killSwitchEngaged ? "disengage" : "engage")}
+            >
+              {killSwitchEngaged ? "Resume Operations" : "Halt All Agents"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

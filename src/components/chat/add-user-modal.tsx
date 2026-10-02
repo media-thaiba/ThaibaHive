@@ -5,8 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { PresenceDot } from "@/components/ui/presence-dot";
-import { X, Search, MessageSquare, Users } from "lucide-react";
+import { Search, MessageSquare, Users } from "lucide-react";
 import { usePresence } from "@/hooks/usePresence";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type StaffMember = {
   id: string;
@@ -88,14 +94,11 @@ export function AddUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-background rounded-lg shadow-lg w-full max-w-md max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="font-semibold">New Conversation</h2>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-4 border-b">
+          <DialogTitle>New Conversation</DialogTitle>
+        </DialogHeader>
 
         <div className="p-3 border-b flex gap-2">
           <Button
@@ -223,7 +226,8 @@ export function AddUserModal({
             {mode === "dm" ? "Start Conversation" : "Create Group"}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
+

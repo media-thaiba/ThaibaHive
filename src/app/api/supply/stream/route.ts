@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyStreamManager } from '@/lib/operations/supply/streaming/supply-stream-manager';
 
 export const dynamic = 'force-dynamic';
@@ -8,7 +9,7 @@ const streamManager = SupplyStreamManager.getInstance();
 
 export const GET = requireAuth(async (req: Request, user: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
   const topic = searchParams.get('topic') || 'orders:status';
 
   const encoder = new TextEncoder();

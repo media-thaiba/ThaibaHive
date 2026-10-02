@@ -7011,6 +7011,7 @@ export const payrollDeductions = sqliteTable("payroll_deductions", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   payrollDeductionRecIdx: index("idx_pg_payroll_deduction_rec").on(t.payrollRecordId),
+  payrollDeductionRecTypeIdx: uniqueIndex("idx_pg_payroll_ded_rec_type").on(t.payrollRecordId, t.deductionType),
 }));
 
 // ─── 3-Way Financial Reconciliation ───

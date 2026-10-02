@@ -109,12 +109,13 @@ export const GET = requireAuth(async (request, session) => {
     const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-});
+}, "attendance:manage");
 
 export const PUT = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
     const institutionId = body.institutionId ?? null;
+
 
     // Authorization check
     if (institutionId) {
@@ -278,4 +279,5 @@ export const PUT = requireAuth(async (request, session) => {
     const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-});
+}, "attendance:manage");
+

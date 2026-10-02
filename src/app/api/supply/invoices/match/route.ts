@@ -23,7 +23,8 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid match payload' }, { status: 400 });
     }
 
-    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    // Tenant scope is server-resolved by requireAuth; client-body institutionId is never trusted.
+    const institutionId = user?.institutionId || 'global';
     
     // 1. Run 3-Way Reconciliation
     const evaluation = matchingEngine.reconcileDocuments(

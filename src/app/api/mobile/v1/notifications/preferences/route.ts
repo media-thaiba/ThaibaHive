@@ -11,7 +11,7 @@ export const GET = requireAuth(async (_request: Request, _session) => {
       announcements: true,
     },
   });
-});
+}, "notifications:update");
 
 export const POST = requireAuth(async (request: Request, _session) => {
   try {
@@ -30,4 +30,5 @@ export const POST = requireAuth(async (request: Request, _session) => {
   } catch {
     return NextResponse.json({ error: "Failed to update notification preferences" }, { status: 500 });
   }
-});
+}, "notifications:update");
+

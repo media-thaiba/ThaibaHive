@@ -13,11 +13,33 @@ export type StaffRole =
   | "academic_coordinator"
   | "exam_coordinator"
   | "teacher"
-  | "inspector";
+  | "inspector"
+  | "system";
 
 type Permission = string;
 
 const basePermissions = {
+  system: [
+    "system:update",
+    "system:manage",
+    "system:telemetry",
+    "system:admin",
+    "system:sync",
+    "system:cache:sync",
+    "system:dr",
+    "system:read",
+    "system:cron",
+    "cache:manage",
+    "media:reconcile",
+    "media:manage",
+    "dr:manage",
+    "sync:manage",
+    "sync:device",
+    "cron:run",
+    "telemetry:ingest",
+    "mobile:sync",
+    "cleanup:execute",
+  ],
   coordinator: [
     "campus.approve", "campus:approve", "teacher.assign", "teacher:assign", "academic.grade.create", "academic:grade:create",
     "regional:view", "regional:manage", "warehouse:export", "alerts:push_configure",
@@ -84,6 +106,7 @@ const basePermissions = {
 
 const rolePermissions: Record<StaffRole, Permission[]> = {
   super_admin: ["*"],
+  system: basePermissions.system,
   coordinator: basePermissions.coordinator,
   institutional_head: basePermissions.institutional_head,
   academic_coordinator: basePermissions.academic_coordinator,
@@ -427,6 +450,7 @@ export const VALID_STAFF_ROLES: StaffRole[] = [
   "exam_coordinator",
   "teacher",
   "inspector",
+  "system",
 ];
 
 const DOT_TO_COLON_MAP: Record<string, string> = {

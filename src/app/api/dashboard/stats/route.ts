@@ -196,4 +196,5 @@ export const GET = requireAuth(async (request, session) => {
     console.error("Dashboard stats error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-});
+}, "reports:read");
+

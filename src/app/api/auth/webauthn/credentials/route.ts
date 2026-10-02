@@ -10,4 +10,5 @@ export const GET = requireAuth(async (_request, session) => {
     .where(eq(webauthnCredentials.staffId, session.staffId));
 
   return NextResponse.json({ credentials });
-});
+}, "webauthn:manage");
+

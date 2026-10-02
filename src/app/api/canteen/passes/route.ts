@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenMealPasses } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { canteenPassCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
-  const userId = url.searchParams.get("userId") || session.staffId;
+  const isManager = session.role === "admin" || session.role === "super_admin" || session.role === "principal";
+  const userId = isManager && url.searchParams.get("userId") ? url.searchParams.get("userId")! : session.staffId;
 
   const passes = await db
     .select()
@@ -19,7 +21,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ passes });
 }, "canteen:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const parsed = canteenPassCreateSchema.safeParse(body);
   if (!parsed.success) {
@@ -27,13 +29,15 @@ export const POST = requireAuth(async (request: Request) => {
   }
 
   const { userId, passCode, balance, dailyLimit } = parsed.data;
+  const institutionId = await resolveScopedInstitutionId(body.institutionId);
+  const isManager = session.role === "admin" || session.role === "super_admin" || session.role === "principal";
 
   const pass = await db
     .insert(canteenMealPasses)
     .values({
       id: crypto.randomUUID(),
-      institutionId: "inst_001",
-      userId,
+      institutionId,
+      userId: isManager && userId ? userId : session.staffId,
       passCode,
       balance,
       currency: "INR",

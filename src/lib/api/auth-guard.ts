@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySession, type SessionPayload, hasPermission } from "@thaiba/auth";
+import { verifySession, resolveInstitutionScopeForSession, type SessionPayload, hasPermission } from "@thaiba/auth";
 import type { StaffRole } from "@/types";
 import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
@@ -51,12 +51,18 @@ export function requireAuth(
       const cacheSecret = request.headers.get("x-cache-secret");
       const cronSecret = request.headers.get("x-cron-secret");
 
+      // SEC-03: Path-scoped machine identity with role: "system" (never unrestricted super_admin)
+      const cronRoutes = (process.env.CRON_SECRET_ROUTES || "/api/system/update,/api/media/reconcile,/api/cron").split(",").map((s) => s.trim()).filter(Boolean);
+      const isCronPathAllowed = cronRoutes.some((allowed) => normalizedPath.startsWith(allowed));
+      const isDrPathAllowed = normalizedPath.startsWith("/api/system/dr") || normalizedPath.startsWith("/api/dr");
+      const isCachePathAllowed = normalizedPath.startsWith("/api/system/cache") || normalizedPath.startsWith("/api/cache");
+
       if (
-        (process.env.DR_DRILL_SECRET && drSecret === process.env.DR_DRILL_SECRET) ||
-        (process.env.CACHE_SYNC_SECRET && cacheSecret === process.env.CACHE_SYNC_SECRET) ||
-        (process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET)
+        (process.env.DR_DRILL_SECRET && drSecret === process.env.DR_DRILL_SECRET && isDrPathAllowed) ||
+        (process.env.CACHE_SYNC_SECRET && cacheSecret === process.env.CACHE_SYNC_SECRET && isCachePathAllowed) ||
+        (process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET && isCronPathAllowed)
       ) {
-        session = { staffId: "system", role: "super_admin", email: "system@internal" } as any;
+        session = { staffId: "system", role: "system", email: "system@internal", institutionId: "global" } as any;
       }
     }
 
@@ -68,7 +74,7 @@ export function requireAuth(
     if (requiredPermission) {
       const allowed = typeof hasPermission === "function"
         ? hasPermission(session.role as StaffRole, requiredPermission)
-        : (session.role === "super_admin" || (session.role === "admin" && requiredPermission !== "system:super_admin"));
+        : (session.role === "super_admin" || session.role === "system" || (session.role === "admin" && requiredPermission !== "system:super_admin"));
       if (!allowed) {
         console.warn(
           JSON.stringify({
@@ -82,6 +88,39 @@ export function requireAuth(
         );
         recordApm(403);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
+    // Server-side tenant scope resolution: never derived from JWT claims,
+    // request params, or client body. Admins resolve to "global" (the
+    // sanctioned unscoped bypass); mapped staff resolve to their institution.
+    if (typeof session.institutionId !== "string" && typeof resolveInstitutionScopeForSession === "function") {
+      try {
+        const scope = await resolveInstitutionScopeForSession(session);
+        session.institutionId = scope ?? "global";
+        if (!scope && session.role !== "super_admin" && session.role !== "admin") {
+          console.warn(
+            JSON.stringify({
+              event: "unmapped_institution_scope",
+              severity: "warning",
+              staffId: session.staffId,
+              role: session.role,
+              url: request.url,
+              timestamp: new Date().toISOString(),
+            })
+          );
+        }
+      } catch (error) {
+        console.error(
+          JSON.stringify({
+            event: "institution_scope_resolution_failed",
+            staffId: session.staffId,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          })
+        );
+        recordApm(500);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
       }
     }
 

@@ -4,6 +4,7 @@ import {
   payrollRecords,
   payrollDeductions,
   eq,
+  and,
 } from "@/db";
 import { createHash, randomUUID } from "crypto";
 
@@ -144,8 +145,25 @@ export class PayrollEngine {
     const generatedRecords = [];
 
     for (const struct of targetStructures) {
+      // Guard: Disbursed records are final and must never be overwritten
+      const [existingRecord] = await db
+        .select()
+        .from(payrollRecords)
+        .where(
+          and(
+            eq(payrollRecords.staffId, struct.staffId),
+            eq(payrollRecords.payPeriodYear, year),
+            eq(payrollRecords.payPeriodMonth, month)
+          )
+        );
+
+      if (existingRecord?.status === "disbursed") {
+        generatedRecords.push(existingRecord);
+        continue;
+      }
+
       const breakdown = this.computeBreakdown(struct);
-      const recordId = `pay-rec-${randomUUID()}`;
+      const recordId = existingRecord?.id || `pay-rec-${randomUUID()}`;
       const now = new Date().toISOString();
 
       const auditData = `${institutionId}:${struct.staffId}:${year}:${month}:${breakdown.netPayable}:${now}`;
@@ -163,9 +181,9 @@ export class PayrollEngine {
           totalDeductions: breakdown.totalDeductions,
           taxDeduction: breakdown.incomeTax,
           netPayable: breakdown.netPayable,
-          status: "draft",
+          status: existingRecord?.status || "draft",
           auditHash,
-          createdAt: now,
+          createdAt: existingRecord?.createdAt || now,
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -181,10 +199,10 @@ export class PayrollEngine {
         })
         .returning();
 
-      // Insert itemized deductions
-      await db.insert(payrollDeductions).values([
+      // Upsert itemized deductions with deterministic IDs & onConflictDoUpdate
+      const deductionsToInsert = [
         {
-          id: `ded-${randomUUID()}`,
+          id: `ded-${record.id}-pf`,
           payrollRecordId: record.id,
           deductionType: "provident_fund",
           amount: breakdown.pfDeduction,
@@ -192,7 +210,7 @@ export class PayrollEngine {
           createdAt: now,
         },
         {
-          id: `ded-${randomUUID()}`,
+          id: `ded-${record.id}-pt`,
           payrollRecordId: record.id,
           deductionType: "professional_tax",
           amount: breakdown.professionalTax,
@@ -200,14 +218,27 @@ export class PayrollEngine {
           createdAt: now,
         },
         {
-          id: `ded-${randomUUID()}`,
+          id: `ded-${record.id}-tax`,
           payrollRecordId: record.id,
           deductionType: "income_tax",
           amount: breakdown.incomeTax,
           description: "Tax Deducted at Source (TDS)",
           createdAt: now,
         },
-      ]);
+      ];
+
+      for (const ded of deductionsToInsert) {
+        await db
+          .insert(payrollDeductions)
+          .values(ded)
+          .onConflictDoUpdate({
+            target: [payrollDeductions.payrollRecordId, payrollDeductions.deductionType],
+            set: {
+              amount: ded.amount,
+              description: ded.description,
+            },
+          });
+      }
 
       generatedRecords.push(record);
     }

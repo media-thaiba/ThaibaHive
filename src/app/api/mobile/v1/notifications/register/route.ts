@@ -25,4 +25,5 @@ export const POST = requireAuth(async (request: Request, session) => {
     console.error("FCM Token registration error:", error);
     return NextResponse.json({ error: "Failed to register push token" }, { status: 500 });
   }
-});
+}, "notifications:update");
+

@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { fleetRoutes } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { eq, desc } from "drizzle-orm";
 
-export const GET = requireAuth(async () => {
-  const instId = "inst_001";
+export const GET = requireAuth(async (request: Request) => {
+  const url = new URL(request.url);
+  const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
   const routes = await db
     .select()
     .from(fleetRoutes)
-    .where(eq(fleetRoutes.institutionId, instId))
+    .where(instId && instId !== "global" ? eq(fleetRoutes.institutionId, instId) : undefined)
     .orderBy(desc(fleetRoutes.createdAt))
     .all();
 
@@ -24,7 +26,7 @@ export const POST = requireAuth(async (request: Request) => {
     return NextResponse.json({ error: "Missing required route fields" }, { status: 400 });
   }
 
-  const instId = "inst_001";
+  const instId = await resolveScopedInstitutionId(body.institutionId);
 
   const route = await db
     .insert(fleetRoutes)

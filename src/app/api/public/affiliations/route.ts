@@ -66,9 +66,9 @@ export const GET = requireAuth(async () => {
 }, "affiliations:manage");
 
 // Protected approval / review handler
-export const PATCH = requireAuth(async (request: Request) => {
+export const PATCH = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { id, status, approvedById } = body;
+  const { id, status } = body;
 
   if (!id || !status) {
     return NextResponse.json({ error: "id and status are required" }, { status: 400 });
@@ -78,12 +78,16 @@ export const PATCH = requireAuth(async (request: Request) => {
     .update(campusAffiliations)
     .set({
       status,
-      approvedById: approvedById || null,
+      approvedById: session.staffId,
       updatedAt: new Date().toISOString(),
     })
     .where(eq(campusAffiliations.id, id))
     .returning()
     .get();
+
+  if (!updated) {
+    return NextResponse.json({ error: "Affiliation record not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ affiliation: updated });
 }, "affiliations:manage");

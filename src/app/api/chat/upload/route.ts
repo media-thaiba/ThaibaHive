@@ -92,4 +92,5 @@ export const POST = requireAuth(async (request: Request) => {
       error instanceof Error ? error.message : "Failed to upload file";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-});
+}, "media:create");
+

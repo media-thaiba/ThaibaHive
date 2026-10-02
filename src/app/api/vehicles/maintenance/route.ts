@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { fleetMaintenanceLogs, vehicles } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { eq, desc } from "drizzle-orm";
 
-export const GET = requireAuth(async () => {
-  const instId = "inst_001";
+export const GET = requireAuth(async (request: Request) => {
+  const url = new URL(request.url);
+  const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
   const logs = await db
     .select({
       id: fleetMaintenanceLogs.id,
@@ -23,14 +25,14 @@ export const GET = requireAuth(async () => {
     })
     .from(fleetMaintenanceLogs)
     .leftJoin(vehicles, eq(fleetMaintenanceLogs.vehicleId, vehicles.id))
-    .where(eq(fleetMaintenanceLogs.institutionId, instId))
+    .where(instId && instId !== "global" ? eq(fleetMaintenanceLogs.institutionId, instId) : undefined)
     .orderBy(desc(fleetMaintenanceLogs.createdAt))
     .all();
 
   return NextResponse.json({ maintenanceLogs: logs });
 }, "vehicles:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { vehicleId, maintenanceDate, serviceType, cost, odometerReading, description, performedBy } = body;
 
@@ -38,7 +40,7 @@ export const POST = requireAuth(async (request: Request) => {
     return NextResponse.json({ error: "Missing required maintenance parameters" }, { status: 400 });
   }
 
-  const instId = "inst_001";
+  const instId = await resolveScopedInstitutionId(body.institutionId);
 
   const log = await db
     .insert(fleetMaintenanceLogs)
@@ -51,7 +53,7 @@ export const POST = requireAuth(async (request: Request) => {
       cost: cost || 0.0,
       odometerReading: odometerReading || null,
       description: description || null,
-      performedBy: performedBy || null,
+      performedBy: performedBy || session.staffId,
       status: "completed",
     })
     .returning()

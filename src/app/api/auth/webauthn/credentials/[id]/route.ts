@@ -21,4 +21,5 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     .where(eq(webauthnCredentials.id, id));
 
   return NextResponse.json({ deleted: true });
-});
+}, "webauthn:manage");
+

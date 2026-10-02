@@ -2,21 +2,29 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenItems, canteenMenus } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { canteenItemCreateSchema, canteenMenuPublishSchema } from "@/lib/validation/schemas";
-import { eq,  } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request) => {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
+  const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
 
-  const items = await db.select().from(canteenItems).all();
-  const menus = await db.select().from(canteenMenus).where(eq(canteenMenus.date, date)).all();
+  const itemWhere = instId && instId !== "global" ? eq(canteenItems.institutionId, instId) : undefined;
+  const menuWhere = instId && instId !== "global"
+    ? and(eq(canteenMenus.date, date), eq(canteenMenus.institutionId, instId))
+    : eq(canteenMenus.date, date);
+
+  const items = await db.select().from(canteenItems).where(itemWhere).all();
+  const menus = await db.select().from(canteenMenus).where(menuWhere).all();
 
   return NextResponse.json({ date, items, menus });
 }, "canteen:read");
 
 export const POST = requireAuth(async (request: Request) => {
   const body = await request.json();
+  const institutionId = await resolveScopedInstitutionId(body.institutionId);
   
   if (body.type === "item") {
     const parsed = canteenItemCreateSchema.safeParse(body);
@@ -29,7 +37,7 @@ export const POST = requireAuth(async (request: Request) => {
       .insert(canteenItems)
       .values({
         id: crypto.randomUUID(),
-        institutionId: "inst_001",
+        institutionId,
         name,
         category,
         price,
@@ -52,7 +60,7 @@ export const POST = requireAuth(async (request: Request) => {
       .insert(canteenMenus)
       .values({
         id: crypto.randomUUID(),
-        institutionId: "inst_001",
+        institutionId,
         date,
         mealType,
         itemsJson,
