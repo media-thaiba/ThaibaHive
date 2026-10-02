@@ -9,13 +9,23 @@ import { inArray } from "drizzle-orm";
 export async function deduplicateMarkEntries(dbClient: typeof db = db): Promise<{ duplicateGroups: number; deletedRows: number }> {
   console.log("[pre-migration] Checking mark_entries for duplicate records...");
 
-  // Query all mark entries
-  const allEntries = await dbClient.select({
-    id: markEntries.id,
-    examScheduleId: markEntries.examScheduleId,
-    studentId: markEntries.studentId,
-    createdAt: markEntries.createdAt,
-  }).from(markEntries).all();
+  // Query all mark entries safely (if table does not exist yet, return gracefully)
+  let allEntries: any[] = [];
+  try {
+    allEntries = await dbClient.select({
+      id: markEntries.id,
+      examScheduleId: markEntries.examScheduleId,
+      studentId: markEntries.studentId,
+      createdAt: markEntries.createdAt,
+    }).from(markEntries).all();
+  } catch (err: any) {
+    const msg = `${err?.message || ""} ${err?.cause?.message || ""} ${String(err)}`;
+    if (msg.includes("no such table") || msg.includes("SQLITE_ERROR") || err?.code === "SQLITE_ERROR" || err?.cause?.code === "SQLITE_ERROR") {
+      console.log("[pre-migration] mark_entries table does not exist yet. Skipping dedup.");
+      return { duplicateGroups: 0, deletedRows: 0 };
+    }
+    throw err;
+  }
 
   // Group by composite key
   const groups = new Map<string, typeof allEntries>();

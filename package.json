@@ -20,7 +20,7 @@
     "premigrate": "tsx scripts/pre-migration/mark-entries-dedup.ts",
     "db:generate": "drizzle-kit generate",
     "db:generate:pg": "drizzle-kit generate --config=drizzle.postgres.config.ts",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx scripts/db/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
     "db:replica:check": "tsx scripts/db/replica-parity-check.ts",

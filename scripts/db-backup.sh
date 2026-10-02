@@ -16,6 +16,16 @@
 # ============================================================================
 set -euo pipefail
 
+if [ "${DRY_RUN:-false}" = "true" ]; then
+  echo "[backup] Dry run enabled — skipping database backup and S3 upload."
+  exit 0
+fi
+
+if [ -z "${DATABASE_URL:-}" ] || [ -z "${BACKUP_S3_BUCKET:-}" ] || [ -z "${AWS_ACCESS_KEY_ID:-}" ]; then
+  echo "[backup] Skipping database backup: DATABASE_URL, BACKUP_S3_BUCKET, or AWS_ACCESS_KEY_ID is not configured in repository environment."
+  exit 0
+fi
+
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
 FILENAME="thaibahive_backup_${TIMESTAMP}.sql.gz"

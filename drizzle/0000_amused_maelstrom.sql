@@ -1,3 +1,15 @@
+CREATE TABLE `academic_years` (
+	`id` text PRIMARY KEY NOT NULL,
+	`institution_id` text,
+	`name` text NOT NULL,
+	`start_date` text NOT NULL,
+	`end_date` text NOT NULL,
+	`is_active` integer DEFAULT true NOT NULL,
+	`created_at` text DEFAULT (current_timestamp) NOT NULL,
+	`updated_at` text DEFAULT (current_timestamp) NOT NULL,
+	FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `announcement_reads` (
 	`id` text PRIMARY KEY NOT NULL,
 	`announcement_id` text NOT NULL,

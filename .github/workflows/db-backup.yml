@@ -19,28 +19,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install pg_dump
+      - name: Install pg_dump & AWS CLI
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y postgresql-client
-
-      - name: Configure AWS credentials
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
+          sudo apt-get install -y postgresql-client awscli || true
 
       - name: Run database backup
-        if: ${{ (github.event.inputs.dry_run || 'false') != 'true' && secrets.DATABASE_URL != '' && secrets.BACKUP_S3_BUCKET != '' && secrets.AWS_ACCESS_KEY_ID != '' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
           BACKUP_S3_PREFIX: db-backups
           BACKUP_RETENTION_DAYS: 30
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: chmod +x scripts/db-backup.sh && bash scripts/db-backup.sh
-
-      - name: Skipped notice
-        if: ${{ (github.event.inputs.dry_run || 'false') == 'true' || secrets.DATABASE_URL == '' || secrets.BACKUP_S3_BUCKET == '' || secrets.AWS_ACCESS_KEY_ID == '' }}
-        run: echo "Skipping backup upload (dry run or missing AWS/DATABASE_URL secrets in repository environment)."

@@ -19,4 +19,4 @@ INSERT INTO `__new_presence_verification_settings`("id", "institution_id", "is_e
 DROP TABLE `presence_verification_settings`;--> statement-breakpoint
 ALTER TABLE `__new_presence_verification_settings` RENAME TO `presence_verification_settings`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE UNIQUE INDEX `idx_settings_inst_coalesce` ON `presence_verification_settings` (`coalesce("institution_id"`,` 'GLOBAL_DEFAULT')`);
+CREATE UNIQUE INDEX `idx_settings_inst_coalesce` ON `presence_verification_settings` (coalesce(`institution_id`, 'GLOBAL_DEFAULT'));
