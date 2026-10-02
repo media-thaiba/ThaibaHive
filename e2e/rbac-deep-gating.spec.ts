@@ -72,34 +72,30 @@ test.describe("Bottom Navigation Visibility by Role", () => {
 // ========== Test: Dashboard Action Button Gating ==========
 
 test.describe("Dashboard Action Button Gating by Role", () => {
-  const financeRoles = AUTH_FINANCE_ROLES.filter(r => authStateExists(r));
-  const purchaseRoles = AUTH_PURCHASE_ROLES.filter(r => authStateExists(r));
-  const hodAndAbove = AUTH_HOD_AND_ABOVE.filter(r => authStateExists(r));
-  const principalAndAbove = AUTH_PRINCIPAL_AND_ABOVE.filter(r => authStateExists(r));
-  const adminRoles = AUTH_ADMIN_ROLES.filter(r => authStateExists(r));
   const allRoles = AUTH_ALL_STAFF_ROLES.filter(r => authStateExists(r));
 
   // ========== Finance Dashboard ==========
   
   test.describe("Finance Dashboard (/finance)", () => {
     for (const role of allRoles) {
-      const canCreate = DASHBOARD_ACTION_VISIBILITY["finance:new-request"][role];
-      const canExport = DASHBOARD_ACTION_VISIBILITY["finance:export"][role];
-
-      test(`Role ${role}: New Request button ${canCreate ? "visible" : "hidden"}`, async ({ page }) => {
+      test.describe(`Role: ${role}`, () => {
         test.use({ storageState: getAuthStatePath(role) });
-        const gating = new RoleGatingPage(page);
-        await page.goto("/finance");
-        await gating.expectFinanceDashboardLoaded();
-        await gating.expectFinanceNewRequestVisible(canCreate);
-      });
+        const canCreate = DASHBOARD_ACTION_VISIBILITY["finance:new-request"][role];
+        const canExport = DASHBOARD_ACTION_VISIBILITY["finance:export"][role];
 
-      test(`Role ${role}: Export button ${canExport ? "visible" : "hidden"}`, async ({ page }) => {
-        test.use({ storageState: getAuthStatePath(role) });
-        const gating = new RoleGatingPage(page);
-        await page.goto("/finance");
-        await gating.expectFinanceDashboardLoaded();
-        await gating.expectFinanceExportVisible(canExport);
+        test(`New Request button ${canCreate ? "visible" : "hidden"}`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          await page.goto("/finance");
+          await gating.expectFinanceDashboardLoaded();
+          await gating.expectFinanceNewRequestVisible(canCreate);
+        });
+
+        test(`Export button ${canExport ? "visible" : "hidden"}`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          await page.goto("/finance");
+          await gating.expectFinanceDashboardLoaded();
+          await gating.expectFinanceExportVisible(canExport);
+        });
       });
     }
   });
@@ -110,18 +106,20 @@ test.describe("Dashboard Action Button Gating by Role", () => {
     const tabs = ["AI Mentor Match", "Job Board", "Endowments", "Homecoming & Events"];
 
     for (const role of allRoles) {
-      for (const tab of tabs) {
-        const key = `alumni:${tab.toLowerCase().replace(/ /g, "-").replace("&", "")}`;
-        const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? true;
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
+        for (const tab of tabs) {
+          const key = `alumni:${tab.toLowerCase().replace(/ /g, "-").replace("&", "")}`;
+          const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? true;
 
-        test(`Role ${role}: "${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          await page.goto("/portal/alumni");
-          await gating.expectAlumniPortalLoaded();
-          await gating.expectAlumniTabVisible(tab, shouldBeVisible);
-        });
-      }
+          test(`"${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            await page.goto("/portal/alumni");
+            await gating.expectAlumniPortalLoaded();
+            await gating.expectAlumniTabVisible(tab, shouldBeVisible);
+          });
+        }
+      });
     }
   });
 
@@ -131,26 +129,27 @@ test.describe("Dashboard Action Button Gating by Role", () => {
     const tabs = ["3-Way Matching", "Purchase Orders", "Vendor Directory"];
 
     for (const role of allRoles) {
-      for (const tab of tabs) {
-        const key = `supply:${tab.toLowerCase().replace(/ /g, "-")}`;
-        const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? true;
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
+        for (const tab of tabs) {
+          const key = `supply:${tab.toLowerCase().replace(/ /g, "-")}`;
+          const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? true;
 
-        test(`Role ${role}: "${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
+          test(`"${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            await page.goto("/operations/supply");
+            await gating.expectSupplyCockpitLoaded();
+            await gating.expectSupplyTabVisible(tab, shouldBeVisible);
+          });
+        }
+
+        const canCreateRequisition = DASHBOARD_ACTION_VISIBILITY["supply:new-requisition"][role];
+        test(`New Requisition button ${canCreateRequisition ? "visible" : "hidden"}`, async ({ page }) => {
           const gating = new RoleGatingPage(page);
           await page.goto("/operations/supply");
           await gating.expectSupplyCockpitLoaded();
-          await gating.expectSupplyTabVisible(tab, shouldBeVisible);
+          await gating.expectSupplyNewRequisitionVisible(canCreateRequisition);
         });
-      }
-
-      const canCreateRequisition = DASHBOARD_ACTION_VISIBILITY["supply:new-requisition"][role];
-      test(`Role ${role}: New Requisition button ${canCreateRequisition ? "visible" : "hidden"}`, async ({ page }) => {
-        test.use({ storageState: getAuthStatePath(role) });
-        const gating = new RoleGatingPage(page);
-        await page.goto("/operations/supply");
-        await gating.expectSupplyCockpitLoaded();
-        await gating.expectSupplyNewRequisitionVisible(canCreateRequisition);
       });
     }
   });
@@ -161,28 +160,28 @@ test.describe("Dashboard Action Button Gating by Role", () => {
     const tabs = ["3D Vision Radar", "Threat Alerts & Incidents", "Guard Dispatch", "ALPR & Gate Access", "Privacy Vault"];
 
     for (const role of allRoles) {
-      for (const tab of tabs) {
-        const key = `vision:${tab.toLowerCase().replace(/ /g, "-").replace("&", "").replace("-", "")}`;
-        const shortKey = `vision:${tab.toLowerCase().split(" ")[0]}`;
-        const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[shortKey]?.[role] ?? false;
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
+        for (const tab of tabs) {
+          const shortKey = `vision:${tab.toLowerCase().split(" ")[0]}`;
+          const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[shortKey]?.[role] ?? false;
 
-        test(`Role ${role}: "${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
+          test(`"${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            await page.goto("/admin/operations/vision-shield");
+            await gating.expectVisionShieldLoaded();
+            await gating.expectVisionTabVisible(tab, shouldBeVisible);
+          });
+        }
+
+        // Lockdown button - only super_admin and admin
+        const canLockdown = DASHBOARD_ACTION_VISIBILITY["vision:lockdown"][role];
+        test(`LOCKDOWN button ${canLockdown ? "visible" : "hidden"}`, async ({ page }) => {
           const gating = new RoleGatingPage(page);
           await page.goto("/admin/operations/vision-shield");
           await gating.expectVisionShieldLoaded();
-          await gating.expectVisionTabVisible(tab, shouldBeVisible);
+          await gating.expectVisionLockdownVisible(canLockdown);
         });
-      }
-
-      // Lockdown button - only super_admin and admin
-      const canLockdown = DASHBOARD_ACTION_VISIBILITY["vision:lockdown"][role];
-      test(`Role ${role}: LOCKDOWN button ${canLockdown ? "visible" : "hidden"}`, async ({ page }) => {
-        test.use({ storageState: getAuthStatePath(role) });
-        const gating = new RoleGatingPage(page);
-        await page.goto("/admin/operations/vision-shield");
-        await gating.expectVisionShieldLoaded();
-        await gating.expectVisionLockdownVisible(canLockdown);
       });
     }
   });
@@ -193,18 +192,20 @@ test.describe("Dashboard Action Button Gating by Role", () => {
     const tabs = ["Equipment Studio & Twin", "Predictive Matrix", "Work Order Radar", "Parts Inventory", "Energy & Load Shed"];
 
     for (const role of allRoles) {
-      for (const tab of tabs) {
-        const shortKey = `facility:${tab.toLowerCase().split(" ")[0]}`;
-        const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[shortKey]?.[role] ?? false;
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
+        for (const tab of tabs) {
+          const shortKey = `facility:${tab.toLowerCase().split(" ")[0]}`;
+          const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[shortKey]?.[role] ?? false;
 
-        test(`Role ${role}: "${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          await page.goto("/admin/operations/facility-mind");
-          await gating.expectFacilityMindLoaded();
-          await gating.expectFacilityTabVisible(tab, shouldBeVisible);
-        });
-      }
+          test(`"${tab}" tab ${shouldBeVisible ? "visible" : "hidden"}`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            await page.goto("/admin/operations/facility-mind");
+            await gating.expectFacilityMindLoaded();
+            await gating.expectFacilityTabVisible(tab, shouldBeVisible);
+          });
+        }
+      });
     }
   });
 
@@ -292,27 +293,29 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
   test.describe("Finance API 403 for non-finance roles", () => {
     for (const role of nonAdminRoles) {
       if (!AUTH_FINANCE_ROLES.includes(role as any)) {
-        test(`Role ${role} cannot POST /api/finance/fees/structures`, async ({ page }) => {
+        test.describe(`Role: ${role}`, () => {
           test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/finance/fees/structures", "POST", {
-            institutionId: "inst_campus_main",
-            name: "Test Fee",
-            code: "TEST-FEE",
-            academicYear: "2025-2026",
-            totalAmount: 10000,
-          });
-        });
 
-        test(`Role ${role} cannot POST /api/approvals`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/approvals", "POST", {
-            type: "expense",
-            amount: 5000,
-            description: "Test expense",
+          test(`cannot POST /api/finance/fees/structures`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/finance/fees/structures", "POST", {
+              institutionId: "inst_campus_main",
+              name: "Test Fee",
+              code: "TEST-FEE",
+              academicYear: "2025-2026",
+              totalAmount: 10000,
+            });
+          });
+
+          test(`cannot POST /api/approvals`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/approvals", "POST", {
+              type: "expense",
+              amount: 5000,
+              description: "Test expense",
+            });
           });
         });
       }
@@ -323,13 +326,16 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
   test.describe("Supply API 403 for non-purchase roles", () => {
     for (const role of nonAdminRoles) {
       if (!AUTH_PURCHASE_ROLES.includes(role as any)) {
-        test(`Role ${role} cannot POST /api/supply/orders`, async ({ page }) => {
+        test.describe(`Role: ${role}`, () => {
           test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/supply/orders", "POST", {
-            vendorId: "test-vendor",
-            items: [{ sku: "TEST-001", quantity: 10, unitPrice: 100 }],
+
+          test(`cannot POST /api/supply/orders`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/supply/orders", "POST", {
+              vendorId: "test-vendor",
+              items: [{ sku: "TEST-001", quantity: 10, unitPrice: 100 }],
+            });
           });
         });
       }
@@ -340,22 +346,24 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
   test.describe("Vision Shield API 403 for non-admin roles", () => {
     for (const role of nonAdminRoles) {
       if (!AUTH_ADMIN_ROLES.includes(role as any)) {
-        test(`Role ${role} cannot POST /api/vision/lockdown`, async ({ page }) => {
+        test.describe(`Role: ${role}`, () => {
           test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/vision/lockdown", "POST", {
-            scope: "campus",
-            targetFacilityId: "bldg_eng",
-            reason: "Test lockdown",
-          });
-        });
 
-        test(`Role ${role} cannot GET /api/vision/alerts/stream`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/vision/alerts/stream", "GET");
+          test(`cannot POST /api/vision/lockdown`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/vision/lockdown", "POST", {
+              scope: "campus",
+              targetFacilityId: "bldg_eng",
+              reason: "Test lockdown",
+            });
+          });
+
+          test(`cannot GET /api/vision/alerts/stream`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/vision/alerts/stream", "GET");
+          });
         });
       }
     }
@@ -365,25 +373,27 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
   test.describe("Facility API 403 for non-admin roles", () => {
     for (const role of nonAdminRoles) {
       if (!AUTH_ADMIN_ROLES.includes(role as any) && !AUTH_HOD_AND_ABOVE.includes(role as any)) {
-        test(`Role ${role} cannot POST /api/facility/workorders`, async ({ page }) => {
+        test.describe(`Role: ${role}`, () => {
           test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/facility/workorders", "POST", {
-            title: "Test Work Order",
-            buildingId: "bldg_eng",
-            category: "hvac",
-            priority: "high",
-          });
-        });
 
-        test(`Role ${role} cannot POST /api/facility/dispatch`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/facility/dispatch", "POST", {
-            workOrderNumber: "WO-TEST-001",
-            requiredSkill: "hvac",
+          test(`cannot POST /api/facility/workorders`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/facility/workorders", "POST", {
+              title: "Test Work Order",
+              buildingId: "bldg_eng",
+              category: "hvac",
+              priority: "high",
+            });
+          });
+
+          test(`cannot POST /api/facility/dispatch`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/facility/dispatch", "POST", {
+              workOrderNumber: "WO-TEST-001",
+              requiredSkill: "hvac",
+            });
           });
         });
       }
@@ -394,20 +404,22 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
   test.describe("Admin API 403 for non-admin roles", () => {
     for (const role of nonAdminRoles) {
       if (!AUTH_ADMIN_ROLES.includes(role as any)) {
-        test(`Role ${role} cannot GET /admin/scheduled-jobs`, async ({ page }) => {
+        test.describe(`Role: ${role}`, () => {
           test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/admin/scheduled-jobs", "GET");
-        });
 
-        test(`Role ${role} cannot POST /api/admin/sync-policies`, async ({ page }) => {
-          test.use({ storageState: getAuthStatePath(role) });
-          const gating = new RoleGatingPage(page);
-          
-          await gating.callApiAndExpectForbidden("/api/admin/sync-policies", "POST", {
-            policyId: "test-policy",
-            enabled: true,
+          test(`cannot GET /admin/scheduled-jobs`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/admin/scheduled-jobs", "GET");
+          });
+
+          test(`cannot POST /api/admin/sync-policies`, async ({ page }) => {
+            const gating = new RoleGatingPage(page);
+            
+            await gating.callApiAndExpectForbidden("/api/admin/sync-policies", "POST", {
+              policyId: "test-policy",
+              enabled: true,
+            });
           });
         });
       }
@@ -461,52 +473,62 @@ test.describe("Unauthenticated Access (401/Redirect)", () => {
 // ========== Test: Cross-Role Navigation ==========
 
 test.describe("Cross-Role Navigation Edge Cases", () => {
-  test("staff cannot access /admin routes directly", async ({ page }) => {
+  test.describe("staff", () => {
     test.use({ storageState: getAuthStatePath("staff") });
-    const gating = new RoleGatingPage(page);
+    test("staff cannot access /admin routes directly", async ({ page }) => {
+      const gating = new RoleGatingPage(page);
 
-    await page.goto("/admin/scheduled-jobs");
-    await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await page.goto("/admin/scheduled-jobs");
+      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+    });
   });
 
-  test("hod cannot access /admin/nfc", async ({ page }) => {
+  test.describe("hod", () => {
     test.use({ storageState: getAuthStatePath("hod") });
-    const gating = new RoleGatingPage(page);
+    test("hod cannot access /admin/nfc", async ({ page }) => {
+      const gating = new RoleGatingPage(page);
 
-    await page.goto("/admin/nfc");
-    await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await page.goto("/admin/nfc");
+      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+    });
   });
 
-  test("principal can access /academic but not /admin/nfc", async ({ page }) => {
+  test.describe("principal", () => {
     test.use({ storageState: getAuthStatePath("principal") });
-    const gating = new RoleGatingPage(page);
+    test("principal can access /academic but not /admin/nfc", async ({ page }) => {
+      const gating = new RoleGatingPage(page);
 
-    await page.goto("/academic");
-    await expect(page.locator("text=Academic Dashboard")).toBeVisible({ timeout: 10000 });
+      await page.goto("/academic");
+      await expect(page.locator("text=Academic Dashboard")).toBeVisible({ timeout: 10000 });
 
-    await page.goto("/admin/nfc");
-    await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await page.goto("/admin/nfc");
+      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+    });
   });
 
-  test("accounts can access /accounts but not /admin/nfc", async ({ page }) => {
+  test.describe("accounts", () => {
     test.use({ storageState: getAuthStatePath("accounts") });
-    const gating = new RoleGatingPage(page);
+    test("accounts can access /accounts but not /admin/nfc", async ({ page }) => {
+      const gating = new RoleGatingPage(page);
 
-    await page.goto("/accounts");
-    await expect(page.locator("text=Accounts")).toBeVisible({ timeout: 10000 });
+      await page.goto("/accounts");
+      await expect(page.locator("text=Accounts")).toBeVisible({ timeout: 10000 });
 
-    await page.goto("/admin/nfc");
-    await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await page.goto("/admin/nfc");
+      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+    });
   });
 
-  test("purchase can access /purchases but not /accounts", async ({ page }) => {
+  test.describe("purchase", () => {
     test.use({ storageState: getAuthStatePath("purchase") });
-    const gating = new RoleGatingPage(page);
+    test("purchase can access /purchases but not /accounts", async ({ page }) => {
+      const gating = new RoleGatingPage(page);
 
-    await page.goto("/purchases");
-    await expect(page.locator("text=Purchases")).toBeVisible({ timeout: 10000 });
+      await page.goto("/purchases");
+      await expect(page.locator("text=Purchases")).toBeVisible({ timeout: 10000 });
 
-    await page.goto("/accounts");
-    await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await page.goto("/accounts");
+      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+    });
   });
 });

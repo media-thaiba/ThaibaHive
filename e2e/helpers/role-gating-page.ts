@@ -2,13 +2,13 @@ import { type Page, type Locator, expect } from "@playwright/test";
 
 export class RoleGatingPage {
   readonly page: Page;
-
-  // Sidebar Navigation Links (data-testid or href-based)
-  readonly sidebarNav = this.page.locator('nav[aria-label="Sidebar navigation"]');
-  readonly bottomNav = this.page.locator('nav[aria-label="Mobile navigation"]');
+  readonly sidebarNav: Locator;
+  readonly bottomNav: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    this.sidebarNav = page.locator('nav[aria-label="Sidebar navigation"]');
+    this.bottomNav = page.locator('nav[aria-label="Mobile navigation"]');
   }
 
   // ========== Sidebar Navigation ==========
