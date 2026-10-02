@@ -1,5 +1,5 @@
 import { db } from '@thaiba/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
   alumniProfiles,
   alumniEducations,
@@ -62,6 +62,7 @@ export interface InMemoryAlumniStore {
 
 export class AlumniDbStore {
   private static instance: AlumniDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
   private memoryStore: InMemoryAlumniStore = {
     profiles: new Map(),
     educations: new Map(),
@@ -108,7 +109,7 @@ export class AlumniDbStore {
   // ─── Alumni Profile Operations ───
 
   private async persistEducation(education: AlumniEducationItem): Promise<void> {
-    if (!db) return;
+    if (!db || this.useMemoryOnly) return;
     await db.insert(alumniEducations).values({
       id: education.id,
       alumniProfileId: education.alumniProfileId,
@@ -141,7 +142,7 @@ export class AlumniDbStore {
   }
 
   private async persistExperience(experience: AlumniExperienceItem): Promise<void> {
-    if (!db) return;
+    if (!db || this.useMemoryOnly) return;
     await db.insert(alumniExperiences).values({
       id: experience.id,
       alumniProfileId: experience.alumniProfileId,
@@ -188,7 +189,7 @@ export class AlumniDbStore {
       }
     }
 
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniProfiles).values({
           id: profile.id,
@@ -356,9 +357,10 @@ export class AlumniDbStore {
     return { items: paginated, total };
   }
 
-  public async updateAlumniProfile(id: string, updates: Partial<AlumniProfileItem>): Promise<AlumniProfileItem | null> {
+  public async updateAlumniProfile(id: string, updates: Partial<AlumniProfileItem>, institutionId?: string): Promise<AlumniProfileItem | null> {
     const existing = this.memoryStore.profiles.get(id);
     if (!existing) return null;
+    if (institutionId && existing.institutionId !== institutionId) return null;
     const updated = {
       ...existing,
       ...updates,
@@ -366,7 +368,7 @@ export class AlumniDbStore {
     };
     this.memoryStore.profiles.set(id, updated);
 
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         const dbUpdates: Record<string, unknown> = { updatedAt: updated.updatedAt };
         if (updates.firstName !== undefined) dbUpdates.firstName = updates.firstName;
@@ -398,7 +400,11 @@ export class AlumniDbStore {
         if (updates.status !== undefined) dbUpdates.status = updates.status;
         if (updates.claimedAt !== undefined) dbUpdates.claimedAt = updates.claimedAt ?? null;
 
-        await db.update(alumniProfiles).set(dbUpdates).where(eq(alumniProfiles.id, id));
+        const whereClause = institutionId
+          ? and(eq(alumniProfiles.id, id), eq(alumniProfiles.institutionId, institutionId))
+          : eq(alumniProfiles.id, id);
+
+        await db.update(alumniProfiles).set(dbUpdates).where(whereClause);
       } catch (error) {
         handleWriteError('updateAlumniProfile', error);
       }
@@ -411,7 +417,7 @@ export class AlumniDbStore {
 
   public async addEducation(education: AlumniEducationItem): Promise<AlumniEducationItem> {
     this.memoryStore.educations.set(education.id, { ...education });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await this.persistEducation(education);
       } catch (error) {
@@ -423,7 +429,7 @@ export class AlumniDbStore {
 
   public async addExperience(experience: AlumniExperienceItem): Promise<AlumniExperienceItem> {
     this.memoryStore.experiences.set(experience.id, { ...experience });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await this.persistExperience(experience);
       } catch (error) {
@@ -437,7 +443,7 @@ export class AlumniDbStore {
 
   public async createMentorshipProfile(profile: AlumniMentorshipProfileItem): Promise<AlumniMentorshipProfileItem> {
     this.memoryStore.mentorshipProfiles.set(profile.id, { ...profile });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniMentorshipProfiles).values({
           id: profile.id,
@@ -521,7 +527,7 @@ export class AlumniDbStore {
 
   public async createMentorshipRequest(request: AlumniMentorshipRequestItem): Promise<AlumniMentorshipRequestItem> {
     this.memoryStore.mentorshipRequests.set(request.id, { ...request });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniMentorshipRequests).values({
           id: request.id,
@@ -558,7 +564,7 @@ export class AlumniDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.mentorshipRequests.set(id, updated);
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         const dbUpdates: Record<string, unknown> = { updatedAt: updated.updatedAt };
         if (updates.status !== undefined) dbUpdates.status = updates.status;
@@ -575,7 +581,7 @@ export class AlumniDbStore {
 
   public async createMentorshipSession(session: AlumniMentorshipSessionItem): Promise<AlumniMentorshipSessionItem> {
     this.memoryStore.mentorshipSessions.set(session.id, { ...session });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniMentorshipSessions).values({
           id: session.id,
@@ -615,7 +621,7 @@ export class AlumniDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.mentorshipSessions.set(id, updated);
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         const dbUpdates: Record<string, unknown> = { updatedAt: updated.updatedAt };
         if (updates.status !== undefined) dbUpdates.status = updates.status;
@@ -637,7 +643,7 @@ export class AlumniDbStore {
 
   public async createJobPosting(job: AlumniJobPostingItem): Promise<AlumniJobPostingItem> {
     this.memoryStore.jobPostings.set(job.id, { ...job });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniJobPostings).values({
           id: job.id,
@@ -715,16 +721,17 @@ export class AlumniDbStore {
     return items;
   }
 
-  public async updateJobPosting(id: string, updates: Partial<AlumniJobPostingItem>): Promise<AlumniJobPostingItem | null> {
+  public async updateJobPosting(id: string, updates: Partial<AlumniJobPostingItem>, institutionId?: string): Promise<AlumniJobPostingItem | null> {
     const existing = this.memoryStore.jobPostings.get(id);
     if (!existing) return null;
+    if (institutionId && existing.institutionId !== institutionId) return null;
     const updated = {
       ...existing,
       ...updates,
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.jobPostings.set(id, updated);
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         const dbUpdates: Record<string, unknown> = { updatedAt: updated.updatedAt };
         if (updates.status !== undefined) dbUpdates.status = updates.status;
@@ -734,7 +741,12 @@ export class AlumniDbStore {
         if (updates.moderationNotes !== undefined) dbUpdates.moderationNotes = updates.moderationNotes ?? null;
         if (updates.publishedAt !== undefined) dbUpdates.publishedAt = updates.publishedAt ?? null;
         if (updates.expiresAt !== undefined) dbUpdates.expiresAt = updates.expiresAt ?? null;
-        await db.update(alumniJobPostings).set(dbUpdates).where(eq(alumniJobPostings.id, id));
+
+        const whereClause = institutionId
+          ? and(eq(alumniJobPostings.id, id), eq(alumniJobPostings.institutionId, institutionId))
+          : eq(alumniJobPostings.id, id);
+
+        await db.update(alumniJobPostings).set(dbUpdates).where(whereClause);
       } catch (error) {
         handleWriteError('updateJobPosting', error);
       }
@@ -749,7 +761,7 @@ export class AlumniDbStore {
       job.applicationsCount += 1;
       this.memoryStore.jobPostings.set(job.id, job);
     }
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniJobApplications).values({
           id: app.id,
@@ -798,7 +810,7 @@ export class AlumniDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.jobApplications.set(id, updated);
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         const dbUpdates: Record<string, unknown> = { updatedAt: updated.updatedAt };
         if (updates.status !== undefined) dbUpdates.status = updates.status;
@@ -817,7 +829,7 @@ export class AlumniDbStore {
 
   public async createDonationCampaign(campaign: AlumniDonationCampaignItem): Promise<AlumniDonationCampaignItem> {
     this.memoryStore.donationCampaigns.set(campaign.id, { ...campaign });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniDonationCampaigns).values({
           id: campaign.id,
@@ -885,7 +897,7 @@ export class AlumniDbStore {
       campaign.donorCount += 1;
       this.memoryStore.donationCampaigns.set(campaign.id, campaign);
     }
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniDonations).values({
           id: donation.id,
@@ -961,7 +973,7 @@ export class AlumniDbStore {
 
   public async createChapter(chapter: AlumniChapterItem): Promise<AlumniChapterItem> {
     this.memoryStore.chapters.set(chapter.id, { ...chapter });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniChapters).values({
           id: chapter.id,
@@ -1026,7 +1038,7 @@ export class AlumniDbStore {
       chapter.memberCount += 1;
       this.memoryStore.chapters.set(chapter.id, chapter);
     }
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniChapterMembers).values({
           id: member.id,
@@ -1053,7 +1065,7 @@ export class AlumniDbStore {
 
   public async createEvent(event: AlumniEventItem): Promise<AlumniEventItem> {
     this.memoryStore.events.set(event.id, { ...event });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniEvents).values({
           id: event.id,
@@ -1130,7 +1142,7 @@ export class AlumniDbStore {
       event.registeredCount += 1;
       this.memoryStore.events.set(event.id, event);
     }
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniEventRsvps).values({
           id: rsvp.id,
@@ -1189,7 +1201,7 @@ export class AlumniDbStore {
         eventToUpdate = event;
       }
     }
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         const dbUpdates: Record<string, unknown> = { updatedAt: updated.updatedAt };
         if (updates.isCheckedIn !== undefined) dbUpdates.isCheckedIn = updates.isCheckedIn;
@@ -1218,7 +1230,7 @@ export class AlumniDbStore {
 
   public async logAudit(audit: AlumniAuditLogItem): Promise<AlumniAuditLogItem> {
     this.memoryStore.auditLogs.set(audit.id, { ...audit });
-    if (db) {
+    if (db && !this.useMemoryOnly) {
       try {
         await db.insert(alumniAuditLogs).values({
           id: audit.id,

@@ -14,7 +14,7 @@ import {
   feeReconciliationBatches,
   feeAuditLogs,
 } from '@thaiba/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
   FeeStructureItem,
   FeeStructureComponentItem,
@@ -53,6 +53,7 @@ export interface InMemoryFeeStore {
 
 export class FeeDbStore {
   private static instance: FeeDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
   private memoryStore: InMemoryFeeStore = {
     structures: new Map(),
     components: new Map(),
@@ -110,7 +111,7 @@ export class FeeDbStore {
     }
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeStructures).values({
           id: structure.id,
           institutionId: structure.institutionId,
@@ -193,7 +194,7 @@ export class FeeDbStore {
     }
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeStudentAllocations).values({
           id: allocation.id,
           institutionId: allocation.institutionId,
@@ -286,14 +287,18 @@ export class FeeDbStore {
       }));
   }
 
-  public async updateAllocation(id: string, updates: Partial<FeeStudentAllocationItem>): Promise<FeeStudentAllocationItem | null> {
+  public async updateAllocation(id: string, updates: Partial<FeeStudentAllocationItem>, institutionId?: string): Promise<FeeStudentAllocationItem | null> {
     const existing = this.memoryStore.allocations.get(id);
     if (!existing) return null;
+    if (institutionId && existing.institutionId !== institutionId) return null;
     const updated = { ...existing, ...updates, updatedAt: new Date().toISOString() };
     this.memoryStore.allocations.set(id, updated);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = institutionId
+          ? and(eq(feeStudentAllocations.id, id), eq(feeStudentAllocations.institutionId, institutionId))
+          : eq(feeStudentAllocations.id, id);
         await db.update(feeStudentAllocations).set({
           concessionAmount: updated.concessionAmount,
           netPayableAmount: updated.netPayableAmount,
@@ -303,7 +308,7 @@ export class FeeDbStore {
           dueDate: updated.dueDate,
           remarks: updated.remarks,
           updatedAt: updated.updatedAt,
-        }).where(eq(feeStudentAllocations.id, id));
+        }).where(whereClause);
       }
     } catch (err) {
       this.handlePersistenceError('updateAllocation', id, err);
@@ -319,7 +324,7 @@ export class FeeDbStore {
     this.memoryStore.installments.set(id, updated);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.update(feeInstallments).set({
           paidAmount: updated.paidAmount,
           balanceAmount: updated.balanceAmount,
@@ -348,7 +353,7 @@ export class FeeDbStore {
     }
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feePayments).values({
           id: payment.id,
           paymentNumber: payment.paymentNumber,
@@ -438,7 +443,7 @@ export class FeeDbStore {
     this.memoryStore.receipts.set(receipt.id, { ...receipt });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeReceipts).values({
           id: receipt.id,
           receiptNumber: receipt.receiptNumber,
@@ -491,7 +496,7 @@ export class FeeDbStore {
     this.memoryStore.scholarships.set(scholarship.id, { ...scholarship });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeScholarships).values({
           id: scholarship.id,
           institutionId: scholarship.institutionId,
@@ -526,7 +531,7 @@ export class FeeDbStore {
     this.memoryStore.concessions.set(concession.id, { ...concession });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeConcessions).values({
           id: concession.id,
           institutionId: concession.institutionId,
@@ -556,10 +561,12 @@ export class FeeDbStore {
     id: string,
     status: ConcessionStatus,
     approvedById?: string,
-    decisionNotes?: string
+    decisionNotes?: string,
+    institutionId?: string
   ): Promise<FeeConcessionItem | null> {
     const existing = this.memoryStore.concessions.get(id);
     if (!existing) return null;
+    if (institutionId && existing.institutionId !== institutionId) return null;
     const updated: FeeConcessionItem = {
       ...existing,
       status,
@@ -571,14 +578,17 @@ export class FeeDbStore {
     this.memoryStore.concessions.set(id, updated);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = institutionId
+          ? and(eq(feeConcessions.id, id), eq(feeConcessions.institutionId, institutionId))
+          : eq(feeConcessions.id, id);
         await db.update(feeConcessions).set({
           status: updated.status,
           approvedById: updated.approvedById,
           decisionNotes: updated.decisionNotes,
           decisionDate: updated.decisionDate,
           updatedAt: updated.updatedAt,
-        }).where(eq(feeConcessions.id, id));
+        }).where(whereClause);
       }
     } catch (err) {
       this.handlePersistenceError('updateConcessionStatus', id, err);
@@ -599,7 +609,7 @@ export class FeeDbStore {
     this.memoryStore.counterRegisters.set(register.id, { ...register });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeCounterRegisters).values({
           id: register.id,
           institutionId: register.institutionId,
@@ -632,10 +642,12 @@ export class FeeDbStore {
     id: string,
     closingCashDeclared: number,
     supervisorId?: string,
-    supervisorNotes?: string
+    supervisorNotes?: string,
+    institutionId?: string
   ): Promise<FeeCounterRegisterItem | null> {
     const existing = this.memoryStore.counterRegisters.get(id);
     if (!existing) return null;
+    if (institutionId && existing.institutionId !== institutionId) return null;
     const variance = closingCashDeclared - (existing.openingFloat + existing.systemCashTotal - existing.cashDropsTotal);
     const updated: FeeCounterRegisterItem = {
       ...existing,
@@ -650,7 +662,10 @@ export class FeeDbStore {
     this.memoryStore.counterRegisters.set(id, updated);
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = institutionId
+          ? and(eq(feeCounterRegisters.id, id), eq(feeCounterRegisters.institutionId, institutionId))
+          : eq(feeCounterRegisters.id, id);
         await db.update(feeCounterRegisters).set({
           closingCashDeclared: updated.closingCashDeclared,
           varianceAmount: updated.varianceAmount,
@@ -659,7 +674,7 @@ export class FeeDbStore {
           supervisorId: updated.supervisorId,
           supervisorNotes: updated.supervisorNotes,
           updatedAt: updated.updatedAt,
-        }).where(eq(feeCounterRegisters.id, id));
+        }).where(whereClause);
       }
     } catch (err) {
       this.handlePersistenceError('closeCounterRegister', id, err);
@@ -687,7 +702,7 @@ export class FeeDbStore {
     this.memoryStore.defaulterLogs.set(log.id, { ...log });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeDefaulterLogs).values({
           id: log.id,
           institutionId: log.institutionId,
@@ -722,7 +737,7 @@ export class FeeDbStore {
     this.memoryStore.reconciliationBatches.set(batch.id, { ...batch });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeReconciliationBatches).values({
           id: batch.id,
           batchNumber: batch.batchNumber,
@@ -761,7 +776,7 @@ export class FeeDbStore {
     this.memoryStore.auditLogs.set(log.id, { ...log });
 
     try {
-      if (db) {
+      if (db && !this.useMemoryOnly) {
         await db.insert(feeAuditLogs).values({
           id: log.id,
           auditId: log.auditId,

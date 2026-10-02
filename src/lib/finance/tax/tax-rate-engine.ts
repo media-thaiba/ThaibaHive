@@ -1,4 +1,4 @@
-import { db, taxJurisdictions, taxRateOverrides, eq, and, lte, or, isNull, gte } from "@/db";
+import { db, taxJurisdictions, taxRateOverrides, eq, and, lte, or, isNull, gte, desc } from "@/db";
 import { randomUUID } from "crypto";
 
 export interface TaxCalculationResult {
@@ -47,7 +47,8 @@ export class TaxRateEngine {
             gte(taxRateOverrides.effectiveTo, asOfDate)
           )
         )
-      );
+      )
+      .orderBy(desc(taxRateOverrides.effectiveFrom));
 
     if (overrides.length > 0) {
       const bestOverride = overrides[0];

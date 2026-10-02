@@ -325,36 +325,38 @@ async function applyApprovalDecision(
       nextStatus = "hod_approved";
     }
 
-    const updated = await db
-      .update(leaveRequests)
-      .set({ status: nextStatus, reviewedById: ctx.staffId, reviewedAt: now, reviewNotes: notes, updatedAt: now })
-      .where(
-        and(eq(leaveRequests.id, id), ne(leaveRequests.status, "approved"), ne(leaveRequests.status, "rejected"))
-      )
-      .returning()
-      .get();
-    if (!updated) throw new Error("Leave request is already in a terminal state");
-
-    if (updated.status === "approved") {
-      const existing = await db
-        .select()
-        .from(leaveBalances)
+    await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(leaveRequests)
+        .set({ status: nextStatus, reviewedById: ctx.staffId, reviewedAt: now, reviewNotes: notes, updatedAt: now })
         .where(
-          and(
-            eq(leaveBalances.staffId, leave.staffId),
-            eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-            eq(leaveBalances.year, new Date().getFullYear())
-          )
+          and(eq(leaveRequests.id, id), ne(leaveRequests.status, "approved"), ne(leaveRequests.status, "rejected"))
         )
+        .returning()
         .get();
-      if (existing) {
-        await db
-          .update(leaveBalances)
-          .set({ usedDays: existing.usedDays + leave.daysCount })
-          .where(eq(leaveBalances.id, existing.id))
-          .run();
+      if (!updated) throw new Error("Leave request is already in a terminal state");
+
+      if (updated.status === "approved") {
+        const existing = await tx
+          .select()
+          .from(leaveBalances)
+          .where(
+            and(
+              eq(leaveBalances.staffId, leave.staffId),
+              eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+              eq(leaveBalances.year, new Date().getFullYear())
+            )
+          )
+          .get();
+        if (existing) {
+          await tx
+            .update(leaveBalances)
+            .set({ usedDays: existing.usedDays + leave.daysCount })
+            .where(eq(leaveBalances.id, existing.id))
+            .run();
+        }
       }
-    }
+    });
     return;
   }
 
