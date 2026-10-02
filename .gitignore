@@ -44,9 +44,6 @@ stdout.txt
 stderr.txt
 uploads/
 
-# drizzle
-drizzle/meta/
-drizzle/*.sql
 
 .env
 .env.local

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `idx_payroll_ded_rec_type` ON `payroll_deductions` (`payroll_record_id`,`deduction_type`);
