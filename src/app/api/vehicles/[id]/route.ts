@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { vehicles, vehicleBookings, vehicleLogs, institutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const params = context?.params ? await context.params : {};
   const id = params.id;
   if (!id) return NextResponse.json({ error: "Vehicle ID is required" }, { status: 400 });
+
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(vehicles.id, id), eq(vehicles.institutionId, institutionId))
+    : eq(vehicles.id, id);
 
   const vehicle = await db
     .select({
@@ -25,7 +31,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
     })
     .from(vehicles)
     .leftJoin(institutions, eq(vehicles.institutionId, institutions.id))
-    .where(eq(vehicles.id, id))
+    .where(whereClause)
     .get();
 
   if (!vehicle) {
@@ -41,12 +47,17 @@ export const GET = requireAuth(async (_request, _session, context) => {
   return NextResponse.json({ vehicle, bookings });
 }, "vehicles:read");
 
-export const PATCH = requireAuth(async (request: Request, _session, context) => {
+export const PATCH = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
   const id = params.id;
   if (!id) return NextResponse.json({ error: "Vehicle ID is required" }, { status: 400 });
 
-  const existing = await db.select().from(vehicles).where(eq(vehicles.id, id)).get();
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(vehicles.id, id), eq(vehicles.institutionId, institutionId))
+    : eq(vehicles.id, id);
+
+  const existing = await db.select().from(vehicles).where(whereClause).get();
   if (!existing) {
     return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
   }
@@ -65,25 +76,30 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
   const updated = await db
     .update(vehicles)
     .set(updateData)
-    .where(eq(vehicles.id, id))
+    .where(whereClause)
     .returning()
     .get();
 
   return NextResponse.json({ vehicle: updated });
 }, "vehicles:manage");
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
+export const DELETE = requireAuth(async (_request, session, context) => {
   const params = context?.params ? await context.params : {};
   const id = params.id;
   if (!id) return NextResponse.json({ error: "Vehicle ID is required" }, { status: 400 });
 
-  const existing = await db.select().from(vehicles).where(eq(vehicles.id, id)).get();
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(vehicles.id, id), eq(vehicles.institutionId, institutionId))
+    : eq(vehicles.id, id);
+
+  const existing = await db.select().from(vehicles).where(whereClause).get();
   if (!existing) {
     return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
   }
 
   await db.delete(vehicleLogs).where(eq(vehicleLogs.vehicleId, id)).run();
   await db.delete(vehicleBookings).where(eq(vehicleBookings.vehicleId, id)).run();
-  await db.delete(vehicles).where(eq(vehicles.id, id)).run();
+  await db.delete(vehicles).where(whereClause).run();
   return NextResponse.json({ success: true });
 }, "vehicles:manage");

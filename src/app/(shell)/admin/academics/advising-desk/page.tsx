@@ -41,40 +41,49 @@ export default function AdvisingDeskPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 bg-red-50/50 border-red-200">
-          <div className="text-red-700 font-bold text-2xl">1</div>
-          <div className="text-xs text-red-600 font-medium">Critical Interventions Pending</div>
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="font-bold text-2xl">1</div>
+            <Badge variant="destructive">Critical</Badge>
+          </div>
+          <div className="text-xs text-muted-foreground font-medium mt-1">Critical Interventions Pending</div>
         </Card>
-        <Card className="p-4 bg-amber-50/50 border-amber-200">
-          <div className="text-amber-700 font-bold text-2xl">1</div>
-          <div className="text-xs text-amber-600 font-medium">Prerequisite Reviews</div>
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="font-bold text-2xl">1</div>
+            <Badge variant="warning">Review</Badge>
+          </div>
+          <div className="text-xs text-muted-foreground font-medium mt-1">Prerequisite Reviews</div>
         </Card>
-        <Card className="p-4 bg-emerald-50/50 border-emerald-200">
-          <div className="text-emerald-700 font-bold text-2xl">48</div>
-          <div className="text-xs text-emerald-600 font-medium">Autonomously Resolved by Copilot</div>
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="font-bold text-2xl">48</div>
+            <Badge variant="success">Resolved</Badge>
+          </div>
+          <div className="text-xs text-muted-foreground font-medium mt-1">Autonomously Resolved by Copilot</div>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-indigo-600" />
+            <UserCheck className="h-5 w-5 text-primary" />
             Pending Student Advising Interventions
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {pendingInterventions.map((item, idx) => (
-            <div key={idx} className="p-4 bg-slate-50 border rounded-lg flex items-center justify-between">
+            <div key={idx} className="p-4 bg-muted/40 border rounded-lg flex items-center justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-800 text-sm">{item.name}</span>
-                  <span className="text-xs text-slate-400">({item.studentId})</span>
+                  <span className="font-semibold text-foreground text-sm">{item.name}</span>
+                  <span className="text-xs text-muted-foreground">({item.studentId})</span>
                   <Badge variant={item.riskTier === 'critical_intervention' ? 'destructive' : 'warning'}>
                     {item.riskTier}
                   </Badge>
                 </div>
-                <div className="text-xs text-slate-600">{item.reason}</div>
-                <div className="text-xs text-indigo-600 font-medium">Recommended: {item.action}</div>
+                <div className="text-xs text-muted-foreground">{item.reason}</div>
+                <div className="text-xs text-primary font-medium">Recommended: {item.action}</div>
               </div>
 
               <div className="flex gap-2">
@@ -82,7 +91,7 @@ export default function AdvisingDeskPage() {
                   <MessageSquare className="h-3.5 w-3.5" />
                   Take Over Chat
                 </Button>
-                <Button size="sm" className="gap-1 text-xs bg-indigo-600 hover:bg-indigo-700">
+                <Button size="sm" className="gap-1 text-xs">
                   <CheckCircle className="h-3.5 w-3.5" />
                   Approve Plan
                 </Button>

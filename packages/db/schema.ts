@@ -391,6 +391,7 @@ export const tasks = sqliteTable("tasks", {
   assignedToId: text("assigned_to_id").references(() => staff.id, { onDelete: "set null" }),
   assignedById: text("assigned_by_id").references(() => staff.id, { onDelete: "set null" }),
   departmentId: text("department_id").references(() => departments.id, { onDelete: "set null" }),
+  institutionId: text("institution_id").references(() => institutions.id),
   dueDate: text("due_date"),
   completedAt: text("completed_at"),
   sortOrder: integer("sort_order").notNull().default(0),
@@ -618,6 +619,7 @@ export const bookings = sqliteTable("bookings", {
   endTime: text("end_time").notNull(),
   status: text("status").notNull().default("pending"),
   approvedById: text("approved_by_id").references(() => staff.id),
+  institutionId: text("institution_id").references(() => institutions.id),
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -636,6 +638,7 @@ export const helpDeskTickets = sqliteTable("help_desk_tickets", {
     .notNull()
     .references(() => staff.id),
   assignedToId: text("assigned_to_id").references(() => staff.id),
+  institutionId: text("institution_id").references(() => institutions.id),
   resolvedAt: text("resolved_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -775,6 +778,7 @@ export const visitors = sqliteTable("visitors", {
   checkOut: text("check_out"),
   status: text("status").notNull().default("checked_in"),
   notes: text("notes"),
+  institutionId: text("institution_id").references(() => institutions.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
@@ -1218,6 +1222,7 @@ export const mediaFolders = sqliteTable("media_folders", {
   name: text("name").notNull(),
   parentId: text("parent_id").references((): any => mediaFolders.id, { onDelete: "cascade" }),
   departmentId: text("department_id").references(() => departments.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").references(() => institutions.id),
   createdById: text("created_by_id").notNull().references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -1233,6 +1238,7 @@ export const mediaAssets = sqliteTable("media_assets", {
   fileType: text("file_type").notNull(), // 'image' | 'video' | 'audio' | 'document'
   status: text("status").notNull().default("ready"), // 'ready' | 'processing' | 'failed'
   folderId: text("folder_id").references(() => mediaFolders.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").references(() => institutions.id),
   tags: text("tags", { mode: "json" }).$type<string[]>(),
   metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
   downloadCount: integer("download_count").notNull().default(0),

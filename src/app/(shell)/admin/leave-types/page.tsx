@@ -39,13 +39,23 @@ export default function LeaveTypesPage() {
     requiresApproval: true,
   });
 
-  useEffect(() => { fetchData().catch(() => {}); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   async function fetchData() {
-    const res = await fetch("/api/admin/leave-types");
-    const data = await res.json();
-    setLeaveTypes(Array.isArray(data.leaveTypes) ? data.leaveTypes : []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/leave-types");
+      if (!res.ok) {
+        throw new Error("Failed to load leave types");
+      }
+      const data = await res.json();
+      setLeaveTypes(Array.isArray(data.leaveTypes) ? data.leaveTypes : []);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load leave types");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openCreate() {

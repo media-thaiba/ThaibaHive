@@ -32,7 +32,6 @@ export function CampusHealthTable({ campuses, onTriggerEtl, isTriggeringEtl }: C
             size="sm"
             onClick={onTriggerEtl}
             disabled={isTriggeringEtl}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isTriggeringEtl ? "Processing ETL..." : "Trigger ETL Pipeline"}
           </Button>

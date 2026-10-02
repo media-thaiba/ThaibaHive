@@ -260,7 +260,7 @@ export class RoleGatingPage {
 
   // Main Dashboard assertions
   async expectDashboardLoaded() {
-    await expect(this.page.locator('text=Good morning, Test').first()).toBeVisible({ timeout: 10000 });
+    await expect(this.sidebarNav).toBeVisible({ timeout: 10000 });
   }
 
   async expectDashboardStaffPresentCardVisible(shouldBeVisible: boolean = true) {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { bookings } from "@/db/schema";
+import { bookings, bookingResources } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import type { StaffRole } from "@/types";
 
@@ -9,14 +10,26 @@ const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal"];
 
 export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
   
   const booking = await db
-    .select()
+    .select({
+      id: bookings.id,
+      bookerId: bookings.bookerId,
+      resourceInstitutionId: bookingResources.institutionId,
+      bookingInstitutionId: bookings.institutionId,
+    })
     .from(bookings)
+    .leftJoin(bookingResources, eq(bookings.resourceId, bookingResources.id))
     .where(eq(bookings.id, id))
     .get();
 
   if (!booking) {
+    return NextResponse.json({ error: "Booking request not found" }, { status: 404 });
+  }
+
+  const effectiveInst = booking.bookingInstitutionId || booking.resourceInstitutionId;
+  if (institutionId && institutionId !== "global" && effectiveInst && effectiveInst !== institutionId) {
     return NextResponse.json({ error: "Booking request not found" }, { status: 404 });
   }
 

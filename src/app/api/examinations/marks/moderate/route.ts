@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { markEntries, examSchedules, examAuditLogs } from "@thaiba/db/schema";
+import { markEntries, examSchedules, examAuditLogs, exams } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {
   try {
@@ -13,21 +14,30 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Missing required parameters: markEntryId, action" }, { status: 400 });
     }
 
-    const existing = await db
-      .select()
+    const institutionId = await resolveScopedInstitutionId(session.institutionId);
+
+    const row = await db
+      .select({
+        entry: markEntries,
+        schedule: examSchedules,
+        exam: exams,
+      })
       .from(markEntries)
-      .where(eq(markEntries.id, markEntryId))
+      .innerJoin(examSchedules, eq(markEntries.examScheduleId, examSchedules.id))
+      .innerJoin(exams, eq(examSchedules.examId, exams.id))
+      .where(
+        institutionId && institutionId !== "global"
+          ? and(eq(markEntries.id, markEntryId), eq(exams.institutionId, institutionId))
+          : eq(markEntries.id, markEntryId)
+      )
       .get();
 
-    if (!existing) {
+    if (!row) {
       return NextResponse.json({ error: "Target mark entry not found" }, { status: 404 });
     }
 
-    const schedule = await db
-      .select()
-      .from(examSchedules)
-      .where(eq(examSchedules.id, existing.examScheduleId))
-      .get();
+    const existing = row.entry;
+    const schedule = row.schedule;
 
     const now = new Date().toISOString();
     const updates: Record<string, any> = {

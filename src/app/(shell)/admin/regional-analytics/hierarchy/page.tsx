@@ -58,7 +58,7 @@ export default function RegionalHierarchyPage() {
           <p className="text-sm text-slate-500">Manage regional group clusters, campus cluster assignments, and access delegation</p>
         </div>
 
-        <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={() => setIsModalOpen(true)}>
           + New Regional Group
         </Button>
       </div>

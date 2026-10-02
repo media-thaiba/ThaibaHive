@@ -3,13 +3,19 @@ import { db } from "@/db";
 import { visitors, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { visitorCreateSchema } from "@/lib/validation/schemas";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and, desc, sql } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const date = searchParams.get("date");
   const conditions = [];
+
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  if (institutionId && institutionId !== "global") {
+    conditions.push(eq(visitors.institutionId, institutionId));
+  }
 
   if (status) conditions.push(eq(visitors.status, status));
   if (date) conditions.push(sql`date(${visitors.checkIn}) = ${date}`);
@@ -29,6 +35,7 @@ export const GET = requireAuth(async (request: Request) => {
       checkOut: visitors.checkOut,
       status: visitors.status,
       notes: visitors.notes,
+      institutionId: visitors.institutionId,
       createdAt: visitors.createdAt,
     })
     .from(visitors)
@@ -40,7 +47,7 @@ export const GET = requireAuth(async (request: Request) => {
   return NextResponse.json({ visitors: result });
 }, "visitors:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const parsed = visitorCreateSchema.safeParse(body);
   if (!parsed.success) {
@@ -51,6 +58,7 @@ export const POST = requireAuth(async (request: Request) => {
   }
 
   const { name, contact, idType, idNumber, hostStaffId, purpose, notes } = parsed.data;
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const visitor = await db
     .insert(visitors)
@@ -63,6 +71,7 @@ export const POST = requireAuth(async (request: Request) => {
       hostStaffId: hostStaffId || null,
       purpose,
       notes: notes || null,
+      institutionId: institutionId !== "global" ? institutionId : null,
       checkIn: new Date().toISOString(),
       status: "checked_in",
     })

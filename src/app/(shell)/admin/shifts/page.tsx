@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -66,21 +67,28 @@ export default function ShiftsPage() {
     effectiveTo: "",
   });
 
-  useEffect(() => { fetchData().catch(() => {}); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   async function fetchData() {
-    const [shiftsRes, assignmentsRes, staffRes] = await Promise.all([
-      fetch("/api/admin/shifts"),
-      fetch("/api/admin/staff-shifts"),
-      fetch("/api/admin/staff"),
-    ]);
-    const shiftsData = await shiftsRes.json();
-    const assignmentsData = await assignmentsRes.json();
-    const staffData = await staffRes.json();
-    setShifts(Array.isArray(shiftsData.shifts) ? shiftsData.shifts : []);
-    setAssignments(Array.isArray(assignmentsData.assignments) ? assignmentsData.assignments : []);
-    setStaffList(Array.isArray(staffData.staff) ? staffData.staff : []);
-    setLoading(false);
+    try {
+      const [shiftsRes, assignmentsRes, staffRes] = await Promise.all([
+        fetch("/api/admin/shifts"),
+        fetch("/api/admin/staff-shifts"),
+        fetch("/api/admin/staff"),
+      ]);
+      const shiftsData = await shiftsRes.json();
+      const assignmentsData = await assignmentsRes.json();
+      const staffData = await staffRes.json();
+      setShifts(Array.isArray(shiftsData.shifts) ? shiftsData.shifts : []);
+      setAssignments(Array.isArray(assignmentsData.assignments) ? assignmentsData.assignments : []);
+      setStaffList(Array.isArray(staffData.staff) ? staffData.staff : []);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load shifts");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -131,7 +139,7 @@ export default function ShiftsPage() {
   if (loading) {
     return (
       <div className="flex-1 p-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        <Skeleton className="h-8 w-48" />
       </div>
     );
   }

@@ -102,7 +102,7 @@ export function RegionalGroupModal({ open, onOpenChange, onGroupCreated }: Regio
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" disabled={loading}>
               {loading ? "Creating..." : "Create Regional Group"}
             </Button>
           </DialogFooter>

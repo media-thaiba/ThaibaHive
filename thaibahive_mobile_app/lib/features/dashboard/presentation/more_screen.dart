@@ -90,16 +90,21 @@ class MoreScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: isDark ? const Color(0xFF22262b) : Colors.white,
       ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          _buildCategory(context, theme, 'Communication', _communicationFeatures),
-          const SizedBox(height: 24),
-          _buildCategory(context, theme, 'Support & Admin', _supportAdminFeatures),
-          const SizedBox(height: 24),
-          _buildCategory(context, theme, 'Operations & Finance', _operationsFinanceFeatures),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await Future.delayed(const Duration(milliseconds: 350));
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            _buildCategory(context, theme, 'Communication', _communicationFeatures),
+            const SizedBox(height: 24),
+            _buildCategory(context, theme, 'Support & Admin', _supportAdminFeatures),
+            const SizedBox(height: 24),
+            _buildCategory(context, theme, 'Operations & Finance', _operationsFinanceFeatures),
+          ],
+        ),
       ),
     );
   }

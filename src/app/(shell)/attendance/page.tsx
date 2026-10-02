@@ -285,7 +285,7 @@ export default function AttendancePage() {
                         className="w-full sm:w-auto"
                         aria-label="Load more attendance logs"
                       >
-                        {loadingMy ? "Loading..." : "Load More"}
+                        {loadingMy ? <Skeleton className="h-4 w-16" /> : "Load More"}
                       </Button>
                     </div>
                   )}

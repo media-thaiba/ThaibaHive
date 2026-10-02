@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { helpDeskTickets, helpDeskComments, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
   const isAdminRole = ["super_admin", "admin"].includes(session.role);
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(helpDeskTickets.id, id), eq(helpDeskTickets.institutionId, institutionId))
+    : eq(helpDeskTickets.id, id);
 
   const ticket = await db
     .select({
@@ -18,6 +24,7 @@ export const GET = requireAuth(async (_request, session, context) => {
       status: helpDeskTickets.status,
       submittedById: helpDeskTickets.submittedById,
       assignedToId: helpDeskTickets.assignedToId,
+      institutionId: helpDeskTickets.institutionId,
       createdByName: staff.firstName,
       createdByLastName: staff.lastName,
       createdAt: helpDeskTickets.createdAt,
@@ -25,7 +32,7 @@ export const GET = requireAuth(async (_request, session, context) => {
     })
     .from(helpDeskTickets)
     .leftJoin(staff, eq(helpDeskTickets.submittedById, staff.id))
-    .where(eq(helpDeskTickets.id, id))
+    .where(whereClause)
     .get();
 
   if (!ticket) {
@@ -56,8 +63,13 @@ export const GET = requireAuth(async (_request, session, context) => {
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
   const isAdminRole = ["super_admin", "admin"].includes(session.role);
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  const existing = await db.select().from(helpDeskTickets).where(eq(helpDeskTickets.id, id)).get();
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(helpDeskTickets.id, id), eq(helpDeskTickets.institutionId, institutionId))
+    : eq(helpDeskTickets.id, id);
+
+  const existing = await db.select().from(helpDeskTickets).where(whereClause).get();
   if (!existing) {
     return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
   }
@@ -71,6 +83,6 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   if (status) updateData.status = status;
   if (assignedToId) updateData.assignedToId = assignedToId;
-  await db.update(helpDeskTickets).set(updateData).where(eq(helpDeskTickets.id, id)).run();
+  await db.update(helpDeskTickets).set(updateData).where(whereClause).run();
   return NextResponse.json({ success: true });
 }, "helpdesk:manage");

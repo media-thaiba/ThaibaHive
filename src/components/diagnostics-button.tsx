@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { telemetry } from "@/lib/diagnostics/logger";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export function DiagnosticsButton() {
   const [open, setOpen] = useState(false);
@@ -71,85 +73,80 @@ export function DiagnosticsButton() {
 
   return (
     <>
-      <button
+      <Button
         onClick={openSheet}
-        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-lg hover:opacity-90 transition-all hover:scale-105"
+        size="icon"
+        variant="destructive"
+        className="fixed bottom-4 right-4 z-50 h-10 w-10 rounded-full shadow-lg hover:scale-105 transition-all"
         title="Diagnostics & Bug Report"
+        aria-label="Diagnostics & Bug Report"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-      </button>
+      </Button>
 
-      {open && (
-        <>
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="fixed bottom-0 right-0 z-50 m-4 w-full max-w-xl rounded-lg border bg-background shadow-xl">
-            <div className="flex items-center justify-between border-b p-3">
-              <h3 className="font-semibold text-sm">Diagnostics &amp; Bug Report</h3>
-              <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground text-lg font-bold">&times;</button>
-            </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-2 border-b">
+            <DialogTitle className="text-base">Diagnostics &amp; Bug Report</DialogTitle>
+          </DialogHeader>
 
-            {serverReport && (
-              <div className="flex border-b text-xs font-medium bg-muted/40">
-                <button
-                  onClick={() => setActiveTab("client")}
-                  className={`px-4 py-2 border-b-2 transition-all ${
-                    activeTab === "client"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Local Client Logs
-                </button>
-                <button
-                  onClick={() => setActiveTab("server")}
-                  className={`px-4 py-2 border-b-2 transition-all ${
-                    activeTab === "server"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Shared Server Report
-                </button>
-              </div>
-            )}
-
-            <div className="max-h-96 overflow-auto p-3">
-              <pre className="whitespace-pre-wrap break-all text-xs font-mono text-muted-foreground leading-relaxed">
-                {activeTab === "server" && serverReport ? serverReport : (logs || "No logs captured yet. Interact with the app to generate logs.")}
-              </pre>
-            </div>
-
-            <div className="flex gap-2 border-t p-3 bg-muted/20">
-              <button onClick={copyLogs} className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted">
-                {copied ? "Copied!" : "Copy Report"}
-              </button>
-              <button onClick={downloadLogs} className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted">
-                Download
+          {serverReport && (
+            <div className="flex border-b text-xs font-medium bg-muted/40">
+              <button
+                onClick={() => setActiveTab("client")}
+                className={`px-4 py-2 border-b-2 transition-all ${
+                  activeTab === "client"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Local Client Logs
               </button>
               <button
-                onClick={shareLogs}
-                disabled={sharing || !logs}
-                className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+                onClick={() => setActiveTab("server")}
+                className={`px-4 py-2 border-b-2 transition-all ${
+                  activeTab === "server"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {sharing ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Sharing...
-                  </>
-                ) : (
-                  "Share with Support"
-                )}
-              </button>
-              <button onClick={() => { telemetry.clearLogs(); setLogs(""); setServerReport(""); setActiveTab("client"); }} className="rounded-md border px-3 py-1.5 text-xs font-medium text-destructive hover:bg-muted ml-auto">
-                Clear
+                Shared Server Report
               </button>
             </div>
+          )}
+
+          <div className="flex-1 overflow-auto p-4 max-h-96">
+            <pre className="whitespace-pre-wrap break-all text-xs font-mono text-muted-foreground leading-relaxed">
+              {activeTab === "server" && serverReport ? serverReport : (logs || "No logs captured yet. Interact with the app to generate logs.")}
+            </pre>
           </div>
-        </>
-      )}
+
+          <div className="flex flex-wrap gap-2 border-t p-3 bg-muted/20">
+            <Button size="sm" variant="outline" onClick={copyLogs}>
+              {copied ? "Copied!" : "Copy Report"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={downloadLogs}>
+              Download
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={shareLogs}
+              disabled={sharing || !logs}
+            >
+              {sharing ? "Sharing..." : "Share with Support"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { telemetry.clearLogs(); setLogs(""); setServerReport(""); setActiveTab("client"); }}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+            >
+              Clear
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

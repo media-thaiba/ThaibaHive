@@ -6,22 +6,37 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 type SubDept = { id: string; name: string; code: string; departmentId: string; headOfSubDepartment: string | null; isActive: boolean };
 
 export default function SubDepartmentsPage() {
   const [subDepts, setSubDepts] = useState<SubDept[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", departmentId: "", headOfSubDepartment: "" });
 
-  useEffect(() => { fetchData().catch(() => setLoading(false)); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   async function fetchData() {
-    const res = await fetch("/api/admin/sub-departments");
-    const data = await res.json();
-    setSubDepts(Array.isArray(data.subDepartments) ? data.subDepartments : []);
-    setLoading(false);
+    try {
+      setError(null);
+      const res = await fetch("/api/admin/sub-departments");
+      if (!res.ok) {
+        throw new Error("Failed to load sub-departments");
+      }
+      const data = await res.json();
+      setSubDepts(Array.isArray(data.subDepartments) ? data.subDepartments : []);
+    } catch (err: any) {
+      setError(err.message || "Failed to load sub-departments");
+      toast.error(err.message || "Failed to load sub-departments");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -50,6 +65,7 @@ export default function SubDepartmentsPage() {
           {showForm ? "Cancel" : "Add Sub-Department"}
         </Button>
       </div>
+      {error && <Alert variant="error">{error}</Alert>}
       {showForm && (
         <Card>
           <CardHeader><CardTitle>New Sub-Department</CardTitle></CardHeader>

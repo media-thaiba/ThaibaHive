@@ -244,14 +244,14 @@ export default function AssetsPage() {
   }
 
   if (loading && assets.length === 0) {
-    return <div className="flex-1 p-6"><div className="h-8 w-48 animate-pulse rounded bg-muted" /></div>;
+    return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
   }
 
   const statsCards = [
-    { label: "Available", count: statusCount("available"), color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30" },
-    { label: "Assigned", count: statusCount("assigned"), color: "text-blue-600 bg-blue-50 dark:bg-blue-950/30" },
-    { label: "Maintenance", count: statusCount("maintenance"), color: "text-amber-600 bg-amber-50 dark:bg-amber-950/30" },
-    { label: "Retired", count: statusCount("retired"), color: "text-red-600 bg-red-50 dark:bg-red-950/30" },
+    { label: "Available", count: statusCount("available"), variant: "success" as const },
+    { label: "Assigned", count: statusCount("assigned"), variant: "info" as const },
+    { label: "Maintenance", count: statusCount("maintenance"), variant: "warning" as const },
+    { label: "Retired", count: statusCount("retired"), variant: "destructive" as const },
   ];
 
   return (
@@ -273,9 +273,9 @@ export default function AssetsPage() {
         {statsCards.map((s) => (
           <Card key={s.label}>
             <CardContent className="flex items-center gap-3 p-4">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${s.color}`}>
-                <span className="text-lg font-bold">{s.count}</span>
-              </div>
+              <Badge variant={s.variant} className="flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold">
+                {s.count}
+              </Badge>
               <p className="text-sm font-medium text-muted-foreground">{s.label}</p>
             </CardContent>
           </Card>

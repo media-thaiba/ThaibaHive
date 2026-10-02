@@ -124,9 +124,14 @@ export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
   const leave = await db.select({ staffId: leaveRequests.staffId }).from(leaveRequests).where(eq(leaveRequests.id, id)).get();
   if (!leave) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (leave.staffId !== session.staffId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  
+  if (leave.staffId !== session.staffId && session.role !== "super_admin" && session.role !== "admin") {
+    const hasAccess = await isAuthorizedToViewLeave(session.staffId, session.role, leave.staffId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
+
   await db.delete(leaveRequests).where(eq(leaveRequests.id, id)).run();
   return NextResponse.json({ success: true });
 }, "leaves:delete");

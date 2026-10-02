@@ -3,13 +3,19 @@ import { db } from "@/db";
 import { tasks, taskComments, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { canAccessTask } from "@/lib/auth/department-scope";
-import { type SessionPayload } from "@/lib/auth";
+import { resolveScopedInstitutionId, type SessionPayload } from "@/lib/auth";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
-  const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(tasks.id, id), eq(tasks.institutionId, institutionId))
+    : eq(tasks.id, id);
+
+  const task = await db.select().from(tasks).where(whereClause).get();
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const hasAccess = await canAccessTask(session.staffId, session.role, task);
@@ -57,8 +63,13 @@ function computeCompletedAt(status: string | undefined, currentStatus: string | 
 async function handleUpdate(request: Request, session: SessionPayload, context?: { params: Promise<Record<string, string>> }) {
   const { id } = await context!.params;
   const body = await request.json();
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  const existing = await db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(tasks.id, id), eq(tasks.institutionId, institutionId))
+    : eq(tasks.id, id);
+
+  const existing = await db.select().from(tasks).where(whereClause).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const hasAccess = await canAccessTask(session.staffId, session.role, existing);
@@ -76,7 +87,7 @@ async function handleUpdate(request: Request, session: SessionPayload, context?:
       ...(completedAt !== null ? { completedAt } : {}),
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(tasks.id, id))
+    .where(whereClause)
     .returning()
     .get();
 
@@ -88,7 +99,13 @@ export const PATCH = requireAuth(handleUpdate, "tasks:create");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
-  const existing = await db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(tasks.id, id), eq(tasks.institutionId, institutionId))
+    : eq(tasks.id, id);
+
+  const existing = await db.select().from(tasks).where(whereClause).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const hasAccess = await canAccessTask(session.staffId, session.role, existing);
@@ -97,7 +114,7 @@ export const DELETE = requireAuth(async (_request, session, context) => {
   }
 
   await db.delete(taskComments).where(eq(taskComments.taskId, id)).run();
-  await db.delete(tasks).where(eq(tasks.id, id)).run();
+  await db.delete(tasks).where(whereClause).run();
   return NextResponse.json({ success: true });
 }, "tasks:create");
 

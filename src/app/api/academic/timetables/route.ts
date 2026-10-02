@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { timetableSlots, timetableEntries, classes, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and, asc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request) => {
@@ -174,7 +175,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ entry: created }, { status: 201 });
 }, "timetables:manage");
 
-export const DELETE = requireAuth(async (request: Request) => {
+export const DELETE = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
 
@@ -182,12 +183,17 @@ export const DELETE = requireAuth(async (request: Request) => {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
-  const existing = await db.select().from(timetableEntries).where(eq(timetableEntries.id, id)).get();
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(timetableEntries.id, id), eq(timetableEntries.institutionId, institutionId))
+    : eq(timetableEntries.id, id);
+
+  const existing = await db.select().from(timetableEntries).where(whereClause).get();
   if (!existing) {
     return NextResponse.json({ error: "Timetable entry not found" }, { status: 404 });
   }
 
-  await db.delete(timetableEntries).where(eq(timetableEntries.id, id)).run();
+  await db.delete(timetableEntries).where(whereClause).run();
 
   return NextResponse.json({ success: true, deletedId: id });
 }, "timetables:manage");
