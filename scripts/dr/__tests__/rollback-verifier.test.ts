@@ -1,8 +1,6 @@
-/**
- * Rollback Verifier Unit Tests
- * Part of Sprint-035: Global Multi-Tenant Cross-Region Disaster Recovery Drills & Automated Failover Verification
- */
-
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 import { runRollbackVerification } from "../rollback-verifier";
 import { evaluateDRExecution } from "../../staging/dr-canary-evaluator";
 
@@ -24,8 +22,15 @@ describe("runRollbackVerification & evaluateDRExecution", () => {
   });
 
   it("should evaluate DR canary promotion gate correctly", async () => {
-    await runRollbackVerification(false);
-    const evaluation = evaluateDRExecution();
+    const report = await runRollbackVerification(false);
+    const tempReportPath = path.join(os.tmpdir(), `rollback-test-${Date.now()}.json`);
+    fs.writeFileSync(tempReportPath, JSON.stringify(report), "utf8");
+
+    const evaluation = evaluateDRExecution(undefined, undefined, tempReportPath);
+
+    try {
+      fs.unlinkSync(tempReportPath);
+    } catch {}
 
     expect(evaluation.passed).toBe(true);
     expect(evaluation.rpoPassed).toBe(true);
