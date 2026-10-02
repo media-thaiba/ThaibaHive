@@ -333,6 +333,7 @@ async function globalSetup() {
       role: u.role,
       employeeId: u.employeeId,
       name: u.name,
+      institutionId,
       tokenVersion: 0,
       dpopEnabled: false,
     })

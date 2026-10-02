@@ -241,6 +241,7 @@ jobs:
                 role: admin.role,
                 employeeId: 'EMP001',
                 name: 'Test Admin',
+                institutionId: 'inst_campus_main',
                 tokenVersion: 0
               })
               .setProtectedHeader({ alg: 'HS256' })
