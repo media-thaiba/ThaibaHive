@@ -234,13 +234,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         {mode === "signin" && (
           <form onSubmit={handleLoginSubmit} className="space-y-4" data-hydrated={isHydrated}>
             <div className="space-y-1.5">
-              <label htmlFor="signin-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  id="signin-email"
+                  id="email"
                   type="email"
                   placeholder="admin@thaibahive.local"
                   value={email}
@@ -253,13 +253,13 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
             
             <div className="space-y-1.5">
-              <label htmlFor="signin-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  id="signin-password"
+                  id="password"
                   type="password"
                   placeholder="••••••••••••"
                   value={password}
@@ -295,7 +295,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             {error && (
-              <div role="alert" aria-live="polite">
+              <div aria-live="polite">
                 <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
               </div>
             )}
@@ -488,7 +488,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             {error && (
-              <div role="alert" aria-live="polite">
+              <div aria-live="polite">
                 <Alert variant="error" className="py-2 px-3 text-xs rounded-xl">{error}</Alert>
               </div>
             )}
@@ -534,7 +534,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             {error && (
-              <div role="alert" aria-live="polite">
+              <div aria-live="polite">
                 <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
               </div>
             )}
@@ -587,7 +587,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 </div>
 
                 {forgotError && (
-                  <div role="alert" aria-live="polite">
+                  <div aria-live="polite">
                     <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{forgotError}</Alert>
                   </div>
                 )}

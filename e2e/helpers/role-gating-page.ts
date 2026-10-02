@@ -1,4 +1,7 @@
 import { type Page, type Locator, expect } from "@playwright/test";
+import { E2E_ROLES } from "./auth-helper";
+
+export { E2E_ROLES };
 
 export class RoleGatingPage {
   readonly page: Page;

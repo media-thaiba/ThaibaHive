@@ -1,8 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as fs from "fs";
+import * as path from "path";
 
 const PORT = process.env.PORT || 3000;
 const envFlag = fs.existsSync(".env") ? "--env-file=.env " : "";
+const resolvedDbPath = process.env.DATABASE_URL || `file:${path.resolve("dev.db")}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -43,8 +45,12 @@ export default defineConfig({
       HEALTH_SECRET: "thaibahive_health_secret_token",
       PLAYWRIGHT_TEST: "true",
       PORT: String(PORT),
-      DATABASE_URL: process.env.DATABASE_URL || "file:./dev.db",
+      DATABASE_URL: resolvedDbPath,
       AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847",
+      BIOMETRIC_MASTER_KEY: process.env.BIOMETRIC_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      TENANT_ENCRYPTION_MASTER_KEY: process.env.TENANT_ENCRYPTION_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      JWT_SECRET: process.env.JWT_SECRET || "test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars",
       NODE_ENV: "production",
       NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
     },

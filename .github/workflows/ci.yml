@@ -158,6 +158,10 @@ jobs:
         run: pnpm run build
         env:
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          BIOMETRIC_MASTER_KEY: ${{ secrets.BIOMETRIC_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ secrets.TENANT_ENCRYPTION_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars' }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -181,6 +185,10 @@ jobs:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          BIOMETRIC_MASTER_KEY: ${{ secrets.BIOMETRIC_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ secrets.TENANT_ENCRYPTION_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars' }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
