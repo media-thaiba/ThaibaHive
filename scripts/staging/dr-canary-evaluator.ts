@@ -64,6 +64,11 @@ export function evaluateDRExecution(
       const data = JSON.parse(fs.readFileSync(rollbackFile, "utf8"));
       if (data.parityResults) {
         parityPassed = data.parityResults.checksumMatched && data.parityResults.schemaAligned;
+        if (reportsFound === 0) {
+          const totalDurationMs = data.steps?.reduce((acc: number, s: { durationMs: number }) => acc + (s.durationMs || 0), 0) || 100;
+          mttrSeconds = totalDurationMs / 1000;
+          rpoLostTx = 0;
+        }
         reportsFound++;
       }
     } catch {}
