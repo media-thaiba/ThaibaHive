@@ -53,6 +53,11 @@ jobs:
 
       - name: Run unit & integration tests
         run: pnpm test
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          DATABASE_URL: file:./test.db
+          CI: "true"
 
       - name: Build check
         run: pnpm build
