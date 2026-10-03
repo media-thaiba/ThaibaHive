@@ -43,9 +43,9 @@ export async function GET(request: Request) {
 
     let downloadUrl = configMap.app_download_url;
     if (downloadUrl && downloadUrl.startsWith("/")) {
-      const host = request.headers.get("host") || "localhost:3000";
-      const protocol = request.headers.get("x-forwarded-proto") || "https";
-      downloadUrl = `${protocol}://${host}${downloadUrl}`;
+      const baseOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://thaibahive.com";
+      const cleanBase = baseOrigin.replace(/\/$/, "");
+      downloadUrl = `${cleanBase}${downloadUrl}`;
     }
 
     return NextResponse.json(
