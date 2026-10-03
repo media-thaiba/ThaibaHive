@@ -5,8 +5,9 @@ import { cryptoAuditWriter } from '@/lib/audit/crypto-writer';
 
 export function isDPoPToken(token: string): boolean {
   try {
-    const decoded: any = decodeJwt(token);
-    return !!(decoded.cnf && decoded.cnf.jkt);
+    const decoded = decodeJwt(token);
+    const cnf = decoded.cnf as { jkt?: unknown } | undefined;
+    return !!cnf?.jkt;
   } catch {
     return false;
   }

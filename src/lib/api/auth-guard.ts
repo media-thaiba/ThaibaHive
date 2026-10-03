@@ -25,7 +25,10 @@ export function requireAuth(
   handler: HandlerWithSession,
   requiredPermission?: string
 ) {
-  return async (request: Request, context?: any) => {
+  return async (
+    request: Request,
+    context?: { params?: Promise<Record<string, string>>; [key: string]: unknown }
+  ) => {
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const urlObj = new URL(request.url);
     const normalizedPath = normalizeRoutePath(urlObj.pathname);
@@ -71,7 +74,15 @@ export function requireAuth(
         (timingSafeSecretMatch(cacheSecret, process.env.CACHE_SYNC_SECRET) && isCachePathAllowed) ||
         (timingSafeSecretMatch(cronSecret, process.env.CRON_SECRET) && isCronPathAllowed)
       ) {
-        session = { staffId: "system", role: "system", email: "system@internal", institutionId: "global" } as any;
+        session = {
+          staffId: "system",
+          role: "system",
+          email: "system@internal",
+          employeeId: "system",
+          name: "System",
+          tokenVersion: 1,
+          institutionId: "global",
+        };
       }
     }
 
@@ -168,7 +179,11 @@ export function requireAuth(
     }
 
     try {
-      const response = await handler(request, session, context);
+      const response = await handler(
+        request,
+        session,
+        context as { params: Promise<Record<string, string>> } | undefined
+      );
       recordApm(response.status || 200);
 
       // Inject RFC 8594 headers safely

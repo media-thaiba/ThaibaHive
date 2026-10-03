@@ -58,8 +58,9 @@ export class LegacyTokenDeprecationEngine {
   public isLegacyToken(token: string): boolean {
     if (!token) return false;
     try {
-      const decoded: any = decodeJwt(token);
-      return !(decoded && decoded.cnf && decoded.cnf.jkt);
+      const decoded = decodeJwt(token);
+      const cnf = decoded.cnf as { jkt?: unknown } | undefined;
+      return !(cnf && cnf.jkt);
     } catch {
       // Invalid JWT string is handled by auth validator
       return false;

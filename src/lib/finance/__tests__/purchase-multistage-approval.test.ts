@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { purchaseRequests, staff, staffDepartments, departments, auditLog } from "@/db/schema";
+import { purchaseRequests, staff, staffDepartments, departments, auditLog, staffInstitutions } from "@/db/schema";
 import { PATCH } from "@/app/api/purchases/[id]/route";
 import { verifySession, hasPermission } from "@thaiba/auth";
 import { eq } from "drizzle-orm";
@@ -79,12 +79,40 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: hodId,
       departmentId: deptId,
     }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-rq-${timestamp}`,
+      staffId: requesterId,
+      institutionId: "inst-001",
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-hp-${timestamp}`,
+      staffId: hodId,
+      institutionId: "inst-001",
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-ap-${timestamp}`,
+      staffId: accountsId,
+      institutionId: "inst-001",
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-po-${timestamp}`,
+      staffId: purchaseOfficerId,
+      institutionId: "inst-001",
+    }).run();
   });
 
   afterAll(async () => {
     try {
       await db.delete(auditLog).where(eq(auditLog.entityId, purchaseId)).run();
       await db.delete(purchaseRequests).where(eq(purchaseRequests.id, purchaseId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, requesterId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, hodId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, accountsId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, purchaseOfficerId)).run();
       await db.delete(staffDepartments).where(eq(staffDepartments.departmentId, deptId)).run();
       await db.delete(staff).where(eq(staff.id, requesterId)).run();
       await db.delete(staff).where(eq(staff.id, hodId)).run();

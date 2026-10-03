@@ -256,7 +256,7 @@ export class FeeDbStore {
   public async getAllocationById(id: string, institutionId?: string): Promise<FeeStudentAllocationItem | null> {
     const alloc = this.memoryStore.allocations.get(id);
     if (!alloc) return null;
-    if (institutionId && alloc.institutionId !== institutionId) {
+    if (institutionId && alloc.institutionId !== institutionId && institutionId !== 'global') {
       return null;
     }
     const insts = Array.from(this.memoryStore.installments.values())

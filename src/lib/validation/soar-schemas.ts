@@ -5,7 +5,32 @@
 
 import { z } from 'zod';
 
-export const PlaybookConditionLeafSchema: z.ZodType<any> = z.object({
+export interface PlaybookConditionLeaf {
+  field: string;
+  operator:
+    | '=='
+    | '!='
+    | '>'
+    | '>='
+    | '<'
+    | '<='
+    | 'in'
+    | 'not_in'
+    | 'contains'
+    | 'regex_match'
+    | 'cidr_match';
+  value: unknown;
+}
+
+export type PlaybookConditionNode =
+  | PlaybookConditionLeaf
+  | {
+      and?: PlaybookConditionNode[];
+      or?: PlaybookConditionNode[];
+      not?: PlaybookConditionNode;
+    };
+
+export const PlaybookConditionLeafSchema: z.ZodType<PlaybookConditionLeaf> = z.object({
   field: z.string().min(1),
   operator: z.enum([
     '==',
@@ -23,7 +48,7 @@ export const PlaybookConditionLeafSchema: z.ZodType<any> = z.object({
   value: z.any(),
 });
 
-export const PlaybookConditionSchema: z.ZodType<any> = z.lazy(() =>
+export const PlaybookConditionSchema: z.ZodType<PlaybookConditionNode> = z.lazy(() =>
   z.union([
     PlaybookConditionLeafSchema,
     z.object({

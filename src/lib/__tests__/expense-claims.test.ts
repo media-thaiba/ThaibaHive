@@ -60,6 +60,7 @@ jest.mock("@thaiba/auth", () => {
     ...actual,
     verifySession: jest.fn(),
     hasPermission: jest.fn(() => true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_1"),
   };
 });
 
@@ -72,6 +73,8 @@ jest.mock("@/lib/auth/department-scope", () => ({
   getManagedStaffIds: jest.fn().mockResolvedValue(["staff_1", "staff_2"]),
   isManagedBy: jest.fn().mockResolvedValue(true),
 }));
+
+
 
 describe("Expense Claims API Flow", () => {
   beforeEach(() => {

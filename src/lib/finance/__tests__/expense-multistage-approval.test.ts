@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { expenseClaims, staff, staffDepartments, departments, financialTransactions } from "@/db/schema";
+import { expenseClaims, staff, staffDepartments, departments, financialTransactions, staffInstitutions } from "@/db/schema";
 import { PATCH } from "@/app/api/expense-claims/[id]/route";
 import { POST } from "@/app/api/expense-claims/route";
 import { verifySession, hasPermission } from "@thaiba/auth";
@@ -70,12 +70,33 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: hodId,
       departmentId: deptId,
     }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-c-${timestamp}`,
+      staffId: staffId,
+      institutionId: "inst_campus_main",
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-h-${timestamp}`,
+      staffId: hodId,
+      institutionId: "inst_campus_main",
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-f-${timestamp}`,
+      staffId: financeId,
+      institutionId: "inst_campus_main",
+    }).run();
   });
 
   afterAll(async () => {
     try {
       await db.delete(financialTransactions).where(eq(financialTransactions.notes, `Ref: EXP-${claimId.substring(0, 8)}`)).run();
       await db.delete(expenseClaims).where(eq(expenseClaims.id, claimId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, staffId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, hodId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, financeId)).run();
       await db.delete(staffDepartments).where(eq(staffDepartments.departmentId, deptId)).run();
       await db.delete(staff).where(eq(staff.id, staffId)).run();
       await db.delete(staff).where(eq(staff.id, hodId)).run();

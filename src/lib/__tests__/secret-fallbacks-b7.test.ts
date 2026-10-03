@@ -89,7 +89,7 @@ describe("R3-1 / Blocker B7: Hardcoded Secret Fallback Elimination & Fail-Closed
 
     it("fails closed (returns 500) when MDM_ENROLLMENT_TOKEN is missing from environment", async () => {
       delete process.env.MDM_ENROLLMENT_TOKEN;
-      process.env.NODE_ENV = "production";
+      Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true, configurable: true });
 
       const req = new NextRequest("http://localhost:3000/api/mobile/mdm/enroll", {
         method: "POST",
@@ -182,7 +182,7 @@ describe("R3-1 / Blocker B7: Hardcoded Secret Fallback Elimination & Fail-Closed
   describe("PaymentCrypto Master Key", () => {
     it("PaymentCrypto throws in non-test mode if PAYMENT_ENCRYPTION_KEY is missing", () => {
       delete process.env.PAYMENT_ENCRYPTION_KEY;
-      process.env.NODE_ENV = "production";
+      Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true, configurable: true });
 
       expect(() => {
         PaymentCrypto.encryptSecret("sensitive-card-data");

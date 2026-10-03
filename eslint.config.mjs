@@ -37,6 +37,20 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // O3: security-critical auth/session/DPoP/guard/validation code must stay `any`-free.
+    // Declared after the test override so packages/auth tests are covered too.
+    files: [
+      "src/lib/api/auth-guard.ts",
+      "src/lib/api/public-apm.ts",
+      "src/lib/identity/*.ts",
+      "src/lib/validation/soar-schemas.ts",
+      "packages/auth/**/*.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+    },
+  },
+  {
     // Architectural Boundary: Restrict database client/schema imports in client components and client hooks
     files: [
       "src/components/**/*.ts",

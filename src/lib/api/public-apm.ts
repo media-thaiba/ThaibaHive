@@ -4,17 +4,18 @@ import { normalizeRoutePath } from "@/lib/observability/route-normalizer";
 /**
  * Wraps public API route handlers (unauthenticated) to record telemetry in the Node.js APM aggregator.
  */
-export function withPublicApm<T extends (request: Request, ...args: any[]) => Promise<Response>>(
+export function withPublicApm<T extends (request: Request, ...args: never[]) => Promise<Response>>(
   handler: T,
   explicitRoute?: string
 ): T {
-  return (async (request: Request, ...rest: any[]) => {
+  return (async (...args: Parameters<T>) => {
+    const request = args[0];
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const route = explicitRoute || normalizeRoutePath(new URL(request.url).pathname);
     const method = request.method || "GET";
 
     try {
-      const response = await handler(request, ...rest);
+      const response: Response = await handler.call(undefined, ...args);
       if (process.env.APM_TELEMETRY_ENABLED !== "false") {
         const durationMs = Number(((typeof performance !== "undefined" ? performance.now() : Date.now()) - startTime).toFixed(2));
         SlidingWindowAggregator.getInstance().recordRequest(route, method, response.status, durationMs);

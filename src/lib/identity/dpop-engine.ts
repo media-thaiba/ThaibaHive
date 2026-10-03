@@ -13,10 +13,17 @@ function cleanupCache() {
   }
 }
 
+export interface ThumbprintJwk {
+  crv?: string;
+  kty?: string;
+  x?: string;
+  y?: string;
+}
+
 /**
  * Computes RFC 7638 SHA-256 JWK thumbprint (base64url encoded)
  */
-export async function computeJwkThumbprint(jwk: any): Promise<string> {
+export async function computeJwkThumbprint(jwk: ThumbprintJwk): Promise<string> {
   const canonical = JSON.stringify({
     crv: jwk.crv,
     kty: jwk.kty,
