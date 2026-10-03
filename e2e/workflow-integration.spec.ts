@@ -4,7 +4,7 @@ import { leaveBalances, staff } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("Full System Integration Workflow", () => {
-  const HEALTH_SECRET = process.env.HEALTH_SECRET || "thaibahive_health_secret_token";
+  const HEALTH_SECRET = process.env.HEALTH_SECRET || "";
 
   test("should verify system health probe secret gating logic", async ({ request }) => {
     // 1. Authorized request with secret header: must return HTTP 200 with gated diagnostic fields

@@ -77,7 +77,7 @@ async function runAresSimulation() {
   // Step 3: Zero-Knowledge Proof (ZKP) Audit Attestation
   console.log('\n▶ [Step 3/6] Generating & Verifying zk-SNARK Audit Proofs...');
   const zkService = ZkAttestationService.getInstance();
-  const mockMerkleRoot = 'a6b4e99f0123456789abcdef0123456789abcdef0123456789abcdef01234567';
+  const mockMerkleRoot = crypto.randomBytes(32).toString('hex');
   const mockRecord = '{"tenantId":"tenant-master","action":"ARES_THREAT_PREDICTED","timestamp":"2026-08-20T00:00:00Z"}';
 
   const zkpProof = zkService.generateAndStoreProof(mockMerkleRoot, mockRecord, 'tenant-master');
