@@ -33,7 +33,7 @@ type Transaction = {
 
 type Institution = { id: string; name: string };
 
-export const _ledgerCategories = {
+const _ledgerCategories = {
   income: ["Tuition Fees", "Grants & Donations", "Canteen Sales", "Event Revenue", "Other Revenue"],
   expense: ["Salaries & Wages", "Maintenance & Repairs", "Canteen Purchase", "Utilities", "Teaching Supplies", "Others"],
 };

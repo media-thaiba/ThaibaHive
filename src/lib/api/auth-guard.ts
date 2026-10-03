@@ -27,8 +27,9 @@ export function requireAuth(
 ) {
   return async (
     request: Request,
-    context?: { params?: Promise<Record<string, string>>; [key: string]: unknown }
+    ...rest: unknown[]
   ) => {
+    const context = rest[0] as { params: Promise<Record<string, string>> } | undefined;
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const urlObj = new URL(request.url);
     const normalizedPath = normalizeRoutePath(urlObj.pathname);

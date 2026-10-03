@@ -5,7 +5,10 @@
   "main": "./index.ts",
   "types": "./index.ts",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./config": "./config.ts",
+    "./roles": "./roles.ts",
+    "./session": "./session.ts"
   },
   "dependencies": {
     "jose": "^6.2.3",

@@ -5,9 +5,10 @@ import { createHmac } from 'crypto';
 
 export const POST = withPublicApm(async function POST(
   request: Request,
-  context?: { params?: Promise<{ provider: string }> | { provider: string } }
+  ...rest: unknown[]
 ) {
   try {
+    const context = rest[0] as { params?: Promise<{ provider: string }> | { provider: string } } | undefined;
     const params = await context?.params;
     const provider = (params?.provider || 'generic').toLowerCase();
     const rawBody = await request.text();

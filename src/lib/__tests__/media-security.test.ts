@@ -1,4 +1,4 @@
-import { middleware } from "@/proxy";
+import { proxy as middleware } from "@/proxy";
 
 jest.mock("next/server", () => {
   class MockNextResponse {

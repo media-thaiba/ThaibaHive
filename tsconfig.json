@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,13 +23,27 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@thaiba/db": ["./packages/db/index.ts"],
-      "@thaiba/db/*": ["./packages/db/*"],
-      "@thaiba/auth": ["./packages/auth/index.ts"],
-      "@thaiba/auth/*": ["./packages/auth/*"],
-      "drizzle-orm": ["./node_modules/drizzle-orm"],
-      "drizzle-orm/*": ["./node_modules/drizzle-orm/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@thaiba/db": [
+        "./packages/db/index.ts"
+      ],
+      "@thaiba/db/*": [
+        "./packages/db/*"
+      ],
+      "@thaiba/auth": [
+        "./packages/auth/index.ts"
+      ],
+      "@thaiba/auth/*": [
+        "./packages/auth/*"
+      ],
+      "drizzle-orm": [
+        "./node_modules/drizzle-orm"
+      ],
+      "drizzle-orm/*": [
+        "./node_modules/drizzle-orm/*"
+      ]
     }
   },
   "include": [
@@ -33,8 +51,13 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "thaibahive_mobile_app", "e2e", "scratch"]
+  "exclude": [
+    "node_modules",
+    "thaibahive_mobile_app",
+    "e2e",
+    "scratch"
+  ]
 }

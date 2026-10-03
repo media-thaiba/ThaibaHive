@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144\" NEXT_CPU_NUM_WORKERS=4 next build",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144\" next build --experimental-app-only",
     "postbuild": "tsx scripts/copy-standalone-assets.ts",
     "start": "next start",
     "lint": "eslint .",
