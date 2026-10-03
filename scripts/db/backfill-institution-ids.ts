@@ -20,7 +20,7 @@ export interface BackfillReport {
   tableStats: BackfillStats[];
 }
 
-export async function runInstitutionBackfill(): Promise<BackfillReport> {
+export async function runInstitutionBackfill(customReportPath?: string): Promise<BackfillReport> {
   console.log("[db:backfill] Starting institution ID backfill across 8 scoped tables...");
 
   const report: BackfillReport = {
@@ -138,16 +138,18 @@ export async function runInstitutionBackfill(): Promise<BackfillReport> {
   // 8. media_assets (created_by_id)
   await backfillTable("media_assets", "id", "created_by_id");
 
-  // Output report artifact
-  const reportsDir = path.resolve(__dirname, "../../docs/reports");
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
+  // Output report artifact (skip default file write in test mode to avoid dirtying git working tree)
+  if (process.env.NODE_ENV !== "test" || customReportPath) {
+    const reportsDir = path.resolve(__dirname, "../../docs/reports");
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true });
+    }
+
+    const reportPath = customReportPath || path.join(reportsDir, "backfill-institution-report.json");
+    fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf-8");
+
+    console.log(`[db:backfill] Backfill completed. Total updated: ${report.totalUpdated}, skipped: ${report.totalSkipped}, ambiguous: ${report.totalAmbiguous}. Report written to ${reportPath}`);
   }
-
-  const reportPath = path.join(reportsDir, "backfill-institution-report.json");
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf-8");
-
-  console.log(`[db:backfill] Backfill completed. Total updated: ${report.totalUpdated}, skipped: ${report.totalSkipped}, ambiguous: ${report.totalAmbiguous}. Report written to ${reportPath}`);
   return report;
 }
 
