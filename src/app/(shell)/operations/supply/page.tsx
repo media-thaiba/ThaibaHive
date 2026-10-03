@@ -103,7 +103,7 @@ export default function SupplyCockpitPage() {
             <Button variant="outline" size="sm" onClick={fetchSupplyData} className="flex items-center gap-1">
               <RefreshCw className="h-3.5 w-3.5" /> Refresh
             </Button>
-            <PermissionGate permission="supply:orders:create" fallback={null}>
+            <PermissionGate permission="supply:requisitions:create" fallback={null}>
               <Button size="sm" className="flex items-center gap-1">
                 <Plus className="h-3.5 w-3.5" /> New Requisition
               </Button>
@@ -113,7 +113,7 @@ export default function SupplyCockpitPage() {
       />
 
       {/* KPI Cards */}
-      <PermissionGate anyOf={["supply:orders:view", "supply:vendors:view", "supply:reconcile:view"]} fallback={null}>
+      <PermissionGate anyOf={["supply:orders:view", "supply:vendors:view", "supply:invoices:match"]} fallback={null}>
         <SupplyCockpitKpiCards
           totalOrders={orders.length || 24}
           totalSpendUsd={totalSpend}
@@ -127,7 +127,7 @@ export default function SupplyCockpitPage() {
       {/* Subsystems Tabs */}
       <Tabs defaultValue="reconciliation" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <PermissionGate permission="supply:reconcile:view" fallback={null}>
+          <PermissionGate permission="supply:invoices:match" fallback={null}>
             <TabsTrigger value="reconciliation">3-Way Matching</TabsTrigger>
           </PermissionGate>
           <PermissionGate permission="supply:orders:view" fallback={null}>
@@ -138,7 +138,7 @@ export default function SupplyCockpitPage() {
           </PermissionGate>
         </TabsList>
 
-        <PermissionGate permission="supply:reconcile:view" fallback={null}>
+        <PermissionGate permission="supply:invoices:match" fallback={null}>
           <TabsContent value="reconciliation" className="space-y-4">
             <ThreeWayMatchStudio matchQueue={matchQueue} />
           </TabsContent>

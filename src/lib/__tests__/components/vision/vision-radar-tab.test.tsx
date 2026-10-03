@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { VisionRadarTab } from '../../../../components/operations/vision/vision-radar-tab';
 
+jest.mock('@/components/ui/permission-gate', () => ({
+  PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 describe('VisionRadarTab UI Component Tests', () => {
   beforeEach(() => {
     (global as any).fetch = jest.fn((url: string) => {

@@ -56,21 +56,21 @@ export default function AlumniPortalPage() {
 
       <Tabs defaultValue="mentors" className="space-y-6">
         <TabsList className="grid grid-cols-4 w-full max-w-2xl">
-          <PermissionGate anyOf={["alumni:mentors:view", "alumni:mentors:book"]} fallback={null}>
+          <PermissionGate anyOf={["alumni:mentorship:view", "alumni:mentorship:manage"]} fallback={null}>
             <TabsTrigger value="mentors">AI Mentor Match</TabsTrigger>
           </PermissionGate>
-          <PermissionGate anyOf={["alumni:jobs:view", "alumni:jobs:apply"]} fallback={null}>
+          <PermissionGate anyOf={["alumni:jobs:view", "alumni:jobs:apply", "alumni:jobs:post"]} fallback={null}>
             <TabsTrigger value="jobs">Job Board</TabsTrigger>
           </PermissionGate>
-          <PermissionGate anyOf={["alumni:endowments:view", "alumni:endowments:donate"]} fallback={null}>
+          <PermissionGate anyOf={["alumni:donations:view", "alumni:donations:manage", "alumni:donations:collect"]} fallback={null}>
             <TabsTrigger value="endowments">Endowments</TabsTrigger>
           </PermissionGate>
-          <PermissionGate anyOf={["alumni:events:view", "alumni:events:rsvp"]} fallback={null}>
+          <PermissionGate anyOf={["alumni:events:view", "alumni:events:rsvp", "alumni:events:manage"]} fallback={null}>
             <TabsTrigger value="events">Homecoming &amp; Events</TabsTrigger>
           </PermissionGate>
         </TabsList>
 
-        <PermissionGate anyOf={["alumni:mentors:view", "alumni:mentors:book"]} fallback={null}>
+        <PermissionGate anyOf={["alumni:mentorship:view", "alumni:mentorship:manage"]} fallback={null}>
           <TabsContent value="mentors" className="space-y-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">
@@ -93,7 +93,7 @@ export default function AlumniPortalPage() {
           </TabsContent>
         </PermissionGate>
 
-        <PermissionGate anyOf={["alumni:jobs:view", "alumni:jobs:apply"]} fallback={null}>
+        <PermissionGate anyOf={["alumni:jobs:view", "alumni:jobs:apply", "alumni:jobs:post"]} fallback={null}>
           <TabsContent value="jobs" className="space-y-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">
@@ -147,7 +147,7 @@ export default function AlumniPortalPage() {
           </TabsContent>
         </PermissionGate>
 
-        <PermissionGate anyOf={["alumni:endowments:view", "alumni:endowments:donate"]} fallback={null}>
+        <PermissionGate anyOf={["alumni:donations:view", "alumni:donations:manage", "alumni:donations:collect"]} fallback={null}>
           <TabsContent value="endowments" className="space-y-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">
@@ -165,7 +165,7 @@ export default function AlumniPortalPage() {
           </TabsContent>
         </PermissionGate>
 
-        <PermissionGate anyOf={["alumni:events:view", "alumni:events:rsvp"]} fallback={null}>
+        <PermissionGate anyOf={["alumni:events:view", "alumni:events:rsvp", "alumni:events:manage"]} fallback={null}>
           <TabsContent value="events" className="space-y-4">
             <div>
               <h3 className="text-base font-semibold text-slate-800">

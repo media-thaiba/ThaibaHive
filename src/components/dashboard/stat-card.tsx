@@ -34,7 +34,7 @@ export function StatCard({ id, label, value, suffix, progress, href, icon, color
   return (
     <Link id={id} href={href} className="interactive-row block group p-5 border border-muted/50 rounded-xl bg-card hover:border-primary/10 shadow-xs">
       <div className="flex items-start justify-between mb-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
         <span className={`${colorMap[c]} opacity-60 group-hover:opacity-100 transition-opacity`}>{icon}</span>
       </div>
       <p className={`text-2xl font-extrabold tracking-tight ${colorMap[c]}`}>

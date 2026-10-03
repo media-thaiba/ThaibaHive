@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Camera, ShieldCheck, Eye, ShieldAlert, Radio, RefreshCw } from 'lucide-react';
+import { PermissionGate } from '@/components/ui/permission-gate';
 
 interface VisionRadarTabProps {
   onTriggerLockdownClick?: () => void;
@@ -143,9 +144,11 @@ export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) 
             <Button variant="secondary" size="sm" onClick={fetchRadarData}>
               <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>
-            <Button variant="destructive" size="sm" onClick={onTriggerLockdownClick}>
-              <ShieldAlert className="h-4 w-4 mr-1" /> Emergency Lockdown
-            </Button>
+            <PermissionGate permission="vision:lockdown:execute" fallback={null}>
+              <Button variant="destructive" size="sm" onClick={onTriggerLockdownClick}>
+                <ShieldAlert className="h-4 w-4 mr-1" /> Emergency Lockdown
+              </Button>
+            </PermissionGate>
           </div>
         </CardHeader>
         <CardContent>

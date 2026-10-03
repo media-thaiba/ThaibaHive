@@ -8,7 +8,7 @@ import { PermissionGate } from '@/components/ui/permission-gate';
 
 export default function FacilitiesDiscoveryPage() {
   return (
-    <PermissionGate anyOf={["facility:spaces:view", "facility:bookings:create"]} fallback={<div className="p-8 text-center text-muted-foreground">Access requires facility permissions.</div>}>
+    <PermissionGate anyOf={["bookings:read", "bookings:create", "facility:equipment:view"]} fallback={<div className="p-8 text-center text-muted-foreground">Access requires facility permissions.</div>}>
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>

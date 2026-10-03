@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { AlertTriangle } from "lucide-react";
 
 type DashboardStats = {
   total: number;
@@ -16,10 +18,17 @@ type DashboardStats = {
 };
 
 export default function NfcDashboardPage() {
+  const { staff, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isAuthorized = staff ? ["super_admin", "admin"].includes(staff.role) : false;
+
   useEffect(() => {
+    if (!isAuthorized) {
+      setLoading(false);
+      return;
+    }
     const fetchStats = async () => {
       try {
         const res = await fetch("/api/admin/nfc/cards?limit=1000");
@@ -40,9 +49,9 @@ export default function NfcDashboardPage() {
       setLoading(false);
     };
     fetchStats();
-  }, []);
+  }, [isAuthorized]);
 
-  if (loading) {
+  if (authLoading || (loading && isAuthorized)) {
     return (
       <div className="flex-1 space-y-6 p-6">
         <Skeleton className="h-8 w-48" />
@@ -54,6 +63,25 @@ export default function NfcDashboardPage() {
             </Card>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex-1 p-6 lg:p-8 flex items-center justify-center min-h-[70vh]">
+        <Card className="max-w-md w-full border-destructive/20 bg-destructive/5 text-center">
+          <CardHeader className="flex flex-col items-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mb-2" />
+            <CardTitle className="text-lg font-bold text-destructive">Access Restricted</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Only operators with administrator privileges are permitted to view or manage NFC card operations.
+            </p>
+            <Button variant="outline" onClick={() => window.location.href = "/"}>Return to Dashboard</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

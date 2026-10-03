@@ -225,10 +225,10 @@ export default function FacilityMindAdminPage() {
           <PermissionGate permission="facility:workorders:view" fallback={null}>
             <TabsTrigger value="work_orders">Work Order Radar</TabsTrigger>
           </PermissionGate>
-          <PermissionGate permission="facility:inventory:view" fallback={null}>
+          <PermissionGate permission="facility:inventory:manage" fallback={null}>
             <TabsTrigger value="inventory">Parts Inventory</TabsTrigger>
           </PermissionGate>
-          <PermissionGate permission="facility:energy:view" fallback={null}>
+          <PermissionGate permission="facility:energy:loadshed" fallback={null}>
             <TabsTrigger value="energy">Energy &amp; Load Shed</TabsTrigger>
           </PermissionGate>
         </TabsList>
@@ -258,7 +258,7 @@ export default function FacilityMindAdminPage() {
           </TabsContent>
         </PermissionGate>
 
-        <PermissionGate permission="facility:inventory:view" fallback={null}>
+        <PermissionGate permission="facility:inventory:manage" fallback={null}>
           <TabsContent value="inventory">
             <InventoryVaultTab
               parts={parts}
@@ -271,7 +271,7 @@ export default function FacilityMindAdminPage() {
           </TabsContent>
         </PermissionGate>
 
-        <PermissionGate permission="facility:energy:view" fallback={null}>
+        <PermissionGate permission="facility:energy:loadshed" fallback={null}>
           <TabsContent value="energy">
             <EnergyLoadTab onExecutePeakShave={handleExecutePeakShave} />
           </TabsContent>

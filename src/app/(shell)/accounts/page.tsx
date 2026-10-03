@@ -40,8 +40,8 @@ export const _ledgerCategories = {
 
 export default function AccountsPage() {
   const { staff } = useAuth();
-  const isAuthorized = staff ? ["super_admin", "admin", "principal", "hod"].includes(staff.role) : false;
-  const isWriter = staff ? ["super_admin", "admin"].includes(staff.role) : false;
+  const isAuthorized = staff ? ["super_admin", "admin", "principal", "hod", "accounts"].includes(staff.role) : false;
+  const isWriter = staff ? ["super_admin", "admin", "accounts"].includes(staff.role) : false;
 
   const {
     selectedInst,
