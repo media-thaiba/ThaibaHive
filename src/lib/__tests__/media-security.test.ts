@@ -1,4 +1,4 @@
-import { proxy as middleware } from "@/proxy";
+import { proxy } from "@/proxy";
 
 jest.mock("next/server", () => {
   class MockNextResponse {
@@ -110,7 +110,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
       "http://localhost:3000/api/media/assets",
       { cookies: { thaibahive_session: token } }
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
@@ -123,7 +123,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/media-library"
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/login");
@@ -133,7 +133,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/assets"
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).toBe(401);
   });
@@ -142,7 +142,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/share-links/public-token-123"
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(307);
@@ -158,7 +158,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
         headers: { "content-length": String(60 * 1024 * 1024), "content-type": "application/json" }, // 60MB
       }
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).toBe(413);
   });

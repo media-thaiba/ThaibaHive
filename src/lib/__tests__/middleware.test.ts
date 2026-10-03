@@ -226,6 +226,24 @@ describe("proxy", () => {
         expect(res.status).toBe(200);
       }
     });
+
+    it("should require authentication for webhook subpaths (/api/finance/fees/webhooks/anything must NOT be public) (R4-2)", async () => {
+      const subpathEndpoints = [
+        "/api/finance/fees/webhooks/anything",
+        "/api/finance/fees/webhooks/subpath",
+        "/api/webhooks/edge-security/nested",
+        "/api/engage/voice/unauthorized",
+      ];
+
+      for (const endpoint of subpathEndpoints) {
+        const req = makeRequest(endpoint, {
+          method: "POST",
+          contentType: "application/json",
+        });
+        const res = (await proxy(req as any)) as any;
+        expect(res.status).toBe(401);
+      }
+    });
   });
 
   describe("cookie authentication", () => {

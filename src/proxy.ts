@@ -11,13 +11,9 @@ import { getJwtSecretBytes } from "@thaiba/auth/config";
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
 
-const publicPaths = [
+const exactPublicPaths = new Set([
   "/auth/login",
   "/auth/signup",
-  "/_next",
-  "/Logo",
-  "/portal",
-  "/api/public/",
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/google",
@@ -29,15 +25,22 @@ const publicPaths = [
   "/api/health",
   "/api/system/csp-report",
   "/api/system/update",
-  "/api/media/share-links/",
-  "/share/",
   "/downloads",
   "/about",
   "/mission",
   "/enquiry",
   "/affiliation",
-  "/verify/",
   "/favicon.ico",
+]);
+
+const prefixPublicPaths = [
+  "/_next",
+  "/Logo",
+  "/portal",
+  "/api/public/",
+  "/api/media/share-links/",
+  "/share/",
+  "/verify/",
 ];
 
 const BLOCKED_PATHS = [
@@ -71,7 +74,10 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       pathname.startsWith("/portal/facilities") ||
       pathname.startsWith("/portal/fees") ||
       pathname.startsWith("/portal/documents");
-    const isPublic = !isProtectedPortal && publicPaths.some((p) => pathname.startsWith(p));
+    const isPublic =
+      !isProtectedPortal &&
+      (exactPublicPaths.has(pathname) ||
+        prefixPublicPaths.some((p) => pathname.startsWith(p)));
     if (isPublic) return addSecurityHeaders(request, NextResponse.next(), pathname);
 
     let token = request.cookies.get("thaibahive_session")?.value;
@@ -234,7 +240,4 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo|manifest.json|sw.js|offline.html|.*\\.svg$).*)"],
 };
-
-export { proxy as middleware };
-export default proxy;
 
