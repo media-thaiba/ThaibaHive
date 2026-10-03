@@ -70,6 +70,10 @@ jest.mock("@thaiba/auth", () => {
     ...actual,
     verifySession: jest.fn(),
     hasPermission: jest.fn(() => true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_1"),
+    getUserInstitutionScope: jest.fn().mockResolvedValue("inst_1"),
+    resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_1"),
+    getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_1"]),
   };
 });
 

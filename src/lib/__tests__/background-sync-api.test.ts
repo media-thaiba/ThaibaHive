@@ -5,6 +5,10 @@ import { verifySession } from "@thaiba/auth";
 jest.mock("@thaiba/auth", () => ({
   ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_001"),
+  getUserInstitutionScope: jest.fn().mockResolvedValue("inst_001"),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_001"),
+  getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_001"]),
 }));
 
 describe("Background Sync Status API (/api/mobile/sync/background-status)", () => {

@@ -15,11 +15,6 @@ export class TenantMismatchError extends Error {
  */
 export async function getStaffInstitutionMemberships(staffId: string): Promise<string[]> {
   try {
-    const dbSelectObj = db?.select as unknown as { _isMockFunction?: boolean } | undefined;
-    const isDbMocked = typeof dbSelectObj?._isMockFunction === "boolean" && dbSelectObj._isMockFunction;
-    if (isDbMocked && process.env.NODE_ENV === "test") {
-      return [];
-    }
     const rows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
@@ -46,19 +41,6 @@ export async function getUserInstitutionScope(sessionParam?: SessionPayload | nu
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
   if (memberships.length === 0) {
-    if (process.env.NODE_ENV === "test") {
-      try {
-        const existingStaff = await db
-          .select({ id: staff.id })
-          .from(staff)
-          .where(eq(staff.id, session.staffId))
-          .get();
-        if (existingStaff) return null;
-      } catch {
-        // Mock DB
-      }
-      return (session as SessionPayload & { institutionId?: string }).institutionId || "inst_campus_main";
-    }
     return null;
   }
   return memberships[0] ?? null;
@@ -88,21 +70,6 @@ export async function resolveScopedInstitutionId(
   const memberships = await getStaffInstitutionMemberships(session.staffId);
 
   if (memberships.length === 0) {
-    if (process.env.NODE_ENV === "test") {
-      try {
-        const existingStaff = await db
-          .select({ id: staff.id })
-          .from(staff)
-          .where(eq(staff.id, session.staffId))
-          .get();
-        if (existingStaff) {
-          throw new TenantMismatchError("Forbidden: User has no assigned institution.");
-        }
-      } catch (e) {
-        if (e instanceof TenantMismatchError) throw e;
-      }
-      return (session as SessionPayload & { institutionId?: string }).institutionId || requestedInstitutionId || "inst_campus_main";
-    }
     throw new TenantMismatchError("Forbidden: User has no assigned institution.");
   }
 
@@ -137,21 +104,6 @@ export async function resolveInstitutionScopeForSession(
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
   if (memberships.length === 0) {
-    if (process.env.NODE_ENV === "test") {
-      try {
-        const existingStaff = await db
-          .select({ id: staff.id })
-          .from(staff)
-          .where(eq(staff.id, session.staffId))
-          .get();
-        if (existingStaff) {
-          return null;
-        }
-      } catch {
-        // Mock DB
-      }
-      return session.institutionId || "inst_campus_main";
-    }
     return null;
   }
 
