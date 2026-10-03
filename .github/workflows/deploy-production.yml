@@ -31,6 +31,19 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Validate required production secrets
+        run: |
+          missing=()
+          [ -z "${{ secrets.AUTH_JWT_SECRET }}" ] && missing+=("AUTH_JWT_SECRET")
+          [ -z "${{ secrets.DATABASE_URL }}" ] && missing+=("DATABASE_URL")
+          [ -z "${{ secrets.HEALTH_SECRET }}" ] && missing+=("HEALTH_SECRET")
+          [ -z "${{ secrets.METRICS_SECRET }}" ] && missing+=("METRICS_SECRET")
+          [ -z "${{ secrets.NEXT_PUBLIC_APP_URL }}" ] && missing+=("NEXT_PUBLIC_APP_URL")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required production secrets: ${missing[*]}"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -46,22 +59,22 @@ jobs:
       - name: Build standalone Next.js App
         run: pnpm run build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'file:./dev.db' }}
-          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET || 'health_sec_4f9a810b2c3d4e5f' }}
-          METRICS_SECRET: ${{ secrets.METRICS_SECRET || 'metrics_sec_9e8d7c6b5a4f3e2d' }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://thaibahive.local' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ secrets.METRICS_SECRET }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           NODE_ENV: production
 
       - name: Run production preflight (env + workspace + build artifact)
         run: pnpm deploy:preflight
         env:
           NODE_ENV: production
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'file:./dev.db' }}
-          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET || 'health_sec_4f9a810b2c3d4e5f' }}
-          METRICS_SECRET: ${{ secrets.METRICS_SECRET || 'metrics_sec_9e8d7c6b5a4f3e2d' }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://thaibahive.local' }}
+          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HEALTH_SECRET: ${{ secrets.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ secrets.METRICS_SECRET }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
 
   deploy:
     name: Deploy to Vercel Production

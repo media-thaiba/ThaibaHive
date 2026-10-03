@@ -11,10 +11,21 @@ jobs:
     name: Purge Expired Nonces
     runs-on: ubuntu-latest
     steps:
+      - name: Validate required secrets
+        run: |
+          missing=()
+          [ -z "${{ secrets.NEXT_PUBLIC_APP_URL }}" ] && missing+=("NEXT_PUBLIC_APP_URL")
+          [ -z "${{ secrets.CRON_SECRET }}" ] && missing+=("CRON_SECRET")
+          [ -z "${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}" ] && missing+=("SYSTEM_ADMIN_SESSION_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets for nonce cleanup: ${missing[*]}"
+            exit 1
+          fi
+
       - name: Invoke nonce cleanup endpoint
         run: |
-          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL || 'https://thaibahive.com' }}"
-          CRON_SECRET="${{ secrets.CRON_SECRET || 'thaiba_cron_secret_cert_2026' }}"
+          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          CRON_SECRET="${{ secrets.CRON_SECRET }}"
           SESSION_TOKEN="${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}"
           
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \

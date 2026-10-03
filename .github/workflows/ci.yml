@@ -61,18 +61,22 @@ jobs:
         env:
           DATABASE_URL: file:./test.db
 
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Run unit & integration tests
         run: pnpm test
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           DATABASE_URL: file:./test.db
           CI: "true"
 
       - name: Build check
         run: pnpm build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           DATABASE_URL: file:./test.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -150,17 +154,22 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Build Next.js Web App (Standalone)
         run: pnpm run build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          BIOMETRIC_MASTER_KEY: ${{ secrets.BIOMETRIC_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          TENANT_ENCRYPTION_MASTER_KEY: ${{ secrets.TENANT_ENCRYPTION_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -214,6 +223,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Download standalone build artifact
         uses: actions/download-artifact@v4
         with:
@@ -241,11 +258,11 @@ jobs:
         env:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          BIOMETRIC_MASTER_KEY: ${{ secrets.BIOMETRIC_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          TENANT_ENCRYPTION_MASTER_KEY: ${{ secrets.TENANT_ENCRYPTION_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
@@ -278,13 +295,14 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Build Next.js Web App (Standalone)
         run: pnpm run build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -338,7 +356,7 @@ jobs:
         env:
           PORT: 3000
           DATABASE_URL: file:${{ github.workspace }}/dev.db
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           NODE_ENV: production
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 

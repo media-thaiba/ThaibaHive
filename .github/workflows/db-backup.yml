@@ -24,6 +24,19 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y postgresql-client awscli || true
 
+      - name: Validate required backup secrets
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          missing=()
+          [ -z "${{ secrets.DATABASE_URL }}" ] && missing+=("DATABASE_URL")
+          [ -z "${{ secrets.BACKUP_S3_BUCKET }}" ] && missing+=("BACKUP_S3_BUCKET")
+          [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing+=("AWS_ACCESS_KEY_ID")
+          [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing+=("AWS_SECRET_ACCESS_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required backup secrets: ${missing[*]}"
+            exit 1
+          fi
+
       - name: Run database backup
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -32,6 +45,6 @@ jobs:
           BACKUP_RETENTION_DAYS: 30
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'us-east-1' }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: chmod +x scripts/db-backup.sh && bash scripts/db-backup.sh
