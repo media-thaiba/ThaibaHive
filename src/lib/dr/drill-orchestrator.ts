@@ -233,7 +233,10 @@ export class DrillOrchestrator {
     }
 
     const durationMs = Date.now() - startTimestamp;
-    const mttrMs = recoveredAt > failureInjectedAt ? recoveredAt - failureInjectedAt : durationMs;
+    const mttrMs =
+      failureInjectedAt > 0 && recoveredAt > failureInjectedAt
+        ? recoveredAt - failureInjectedAt
+        : durationMs;
     const allStepsSucceeded = stepsExecuted.length > 0 && stepsExecuted.every((s) => s.success);
     const slaPassed = this.currentStatus === "COMPLETED" && allStepsSucceeded && mttrMs < 30000 && rpoLostTransactions === 0;
 
