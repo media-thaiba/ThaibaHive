@@ -4,6 +4,7 @@ import { performanceReviews, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { performanceReviewCreateSchema } from "@/lib/validation/schemas";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
+import { parseJsonStringArray } from "@/lib/utils";
 import { eq, desc, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -33,7 +34,7 @@ export const GET = requireAuth(async (request, session) => {
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const reviews = await db
+  const reviews = (await db
     .select({
       id: performanceReviews.id,
       staffId: performanceReviews.staffId,
@@ -56,7 +57,7 @@ export const GET = requireAuth(async (request, session) => {
     .leftJoin(staff, eq(performanceReviews.staffId, staff.id))
     .where(whereClause)
     .orderBy(desc(performanceReviews.createdAt))
-    .all();
+    .all()).map((review) => ({ ...review, goals: parseJsonStringArray(review.goals) }));
 
   return NextResponse.json({ reviews });
 }, "reviews:read");
