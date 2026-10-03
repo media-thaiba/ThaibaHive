@@ -101,6 +101,7 @@ jest.mock("next/server", () => {
 import { proxy, config } from "@/proxy";
 import { SignJWT } from "jose";
 import { getJwtSecretBytes } from "@thaiba/auth";
+import { PERMISSIONS_POLICY_VALUE } from "../security/security-headers";
 
 async function createValidTestToken(payload: Record<string, any> = { role: "admin", staffId: "stf-1", email: "test@example.com" }) {
   const secret = getJwtSecretBytes("session");
@@ -328,7 +329,7 @@ describe("proxy", () => {
       expect(res.get("x-frame-options")).toBe("DENY");
       expect(res.get("x-xss-protection")).toBe("1; mode=block");
       expect(res.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
-      expect(res.get("permissions-policy")).toBe("camera=(self), microphone=(), geolocation=(self)");
+      expect(res.get("permissions-policy")).toBe(PERMISSIONS_POLICY_VALUE);
     });
 
     it("should add no-store cache headers for API routes", async () => {

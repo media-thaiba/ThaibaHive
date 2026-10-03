@@ -1,138 +1,112 @@
+import { readFileSync } from "fs";
+import { join } from "path";
+import {
+  SECURITY_HEADERS,
+  PERMISSIONS_POLICY_VALUE,
+  HSTS_VALUE,
+  buildContentSecurityPolicy,
+  securityHeaderPairs,
+  applySecurityHeaders,
+} from "../security/security-headers";
 
-describe('Security Headers Configuration', () => {
-  const headersConfig = [
-    {
-      source: "/api/(dashboard|attendance/my|leaves/balances|tasks|approvals|auth/permissions|auth/me|departments|institutions|staff)",
-      headers: [
-        { key: "Cache-Control", value: "private, s-maxage=30, stale-while-revalidate=60" },
-      ],
-    },
-    {
-      source: "/_next/static/:path*",
-      headers: [
-        { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-      ],
-    },
-    {
-      source: "/(.*)",
-      headers: [
-        { key: "X-Content-Type-Options", value: "nosniff" },
-        { key: "X-Frame-Options", value: "DENY" },
-        { key: "X-XSS-Protection", value: "1; mode=block" },
-        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: ws: wss:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';" },
-        { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
-        { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
-      ],
-    },
-  ];
+const nextConfigSource = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
+const proxySource = readFileSync(join(process.cwd(), "src", "proxy.ts"), "utf8");
 
-  const getSecurityHeaders = () => {
-    const globalHeaders = headersConfig.find(config => config.source === "/(.*)");
-    if (!globalHeaders) {
-      throw new Error('Global security headers configuration is missing');
+describe("shared security header module (single source of truth)", () => {
+  test("SECURITY_HEADERS exposes the full static set", () => {
+    expect(SECURITY_HEADERS["X-Content-Type-Options"]).toBe("nosniff");
+    expect(SECURITY_HEADERS["X-Frame-Options"]).toBe("DENY");
+    expect(SECURITY_HEADERS["X-XSS-Protection"]).toBe("1; mode=block");
+    expect(SECURITY_HEADERS["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
+    expect(SECURITY_HEADERS["Strict-Transport-Security"]).toBe(HSTS_VALUE);
+    expect(SECURITY_HEADERS["Reporting-Endpoints"]).toBe('csp-endpoint="/api/system/csp-report"');
+    expect(SECURITY_HEADERS["Permissions-Policy"]).toBe(PERMISSIONS_POLICY_VALUE);
+    expect(Object.keys(SECURITY_HEADERS)).toHaveLength(7);
+  });
+
+  test("HSTS is preload-ready", () => {
+    expect(HSTS_VALUE).toContain("max-age=31536000");
+    expect(HSTS_VALUE).toContain("includeSubDomains");
+    expect(HSTS_VALUE).toContain("preload");
+  });
+
+  test("Permissions-Policy keeps camera/geolocation for self (biometrics/geo) and denies payment", () => {
+    expect(PERMISSIONS_POLICY_VALUE).toContain("camera=(self)");
+    expect(PERMISSIONS_POLICY_VALUE).toContain("microphone=()");
+    expect(PERMISSIONS_POLICY_VALUE).toContain("geolocation=(self)");
+    expect(PERMISSIONS_POLICY_VALUE).toContain("payment=()");
+  });
+});
+
+describe("Content-Security-Policy builder", () => {
+  const prodCsp = buildContentSecurityPolicy(true);
+  const devCsp = buildContentSecurityPolicy(false);
+
+  test("contains the mandatory hardening directives", () => {
+    expect(prodCsp).toContain("default-src 'self'");
+    expect(prodCsp).toContain("frame-ancestors 'none'");
+    expect(prodCsp).toContain("base-uri 'self'");
+    expect(prodCsp).toContain("object-src 'none'");
+    expect(prodCsp).toContain("img-src 'self' data: https: blob:");
+    expect(prodCsp).toContain("connect-src 'self' https: ws: wss:");
+    expect(prodCsp).toContain("report-uri /api/system/csp-report");
+    expect(prodCsp).toContain("report-to csp-endpoint");
+  });
+
+  test("production omits unsafe-eval, development keeps it", () => {
+    expect(prodCsp).not.toContain("'unsafe-eval'");
+    expect(devCsp).toContain("'unsafe-eval'");
+  });
+
+  test("has no empty directives (no doubled separators)", () => {
+    expect(prodCsp).not.toContain(";;");
+    expect(prodCsp).not.toMatch(/;\s*;/);
+    expect(prodCsp.trim()).not.toMatch(/;\s*$/);
+  });
+});
+
+describe("securityHeaderPairs (next.config.ts consumer)", () => {
+  test("returns CSP plus every static security header", () => {
+    const pairs = securityHeaderPairs(true);
+    const keys = pairs.map((p) => p.key);
+    expect(keys).toHaveLength(Object.keys(SECURITY_HEADERS).length + 1);
+    expect(keys).toContain("Content-Security-Policy");
+    for (const key of Object.keys(SECURITY_HEADERS)) {
+      expect(keys).toContain(key);
     }
-    return globalHeaders.headers;
-  };
+    const csp = pairs.find((p) => p.key === "Content-Security-Policy");
+    expect(csp?.value).toBe(buildContentSecurityPolicy(true));
+  });
+});
 
-  test('should have Content-Security-Policy header', () => {
-    const headers = getSecurityHeaders();
-    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
+describe("applySecurityHeaders (proxy.ts consumer)", () => {
+  test("applies the full shared set onto a response", () => {
+    const store = new Map<string, string>();
+    applySecurityHeaders(
+      { headers: { set: (key, value) => void store.set(key.toLowerCase(), value) } },
+      true
+    );
+    expect(store.size).toBe(Object.keys(SECURITY_HEADERS).length + 1);
+    for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+      expect(store.get(key.toLowerCase())).toBe(value);
+    }
+    expect(store.get("content-security-policy")).toBe(buildContentSecurityPolicy(true));
+  });
+});
 
-    expect(cspHeader).toBeDefined();
-    expect(cspHeader?.value).toBeDefined();
-    expect(cspHeader?.value).toContain("default-src 'self'");
+describe("anti-drift guards (consolidation invariants)", () => {
+  test("next.config.ts consumes the shared module and declares no inline header literals", () => {
+    expect(nextConfigSource).toContain("securityHeaderPairs");
+    expect(nextConfigSource).not.toContain('"Content-Security-Policy"');
+    expect(nextConfigSource).not.toContain('"X-Frame-Options"');
+    expect(nextConfigSource).not.toContain("cspDirective");
   });
 
-  test('should have X-Content-Type-Options header', () => {
-    const headers = getSecurityHeaders();
-    const contentTypeHeader = headers.find(header => header.key === 'X-Content-Type-Options');
-
-    expect(contentTypeHeader).toBeDefined();
-    expect(contentTypeHeader?.value).toBe('nosniff');
-  });
-
-  test('should have X-Frame-Options header', () => {
-    const headers = getSecurityHeaders();
-    const frameOptionsHeader = headers.find(header => header.key === 'X-Frame-Options');
-
-    expect(frameOptionsHeader).toBeDefined();
-    expect(frameOptionsHeader?.value).toBe('DENY');
-  });
-
-  test('should have X-XSS-Protection header', () => {
-    const headers = getSecurityHeaders();
-    const xssProtectionHeader = headers.find(header => header.key === 'X-XSS-Protection');
-
-    expect(xssProtectionHeader).toBeDefined();
-    expect(xssProtectionHeader?.value).toBe('1; mode=block');
-  });
-
-  test('should have Referrer-Policy header', () => {
-    const headers = getSecurityHeaders();
-    const referrerPolicyHeader = headers.find(header => header.key === 'Referrer-Policy');
-
-    expect(referrerPolicyHeader).toBeDefined();
-    expect(referrerPolicyHeader?.value).toBe('strict-origin-when-cross-origin');
-  });
-
-  test('should have Strict-Transport-Security header', () => {
-    const headers = getSecurityHeaders();
-    const hstsHeader = headers.find(header => header.key === 'Strict-Transport-Security');
-
-    expect(hstsHeader).toBeDefined();
-    expect(hstsHeader?.value).toContain('max-age=31536000');
-    expect(hstsHeader?.value).toContain('includeSubDomains');
-    expect(hstsHeader?.value).toContain('preload');
-  });
-
-  test('should have Permissions-Policy header', () => {
-    const headers = getSecurityHeaders();
-    const permissionsPolicyHeader = headers.find(header => header.key === 'Permissions-Policy');
-
-    expect(permissionsPolicyHeader).toBeDefined();
-    expect(permissionsPolicyHeader?.value).toContain('camera=()');
-    expect(permissionsPolicyHeader?.value).toContain('microphone=()');
-    expect(permissionsPolicyHeader?.value).toContain('geolocation=()');
-    expect(permissionsPolicyHeader?.value).toContain('payment=()');
-  });
-
-  test('CSP should allow data: sources in img-src', () => {
-    const headers = getSecurityHeaders();
-    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
-    expect(cspHeader?.value).toContain("img-src 'self' data: https: blob:");
-  });
-
-  test('CSP should not allow object-src', () => {
-    const headers = getSecurityHeaders();
-    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
-    expect(cspHeader?.value).toContain("object-src 'none'");
-  });
-
-  test('CSP should allow blob: URLs for media', () => {
-    const headers = getSecurityHeaders();
-    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
-    expect(cspHeader?.value).toContain('blob:');
-  });
-
-  test('CSP should allow WebSocket connections', () => {
-    const headers = getSecurityHeaders();
-    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
-    expect(cspHeader?.value).toContain('wss:');
-  });
-
-  test('CSP should omit unsafe-eval in production mode', () => {
-    const isProd = true;
-    const scriptSrc = isProd
-      ? "script-src 'self' 'unsafe-inline';"
-      : "script-src 'self' 'unsafe-inline' 'unsafe-eval';";
-
-    expect(scriptSrc).not.toContain("'unsafe-eval'");
-  });
-
-  test('CSP should not contain unsafe-eval', () => {
-    const headers = getSecurityHeaders();
-    const cspHeader = headers.find(header => header.key === 'Content-Security-Policy');
-    expect(cspHeader?.value).not.toContain("'unsafe-eval'");
+  test("proxy.ts consumes the shared module and declares no inline header literals", () => {
+    expect(proxySource).toContain("applySecurityHeaders");
+    expect(proxySource).not.toContain('"Content-Security-Policy"');
+    expect(proxySource).not.toContain('"X-Frame-Options"');
+    expect(proxySource).not.toContain('"Permissions-Policy"');
+    expect(proxySource).not.toContain("Strict-Transport-Security");
   });
 });
