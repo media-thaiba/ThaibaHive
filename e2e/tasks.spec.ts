@@ -21,26 +21,25 @@ test.describe("Tasks Kanban Board", () => {
     await expect(page).toHaveURL("/tasks/new");
 
     // Fill form elements
-    const form = page.locator("form");
-    await form.locator("input").first().fill("E2E Tasks Board Test");
-    await form.locator("textarea").first().fill("Description for E2E task board test");
+    await page.fill("#title", "E2E Tasks Board Test");
+    await page.fill("#description", "Description for E2E task board test");
 
     // Click Submit
-    await form.locator("button[type='submit']").click();
+    await page.click("button[type='submit']");
 
     // Verify redirected back to tasks board and card appears
-    await expect(page).toHaveURL("/tasks");
+    await expect(page).toHaveURL(/\/tasks(?!\/new)/, { timeout: 20000 });
     const taskCard = page.locator("text=E2E Tasks Board Test");
     await expect(taskCard).toBeVisible();
 
     // Click on the task link to view details
-    await page.locator("a:has-text('E2E Tasks Board Test')").click();
+    await page.locator("a:has-text('E2E Tasks Board Test')").first().click();
 
     // Verify redirected to details page
-    await expect(page).toHaveURL(/\/tasks\/.+/);
+    await expect(page).toHaveURL(/\/tasks\/.+/, { timeout: 15000 });
     
     // Details page heading should show the task title
-    const detailsHeading = page.locator("h1");
+    const detailsHeading = page.locator("h1").first();
     await expect(detailsHeading).toContainText("E2E Tasks Board Test");
   });
 });

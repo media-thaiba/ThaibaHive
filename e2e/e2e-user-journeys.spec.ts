@@ -108,66 +108,76 @@ test.describe("End-to-End User Journey Certification Suite", () => {
   test.describe("Journey 4: Performance Appraisal Lifecycle", () => {
     test.use({ storageState: ".auth/admin.json" });
 
-    test("should execute performance review initiation, self-scoring, and manager appraisal", async ({ page, browser }) => {
+    test("should execute performance review initiation, self-scoring, and manager appraisal", async ({ browser }) => {
       const cycleSuffix = Date.now().toString().slice(-4);
-
-      // 1. Create active performance cycle
-      const cycleRes = await page.request.post("/api/performance/cycles", {
-        data: {
-          title: `Annual Appraisal Cycle ${cycleSuffix}`,
-          period: `2026-Q${cycleSuffix.slice(-1) || "1"}`,
-          startDate: "2026-01-01",
-          endDate: "2026-12-31",
-          selfAssessmentDeadline: "2026-06-30",
-          managerReviewDeadline: "2026-08-31",
-        },
-      });
-      expect(cycleRes.status()).toBe(201);
-      const cycleData = await cycleRes.json();
-      const cycleId = cycleData.cycle?.id || cycleData.id;
-
-      // 2. Initiate performance review for staff
-      const staffUser = await db.select().from(staff).where(eq(staff.email, "test-staff@thaibahive.local")).get();
-      const staffId = staffUser?.id || "test-staff-id";
-
-      const reviewRes = await page.request.post("/api/performance/reviews", {
-        data: {
-          cycleId,
-          staffId,
-          period: "2026-Q1",
-        },
-      });
-      expect(reviewRes.status()).toBe(201);
-      const reviewData = await reviewRes.json();
-      const reviewId = reviewData.review?.id || reviewData.id;
-      expect(reviewId).toBeTruthy();
-
-      // 3. Submit self-assessment via Staff context
-      const staffContext = await browser.newContext({ storageState: ".auth/staff.json" });
-      const staffPage = await staffContext.newPage();
+      const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
+      const adminPage = await adminContext.newPage();
 
       try {
-        const selfSubmitRes = await staffPage.request.post(`/api/performance/reviews/${reviewId}/submit`, {
+        // 1. Create active performance cycle
+        const cycleRes = await adminPage.request.post("/api/performance/cycles", {
           data: {
-            stage: "self_assessment",
-            ratings: [{ metricId: "pedagogy", score: 4.5, comments: "Maintained strong curriculum pacing" }],
-            comments: "Achieved departmental research publication goals",
+            title: `Annual Appraisal Cycle ${cycleSuffix}`,
+            period: `2026-Q${cycleSuffix.slice(-1) || "1"}`,
+            startDate: "2026-01-01",
+            endDate: "2026-12-31",
+            selfAssessmentDeadline: "2026-06-30",
+            managerReviewDeadline: "2026-08-31",
           },
         });
-        expect(selfSubmitRes.status()).toBe(200);
+        expect(cycleRes.status()).toBe(201);
+        const cycleData = await cycleRes.json();
+        const cycleId = cycleData.cycle?.id || cycleData.id;
 
-        // 4. Manager evaluation and approval
-        const managerSubmitRes = await page.request.post(`/api/performance/reviews/${reviewId}/submit`, {
+        // 2. Initiate performance review for staff
+        let staffUser = await db.select().from(staff).where(eq(staff.email, "test-staff@thaibahive.local")).get();
+        if (!staffUser) {
+          const staffList = await db.select().from(staff).where(eq(staff.role, "staff")).all();
+          staffUser = staffList[0];
+        }
+        const staffId = staffUser?.id ?? "";
+
+        const reviewRes = await adminPage.request.post("/api/performance/reviews", {
           data: {
-            stage: "manager_review",
-            ratings: [{ metricId: "pedagogy", score: 4.8, comments: "Exceeded student satisfaction metrics" }],
-            comments: "Outstanding performance during the academic cycle",
-            recommendedGrade: "A+",
+            cycleId,
+            staffId,
+            period: "2026-Q1",
           },
         });
-        expect(managerSubmitRes.status()).toBe(200);
+        expect(reviewRes.status()).toBe(201);
+        const reviewData = await reviewRes.json();
+        const reviewId = reviewData.review?.id || reviewData.id;
+        expect(reviewId).toBeTruthy();
+
+        // 3. Submit self-assessment via Staff context
+        const staffContext = await browser.newContext({ storageState: ".auth/staff.json" });
+        const staffPage = await staffContext.newPage();
+
+        try {
+          const selfSubmitRes = await staffPage.request.post(`/api/performance/reviews/${reviewId}/submit`, {
+            data: {
+              stage: "self_assessment",
+              ratings: [{ metricId: "pedagogy", score: 4.5, comments: "Maintained strong curriculum pacing" }],
+              comments: "Achieved departmental research publication goals",
+            },
+          });
+          expect(selfSubmitRes.status()).toBe(200);
+
+          // 4. Manager evaluation and approval
+          const managerSubmitRes = await adminPage.request.post(`/api/performance/reviews/${reviewId}/submit`, {
+            data: {
+              stage: "manager_review",
+              ratings: [{ metricId: "pedagogy", score: 4.8, comments: "Exceeded student satisfaction metrics" }],
+              comments: "Outstanding performance during the academic cycle",
+              recommendedGrade: "A+",
+            },
+          });
+          expect(managerSubmitRes.status()).toBe(200);
+        } finally {
+          await staffContext.close();
+        }
       } finally {
-        await staffContext.close();
+        await adminContext.close();
       }
     });
   });

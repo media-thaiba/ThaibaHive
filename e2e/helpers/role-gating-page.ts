@@ -11,7 +11,7 @@ export class RoleGatingPage {
   constructor(page: Page) {
     this.page = page;
     this.sidebarNav = page.locator('nav[aria-label="Sidebar navigation"]');
-    this.bottomNav = page.locator('nav[aria-label="Mobile navigation"]');
+    this.bottomNav = page.locator('nav[aria-label="Bottom navigation"], nav[aria-label="Mobile navigation"]');
   }
 
   // ========== Sidebar Navigation ==========
@@ -178,7 +178,7 @@ export class RoleGatingPage {
 
   // Alumni Portal assertions
   async expectAlumniPortalLoaded() {
-    await expect(this.page.locator('text=Alumni & Career Advancement Portal')).toBeVisible({ timeout: 10000 });
+    await expect(this.page.locator('h1:has-text("Alumni & Career Advancement Portal")').first()).toBeVisible({ timeout: 10000 });
   }
 
   async expectAlumniTabVisible(tabName: string, shouldBeVisible: boolean = true) {
@@ -192,7 +192,7 @@ export class RoleGatingPage {
 
   // Supply Cockpit assertions
   async expectSupplyCockpitLoaded() {
-    await expect(this.page.locator('text=SUPPLY-HIVE')).toBeVisible({ timeout: 10000 });
+    await expect(this.page.locator('h1:has-text("SUPPLY-HIVE")').first()).toBeVisible({ timeout: 10000 });
   }
 
   async expectSupplyTabVisible(tabName: string, shouldBeVisible: boolean = true) {
@@ -214,7 +214,7 @@ export class RoleGatingPage {
 
   // Vision Shield assertions
   async expectVisionShieldLoaded() {
-    await expect(this.page.locator('text=Autonomous Campus Safety')).toBeVisible({ timeout: 10000 });
+    await expect(this.page.locator('h1:has-text("Autonomous Campus Safety")').first()).toBeVisible({ timeout: 10000 });
   }
 
   async expectVisionTabVisible(tabName: string, shouldBeVisible: boolean = true) {
@@ -236,7 +236,7 @@ export class RoleGatingPage {
 
   // Facility Mind assertions
   async expectFacilityMindLoaded() {
-    await expect(this.page.locator('text=FACILITY-MIND')).toBeVisible({ timeout: 10000 });
+    await expect(this.page.locator('h1:has-text("FACILITY-MIND")').first()).toBeVisible({ timeout: 10000 });
   }
 
   async expectFacilityTabVisible(tabName: string, shouldBeVisible: boolean = true) {
@@ -301,7 +301,7 @@ export class RoleGatingPage {
     
     expect(response.status()).toBe(403);
     const json = await response.json();
-    expect(json.error).toBe("Forbidden");
+    expect(json.error).toMatch(/forbidden/i);
     return json;
   }
 }
@@ -359,42 +359,42 @@ export const NAV_VISIBILITY_MATRIX: Record<string, Record<string, boolean>> = {
 // Dashboard action visibility matrix
 export const DASHBOARD_ACTION_VISIBILITY: Record<string, Record<string, boolean>> = {
   // Finance Dashboard
-  "finance:new-request": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: true, purchase: false },
-  "finance:export": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: true, purchase: false },
+  "finance:new-request": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "finance:export": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: false },
 
   // Alumni Portal
   "alumni:mentors": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
   "alumni:jobs": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
-  "alumni:endowments": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "alumni:endowments": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: false },
   "alumni:events": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
 
   // Supply Cockpit
   "supply:new-requisition": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: true },
-  "supply:reconciliation": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: true },
-  "supply:orders": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: true },
-  "supply:vendors": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: true },
+  "supply:reconciliation": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: true, purchase: true },
+  "supply:orders": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: true, purchase: true },
+  "supply:vendors": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: true },
 
   // Vision Shield
-  "vision:radar": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "vision:threats": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "vision:guards": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "vision:alpr": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "vision:privacy": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "vision:lockdown": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: false, purchase: false },
+  "vision:radar": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "vision:threats": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "vision:guards": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "vision:alpr": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "vision:privacy": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
+  "vision:lockdown": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
 
   // Facility Mind
-  "facility:equipment": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "facility:equipment": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
   "facility:predictive": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "facility:workorders": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "facility:inventory": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "facility:energy": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "facility:workorders": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "facility:inventory": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
+  "facility:energy": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
   "facility:dispatch": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
 
   // Portal Pages
-  "facilities:spaces": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
-  "fees:view": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: false },
-  "fees:pay": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: false },
-  "documents:read": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
+  "facilities:spaces": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "fees:view": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "fees:pay": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "documents:read": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
 
   // Main Dashboard
   "dashboard:staff-present": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },

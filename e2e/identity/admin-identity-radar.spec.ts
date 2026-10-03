@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Admin Identity Radar', () => {
+  test.use({ storageState: '.auth/super_admin.json' });
+
   test('should display radar dashboard', async ({ page }) => {
     await page.goto('/admin/security/identity');
     

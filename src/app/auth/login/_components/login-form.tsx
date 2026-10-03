@@ -234,7 +234,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         {mode === "signin" && (
           <form onSubmit={handleLoginSubmit} className="space-y-4" data-hydrated={isHydrated}>
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Email
               </label>
               <div className="relative">
@@ -253,7 +253,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
             
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Password
               </label>
               <div className="relative">
@@ -288,7 +288,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                     </svg>
                   )}
                 </div>
-                <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
+                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                   Keep me signed in
                 </span>
               </label>
@@ -316,7 +316,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 type="button"
                 onClick={() => handleModeChange("signup")}
                 aria-label="Switch to account creation mode"
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 No, Create Account
               </button>
@@ -325,7 +325,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 type="button"
                 onClick={() => handleModeChange("google")}
                 aria-label="Sign in with Google identity provider"
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -341,7 +341,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 onClick={handlePasskeyLogin}
                 disabled={passkeyLoading}
                 aria-label="Sign in with WebAuthn Passkey"
-                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-muted-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+                className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-foreground hover:text-foreground font-bold rounded-full h-12 flex items-center justify-center gap-2 transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
               >
                 {passkeyLoading ? "Authenticating..." : (
                   <><Fingerprint className="w-4 h-4" aria-hidden="true" /> Sign in with Passkey</>
@@ -355,7 +355,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
           <form onSubmit={handleSignupSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label htmlFor="signup-firstName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="signup-firstName" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   First Name
                 </label>
                 <div className="relative">
@@ -372,7 +372,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="signup-lastName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="signup-lastName" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Last Name
                 </label>
                 <div className="relative">
@@ -391,7 +391,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="signup-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="signup-email" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Email
               </label>
               <div className="relative">
@@ -410,7 +410,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="signup-employeeId" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="signup-employeeId" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Employee ID
               </label>
               <div className="relative">
@@ -428,7 +428,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="signup-invitationToken" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="signup-invitationToken" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Invitation Code / Token
                 </label>
                 <span className="text-[9px] text-muted-foreground">Institutional Access</span>
@@ -450,7 +450,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label htmlFor="signup-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="signup-password" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Password
                 </label>
                 <div className="relative">
@@ -468,7 +468,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="signup-confirm" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <label htmlFor="signup-confirm" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Confirm Password
                 </label>
                 <div className="relative">

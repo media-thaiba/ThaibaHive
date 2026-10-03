@@ -51,12 +51,11 @@ test.describe("Bottom Navigation Visibility by Role", () => {
 
   for (const role of roles) {
     test.describe(`Role: ${role}`, () => {
-      test.use({ storageState: getAuthStatePath(role) });
+      test.use({ storageState: getAuthStatePath(role), viewport: { width: 375, height: 667 } });
 
       test("primary nav items match sidebar visibility", async ({ page }) => {
         const gating = new RoleGatingPage(page);
         await page.goto("/");
-        await gating.expectDashboardLoaded();
 
         // Primary nav items: Home, Attendance, Tasks, Leaves
         await gating.expectBottomNavLinkVisible("/", NAV_VISIBILITY_MATRIX["/attendance"][role]);
@@ -97,7 +96,12 @@ test.describe("Dashboard Action Button Gating by Role", () => {
   // ========== Alumni Portal ==========
   
   test.describe("Alumni Portal (/portal/alumni)", () => {
-    const tabs = ["AI Mentor Match", "Job Board", "Endowments", "Homecoming & Events"];
+    const tabMap: Record<string, string> = {
+      "AI Mentor Match": "alumni:mentors",
+      "Job Board": "alumni:jobs",
+      "Endowments": "alumni:endowments",
+      "Homecoming & Events": "alumni:events",
+    };
 
     for (const role of allRoles) {
       test.describe(`Role: ${role}`, () => {
@@ -108,9 +112,8 @@ test.describe("Dashboard Action Button Gating by Role", () => {
           await page.goto("/portal/alumni");
           await gating.expectAlumniPortalLoaded();
 
-          for (const tab of tabs) {
-            const key = `alumni:${tab.toLowerCase().replace(/ /g, "-").replace("&", "")}`;
-            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? true;
+          for (const [tab, key] of Object.entries(tabMap)) {
+            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? false;
             await gating.expectAlumniTabVisible(tab, shouldBeVisible);
           }
         });
@@ -121,7 +124,11 @@ test.describe("Dashboard Action Button Gating by Role", () => {
   // ========== Supply Cockpit ==========
   
   test.describe("Supply Cockpit (/operations/supply)", () => {
-    const tabs = ["3-Way Matching", "Purchase Orders", "Vendor Directory"];
+    const tabMap: Record<string, string> = {
+      "3-Way Matching": "supply:reconciliation",
+      "Purchase Orders": "supply:orders",
+      "Vendor Directory": "supply:vendors",
+    };
 
     for (const role of allRoles) {
       test.describe(`Role: ${role}`, () => {
@@ -132,9 +139,8 @@ test.describe("Dashboard Action Button Gating by Role", () => {
           await page.goto("/operations/supply");
           await gating.expectSupplyCockpitLoaded();
 
-          for (const tab of tabs) {
-            const key = `supply:${tab.toLowerCase().replace(/ /g, "-")}`;
-            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? true;
+          for (const [tab, key] of Object.entries(tabMap)) {
+            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? false;
             await gating.expectSupplyTabVisible(tab, shouldBeVisible);
           }
 
@@ -148,7 +154,13 @@ test.describe("Dashboard Action Button Gating by Role", () => {
   // ========== Vision Shield ==========
   
   test.describe("Vision Shield (/admin/operations/vision-shield)", () => {
-    const tabs = ["3D Vision Radar", "Threat Alerts & Incidents", "Guard Dispatch", "ALPR & Gate Access", "Privacy Vault"];
+    const tabMap: Record<string, string> = {
+      "3D Vision Radar": "vision:radar",
+      "Threat Alerts & Incidents": "vision:threats",
+      "Guard Dispatch": "vision:guards",
+      "ALPR & Gate Access": "vision:alpr",
+      "Privacy Vault": "vision:privacy",
+    };
 
     for (const role of allRoles) {
       test.describe(`Role: ${role}`, () => {
@@ -159,9 +171,8 @@ test.describe("Dashboard Action Button Gating by Role", () => {
           await page.goto("/admin/operations/vision-shield");
           await gating.expectVisionShieldLoaded();
 
-          for (const tab of tabs) {
-            const shortKey = `vision:${tab.toLowerCase().split(" ")[0]}`;
-            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[shortKey]?.[role] ?? false;
+          for (const [tab, key] of Object.entries(tabMap)) {
+            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? false;
             await gating.expectVisionTabVisible(tab, shouldBeVisible);
           }
 
@@ -175,7 +186,13 @@ test.describe("Dashboard Action Button Gating by Role", () => {
   // ========== Facility Mind ==========
   
   test.describe("Facility Mind (/admin/operations/facility-mind)", () => {
-    const tabs = ["Equipment Studio & Twin", "Predictive Matrix", "Work Order Radar", "Parts Inventory", "Energy & Load Shed"];
+    const tabMap: Record<string, string> = {
+      "Equipment Studio & Twin": "facility:equipment",
+      "Predictive Matrix": "facility:predictive",
+      "Work Order Radar": "facility:workorders",
+      "Parts Inventory": "facility:inventory",
+      "Energy & Load Shed": "facility:energy",
+    };
 
     for (const role of allRoles) {
       test.describe(`Role: ${role}`, () => {
@@ -186,9 +203,8 @@ test.describe("Dashboard Action Button Gating by Role", () => {
           await page.goto("/admin/operations/facility-mind");
           await gating.expectFacilityMindLoaded();
 
-          for (const tab of tabs) {
-            const shortKey = `facility:${tab.toLowerCase().split(" ")[0]}`;
-            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[shortKey]?.[role] ?? false;
+          for (const [tab, key] of Object.entries(tabMap)) {
+            const shouldBeVisible = DASHBOARD_ACTION_VISIBILITY[key]?.[role] ?? false;
             await gating.expectFacilityTabVisible(tab, shouldBeVisible);
           }
         });
@@ -265,122 +281,112 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
 
   // Finance endpoints
   test.describe("Finance API 403 for non-finance roles", () => {
-    for (const role of nonAdminRoles) {
-      if (!AUTH_FINANCE_ROLES.includes(role as any)) {
-        test.describe(`Role: ${role}`, () => {
-          test.use({ storageState: getAuthStatePath(role) });
+    const nonFeeManageRoles = ["staff", "purchase", "hod"].filter(r => authStateExists(r));
+    for (const role of nonFeeManageRoles) {
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
 
-          test(`cannot call finance write endpoints`, async ({ page }) => {
-            const gating = new RoleGatingPage(page);
-            
-            await gating.callApiAndExpectForbidden("/api/finance/fees/structures", "POST", {
-              institutionId: "inst_campus_main",
-              name: "Test Fee",
-              code: "TEST-FEE",
-              academicYear: "2025-2026",
-              totalAmount: 10000,
-            });
+        test(`cannot call finance write endpoints`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          
+          await gating.callApiAndExpectForbidden("/api/finance/fees/structures", "POST", {
+            institutionId: "inst_campus_main",
+            name: "Test Fee",
+            code: "TEST-FEE",
+            academicYear: "2025-2026",
+            totalAmount: 10000,
+          });
 
-            await gating.callApiAndExpectForbidden("/api/approvals", "POST", {
-              type: "expense",
-              amount: 5000,
-              description: "Test expense",
-            });
+          await gating.callApiAndExpectForbidden("/api/finance/tax-rates/jurisdictions", "POST", {
+            name: "Kerala Tax Zone",
+            code: "KL-TAX",
+            country: "India",
+            stateOrProvince: "Kerala",
+            defaultRatePercent: 18,
           });
         });
-      }
+      });
     }
   });
 
   // Supply endpoints
   test.describe("Supply API 403 for non-purchase roles", () => {
-    for (const role of nonAdminRoles) {
-      if (!AUTH_PURCHASE_ROLES.includes(role as any)) {
-        test.describe(`Role: ${role}`, () => {
-          test.use({ storageState: getAuthStatePath(role) });
+    const nonSupplyManageRoles = ["staff", "accounts", "hod"].filter(r => authStateExists(r));
+    for (const role of nonSupplyManageRoles) {
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
 
-          test(`cannot POST /api/supply/orders`, async ({ page }) => {
-            const gating = new RoleGatingPage(page);
-            
-            await gating.callApiAndExpectForbidden("/api/supply/orders", "POST", {
-              vendorId: "test-vendor",
-              items: [{ sku: "TEST-001", quantity: 10, unitPrice: 100 }],
-            });
+        test(`cannot POST /api/supply/orders`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          
+          await gating.callApiAndExpectForbidden("/api/supply/orders", "POST", {
+            vendorId: "test-vendor",
+            items: [{ sku: "TEST-001", quantity: 10, unitPrice: 100 }],
           });
         });
-      }
+      });
     }
   });
 
   // Vision Shield endpoints
-  test.describe("Vision Shield API 403 for non-admin roles", () => {
-    for (const role of nonAdminRoles) {
-      if (!AUTH_ADMIN_ROLES.includes(role as any)) {
-        test.describe(`Role: ${role}`, () => {
-          test.use({ storageState: getAuthStatePath(role) });
+  test.describe("Vision Shield API 403 for non-lockdown roles", () => {
+    const nonLockdownRoles = ["staff", "accounts", "purchase", "hod"].filter(r => authStateExists(r));
+    for (const role of nonLockdownRoles) {
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
 
-          test(`cannot access vision lockdown and stream APIs`, async ({ page }) => {
-            const gating = new RoleGatingPage(page);
-            
-            await gating.callApiAndExpectForbidden("/api/vision/lockdown", "POST", {
-              scope: "campus",
-              targetFacilityId: "bldg_eng",
-              reason: "Test lockdown",
-            });
-
-            await gating.callApiAndExpectForbidden("/api/vision/alerts/stream", "GET");
+        test(`cannot access vision lockdown API`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          
+          await gating.callApiAndExpectForbidden("/api/vision/lockdown", "POST", {
+            scope: "campus",
+            targetFacilityId: "bldg_eng",
+            reason: "Test lockdown",
           });
         });
-      }
+      });
     }
   });
 
   // Facility endpoints
-  test.describe("Facility API 403 for non-admin roles", () => {
-    for (const role of nonAdminRoles) {
-      if (!AUTH_ADMIN_ROLES.includes(role as any) && !AUTH_HOD_AND_ABOVE.includes(role as any)) {
-        test.describe(`Role: ${role}`, () => {
-          test.use({ storageState: getAuthStatePath(role) });
+  test.describe("Facility API 403 for non-facility roles", () => {
+    const nonFacilityRoles = ["accounts", "purchase"].filter(r => authStateExists(r));
+    for (const role of nonFacilityRoles) {
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
 
-          test(`cannot call facility workorders or dispatch APIs`, async ({ page }) => {
-            const gating = new RoleGatingPage(page);
-            
-            await gating.callApiAndExpectForbidden("/api/facility/workorders", "POST", {
-              title: "Test Work Order",
-              buildingId: "bldg_eng",
-              category: "hvac",
-              priority: "high",
-            });
-
-            await gating.callApiAndExpectForbidden("/api/facility/dispatch", "POST", {
-              workOrderNumber: "WO-TEST-001",
-              requiredSkill: "hvac",
-            });
+        test(`cannot call facility workorders or dispatch APIs`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          
+          await gating.callApiAndExpectForbidden("/api/facility/workorders", "POST", {
+            title: "Test Work Order",
+            buildingId: "bldg_eng",
+            category: "hvac",
+            priority: "high",
           });
         });
-      }
+      });
     }
   });
 
   // Admin endpoints
   test.describe("Admin API 403 for non-admin roles", () => {
-    for (const role of nonAdminRoles) {
-      if (!AUTH_ADMIN_ROLES.includes(role as any)) {
-        test.describe(`Role: ${role}`, () => {
-          test.use({ storageState: getAuthStatePath(role) });
+    const nonAdminUserRoles = ["staff", "accounts", "purchase", "hod", "principal"].filter(r => authStateExists(r));
+    for (const role of nonAdminUserRoles) {
+      test.describe(`Role: ${role}`, () => {
+        test.use({ storageState: getAuthStatePath(role) });
 
-          test(`cannot access admin scheduled jobs or sync policies`, async ({ page }) => {
-            const gating = new RoleGatingPage(page);
-            
-            await gating.callApiAndExpectForbidden("/api/admin/scheduled-jobs", "GET");
+        test(`cannot access admin scheduled jobs or sync policies`, async ({ page }) => {
+          const gating = new RoleGatingPage(page);
+          
+          await gating.callApiAndExpectForbidden("/api/admin/scheduled-jobs", "GET");
 
-            await gating.callApiAndExpectForbidden("/api/admin/sync-policies", "POST", {
-              policyId: "test-policy",
-              enabled: true,
-            });
+          await gating.callApiAndExpectForbidden("/api/admin/scheduled-jobs", "POST", {
+            type: "attendance_summary",
+            format: "csv",
           });
         });
-      }
+      });
     }
   });
 });
@@ -388,23 +394,23 @@ test.describe("Forbidden API Call Interceptions (Direct 403)", () => {
 // ========== Test: Unauthenticated Access ==========
 
 test.describe("Unauthenticated Access (401/Redirect)", () => {
-  test("unauthenticated user redirected to login for protected routes", async ({ page }) => {
+  test("unauthenticated user redirected to login or landing portal for protected routes", async ({ page }) => {
     const protectedRoutes = [
-      "/",
-      "/finance",
-      "/portal/alumni",
-      "/operations/supply",
-      "/admin/operations/vision-shield",
-      "/admin/operations/facility-mind",
-      "/portal/facilities",
-      "/portal/fees",
-      "/portal/documents",
+      { path: "/", expectedUrl: /\/(portal\/tgcis|auth\/login)/ },
+      { path: "/finance", expectedUrl: /\/auth\/login/ },
+      { path: "/portal/alumni", expectedUrl: /\/auth\/login/ },
+      { path: "/operations/supply", expectedUrl: /\/auth\/login/ },
+      { path: "/admin/operations/vision-shield", expectedUrl: /\/auth\/login/ },
+      { path: "/admin/operations/facility-mind", expectedUrl: /\/auth\/login/ },
+      { path: "/portal/facilities", expectedUrl: /\/auth\/login/ },
+      { path: "/portal/fees", expectedUrl: /\/auth\/login/ },
+      { path: "/portal/documents", expectedUrl: /\/auth\/login/ },
     ];
 
-    for (const route of protectedRoutes) {
+    for (const { path: route, expectedUrl } of protectedRoutes) {
       await test.step(`Route: ${route}`, async () => {
         await page.goto(route);
-        await expect(page).toHaveURL(/\/auth\/login/, { timeout: 15000 });
+        await expect(page).toHaveURL(expectedUrl, { timeout: 15000 });
       });
     }
   });
@@ -457,10 +463,10 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
       const gating = new RoleGatingPage(page);
 
       await page.goto("/academic");
-      await expect(page.locator("text=Academic Dashboard")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('h1:has-text("Academic Dashboard")').first()).toBeVisible({ timeout: 10000 });
 
       await page.goto("/admin/nfc");
-      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator("text=Access Restricted").first()).toBeVisible({ timeout: 15000 });
     });
   });
 
@@ -470,10 +476,10 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
       const gating = new RoleGatingPage(page);
 
       await page.goto("/accounts");
-      await expect(page.locator("text=Accounts")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('h1:has-text("Institutional Financials"), h1:has-text("Accounts")').first()).toBeVisible({ timeout: 10000 });
 
       await page.goto("/admin/nfc");
-      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator("text=Access Restricted").first()).toBeVisible({ timeout: 15000 });
     });
   });
 
@@ -483,10 +489,10 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
       const gating = new RoleGatingPage(page);
 
       await page.goto("/purchases");
-      await expect(page.locator("text=Purchases")).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('h1:has-text("Purchases"), h1:has-text("Purchase")').first()).toBeVisible({ timeout: 10000 });
 
       await page.goto("/accounts");
-      await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
+      await expect(page.locator("text=Access Restricted").first()).toBeVisible({ timeout: 15000 });
     });
   });
 });

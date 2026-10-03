@@ -53,16 +53,16 @@ test.describe("Admin Compliance & Governance Radar", () => {
     await page.goto("/admin/compliance");
 
     // Verify main header and KPI cards are visible
-    await expect(page.getByText("Enterprise Compliance & Forensic Governance")).toBeVisible();
-    await expect(page.getByText("Compliance Health Radar")).toBeVisible();
-    await expect(page.getByText("Cryptographic Audit Integrity")).toBeVisible();
-    await expect(page.getByText("Forensic State Snapshots")).toBeVisible();
+    await expect(page.getByText("Enterprise Compliance & Forensic Governance").first()).toBeVisible();
+    await expect(page.getByText("Compliance Health Radar").first()).toBeVisible();
+    await expect(page.getByText("Cryptographic Audit Integrity").first()).toBeVisible();
+    await expect(page.getByText("Forensic State Snapshots").first()).toBeVisible();
 
     // Verify Export Dossier button opens modal
-    const exportBtn = page.getByRole("button", { name: /Export Dossier/i });
+    const exportBtn = page.getByRole("button", { name: /Export Dossier/i }).first();
     await expect(exportBtn).toBeVisible();
     await exportBtn.click();
 
-    await expect(page.getByText("Generate Regulatory Compliance Dossier")).toBeVisible();
+    await expect(page.getByText("Generate Regulatory Compliance Dossier").first()).toBeVisible();
   });
 });
