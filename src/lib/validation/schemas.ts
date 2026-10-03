@@ -126,12 +126,16 @@ export const purchaseCreateSchema = z.object({
 });
 
 export const visitorCreateSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).max(100).refine((val) => !/[<>]/.test(val), {
+    message: "Visitor name cannot contain HTML markup",
+  }),
   contact: z.string().optional(),
   idType: z.string().optional(),
   idNumber: z.string().optional(),
   hostStaffId: z.string().optional(),
-  purpose: z.string().min(1),
+  purpose: z.string().min(1).max(255).refine((val) => !/[<>]/.test(val), {
+    message: "Purpose cannot contain HTML markup",
+  }),
   notes: z.string().optional(),
 });
 

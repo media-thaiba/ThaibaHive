@@ -45,6 +45,7 @@ export const engageChatMessageSchema = z.object({
   sessionId: z.string().min(1),
   stakeholderId: z.string().default('anonymous_user'),
   text: z.string().min(1),
+  institutionId: z.string().optional(),
 });
 
 export const engagePreferenceUpdateSchema = z.object({

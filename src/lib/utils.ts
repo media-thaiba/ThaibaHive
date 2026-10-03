@@ -50,3 +50,13 @@ export function timeAgo(date: string | Date): string {
   if (weeks < 4) return `${weeks}w ago`;
   return formatDate(date);
 }
+
+export function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}

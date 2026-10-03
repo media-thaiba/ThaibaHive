@@ -1,34 +1,30 @@
 import { NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api/auth-guard';
 import { ChatGateway } from '@/lib/operations/engage/conversational/chat-gateway';
-import { withPublicApm } from '@/lib/api/public-apm';
-import { verifySession } from '@thaiba/auth';
 import { resolveScopedInstitutionId } from '@/lib/api/tenant-scope';
+import { engageChatMessageSchema } from '@/lib/validation/engage-schemas';
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 
-export const POST = withPublicApm(async function POST(request: Request) {
+export const POST = requireAuth(async function POST(request: Request, session) {
   try {
+    const rateLimitResult = checkRateLimit(session.staffId, 'write');
+    if (!rateLimitResult.allowed) {
+      return rateLimitResponse(rateLimitResult.resetMs);
+    }
+
     const body = await request.json();
-    const { sessionId, stakeholderId, text, institutionId } = body;
-
-    if (!sessionId || !text) {
-      return NextResponse.json(
-        { error: 'sessionId and text are required' },
-        { status: 400 }
-      );
+    const parse = engageChatMessageSchema.safeParse(body);
+    if (!parse.success) {
+      return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
     }
 
-    const session = await verifySession();
-    let resolvedTenant = "global";
-
-    if (session) {
-      resolvedTenant = await resolveScopedInstitutionId(institutionId);
-    } else if (typeof institutionId === "string" && institutionId.trim().length > 0) {
-      resolvedTenant = institutionId.trim();
-    }
+    const { sessionId, stakeholderId, text, institutionId } = parse.data;
+    const resolvedTenant = await resolveScopedInstitutionId(institutionId);
 
     const gateway = ChatGateway.getInstance();
     const response = await gateway.handleInboundMessage(
       sessionId,
-      stakeholderId || (session ? session.staffId : 'anonymous_user'),
+      stakeholderId || session.staffId || 'staff_user',
       text,
       resolvedTenant
     );
@@ -40,4 +36,4 @@ export const POST = withPublicApm(async function POST(request: Request) {
       { status: 500 }
     );
   }
-});
+}, 'engage:chat:interact');

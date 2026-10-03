@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X, Printer } from "lucide-react";
 import { QRCodeSVG } from "./qr-code";
+import { escapeHtml } from "@/lib/utils";
 import type { Visitor } from "./types";
 
 function formatDateTime(date: string | null | undefined): string {
@@ -66,27 +67,27 @@ export function VisitorPassModal({
           <div class="logo">ThaibaHive</div>
           <div class="badge-type">Visitor Pass</div>
         </div>
-        <div class="field"><span class="label">Pass ID</span><span class="value">${passId}</span></div>
-        <div class="field"><span class="label">Visitor Name</span><span class="value">${visitor.name}</span></div>
-        <div class="field"><span class="label">Contact</span><span class="value">${visitor.contact || "—"}</span></div>
-        ${visitor.idType ? `<div class="field"><span class="label">ID Type</span><span class="value">${visitor.idType}</span></div>` : ""}
-        ${visitor.idNumber ? `<div class="field"><span class="label">ID Number</span><span class="value">${visitor.idNumber}</span></div>` : ""}
-        <div class="field"><span class="label">Host</span><span class="value">${hostName}</span></div>
-        <div class="field"><span class="label">Purpose</span><span class="value">${visitor.purpose}</span></div>
-        <div class="field"><span class="label">Check-in</span><span class="value">${formatDateTime(visitor.checkIn)}</span></div>
+        <div class="field"><span class="label">Pass ID</span><span class="value">${escapeHtml(passId)}</span></div>
+        <div class="field"><span class="label">Visitor Name</span><span class="value">${escapeHtml(visitor.name)}</span></div>
+        <div class="field"><span class="label">Contact</span><span class="value">${escapeHtml(visitor.contact || "—")}</span></div>
+        ${visitor.idType ? `<div class="field"><span class="label">ID Type</span><span class="value">${escapeHtml(visitor.idType)}</span></div>` : ""}
+        ${visitor.idNumber ? `<div class="field"><span class="label">ID Number</span><span class="value">${escapeHtml(visitor.idNumber)}</span></div>` : ""}
+        <div class="field"><span class="label">Host</span><span class="value">${escapeHtml(hostName)}</span></div>
+        <div class="field"><span class="label">Purpose</span><span class="value">${escapeHtml(visitor.purpose)}</span></div>
+        <div class="field"><span class="label">Check-in</span><span class="value">${escapeHtml(formatDateTime(visitor.checkIn))}</span></div>
         <div class="qr-section">
           <div id="qr-code"></div>
           <div class="qr-label">Scan to verify visitor identity</div>
         </div>
         <div class="footer">
-          ThaibaHive Visitor Management System · Generated on ${new Date().toLocaleString("en-IN")}
+          ThaibaHive Visitor Management System · Generated on ${escapeHtml(new Date().toLocaleString("en-IN"))}
         </div>
       </div>
     `;
 
     const scriptContent = `
       (function() {
-        const data = "${qrData.replace(/"/g, '\\"')}";
+        const data = ${JSON.stringify(qrData).replace(/</g, "\\u003c")};
         const size = 160;
         const modules = 25;
         const moduleSize = size / modules;
@@ -121,7 +122,7 @@ export function VisitorPassModal({
     const printContent = `<!DOCTYPE html>
 <html>
 <head>
-<title>Visitor Pass - ${visitor.name}</title>
+<title>Visitor Pass - ${escapeHtml(visitor.name)}</title>
 <style>${styleContent}</style>
 </head>
 <body>

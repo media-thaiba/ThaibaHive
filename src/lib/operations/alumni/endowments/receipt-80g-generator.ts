@@ -13,8 +13,12 @@ export interface Generated80GReceipt {
 export class Receipt80GGenerator {
   private secretKey: string;
 
-  constructor(secretKey: string = process.env.RECEIPT_SIGNING_KEY || 'thaiba_endowment_80g_secret_key_2026') {
-    this.secretKey = secretKey;
+  constructor(secretKey?: string) {
+    const key = secretKey || process.env.RECEIPT_SIGNING_KEY;
+    if (process.env.NODE_ENV === 'production' && !key) {
+      throw new Error('RECEIPT_SIGNING_KEY must be configured in production environment');
+    }
+    this.secretKey = key || 'thaiba_endowment_80g_secret_key_2026';
   }
 
   public generateReceiptNumber(donationId: string, timestamp: Date = new Date()): string {
