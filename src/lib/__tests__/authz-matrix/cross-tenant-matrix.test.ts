@@ -70,9 +70,9 @@ interface Fixture {
   method: "GET" | "DELETE";
   canary: string;
   /** Seed tenant A's row (the protected resource). */
-  seedA: () => Promise<void>;
+  seedA: () => Promise<unknown>;
   /** Seed tenant B's equivalent row (positive control). */
-  seedB: () => Promise<void>;
+  seedB: () => Promise<unknown>;
   exists: (id: string) => Promise<unknown>;
   handler: Handler;
 }
@@ -452,7 +452,6 @@ afterAll(async () => {
   await db.delete(institutions).where(eq(institutions.id, instB)).run();
 
   const dynamicEntries = manifest.filter((e) => e.routePath.includes("[")).length;
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify(
       {

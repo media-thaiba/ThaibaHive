@@ -182,7 +182,6 @@ afterAll(() => {
   const skipped401 = manifest.filter((e) => skip401Reason(e)).length;
   const skipped403 = manifest.filter((e) => skip403Reason(e)).length;
   // Coverage report: every handler in the manifest is exercised or explicitly skipped.
-  // eslint-disable-next-line no-console
   console.log(
     JSON.stringify(
       {

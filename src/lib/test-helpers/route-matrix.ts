@@ -56,7 +56,7 @@ function calleeName(expr: ts.Expression, sf: ts.SourceFile): string {
   return parts[parts.length - 1];
 }
 
-function permissionFromCall(call: ts.CallExpression, sf: ts.SourceFile): string | null {
+function permissionFromCall(call: ts.CallExpression, _sf: ts.SourceFile): string | null {
   const arg = call.arguments[1];
   return arg && ts.isStringLiteral(arg) ? arg.text : null;
 }
