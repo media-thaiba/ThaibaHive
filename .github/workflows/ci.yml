@@ -39,7 +39,7 @@ jobs:
         run: pnpm lint
 
       - name: Dependency vulnerability audit
-        run: pnpm audit --audit-level high || true
+        run: pnpm audit --prod --audit-level high
 
       - name: Type check
         run: pnpm typecheck
