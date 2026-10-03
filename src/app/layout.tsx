@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { NONCE_REQUEST_HEADER_NAME } from "@/lib/security/security-headers";
 import { Providers } from "@/components/layout/Providers";
 import { PwaRegistrar } from "@/components/pwa-registrar";
 
@@ -41,12 +42,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headerList = await headers();
-  const _nonce = headerList.get("x-nonce") ?? undefined;
+  const nonce = (await headers()).get(NONCE_REQUEST_HEADER_NAME) ?? "";
 
   return (
     <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
+        {/* Per-request CSP nonce for client-created documents (print windows, srcDoc iframes) */}
+        <meta name="csp-nonce" content={nonce} />
         <PwaRegistrar />
         <Providers>{children}</Providers>
       </body>

@@ -7,6 +7,9 @@ import {
   buildContentSecurityPolicy,
   securityHeaderPairs,
   applySecurityHeaders,
+  generateCspNonce,
+  CSP_HEADER_NAME,
+  NONCE_REQUEST_HEADER_NAME,
 } from "../security/security-headers";
 
 const nextConfigSource = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
@@ -65,6 +68,70 @@ describe("Content-Security-Policy builder", () => {
     expect(prodCsp).not.toContain(";;");
     expect(prodCsp).not.toMatch(/;\s*;/);
     expect(prodCsp.trim()).not.toMatch(/;\s*$/);
+  });
+});
+
+describe("nonce-based CSP (O4-R per-request policy)", () => {
+  const scriptSrcOf = (csp: string) =>
+    csp.split(";").map((d) => d.trim()).find((d) => d.startsWith("script-src")) ?? "";
+
+  test("production nonce policy drops unsafe-inline for scripts and adds strict-dynamic", () => {
+    const csp = buildContentSecurityPolicy(true, "test-nonce");
+    const scriptSrc = scriptSrcOf(csp);
+    expect(scriptSrc).toContain("'nonce-test-nonce'");
+    expect(scriptSrc).toContain("'strict-dynamic'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("worker-src 'self'");
+    expect(csp).toContain("form-action 'self'");
+  });
+
+  test("development nonce policy keeps unsafe-eval (React debugging) but not unsafe-inline scripts", () => {
+    const scriptSrc = scriptSrcOf(buildContentSecurityPolicy(false, "dev-nonce"));
+    expect(scriptSrc).toContain("'unsafe-eval'");
+    expect(scriptSrc).toContain("'nonce-dev-nonce'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+  });
+
+  test("style-src keeps unsafe-inline (Radix/Tailwind inline style attributes)", () => {
+    const csp = buildContentSecurityPolicy(true, "n1");
+    expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+  });
+
+  test("policy without nonce (config fallback) keeps the legacy unsafe-inline script policy", () => {
+    const scriptSrc = scriptSrcOf(buildContentSecurityPolicy(true));
+    expect(scriptSrc).toBe("script-src 'self' 'unsafe-inline'");
+  });
+
+  test("generateCspNonce returns unique, non-trivial values", () => {
+    const a = generateCspNonce();
+    const b = generateCspNonce();
+    expect(a).toMatch(/^[A-Za-z0-9+/=]+$/);
+    expect(a.length).toBeGreaterThanOrEqual(16);
+    expect(a).not.toBe(b);
+  });
+
+  test("applySecurityHeaders stamps the nonce into the response CSP", () => {
+    const store = new Map<string, string>();
+    applySecurityHeaders(
+      { headers: { set: (key, value) => void store.set(key.toLowerCase(), value) } },
+      true,
+      "resp-nonce"
+    );
+    const value = store.get(CSP_HEADER_NAME.toLowerCase()) ?? "";
+    expect(value).toContain("'nonce-resp-nonce'");
+    const scriptSrc = value
+      .split(";")
+      .map((d) => d.trim())
+      .find((d) => d.startsWith("script-src")) ?? "";
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+  });
+
+  test("exported header names keep proxy source free of inline literals", () => {
+    expect(CSP_HEADER_NAME).toBe("Content-Security-Policy");
+    expect(NONCE_REQUEST_HEADER_NAME).toBe("x-nonce");
+    expect(proxySource).not.toContain(CSP_HEADER_NAME);
   });
 });
 
