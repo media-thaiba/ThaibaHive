@@ -17,6 +17,13 @@ jest.mock("@thaiba/auth", () => {
   };
 });
 
+// uuid@14 is ESM-only and pnpm's nested node_modules defeats the
+// transformIgnorePatterns allow-list — stub it for module-load parity.
+jest.mock("uuid", () => ({
+  __esModule: true,
+  v4: () => "00000000-0000-4000-8000-000000000000",
+}));
+
 import fs from "fs";
 import { hasPermission } from "@thaiba/auth";
 import { VALID_STAFF_ROLES } from "@thaiba/auth/roles";
@@ -54,6 +61,33 @@ const SKIP_403 = new Map<string, string>([
     "src/app/api/auth/revoke/route.ts#POST",
     "withDPoP({required:true}) gate rejects with 401 before RBAC runs",
   ],
+]);
+
+/**
+ * "Public" by wrapper shape but self-authenticating via a custom identity
+ * check (step-up cookie, metrics secret, ...). They must deny anonymous
+ * callers with 401 — asserted explicitly instead of the reachability rule.
+ */
+const CUSTOM_AUTH_PUBLIC = new Map<string, string>([
+  ["src/app/api/auth/stepup/otp/route.ts#POST", "resolveStepUpIdentity"],
+  ["src/app/api/auth/webauthn/challenge/route.ts#POST", "resolveStepUpIdentity"],
+  ["src/app/api/auth/webauthn/verify/route.ts#POST", "resolveStepUpIdentity"],
+  ["src/app/api/metrics/route.ts#GET", "x-metrics-secret or admin session"],
+]);
+
+const SKIP_PUBLIC = new Map<string, string>([
+  [
+    "src/app/api/auth/oidc/login/route.ts#GET",
+    "NextResponse.cookies.set needs the full Response headers API (jsdom MockResponse gap); route is redirect-only",
+  ],
+]);
+
+/**
+ * Self-verified handlers that read/parse the body before the session check.
+ * They need a JSON body to reach the 401 branch.
+ */
+const SELF_401_BODY = new Map<string, Record<string, unknown>>([
+  ["src/app/api/media/batch-download/route.ts#POST", { probe: true }],
 ]);
 
 function skip401Reason(e: RouteHandlerEntry): string | null {
@@ -102,6 +136,13 @@ function contextFor(e: RouteHandlerEntry) {
   return { params: Promise.resolve(params) };
 }
 
+function jsonInit(body: Record<string, unknown>): RequestInit {
+  return {
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  };
+}
+
 async function invoke(
   e: RouteHandlerEntry,
   init?: RequestInit
@@ -121,6 +162,13 @@ async function invoke(
     req,
     contextFor(e)
   );
+}
+
+function bodyInitFor(e: RouteHandlerEntry): RequestInit | undefined {
+  if (e.method === "POST" || e.method === "PUT" || e.method === "PATCH") {
+    return jsonInit({ probe: true });
+  }
+  return undefined;
 }
 
 beforeAll(() => {
@@ -146,6 +194,8 @@ afterAll(() => {
         skipped401,
         tested403: requireAuthEntries.filter((e) => !skip403Reason(e)).length,
         skipped403,
+        customAuthPublic: CUSTOM_AUTH_PUBLIC.size,
+        skippedPublic: SKIP_PUBLIC.size,
       },
       null,
       2
@@ -169,9 +219,11 @@ describe("route manifest integrity", () => {
     expect(manifest.length).toBeGreaterThanOrEqual(600);
   });
 
-  it("documents every 401/403 skip with a reason", () => {
+  it("documents every 401/403/public skip with a reason", () => {
     for (const [, reason] of SKIP_401) expect(reason.length).toBeGreaterThan(10);
     for (const [, reason] of SKIP_403) expect(reason.length).toBeGreaterThan(10);
+    for (const [, reason] of SKIP_PUBLIC) expect(reason.length).toBeGreaterThan(10);
+    for (const [, reason] of CUSTOM_AUTH_PUBLIC) expect(reason.length).toBeGreaterThan(3);
     expect(SKIP_401.size).toBeGreaterThan(0);
     expect(SKIP_403.size).toBeGreaterThan(0);
   });
@@ -202,7 +254,8 @@ describe("401 — no session is rejected", () => {
     }
     it(`${e.method} ${e.routePath} → 401 (self-verified)`, async () => {
       verifySession.mockResolvedValue(null);
-      const res = await invoke(e);
+      const override = SELF_401_BODY.get(entryKey(e));
+      const res = await invoke(e, override ? jsonInit(override) : undefined);
       expect(res.status).toBe(401);
     });
   }
@@ -234,16 +287,25 @@ describe("403 — authenticated role without the required permission", () => {
 
 describe("public routes — positive (not blocked by the session guard)", () => {
   for (const e of publicEntries) {
+    const key = entryKey(e);
+    const customAuth = CUSTOM_AUTH_PUBLIC.get(key);
+    const skipReason = SKIP_PUBLIC.get(key);
+    if (skipReason) {
+      it.skip(`${e.method} ${e.routePath} reachable without a session (${skipReason})`, () => {});
+      continue;
+    }
+    if (customAuth) {
+      it(`${e.method} ${e.routePath} denies anonymous via ${customAuth}`, async () => {
+        verifySession.mockResolvedValue(null);
+        const res = await invoke(e, bodyInitFor(e));
+        expect(res.status).toBe(401);
+        expect(await res.json()).toEqual({ error: "Not authenticated" });
+      });
+      continue;
+    }
     it(`${e.method} ${e.routePath} reachable without a session`, async () => {
       verifySession.mockResolvedValue(null);
-      const bodyInit =
-        e.method === "POST" || e.method === "PUT" || e.method === "PATCH"
-          ? {
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ probe: true }),
-            }
-          : undefined;
-      const res = await invoke(e, bodyInit);
+      const res = await invoke(e, bodyInitFor(e));
       expect(res.status).toBeLessThan(600);
       if (res.status === 401) {
         const body = await res.json().catch(() => null);
@@ -254,7 +316,10 @@ describe("public routes — positive (not blocked by the session guard)", () => 
 });
 
 describe("middleware public paths (B4 webhook bypass)", () => {
-  const src = fs.readFileSync("src/middleware.ts", "utf-8");
+  const middlewarePath = fs.existsSync("src/proxy.ts")
+    ? "src/proxy.ts"
+    : "src/middleware.ts";
+  const src = fs.readFileSync(middlewarePath, "utf-8");
   const arr = src.match(/const publicPaths = \[([\s\S]*?)\]/);
   const paths = arr
     ? [...arr[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
