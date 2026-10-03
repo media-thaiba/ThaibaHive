@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { markEntries, examSchedules, examAuditLogs } from "@thaiba/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { markEntryBatchSchema } from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { shifts } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 export const GET = requireAuth(async () => {
   const all = await db.select().from(shifts).orderBy(shifts.name).all();
   return NextResponse.json({ shifts: all });
 }, "attendance:manage");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { name, startTime, endTime, gracePeriodMinutes, departmentId } = body;
 

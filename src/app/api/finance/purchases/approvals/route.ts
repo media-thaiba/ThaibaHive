@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { purchaseApprovalActionSchema } from "@/lib/validation/schemas";
 import { purchaseApprovalEngine } from "@/lib/finance/purchases/purchase-approval-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";

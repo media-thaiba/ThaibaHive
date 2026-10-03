@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { departments, subDepartments, staffDepartments } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { departmentUpdateSchema } from "@/lib/validation/schemas";
 import { eq } from "drizzle-orm";

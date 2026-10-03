@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin Chaos Emergency Kill-Switch Abort Endpoint
  * Sprint-042 (ARES) — ARES-020
@@ -12,7 +11,7 @@ import { AresAuditLogger } from '@/lib/security/ares/ares-audit-events';
 import { chaosKillSwitchTriggerSchema } from '@/lib/validation/ares-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, session) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const parsed = chaosKillSwitchTriggerSchema.safeParse(body);
 

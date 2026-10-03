@@ -23,7 +23,7 @@ export const GET = requireAuth(async (request, session) => {
   return NextResponse.json({ success: true, metrics: apps });
 }, 'alumni:jobs:view');
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parsed = submitJobApplicationSchema.safeParse(body);
@@ -38,7 +38,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 }, 'alumni:jobs:apply');
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const { applicationId, status, recruiterFeedback } = body;

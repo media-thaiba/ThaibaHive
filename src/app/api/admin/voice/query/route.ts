@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { voiceQuerySchema } from "@/lib/validation/schemas";
 import { SpeechToTextAdapter } from "@/lib/voice/speech-to-text-adapter";
 import { VoiceQueryParser } from "@/lib/voice/voice-query-parser";
@@ -7,7 +7,7 @@ import { VoiceQueryParser } from "@/lib/voice/voice-query-parser";
 const sttAdapter = new SpeechToTextAdapter();
 const voiceParser = new VoiceQueryParser();
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: any = {};
   try {
     body = await request.json();

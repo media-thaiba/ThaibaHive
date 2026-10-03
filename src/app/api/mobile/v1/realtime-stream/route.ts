@@ -4,7 +4,7 @@ import { defaultStreamingService } from "@/lib/realtime/realtime-streaming-servi
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get("tenantId") || "tenant-main";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
   const channel = searchParams.get("channel") || "copilot_feed";
 
   try {

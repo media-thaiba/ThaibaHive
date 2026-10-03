@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { payrollGeneratePeriodSchema } from "@/lib/validation/schemas";
 import { payrollEngine } from "@/lib/finance/payroll/payroll-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parsed = payrollGeneratePeriodSchema.safeParse(body);

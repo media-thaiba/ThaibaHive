@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { PerformanceNotificationService } from "@/lib/notifications/performance-notifications";
 
 export const POST = requireAuth(async (request: Request, _session) => {

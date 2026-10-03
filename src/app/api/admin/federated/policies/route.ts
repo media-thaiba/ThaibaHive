@@ -8,7 +8,8 @@ const defaultPolicySyncEngine = new PolicySyncEngine();
 export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const resolved = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
+  const tenantId = resolved === "global" ? undefined : resolved;
 
     const policies = defaultPolicySyncEngine.getAllPolicies(tenantId);
     return NextResponse.json({ policies }, { status: 200 });

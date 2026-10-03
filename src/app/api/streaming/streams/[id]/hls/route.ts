@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { HlsSegmenter } from "@/lib/streaming/hls-segmenter";
 
 const segmenter = new HlsSegmenter();
 
-export const GET = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
+export const GET = requireAuth(async (request: Request, _session, context?: { params: Promise<Record<string, string>> }) => {
   try {
     const params = context ? await context.params : { id: "stream-001" };
     const streamId = params.id;

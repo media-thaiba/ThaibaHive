@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceCycles, performanceReviews } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session, context) => {

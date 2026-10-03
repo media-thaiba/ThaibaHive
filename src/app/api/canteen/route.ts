@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { mealNotifications, staff, staffInstitutions } from "@/db/schema";
+import { mealNotifications, staff } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { canteenCreateSchema } from "@/lib/validation/schemas";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
@@ -24,8 +24,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       date: mealNotifications.date, mealType: mealNotifications.mealType,
       status: mealNotifications.status, guestCount: mealNotifications.guestCount,
       notes: mealNotifications.notes,
-      staffName: staff.firstName, staffLastName: staff.lastName,
-    })
+      staffName: staff.firstName, staffLastName: staff.lastName })
     .from(mealNotifications)
     .leftJoin(staff, eq(mealNotifications.staffId, staff.id))
     .where(and(...conditions))
@@ -35,8 +34,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const summary = {
     breakfast: { skip: notifications.filter(n => n.mealType === "breakfast" && n.status === "skip").length, guests: notifications.filter(n => n.mealType === "breakfast" && n.status === "bring_guest").reduce((s, n) => s + (n.guestCount || 0), 0) },
     lunch: { skip: notifications.filter(n => n.mealType === "lunch" && n.status === "skip").length, guests: notifications.filter(n => n.mealType === "lunch" && n.status === "bring_guest").reduce((s, n) => s + (n.guestCount || 0), 0) },
-    dinner: { skip: notifications.filter(n => n.mealType === "dinner" && n.status === "skip").length, guests: notifications.filter(n => n.mealType === "dinner" && n.status === "bring_guest").reduce((s, n) => s + (n.guestCount || 0), 0) },
-  };
+    dinner: { skip: notifications.filter(n => n.mealType === "dinner" && n.status === "skip").length, guests: notifications.filter(n => n.mealType === "dinner" && n.status === "bring_guest").reduce((s, n) => s + (n.guestCount || 0), 0) } };
 
   return NextResponse.json({ notifications, summary });
 }, "canteen:read");
@@ -68,8 +66,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       status,
       guestCount: guestCount || 0,
       notes,
-      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
-    }).run();
+      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null }).run();
   }
 
   return NextResponse.json({ success: true });

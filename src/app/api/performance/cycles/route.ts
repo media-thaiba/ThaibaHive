@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceCycles, staffInstitutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution, TenantMismatchError } from "@/lib/api/auth-guard";
+
 import { performanceCycleCreateSchema } from "@/lib/validation/schemas";
 import { eq, inArray, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
-  const institutionIdParam = url.searchParams.get("institutionId");
+  const rawInst = url.searchParams.get("institutionId");
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const institutionIdParam = resolvedInst === "global" ? null : resolvedInst;
 
   const isSuperOrAdmin = session.role === "super_admin" || session.role === "admin";
   let allowedInstIds: string[] = [];
@@ -44,17 +47,11 @@ export const GET = requireAuth(async (request: Request, session) => {
 export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
-    const validated = performanceCycleCreateSchema.parse(body);
-
-    let institutionId = body.institutionId;
-    if (!institutionId) {
-      const callerInst = await db
-        .select({ institutionId: staffInstitutions.institutionId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.staffId, session.staffId))
-        .get();
-      institutionId = callerInst?.institutionId || "inst_default";
+    const institutionId = await resolveRequestInstitution(session, body.institutionId);
+    if (institutionId === "global") {
+      return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
     }
+    const validated = performanceCycleCreateSchema.parse(body);
 
     const id = `cyc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newCycle = {
@@ -75,9 +72,13 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     return NextResponse.json({ cycle: newCycle }, { status: 201 });
   } catch (error) {
+    if (error instanceof TenantMismatchError || (error as any)?.name === "TenantMismatchError") {
+      throw error;
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create performance cycle" },
       { status: 400 }
     );
   }
 }, "performance:manage");
+

@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { getDeltaChanges } from "@/lib/sync/sync-engine-service";
 import { deltaSyncQuerySchema } from "@/lib/validation/schemas";
-import { getUserInstitutionScope } from "@/lib/auth";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const parse = deltaSyncQuerySchema.safeParse({
     sinceVersion: url.searchParams.get("sinceVersion") || 0,
@@ -16,8 +15,7 @@ export const GET = requireAuth(async (request: Request, _session) => {
     return NextResponse.json({ error: "Invalid sync query parameters", details: parse.error.format() }, { status: 400 });
   }
 
-  const userInstScope = await getUserInstitutionScope();
-  const institutionId = url.searchParams.get("institutionId") || userInstScope || "inst_default";
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId") || url.searchParams.get("tenantId"));
 
   const delta = await getDeltaChanges(institutionId, parse.data.sinceVersion, parse.data.limit);
 

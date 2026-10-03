@@ -16,7 +16,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: 'Domain is required for lakehouse export' }, { status: 400 });
     }
 
-    const targetTenantId = tenantId || (session as any).institutionId || 'inst-001';
+    const targetTenantId = await resolveRequestInstitution(session, tenantId);
     const schema = SchemaManager.getSchema(domain);
     const jobId = `job_${crypto.randomUUID()}`;
 

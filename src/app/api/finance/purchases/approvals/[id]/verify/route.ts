@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, purchaseApprovalLogs, eq, asc } from "@/db";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { purchaseApprovalEngine } from "@/lib/finance/purchases/purchase-approval-engine";
 
 export const GET = requireAuth(

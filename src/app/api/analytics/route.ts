@@ -13,10 +13,9 @@ export const GET = requireAuth(async (request, session) => {
   
   const actorInstIds = await getActorInstitutionIds(staffId);
   const queryInstId = url.searchParams.get("institutionId");
-
-  let institutionId = queryInstId;
-  if (!institutionId) {
-    institutionId = Array.from(actorInstIds)[0];
+  const institutionId = await resolveRequestInstitution(session, queryInstId);
+  if (institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
   }
 
   // Verify access unless super_admin or admin

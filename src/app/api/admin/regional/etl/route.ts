@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { DwEtlService } from "@/lib/regional/dw-etl-service";
 import { dwEtlTriggerSchema } from "@/lib/validation/schemas";
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     const text = await request.text();

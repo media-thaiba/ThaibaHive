@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { crossTenantRoleMappingSchema } from "@/lib/validation/schemas";
 import { CrossTenantRoleMapper } from "@/lib/federated/cross-tenant-role-mapper";
 
@@ -17,7 +17,7 @@ export const GET = requireAuth(async () => {
   }
 }, "federated:policies");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     body = await request.json();

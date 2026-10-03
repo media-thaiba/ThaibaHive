@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Manual Execution Trigger API Route
  * Sprint-040 — Administration API

@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { extractStudentFeatures } from "@/lib/ai/feature-extractor";
-import { getUserInstitutionScope } from "@/lib/auth";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const requestedInst = searchParams.get("institutionId");
-  const userInstScope = await getUserInstitutionScope();
-  const institutionId = requestedInst || userInstScope || "inst_default";
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId") || searchParams.get("tenantId"));
   const studentId = searchParams.get("studentId") || undefined;
+
+
 
   const features = await extractStudentFeatures(institutionId, studentId);
 

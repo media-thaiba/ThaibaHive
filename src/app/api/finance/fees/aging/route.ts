@@ -27,6 +27,9 @@ export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = dispatchReminderSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
     }

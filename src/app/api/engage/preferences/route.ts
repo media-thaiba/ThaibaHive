@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { engagePreferenceUpdateSchema } from '@/lib/validation/engage-schemas';
@@ -8,7 +7,7 @@ import { ComplianceAuditLogger } from '@/lib/operations/engage/privacy/complianc
 const store = EngageDbStore.getInstance();
 const auditLogger = ComplianceAuditLogger.getInstance();
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const url = new URL(request.url);
     const recipientId = url.searchParams.get('recipientId');
@@ -23,7 +22,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   }
 }, 'engage:preferences:manage');
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = engagePreferenceUpdateSchema.safeParse(body);

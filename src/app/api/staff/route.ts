@@ -83,6 +83,9 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const body = await request.json();
   const parsed = staffCreateSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }

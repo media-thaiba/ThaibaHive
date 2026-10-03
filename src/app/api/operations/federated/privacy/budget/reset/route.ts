@@ -15,7 +15,8 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
     }
 
-    const { tenantId, newBudgetEpsilon, reason } = parse.data;
+    const { newBudgetEpsilon, reason } = parse.data;
+  const tenantId = await resolveRequestInstitution(session, parse.data.tenantId);
 
     const updatedBudget = {
       tenantId,

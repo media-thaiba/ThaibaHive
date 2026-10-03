@@ -122,6 +122,11 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   }
 
   if (institutionIds) {
+    if (session.role !== "super_admin") {
+      for (const instId of institutionIds) {
+        await resolveRequestInstitution(session, instId);
+      }
+    }
     await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, id)).run();
     if (institutionIds.length) {
       await db.insert(staffInstitutions).values(

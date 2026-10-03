@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Playbooks List & Create API Route
  * Sprint-040 — Administration API
@@ -22,7 +21,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, session) => {
+  requireAuth(async (req: Request, _session) => {
     try {
       const body = await req.json();
       const validation = PlaybookValidator.validate(body);

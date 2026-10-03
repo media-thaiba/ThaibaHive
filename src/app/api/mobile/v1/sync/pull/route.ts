@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const { searchParams } = new URL(request.url);
     const since = searchParams.get("since") || new Date(0).toISOString();

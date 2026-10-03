@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { pushTokenSchema } from "@/lib/validation/schemas";
 import { db } from "@/db";
 import { pushNotificationTokens } from "@thaiba/db/schema";

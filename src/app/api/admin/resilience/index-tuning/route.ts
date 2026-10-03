@@ -9,7 +9,7 @@ const globalIndexTuner = new DatabaseIndexTuner(globalMetricsCollector);
 export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || "tenant-main";
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
     const recommendations = globalIndexTuner.getRecommendations(tenantId);
     const metrics = globalMetricsCollector.getAggregatedMetrics(tenantId);
@@ -36,7 +36,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     }
   }
 
-  const { action, recommendationId, tenantId = "tenant-main" } = body;
+  const { action, recommendationId } = body;
+    const tenantId = await resolveRequestInstitution(session, body.tenantId);
 
   if (action === "analyze") {
     const recs = globalIndexTuner.analyzeAndRecommend(tenantId);

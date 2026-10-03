@@ -47,7 +47,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
   return NextResponse.json({ asset, serviceHistory });
 }, "assets:create");
 
-export const PATCH = requireAuth(async (request: Request, _session, context) => {
+export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
 
   const existing = await db.select().from(assets).where(eq(assets.id, id)).get();
@@ -56,7 +56,8 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
   }
 
   const body = await request.json();
-  const { name, type, model, serialNumber, institutionId, assignedToId, location, purchaseDate, purchaseCost, warrantyEnd, status, notes } = body;
+  const { name, type, model, serialNumber, assignedToId, location, purchaseDate, purchaseCost, warrantyEnd, status, notes } = body;
+  const institutionId = body.institutionId !== undefined ? await resolveRequestInstitution(session, body.institutionId) : undefined;
 
   const updated = await db
     .update(assets)

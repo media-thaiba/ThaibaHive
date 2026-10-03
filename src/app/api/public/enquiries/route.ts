@@ -67,7 +67,9 @@ export async function POST(request: Request) {
 // Protected management view for Coordinators / Principals
 export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const requestedInstitutionId = url.searchParams.get("institutionId");
+  const rawInst = url.searchParams.get("institutionId");
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const requestedInstitutionId = resolvedInst === "global" ? null : resolvedInst;
   const status = url.searchParams.get("status");
   const scope = session.institutionId;
 

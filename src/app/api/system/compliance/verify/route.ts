@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { auditLogs, auditMerkleRoots } from "@thaiba/db/schema";

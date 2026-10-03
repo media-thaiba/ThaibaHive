@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { withDPoP } from "@/lib/identity/dpop-middleware";
 import { revocationStore } from "@/lib/identity/revocation-store";
 import { getMigrationStats } from "@/lib/identity/migration-layer";

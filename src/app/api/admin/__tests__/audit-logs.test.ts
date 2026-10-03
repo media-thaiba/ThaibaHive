@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { GET } from "../audit-logs/route";
 import { db } from "@/db";
 

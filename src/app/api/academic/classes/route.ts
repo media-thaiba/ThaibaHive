@@ -46,7 +46,9 @@ export const GET = requireAuth(async (request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { name, section, institutionId, departmentId, academicYearId, teacherId } = body;
+  const { name, section, institutionId: reqInst, departmentId, academicYearId, teacherId } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
   if (!name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });

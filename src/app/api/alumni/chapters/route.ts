@@ -22,7 +22,7 @@ export const GET = requireAuth(async (request, session) => {
   return NextResponse.json({ success: true, chapters: list });
 }, 'alumni:chapters:view');
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const action = body.action || 'create';

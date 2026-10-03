@@ -33,7 +33,8 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     }
 
     const space = await store.createSpace(parse.data);
-    auditLogger.logEvent('space_created', session?.staffId || 'system', { spaceId: space.spaceId }, parse.data.institutionId, parse.data.facilityId);
+    const institutionId = await resolveRequestInstitution(session, parse.data.institutionId);
+    auditLogger.logEvent('space_created', session?.staffId || 'system', { spaceId: space.spaceId }, institutionId, parse.data.facilityId);
 
     return NextResponse.json({ success: true, space }, { status: 201 });
   } catch (error: any) {

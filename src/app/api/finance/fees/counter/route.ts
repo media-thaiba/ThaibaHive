@@ -28,6 +28,9 @@ export const POST = requireAuth(async (request, session) => {
 
     if (action === 'open') {
       const parsed = openCounterRegisterSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }
@@ -44,6 +47,9 @@ export const POST = requireAuth(async (request, session) => {
 
     if (action === 'record_payment') {
       const parsed = recordCounterPaymentSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }
@@ -85,6 +91,9 @@ export const POST = requireAuth(async (request, session) => {
 
     if (action === 'close') {
       const parsed = closeCounterRegisterSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }

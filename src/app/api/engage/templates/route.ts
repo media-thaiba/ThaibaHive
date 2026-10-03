@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { engageTemplateCreateSchema } from '@/lib/validation/engage-schemas';
@@ -17,7 +16,7 @@ export const GET = requireAuth(async () => {
   }
 }, 'engage:template:edit');
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = engageTemplateCreateSchema.safeParse(body);

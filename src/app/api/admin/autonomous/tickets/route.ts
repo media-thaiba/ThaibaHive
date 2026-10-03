@@ -5,7 +5,9 @@ import { remediationTicketSchema } from "@/lib/validation/schemas";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const institutionId = searchParams.get("institutionId") ?? undefined;
+  const rawInst = searchParams.get("institutionId") || searchParams.get("tenantId") || undefined;
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const institutionId = resolvedInst === "global" ? undefined : resolvedInst;
   const status = searchParams.get("status") ?? undefined;
   const severity = searchParams.get("severity") ?? undefined;
   const category = searchParams.get("category") ?? undefined;
@@ -46,7 +48,11 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Validation failed", details: parse.error.format() }, { status: 400 });
   }
 
-  const institutionId = (body as { institutionId?: string })?.institutionId || "inst_default";
+  const rawBodyInst = (body as { institutionId?: string })?.institutionId;
+  const institutionId = await resolveRequestInstitution(session, rawBodyInst);
+  if (institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required for ticket creation" }, { status: 400 });
+  }
 
   try {
     const ticket = await RemediationTicketService.createTicket({

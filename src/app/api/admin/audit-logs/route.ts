@@ -38,12 +38,13 @@ async function handler(req: Request, session: any) {
       return NextResponse.json({ error: parsed.error.message }, { status: 400 });
     }
 
-    const { userId, preferenceKey, institutionId, page, limit, sortBy, sortOrder } = parsed.data;
+    const { userId, preferenceKey, institutionId: reqInst, page, limit, sortBy, sortOrder } = parsed.data;
+    const institutionId = await resolveRequestInstitution(session, reqInst);
 
     const conditions = [];
     if (userId) conditions.push(eq(preferenceAuditLog.userId, userId));
     if (preferenceKey) conditions.push(eq(preferenceAuditLog.preferenceKey, preferenceKey));
-    if (institutionId) conditions.push(eq(preferenceAuditLog.institutionId, institutionId));
+    if (institutionId && institutionId !== "global") conditions.push(eq(preferenceAuditLog.institutionId, institutionId));
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

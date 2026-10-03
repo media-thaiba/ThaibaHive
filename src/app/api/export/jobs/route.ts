@@ -1,14 +1,13 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { exportStreamSchema } from '@/lib/validation/docgen-schemas';
 import { ExportJobManager } from '@/lib/operations/docgen/export/export-job-manager';
 import { DocDbStore } from '@/lib/db/docgen-store';
 
 export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = resolveTenantInstitutionId(session.institutionId, url.searchParams.get('institutionId'));
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get('institutionId'));
   const jobId = url.searchParams.get('jobId');
 
   const store = DocDbStore.getInstance();
@@ -35,13 +34,12 @@ export const POST = requireAuth(async (request, session) => {
 
     const manager = ExportJobManager.getInstance();
     const job = await manager.submitExportJob(session.staffId, {
-      institutionId: resolveTenantInstitutionId(session.institutionId, parsed.data.institutionId),
+      institutionId: await resolveRequestInstitution(session, parsed.data.institutionId),
       jobType: parsed.data.jobType,
       format: parsed.data.format,
       columns: parsed.data.columns,
       filterParams: parsed.data.filterParams,
-      data: parsed.data.data,
-    });
+      data: parsed.data.data });
 
     return NextResponse.json({ success: true, job }, { status: 202 });
   } catch (err: any) {

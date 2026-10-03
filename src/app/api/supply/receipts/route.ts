@@ -1,7 +1,6 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { goodsReceiptCreateSchema } from '@/lib/validation/supply-schemas';
 import { SupplyMerkleAnchor } from '@/lib/operations/supply/security/supply-merkle-anchor';
@@ -48,8 +47,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       receiverSignature: `VERIFIED_${session?.name || 'RECEIVER'}`,
       status: parsed.data.packageCondition === 'damaged' ? ('quarantined' as const) : ('verified' as const),
       institutionId,
-      createdAt: new Date().toISOString(),
-    };
+      createdAt: new Date().toISOString() };
 
     const saved = await store.createGoodsReceipt(grn);
 
@@ -59,8 +57,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       event: 'goods_received',
       data: { receiptNumber, poId: parsed.data.poId, status: grn.status },
       timestamp: new Date().toISOString(),
-      institutionId,
-    });
+      institutionId });
 
     // Merkle Anchor
     await merkleAnchor.anchorEvent(

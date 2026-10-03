@@ -9,7 +9,8 @@ export const GET = requireAuth(async (request, session) => {
   const startDate = searchParams.get("startDate") || searchParams.get("from");
   const endDate = searchParams.get("endDate") || searchParams.get("to");
   const departmentId = searchParams.get("departmentId");
-  const institutionId = searchParams.get("institutionId");
+  const rawInst = searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, rawInst);
 
   // Parse and validate pagination & search parameters
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
@@ -51,7 +52,7 @@ export const GET = requireAuth(async (request, session) => {
   }
 
   let effectiveDepartmentIds: string[] = departmentId ? [departmentId] : [];
-  let effectiveInstitutionIds: string[] = institutionId ? [institutionId] : [];
+  let effectiveInstitutionIds: string[] = (institutionId && institutionId !== "global") ? [institutionId] : [];
 
   if (["admin", "principal"].includes(session.role)) {
     const instRows = await db

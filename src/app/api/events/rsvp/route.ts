@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { eventRsvps } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
 const ALLOWED_STATUSES = ["attending", "maybe", "declined"];

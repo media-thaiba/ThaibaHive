@@ -9,12 +9,13 @@ export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const status = searchParams.get("status");
-  const institutionId = searchParams.get("institutionId");
+  const rawInst = searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, rawInst);
 
   const conditions = [eq(assets.isActive, true)];
   if (type) conditions.push(eq(assets.type, type));
   if (status) conditions.push(eq(assets.status, status));
-  if (institutionId) conditions.push(eq(assets.institutionId, institutionId));
+  if (institutionId && institutionId !== "global") conditions.push(eq(assets.institutionId, institutionId));
 
   // Staff (non-admin/hod/principal) only see assets assigned to them
   const isAdminRole = ["super_admin", "admin", "principal", "hod"].includes(session.role);
@@ -57,7 +58,8 @@ export const POST = requireAuth(async (request: Request, session) => {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { name, type, model, serialNumber, institutionId, assignedToId, location, purchaseDate, purchaseCost, warrantyEnd, status, notes } = parsed.data;
+  const { name, type, model, serialNumber, assignedToId, location, purchaseDate, purchaseCost, warrantyEnd, status, notes } = parsed.data;
+  const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
   const asset = await db.insert(assets).values({
     id: crypto.randomUUID(),
     name,

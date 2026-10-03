@@ -7,7 +7,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json().catch(() => ({}));
     const { targetRegion = "eu-west", entityType = "student", tenantId } = body;
-    const effectiveTenant = tenantId || (session as any).institutionId || "inst-001";
+    const effectiveTenant = await resolveRequestInstitution(session, tenantId);
 
     const engine = new CrossRegionReplicationEngine("us-east");
     const delta = engine.createMutationDelta(

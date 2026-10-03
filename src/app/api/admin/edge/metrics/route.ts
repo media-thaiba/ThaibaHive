@@ -4,10 +4,11 @@ import { getCacheAnalytics } from "@/lib/monitoring/cache-analytics";
 import { getUsageSummary } from "@/lib/monitoring/usage-tracker";
 import { getRawMetrics } from "@/lib/monitoring/edge-analytics";
 
-export const GET = requireAuth(async (request, _session) => {
+export const GET = requireAuth(async (request, session) => {
   try {
     const url = new URL(request.url);
-    const tenantParam = url.searchParams.get("tenantId") || undefined;
+    const resolved = await resolveRequestInstitution(session, url.searchParams.get("tenantId") || url.searchParams.get("institutionId"));
+  const tenantParam = resolved === "global" ? undefined : resolved;
 
     const cacheStats = getCacheAnalytics(tenantParam);
     const usageSummary = getUsageSummary();

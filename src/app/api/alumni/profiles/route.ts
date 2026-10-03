@@ -28,6 +28,7 @@ export const POST = requireAuth(async (request, session) => {
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
     }
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
 
     const id = `alum_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const now = new Date().toISOString();
@@ -49,7 +50,7 @@ export const POST = requireAuth(async (request, session) => {
   }
 }, 'alumni:profile:manage');
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   try {
     const url = new URL(request.url);
     const profileId = url.searchParams.get('id');

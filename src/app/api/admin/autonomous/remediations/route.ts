@@ -4,7 +4,9 @@ import { SelfHealingHealthService } from "@/lib/services/self-healing-health-ser
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const institutionId = searchParams.get("institutionId") ?? undefined;
+  const rawInst = searchParams.get("institutionId") || searchParams.get("tenantId") || undefined;
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const institutionId = resolvedInst === "global" ? undefined : resolvedInst;
 
   try {
     const health = await SelfHealingHealthService.getSystemHealth(institutionId);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { ApprovalGateway } from "@/lib/agents/healing/approval-gateway";
 
 export const GET = requireAuth(async (_request, _session) => {

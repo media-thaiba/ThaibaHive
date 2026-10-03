@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { nfcCards, nfcCardHistory, staff, students } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { logActivity } from "@/lib/api/activity-log";
 import { getActorInstitutionIds,  } from "@/lib/api/tenant-scope";
 import { eq, and } from "drizzle-orm";

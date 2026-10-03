@@ -19,7 +19,7 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     }
 
     const { facilityId, hazardType, blockedNodeIds, blockedEdgeIds, headcountsPerNode, institutionId } = parse.data;
-    const tenantId = institutionId || session?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, institutionId);
 
     // Setup base evacuation graph if empty
     if (graphEngine.getExitNodes().length === 0) {

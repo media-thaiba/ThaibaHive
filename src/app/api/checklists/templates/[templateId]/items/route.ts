@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { checklistTemplateItems } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, _session, context) => {
@@ -28,7 +28,7 @@ export const POST = requireAuth(async (request: Request, _session, context) => {
   return NextResponse.json({ item }, { status: 201 });
 }, "org:manage");
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { id, title, description, order } = body;
 
@@ -55,7 +55,7 @@ export const PATCH = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ item });
 }, "org:manage");
 
-export const DELETE = requireAuth(async (request: Request, session) => {
+export const DELETE = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { id } = body;
 

@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
@@ -7,7 +6,7 @@ import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 import { fleetDispatchSchema } from '@/lib/validation/aims-schemas';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request, session) => {
+  requireAuth(async (req: Request, _session) => {
     const { searchParams } = new URL(req.url);
     const campusId = searchParams.get('campusId') || undefined;
     const store = AimsDbStore.getInstance();
@@ -22,7 +21,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, session) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const parsed = fleetDispatchSchema.safeParse(body);
 

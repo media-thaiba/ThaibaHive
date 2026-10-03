@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims, activityLogs, financialTransactions, staffInstitutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { isManagedBy } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
 import { expenseClaimReviewSchema } from "@/lib/validation/schemas";

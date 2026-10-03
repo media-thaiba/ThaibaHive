@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { pollResponses } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
 // "polls:read" is used intentionally for this self-service write action — staff can vote on polls they can read

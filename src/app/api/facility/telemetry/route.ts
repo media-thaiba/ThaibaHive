@@ -16,7 +16,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
     const body = await req.json();
 
     let packets: any[] = [];
-    let institutionId = session?.institutionId || 'global';
+    let institutionId: string | undefined;
 
     if (body.packets && Array.isArray(body.packets)) {
       const parsedBatch = telemetryBatchSchema.safeParse(body);
@@ -24,13 +24,16 @@ export const POST = requireAuth(async (req: Request, session: any) => {
         return NextResponse.json({ error: parsedBatch.error.issues[0]?.message || 'Invalid batch payload' }, { status: 400 });
       }
       packets = parsedBatch.data.packets;
-      if (parsedBatch.data.institutionId) institutionId = parsedBatch.data.institutionId;
+      const rawInst = parsedBatch.data.institutionId || undefined;
+      institutionId = await resolveRequestInstitution(session, rawInst);
     } else {
       const parsedSingle = telemetryPacketSchema.safeParse(body);
       if (!parsedSingle.success) {
         return NextResponse.json({ error: parsedSingle.error.issues[0]?.message || 'Invalid packet payload' }, { status: 400 });
       }
       packets = [parsedSingle.data];
+      const rawInst = (parsedSingle.data as any).institutionId || undefined;
+      institutionId = await resolveRequestInstitution(session, rawInst);
     }
 
     const results = [];

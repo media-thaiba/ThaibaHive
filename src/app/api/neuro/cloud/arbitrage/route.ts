@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { SpotPriceAggregator } from '@/lib/operations/neuro/cloud/spot-price-aggregator';
@@ -7,7 +6,7 @@ import { arbitrageEvaluateSchema } from '@/lib/validation/neuro-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, session) => {
+export const GET = requireAuth(async (req: Request, _session) => {
   const { searchParams } = new URL(req.url);
   const gpuModel = searchParams.get('gpuModel') || 'NVIDIA-H100';
 

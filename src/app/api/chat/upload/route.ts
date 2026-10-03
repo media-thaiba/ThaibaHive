@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import {
   isStorageConfigured,
   uploadToSupabase,
@@ -28,7 +28,7 @@ const ALLOWED_TYPES = new Set([
   "text/plain",
 ]);
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { getFederatedSchemas } from "@/lib/federation/schema-manager";
 
 export const GET = requireAuth(async () => {

@@ -8,7 +8,7 @@ const dbStore = AfedDbStore.getInstance();
 export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get('tenantId') || searchParams.get('institutionId'));
 
     let budget = dbStore.getPrivacyBudget(tenantId);
     if (!budget) {

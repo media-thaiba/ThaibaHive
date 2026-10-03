@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Federated Threat Intelligence Sharing API Endpoint
  * Sprint-039 / TIF-012

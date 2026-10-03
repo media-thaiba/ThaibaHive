@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { purchaseApprovalTierCreateSchema } from "@/lib/validation/schemas";
 import { purchaseApprovalEngine } from "@/lib/finance/purchases/purchase-approval-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const { searchParams } = new URL(request.url);
     const institutionId = await resolveScopedInstitutionId(searchParams.get("institutionId"));
@@ -19,7 +19,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   }
 }, "finance:purchases:create");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parsed = purchaseApprovalTierCreateSchema.safeParse(body);

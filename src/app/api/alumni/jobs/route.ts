@@ -45,7 +45,8 @@ export const POST = requireAuth(async (request, session) => {
 export const PATCH = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
-    const { jobId, institutionId, action, moderationNotes } = body;
+    const { jobId, action, moderationNotes } = body;
+    const institutionId = await resolveRequestInstitution(session, body.institutionId);
 
     if (!jobId || !institutionId || !action) {
       return NextResponse.json({ error: 'jobId, institutionId and action required' }, { status: 400 });

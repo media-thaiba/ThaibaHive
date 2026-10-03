@@ -1,10 +1,9 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { mentorshipSessionEngine } from '@/lib/operations/alumni/mentorship/mentorship-session-engine';
 import { createMentorshipRequestSchema } from '@/lib/validation/alumni-schemas';
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const action = body.action || 'request';
@@ -47,7 +46,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 }, 'alumni:mentorship:manage');
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const { sessionId, actorRole, rating, feedback, sessionNotes } = body;

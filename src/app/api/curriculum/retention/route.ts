@@ -21,7 +21,7 @@ export const GET = requireAuth(async (req: Request, session: any) => {
 export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
-    const tenantId = (body.institutionId !== 'global' ? body.institutionId : undefined) || session?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, body.institutionId || body.tenantId);
 
     const extractor = new RiskFeatureExtractor();
     const workflow = new EarlyInterventionWorkflow();

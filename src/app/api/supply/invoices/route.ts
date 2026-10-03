@@ -1,7 +1,6 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { invoiceCreateSchema } from '@/lib/validation/supply-schemas';
 
@@ -42,8 +41,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       status: 'submitted' as const,
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const saved = await store.createInvoice(inv);
     return NextResponse.json({ invoice: saved }, { status: 201 });

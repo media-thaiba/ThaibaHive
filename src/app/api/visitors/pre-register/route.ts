@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitorRequests } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { visitorPreRegisterSchema } from "@/lib/validation/schemas";
 import { desc, eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
   const requests = await db
@@ -19,7 +19,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ requests });
 }, "visitor:read");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const parsed = visitorPreRegisterSchema.safeParse(body);
   if (!parsed.success) {

@@ -4,7 +4,7 @@ import { redisStateManager } from "@/lib/services/redis-state-manager";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get("tenantId") || "inst_101";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
   const feature = searchParams.get("feature") || "copilot_query";
 
   try {
@@ -30,7 +30,7 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "copilot:view");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  let body: { tenantId?: string; feature?: string; action?: "reset" | "trip" } = {};
+  let body: { tenantId?: string; institutionId?: string; feature?: string; action?: "reset" | "trip" } = {};
   try {
     const text = await request.text();
     if (text) body = JSON.parse(text);
@@ -38,7 +38,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const tenantId = body.tenantId || "inst_101";
+  const tenantId = await resolveRequestInstitution(session, body.tenantId || body.institutionId);
   const feature = body.feature || "copilot_query";
 
   try {

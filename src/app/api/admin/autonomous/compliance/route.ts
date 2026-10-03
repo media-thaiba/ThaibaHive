@@ -6,7 +6,9 @@ import { complianceReportSchema } from "@/lib/validation/schemas";
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const frameworkCode = searchParams.get("framework") || searchParams.get("frameworkCode") || "regional_privacy_v1";
-  const institutionId = searchParams.get("institutionId") ?? undefined;
+  const rawInst = searchParams.get("institutionId") || searchParams.get("tenantId") || undefined;
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const institutionId = resolvedInst === "global" ? undefined : resolvedInst;
   const format = searchParams.get("format") ?? "pdf";
 
   const parse = complianceReportSchema.safeParse({ frameworkCode, institutionId, format });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { institutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async () => {
@@ -9,7 +9,7 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ institutions: all });
 }, "org:manage");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { name, code, type, address, phone, email } = body;
 

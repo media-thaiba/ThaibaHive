@@ -28,7 +28,8 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     }
 
     const facility = await store.createFacility(parse.data);
-    auditLogger.logEvent('facility_created', session?.staffId || 'system', { facilityId: facility.facilityId }, parse.data.institutionId, facility.facilityId);
+    const institutionId = await resolveRequestInstitution(session, parse.data.institutionId);
+    auditLogger.logEvent('facility_created', session?.staffId || 'system', { facilityId: facility.facilityId }, institutionId, facility.facilityId);
 
     return NextResponse.json({ success: true, facility }, { status: 201 });
   } catch (error: any) {

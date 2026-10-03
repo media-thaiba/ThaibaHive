@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { verifyQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { db } from "@/db";
 import { hallTickets } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const { qrPayload } = body;

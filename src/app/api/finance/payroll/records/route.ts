@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, payrollRecords, eq, and, desc } from "@/db";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { payrollRecordStatusUpdateSchema } from "@/lib/validation/schemas";
 import { payrollEngine } from "@/lib/finance/payroll/payroll-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";

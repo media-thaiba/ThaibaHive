@@ -13,7 +13,9 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { tenantId = "tenant-main", triggerResult } = body as { tenantId?: string; triggerResult?: TriggerEvaluationResult };
+  const bodyObj = body as { tenantId?: string; triggerResult?: TriggerEvaluationResult };
+    const tenantId = await resolveRequestInstitution(session, bodyObj?.tenantId);
+    const triggerResult = bodyObj?.triggerResult;
 
   if (!triggerResult) {
     return NextResponse.json({ error: "Missing triggerResult payload" }, { status: 400 });
@@ -38,7 +40,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get("tenantId") || "tenant-main";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
   try {
     const logs = defaultNotificationRouter.getDispatchLogs(tenantId);

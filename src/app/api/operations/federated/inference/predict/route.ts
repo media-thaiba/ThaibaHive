@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { afedInferencePredictSchema } from '@/lib/validation/schemas';
@@ -25,7 +24,7 @@ edgeEngine.loadModel({
   biases: [-2.5],
 });
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = afedInferencePredictSchema.safeParse(body);

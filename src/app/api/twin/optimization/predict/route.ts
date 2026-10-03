@@ -19,7 +19,7 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     }
 
     const { facilityId, spaceId, enableHvacOptimization, institutionId } = parse.data;
-    const tenantId = institutionId || session?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, institutionId);
 
     const space = await store.getSpaceById(spaceId, tenantId);
     if (!space) {

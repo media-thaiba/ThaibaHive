@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { presenceVerificationSettings, staffInstitutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution, TenantMismatchError } from "@/lib/api/auth-guard";
 import { logActivity } from "@/lib/api/activity-log";
+
 import { verificationSettingsSchema } from "@/lib/validation/schemas";
 import { eq, and, isNull } from "drizzle-orm";
 import type { SessionPayload } from "@thaiba/auth";
@@ -56,7 +57,8 @@ function calculateDiff(oldSettings: Record<string, unknown>, newSettings: Record
 export const GET = requireAuth(async (request, session) => {
   try {
     const url = new URL(request.url);
-    const institutionId = url.searchParams.get("institutionId");
+    const rawInst = url.searchParams.get("institutionId");
+    const institutionId = rawInst ? await resolveRequestInstitution(session, rawInst) : (isGlobalAdmin(session) ? null : await resolveRequestInstitution(session, null));
 
     // Authorization check
     if (institutionId) {
@@ -106,15 +108,20 @@ export const GET = requireAuth(async (request, session) => {
       },
     });
   } catch (error) {
+    if (error instanceof TenantMismatchError || (error as any)?.name === "TenantMismatchError") {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }, "attendance:manage");
 
+
 export const PUT = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
-    const institutionId = body.institutionId ?? null;
+    const rawInst = body.institutionId ?? null;
+    const institutionId = rawInst ? await resolveRequestInstitution(session, rawInst) : (isGlobalAdmin(session) ? null : await resolveRequestInstitution(session, null));
 
 
     // Authorization check
@@ -276,8 +283,12 @@ export const PUT = requireAuth(async (request, session) => {
       }
     }
   } catch (error) {
+    if (error instanceof TenantMismatchError || (error as any)?.name === "TenantMismatchError") {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }, "attendance:manage");
+
 

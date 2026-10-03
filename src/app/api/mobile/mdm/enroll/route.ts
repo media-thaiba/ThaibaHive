@@ -29,7 +29,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: 'Invalid or expired enterprise enrollment token' }, { status: 403 });
     }
 
-    const tenantId = (session.institutionId && session.institutionId !== "global") ? session.institutionId : (body.tenantId || "global");
+    const tenantId = await resolveRequestInstitution(session, body.tenantId);
     const id = `mdm_dev_${crypto.randomUUID()}`;
     const now = new Date().toISOString();
 

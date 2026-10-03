@@ -62,7 +62,9 @@ export const GET = requireAuth(async (request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { admissionNo, firstName, lastName, email, phone, dateOfBirth, gender, classId, academicYearId, institutionId } = body;
+  const { admissionNo, firstName, lastName, email, phone, dateOfBirth, gender, classId, academicYearId, institutionId: reqInst } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
   if (!admissionNo || !firstName || !lastName) {
     return NextResponse.json({ error: "admissionNo, firstName, and lastName are required" }, { status: 400 });

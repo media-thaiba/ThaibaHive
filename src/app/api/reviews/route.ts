@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceReviews, staff } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { performanceReviewCreateSchema } from "@/lib/validation/schemas";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
 import { eq, desc, and, inArray } from "drizzle-orm";

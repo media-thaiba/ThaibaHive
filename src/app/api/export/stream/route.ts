@@ -14,7 +14,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     const engine = UniversalExportEngine.getInstance();
     const result = await engine.exportDataset({
-      institutionId: parsed.data.institutionId,
+      institutionId: await resolveRequestInstitution(session, parsed.data.institutionId),
       jobType: parsed.data.jobType,
       format: parsed.data.format,
       columns: parsed.data.columns,

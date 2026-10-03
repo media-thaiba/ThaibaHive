@@ -22,7 +22,9 @@ export const GET = requireAuth(async (request: Request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { name, startDate, endDate, institutionId } = body;
+  const { name, startDate, endDate, institutionId: reqInst } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
   if (!name || !startDate || !endDate) {
     return NextResponse.json({ error: "name, startDate, and endDate are required" }, { status: 400 });

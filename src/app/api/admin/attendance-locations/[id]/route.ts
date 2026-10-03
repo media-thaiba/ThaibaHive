@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { eq, and, isNull } from "drizzle-orm";
 import { logActivity } from "@/lib/api/activity-log";

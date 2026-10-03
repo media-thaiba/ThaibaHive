@@ -1,7 +1,6 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { vendorCreateSchema } from '@/lib/validation/supply-schemas';
 import { VendorRiskScreeningEngine } from '@/lib/operations/supply/risk/vendor-risk-screening-engine';
@@ -42,8 +41,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
         creditScore: 750,
         priorDiscrepancyRate: 0.0,
         activeLawsuitsCount: 0,
-        certificationsCount: 1,
-      },
+        certificationsCount: 1 },
       institutionId
     );
     await store.createRiskAssessment(riskAssessment);
@@ -59,8 +57,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
         diversityOwnershipCertified: false,
         hasAntiBriberyPolicy: true,
         hasTransparentAuditedFinances: true,
-        scope3CarbonIntensityKgPerUsd: 0.12,
-      },
+        scope3CarbonIntensityKgPerUsd: 0.12 },
       institutionId
     );
     await store.createEsgScore(esgScore);
@@ -87,8 +84,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       isSanctionsClean: !riskAssessment.sanctionsMatched,
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const created = await store.createVendor(vendor);
     return NextResponse.json({ vendor: created, riskAssessment, esgScore }, { status: 201 });

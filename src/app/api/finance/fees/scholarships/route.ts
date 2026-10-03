@@ -29,6 +29,9 @@ export const POST = requireAuth(async (request, session) => {
 
     if (action === 'apply') {
       const parsed = applyConcessionSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }

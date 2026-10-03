@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { EdgeInferenceEngine } from '@/lib/operations/inference/edge-inference-engine';
@@ -9,7 +8,7 @@ const predictSchema = z.object({
   inputVector: z.array(z.number()),
 });
 
-export const POST = requireAuth(async (req: Request, session) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = predictSchema.safeParse(body);

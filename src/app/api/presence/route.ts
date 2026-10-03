@@ -1,4 +1,4 @@
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { presence, staff } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";

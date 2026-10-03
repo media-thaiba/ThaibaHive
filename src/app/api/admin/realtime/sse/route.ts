@@ -8,7 +8,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get("channel") || "copilot_feed";
   const lastEventId = searchParams.get("lastEventId") || request.headers.get("Last-Event-ID") || undefined;
-  const tenantId = searchParams.get("tenantId") || "tenant-main";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
   try {
     const events = defaultStreamingService.getReplayEvents(tenantId, channel, lastEventId);

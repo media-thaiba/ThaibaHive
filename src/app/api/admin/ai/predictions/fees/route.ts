@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { runFeeForecasting } from "@/lib/ai/fee-forecasting-service";
-import { getUserInstitutionScope } from "@/lib/auth";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const requestedInst = searchParams.get("institutionId");
-  const userInstScope = await getUserInstitutionScope();
-  const institutionId = requestedInst || userInstScope || "inst_default";
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId") || searchParams.get("tenantId"));
   const studentId = searchParams.get("studentId") || undefined;
 
   const forecast = await runFeeForecasting(institutionId, studentId);

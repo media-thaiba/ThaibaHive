@@ -29,7 +29,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       category: data.category,
       fileType: data.fileType,
       metadata: data.metadata,
-      institutionId: data.institutionId,
+      institutionId: await resolveRequestInstitution(session, data.institutionId),
     });
 
     return NextResponse.json({ success: true, result }, { status: 201 });

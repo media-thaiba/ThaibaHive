@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { polls, staff, staffDepartments, staffInstitutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { pollCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, inArray } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";

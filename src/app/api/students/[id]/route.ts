@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { db } from "@/db";
 import { students } from "@thaiba/db/schema";
@@ -24,7 +24,7 @@ const studentUpdateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const id = url.pathname.split("/").at(-1) ?? "";
   const scope = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
@@ -38,7 +38,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json(student);
 }, "students:read");
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const id = url.pathname.split("/").at(-1) ?? "";
   const body = await request.json();
@@ -61,7 +61,7 @@ export const PATCH = requireAuth(async (request: Request, session) => {
   return NextResponse.json(updated);
 }, "students:write");
 
-export const DELETE = requireAuth(async (request: Request, session) => {
+export const DELETE = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const id = url.pathname.split("/").at(-1) ?? "";
   const scope = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));

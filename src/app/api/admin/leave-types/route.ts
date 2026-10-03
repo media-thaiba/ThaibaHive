@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveTypes } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 
 export const GET = requireAuth(async () => {
   const all = await db.select().from(leaveTypes).orderBy(leaveTypes.name).all();
   return NextResponse.json({ leaveTypes: all });
 }, "leave:manage");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { name, code, description, daysAllowed, requiresApproval } = body;
 

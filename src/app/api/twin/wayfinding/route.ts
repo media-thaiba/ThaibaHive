@@ -17,7 +17,7 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     }
 
     const { facilityId, sourceNodeId, targetNodeId, requireStepFree, institutionId } = parse.data;
-    const tenantId = institutionId || session?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, institutionId);
 
     // Populate graph with DB nodes & edges
     const dbNodes = await store.listWayfindingNodes(tenantId, facilityId);

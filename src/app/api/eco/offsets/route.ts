@@ -23,6 +23,9 @@ export const POST = requireAuth(async (req: Request, session: any) => {
 
     if (action === 'retire') {
       const parsed = offsetRetireSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid retire payload' }, { status: 400 });
       }
@@ -36,6 +39,9 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       return NextResponse.json({ certificate: result.certificate }, { status: 200 });
     } else {
       const parsed = offsetRegisterSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid register payload' }, { status: 400 });
       }

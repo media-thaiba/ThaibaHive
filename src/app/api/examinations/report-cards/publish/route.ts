@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, tabulationRegisters, examAuditLogs } from "@thaiba/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {

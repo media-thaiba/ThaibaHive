@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, examSchedules, markEntries, students } from "@thaiba/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { calculateStudentTabulation } from "@/lib/examinations/grade-calculator";
 import { eq, inArray } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
 

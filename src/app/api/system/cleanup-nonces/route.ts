@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { usedNonces } from "@/db/schema";
 import { lt } from "drizzle-orm";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 
 /**
  * POST /api/system/cleanup-nonces

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { RemediationTicketService } from "@/lib/services/remediation-ticket-service";
 
 export const PATCH = requireAuth(async (request: Request, _session, context) => {

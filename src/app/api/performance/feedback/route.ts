@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { feedbackRequests, staff, staffInstitutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { feedbackRequests, staff } from "@/db/schema";
+import { requireAuth, resolveRequestInstitution, TenantMismatchError } from "@/lib/api/auth-guard";
+
 import { feedbackRequestCreateSchema } from "@/lib/validation/schemas";
 import { eq, or, and } from "drizzle-orm";
 
@@ -35,8 +36,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       submittedAt: feedbackRequests.submittedAt,
       createdAt: feedbackRequests.createdAt,
       peerFirstName: staff.firstName,
-      peerLastName: staff.lastName,
-    })
+      peerLastName: staff.lastName })
     .from(feedbackRequests)
     .leftJoin(staff, eq(feedbackRequests.peerStaffId, staff.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -71,8 +71,7 @@ export const POST = requireAuth(async (request: Request, session) => {
           feedbackText: body.feedbackText || existing.feedbackText,
           rating: body.rating ?? existing.rating,
           status: "submitted",
-          submittedAt: new Date().toISOString(),
-        })
+          submittedAt: new Date().toISOString() })
         .where(eq(feedbackRequests.id, body.requestId))
         .returning()
         .get();
@@ -80,18 +79,13 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ feedback: updated });
     }
 
+    const institutionId = await resolveRequestInstitution(session, body.institutionId);
+    if (institutionId === "global") {
+      return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
+    }
+
     // Creating a new 360-degree feedback request
     const validated = feedbackRequestCreateSchema.parse(body);
-
-    let institutionId = body.institutionId;
-    if (!institutionId) {
-      const inst = await db
-        .select({ institutionId: staffInstitutions.institutionId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.staffId, session.staffId))
-        .get();
-      institutionId = inst?.institutionId || "inst_default";
-    }
 
     const id = `fbr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newFeedback = {
@@ -104,16 +98,19 @@ export const POST = requireAuth(async (request: Request, session) => {
       rating: validated.rating || null,
       status: validated.feedbackText ? "submitted" : "pending",
       submittedAt: validated.feedbackText ? new Date().toISOString() : null,
-      createdAt: new Date().toISOString(),
-    };
+      createdAt: new Date().toISOString() };
 
     await db.insert(feedbackRequests).values(newFeedback).run();
 
     return NextResponse.json({ feedback: newFeedback }, { status: 201 });
   } catch (error) {
+    if (error instanceof TenantMismatchError || (error as any)?.name === "TenantMismatchError") {
+      throw error;
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to process feedback request" },
       { status: 400 }
     );
   }
 }, "performance:evaluate");
+

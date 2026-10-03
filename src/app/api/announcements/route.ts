@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db, isPostgres } from "@/db";
 import { announcements, announcementReads, staff, staffDepartments, staffInstitutions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { announcementCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, sql, inArray } from "drizzle-orm";

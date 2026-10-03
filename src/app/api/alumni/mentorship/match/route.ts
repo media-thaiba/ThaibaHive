@@ -6,7 +6,8 @@ import { mentorshipMatchingEngine } from '@/lib/operations/alumni/mentorship/men
 export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
-    const { studentId, institutionId, department, degreeProgram, targetRole, targetIndustry, desiredSkills, limit } = body;
+    const { studentId, department, degreeProgram, targetRole, targetIndustry, desiredSkills, limit } = body;
+  const institutionId = await resolveRequestInstitution(session, body.institutionId);
 
     if (!studentId || !institutionId || !department || !targetRole || !targetIndustry) {
       return NextResponse.json({ error: 'Missing required matching parameters' }, { status: 400 });

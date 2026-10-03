@@ -1,4 +1,4 @@
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { sendToConnection, connectionCount } from "@/lib/api/realtime";
 import { z } from "zod";
 

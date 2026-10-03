@@ -45,7 +45,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  const { registrationNumber, model, type, capacity, fuelType, institutionId, notes } = parsed.data;
+  const { registrationNumber, model, type, capacity, fuelType, notes } = parsed.data;
+  const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
 
   const vehicle = await db
     .insert(vehicles)

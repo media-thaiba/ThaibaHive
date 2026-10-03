@@ -89,6 +89,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const dateFrom = getDateParam(searchParams, "dateFrom");
   const dateTo = getDateParam(searchParams, "dateTo");
   const requestedInstitutionId = searchParams.get("institutionId") || undefined;
+  const finalInstitutionId = await resolveRequestInstitution(session, requestedInstitutionId);
 
   const VALID_TYPES: ExportType[] = [
     "attendance",
@@ -142,8 +143,9 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
   }
 
-  const finalInstitutionId = requestedInstitutionId;
   let instName: string | undefined = undefined;
+
+
 
   if (finalInstitutionId) {
     const instRecord = await db

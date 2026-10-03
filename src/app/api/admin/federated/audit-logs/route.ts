@@ -7,7 +7,8 @@ const defaultAuditAggregator = new FederatedAuditAggregator();
 export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const resolved = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
+  const tenantId = resolved === "global" ? undefined : resolved;
     const severity = (searchParams.get("severity") as AuditSeverity) || undefined;
     const anonymizedOnly = searchParams.get("anonymized") === "true";
 
@@ -41,7 +42,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     }
   }
 
-  const { action, actorId, severity = "INFO", details = {}, institutionId, anonymize = false } = body;
+  const { action, actorId, severity = "INFO", details = {}, anonymize = false, institutionId: reqInst } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
 
   if (!action || !actorId) {
     return NextResponse.json({ error: "action and actorId are required" }, { status: 400 });

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get("tenantId") || session?.institutionId || "global";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return new Response("Agentic workflows feature is disabled\n", { status: 403 });

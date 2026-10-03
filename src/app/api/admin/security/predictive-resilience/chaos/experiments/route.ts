@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin Chaos Experiments List & Runner API Endpoint
  * Sprint-042 (ARES) — ARES-020
@@ -28,7 +27,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, session) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const parsed = chaosExperimentRunSchema.safeParse(body);
 

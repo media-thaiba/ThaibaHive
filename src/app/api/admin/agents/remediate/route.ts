@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { DatabaseHealer } from "@/lib/agents/healing/database-healer";
 
 export const POST = requireAuth(async (request, _session) => {

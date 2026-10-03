@@ -7,7 +7,8 @@ const globalDLQHandler = new DLQRetryHandler();
 export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const resolved = await resolveRequestInstitution(session, searchParams.get("tenantId"));
+    const tenantId = resolved === "global" ? undefined : resolved;
     const status = (searchParams.get("status") as DLQJobStatus) || undefined;
 
     const jobs = globalDLQHandler.getJobs(tenantId, status);
@@ -20,7 +21,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   }
 }, "resilience:manage");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: any = {};
   try {
     body = await request.json();

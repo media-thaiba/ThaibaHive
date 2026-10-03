@@ -3,7 +3,7 @@ import { offlineSyncPayloadSchema } from "@/lib/validation/schemas";
 import { SyncConflictResolver } from "@/lib/offline/sync-conflict-resolver";
 import { EventBus } from "@/lib/observability/event-bus";
 import { AnomalyDetector } from "@/lib/observability/anomaly-detector";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import zlib from "zlib";
 
 const resolver = new SyncConflictResolver();
@@ -45,7 +45,7 @@ function decompressProgressively(buffer: Buffer): Promise<Buffer> {
   });
 }
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const contentEncoding = request.headers.get("content-encoding") || "";
   const isGzip = contentEncoding.includes("gzip");
 

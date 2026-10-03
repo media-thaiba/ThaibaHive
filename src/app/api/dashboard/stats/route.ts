@@ -12,7 +12,7 @@ import {
   events,
   eventRsvps,
 } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, and, sql, desc, gte, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {

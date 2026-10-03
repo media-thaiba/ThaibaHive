@@ -1,7 +1,6 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyStreamManager } from '@/lib/operations/supply/streaming/supply-stream-manager';
 
 export const dynamic = 'force-dynamic';
@@ -34,14 +33,11 @@ export const GET = requireAuth(async (req: Request, session: any) => {
         unsubscribe();
         controller.close();
       });
-    },
-  });
+    } });
 
   return new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
+      Connection: 'keep-alive' } });
 }, 'supply:stream:view');

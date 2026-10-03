@@ -6,7 +6,7 @@ import {
   staff,
   tasks,
 } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, desc, inArray, and, or } from "drizzle-orm";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 import { dailyReportCreateSchema } from "@/lib/validation/schemas";

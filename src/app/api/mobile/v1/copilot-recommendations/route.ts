@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get("tenantId") || "inst_101";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
 
   try {
     const records = await db

@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { StatisticalDriftDetector } from '@/lib/operations/drift/statistical-drift-detector';
@@ -19,7 +18,7 @@ export const GET = requireAuth(async () => {
   }
 }, 'operations:read');
 
-export const POST = requireAuth(async (req: Request, session) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = evaluateDriftSchema.safeParse(body);

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { chatParticipants } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { sendToConnection } from "@/lib/api/realtime";
 import {
   updateParticipant,

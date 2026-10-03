@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { PushNotificationService } from "@/lib/notifications/push-notification-service";
 import { pushAlertDispatchSchema } from "@/lib/validation/schemas";
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     body = await request.json();

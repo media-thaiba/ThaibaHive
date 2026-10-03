@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveBalances, staff, leaveTypes } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, desc } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const year = searchParams.get("year") || String(new Date().getFullYear());
 
@@ -32,7 +32,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ balances });
 }, "leave:manage");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { staffId, leaveTypeId, year, totalDays } = body;
 

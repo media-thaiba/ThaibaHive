@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { withDPoP } from "@/lib/identity/dpop-middleware";
 import { QuarantineManager } from "@/lib/security/quarantine-manager";
 import { GatewayCircuitBreaker } from "@/lib/security/circuit-breaker";

@@ -21,7 +21,8 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { merkleRoot, auditRecordPreimage, tenantId } = parsed.data;
+    const { merkleRoot, auditRecordPreimage } = parsed.data;
+    const tenantId = await resolveRequestInstitution(session, parsed.data.tenantId);
     const attestationService = ZkAttestationService.getInstance();
     const store = AresDbStore.getInstance();
 

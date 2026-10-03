@@ -1,7 +1,6 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { requisitionCreateSchema } from '@/lib/validation/supply-schemas';
 import { RequisitionRoutingEngine } from '@/lib/operations/supply/workflow/requisition-routing-engine';
@@ -47,8 +46,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       notes: parsed.data.notes,
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const routingDecision = routingEngine.evaluateRouting(preliminaryReq);
 
@@ -57,8 +55,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       currentApprovalTier: routingDecision.determinedTier,
       status: (routingDecision.isAutoApproved ? 'approved' : 'pending_approval') as any,
       approvedByUserId: routingDecision.isAutoApproved ? 'SYSTEM_AUTO_POLICY' : undefined,
-      approvedAt: routingDecision.isAutoApproved ? new Date().toISOString() : undefined,
-    };
+      approvedAt: routingDecision.isAutoApproved ? new Date().toISOString() : undefined };
 
     const saved = await store.createRequisition(finalizedReq);
     return NextResponse.json({ requisition: saved, routingDecision }, { status: 201 });

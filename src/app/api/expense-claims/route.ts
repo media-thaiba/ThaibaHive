@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { expenseClaimCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";

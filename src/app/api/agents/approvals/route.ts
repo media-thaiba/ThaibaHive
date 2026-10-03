@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { AgentDbStore } from "@/lib/db/agent-store";
 import { isAgenticWorkflowsEnabled } from "@/lib/features";
 

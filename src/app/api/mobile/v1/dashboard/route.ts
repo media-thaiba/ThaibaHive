@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { serializeMobileUser, serializeMobileDashboard } from "@/lib/mobile/mobile-serializer";
 
 export const GET = requireAuth(async (request: Request, session) => {

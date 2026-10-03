@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staffShifts, staff, shifts } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async () => {
@@ -29,7 +29,7 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ assignments: all });
 }, "attendance:manage");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { staffId, shiftId, effectiveFrom, effectiveTo } = body;
 
@@ -65,7 +65,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 }, "attendance:manage");
 
-export const DELETE = requireAuth(async (request: Request, session) => {
+export const DELETE = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 

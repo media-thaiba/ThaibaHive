@@ -1,7 +1,11 @@
-jest.mock("@thaiba/auth", () => ({
-  verifySession: async () => ({ staffId: "user-admin", role: "super_admin", email: "admin@thaiba.edu" }),
-  hasPermission: () => true,
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: async () => ({ staffId: "user-admin", role: "super_admin", email: "admin@thaiba.edu" }),
+    hasPermission: () => true,
+  };
+});
 
 
 import { POST as streamPOST } from "../stream/route";

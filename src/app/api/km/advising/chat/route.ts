@@ -8,7 +8,7 @@ import { cloudTranslationAdapter } from '@/lib/operations/km/localization/cloud-
 import { kmAnalyticsAggregator } from '@/lib/operations/km/analytics/km-analytics-aggregator';
 import { kmTelemetry } from '@/lib/operations/km/km-telemetry';
 
-export const POST = requireAuth(async (request: Request, _user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = kmAdvisingChatSchema.safeParse(body);
@@ -16,7 +16,8 @@ export const POST = requireAuth(async (request: Request, _user: any) => {
       return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
     }
 
-    const { sessionId, studentId, prompt, targetLanguage, institutionId } = parse.data;
+    const { sessionId, studentId, prompt, targetLanguage } = parse.data;
+    const institutionId = await resolveRequestInstitution(session, parse.data.institutionId);
     const start = Date.now();
 
     // Redact PII before processing
@@ -50,6 +51,7 @@ export const POST = requireAuth(async (request: Request, _user: any) => {
 
     return NextResponse.json({ success: true, response }, { status: 200 });
   } catch (error: any) {
+    if (error?.name === "TenantMismatchError") throw error;
     return NextResponse.json({ error: error.message || 'Copilot chat execution failed' }, { status: 500 });
   }
 }, 'km:knowledge:search');

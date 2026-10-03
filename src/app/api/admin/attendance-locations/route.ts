@@ -46,7 +46,9 @@ export const GET = requireAuth(async (request: Request, session) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { name, institutionId, nfcTagId, qrSecret, latitude, longitude, radius, accuracy, wifiSsids } = body;
+  const { name, institutionId: reqInst, nfcTagId, qrSecret, latitude, longitude, radius, accuracy, wifiSsids } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });

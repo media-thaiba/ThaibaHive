@@ -6,7 +6,7 @@ import { PrivacyBudgetManager } from '@/lib/operations/privacy/privacy-budget-ma
 export const GET = requireAuth(async (req: Request, session) => {
   try {
     const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get('tenantId') || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get('tenantId') || searchParams.get('institutionId'));
     const manager = new PrivacyBudgetManager();
     const budget = manager.getBudget(tenantId);
 

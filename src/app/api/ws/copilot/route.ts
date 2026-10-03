@@ -23,7 +23,7 @@ export const GET = requireAuth(async (req: Request, session) => {
   });
 }, 'km:knowledge:search');
 
-export const POST = requireAuth(async (req: Request, session) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const connectionId = body.connectionId || `conn_${Date.now()}`;

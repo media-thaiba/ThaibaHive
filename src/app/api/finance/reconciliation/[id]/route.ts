@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
 import { getUserInstitutionScope } from "@/lib/auth";
 

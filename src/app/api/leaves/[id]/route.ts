@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, leaveBalances } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
 import { sendPushNotification } from "@/lib/notifications/push-service";

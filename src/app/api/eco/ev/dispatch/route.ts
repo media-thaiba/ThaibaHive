@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { V2GFleetDispatcher } from '@/lib/operations/eco/ev/v2g-fleet-dispatcher';
@@ -6,7 +5,7 @@ import { evFleetDispatchSchema } from '@/lib/validation/eco-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request, session) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = evFleetDispatchSchema.safeParse(body);

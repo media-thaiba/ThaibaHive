@@ -12,7 +12,7 @@ import {
   staffInstitutions,
   approvalDelegations,
 } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";

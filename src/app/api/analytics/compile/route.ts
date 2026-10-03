@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { ReportGeneratorService } from "@/lib/services/report-generator";
 import { getActorInstitutionIds } from "@/lib/api/tenant-scope";
 

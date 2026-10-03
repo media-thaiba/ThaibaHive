@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
@@ -6,7 +5,7 @@ import { HumanApprovalController } from '@/lib/operations/marl/human-approval-co
 import { marlOverrideSchema } from '@/lib/validation/aims-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, session) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const parsed = marlOverrideSchema.safeParse(body);
 

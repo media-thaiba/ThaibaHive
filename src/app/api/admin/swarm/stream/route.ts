@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { SSEManager } from "@/lib/observability/sse-manager";
 import { createGzipFlushStream } from "@/lib/observability/compression";

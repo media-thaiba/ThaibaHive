@@ -14,7 +14,8 @@ export const POST = requireAuth(async (request: Request, session: any) => {
       return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
     }
 
-    const { query, topK, category, enableReranking, institutionId } = parse.data;
+    const { query, topK, category, enableReranking } = parse.data;
+  const institutionId = await resolveRequestInstitution(session, parse.data.institutionId);
     const start = Date.now();
 
     const results = await hybridFusionEngine.search(query, {

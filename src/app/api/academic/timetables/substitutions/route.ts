@@ -6,12 +6,13 @@ import { eq, and, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get("institutionId");
+  const rawInst = url.searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, rawInst);
   const date = url.searchParams.get("date");
   const teacherId = url.searchParams.get("teacherId");
 
   const conditions = [];
-  if (institutionId) {
+  if (institutionId && institutionId !== "global") {
     conditions.push(eq(teacherSubstitutions.institutionId, institutionId));
   }
   if (date) {
@@ -55,7 +56,7 @@ export const GET = requireAuth(async (request, session) => {
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const {
-    institutionId,
+    institutionId: reqInst,
     timetableEntryId,
     date,
     originalTeacherId,
@@ -64,12 +65,21 @@ export const POST = requireAuth(async (request: Request, session) => {
     assignedById,
   } = body;
 
-  if (!institutionId || !timetableEntryId || !date || !originalTeacherId || !substituteTeacherId) {
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") {
     return NextResponse.json(
-      { error: "institutionId, timetableEntryId, date, originalTeacherId, and substituteTeacherId are required" },
+      { error: "Explicit institutionId required" },
       { status: 400 }
     );
   }
+
+  if (!timetableEntryId || !date || !originalTeacherId || !substituteTeacherId) {
+    return NextResponse.json(
+      { error: "timetableEntryId, date, originalTeacherId, and substituteTeacherId are required" },
+      { status: 400 }
+    );
+  }
+
 
   const created = await db
     .insert(teacherSubstitutions)
@@ -90,7 +100,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ substitution: created }, { status: 201 });
 }, "timetables:manage");
 
-export const PATCH = requireAuth(async (request: Request, session) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { id, status } = body;
 

@@ -1,4 +1,3 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Legacy Token Deprecation & Migration Stats Admin API
  * Sprint-039 / TIF-009 (TD-012)

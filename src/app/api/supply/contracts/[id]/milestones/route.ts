@@ -27,7 +27,7 @@ export const POST = requireAuth(async (req: Request, session: any, context) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid milestone payload' }, { status: 400 });
     }
 
-    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || session?.institutionId || 'global';
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const milestoneId = `mile-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     const milestone = {

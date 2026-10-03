@@ -6,7 +6,8 @@ import { resolveInstitutionId } from "@/lib/finance/institution-context";
 export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
-    const { amount, category, institutionId, jurisdictionId, asOfDate } = body;
+    const { amount, category, jurisdictionId, asOfDate } = body;
+  const institutionId = await resolveRequestInstitution(session, body.institutionId);
 
     if (typeof amount !== "number" || !category) {
       return NextResponse.json({ error: "amount and category are required" }, { status: 400 });

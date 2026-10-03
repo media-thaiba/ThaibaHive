@@ -33,12 +33,14 @@ export const POST = withDPoP(
 
       const durationMs = parsed.data.durationMinutes * 60 * 1000;
       const bannedBy = session?.email || "admin";
+      const rawInst = (body as any)?.tenantId || (body as any)?.institutionId;
+      const tenantId = (await resolveRequestInstitution(session, rawInst)) || "default";
 
       const result = QuarantineManager.getInstance().quarantineIp(
         parsed.data.ipAddress,
         parsed.data.reason,
         durationMs,
-        parsed.data.tenantId,
+        tenantId,
         bannedBy
       );
 
@@ -58,7 +60,7 @@ export const POST = withDPoP(
 );
 
 export const DELETE = withDPoP(
-  requireAuth(async (request: Request, session) => {
+  requireAuth(async (request: Request, _session) => {
     const url = new URL(request.url);
     const idOrIp = url.searchParams.get("id") || url.searchParams.get("ip");
 

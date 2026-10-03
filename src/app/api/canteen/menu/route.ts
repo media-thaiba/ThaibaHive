@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenItems, canteenMenus } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { canteenItemCreateSchema, canteenMenuPublishSchema } from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, session) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
   const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
@@ -22,7 +22,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ date, items, menus });
 }, "canteen:read");
 
-export const POST = requireAuth(async (request: Request, session) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const institutionId = await resolveScopedInstitutionId(body.institutionId);
   

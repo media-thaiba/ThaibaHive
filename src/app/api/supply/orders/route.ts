@@ -1,7 +1,6 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { purchaseOrderCreateSchema } from '@/lib/validation/supply-schemas';
 import { BudgetEncumbranceEngine } from '@/lib/operations/supply/finance/budget-encumbrance-engine';
@@ -65,8 +64,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       merkleLeafHash: SupplyMerkleAnchor.computeSha256({ poId, poNumber, total: parsed.data.totalAmountUsd }),
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const createdPo = await store.createPurchaseOrder(po);
 
@@ -89,8 +87,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
           lineTotalUsd: item.unitPriceUsd * item.quantityOrdered,
           status: 'pending',
           institutionId,
-          createdAt: new Date().toISOString(),
-        });
+          createdAt: new Date().toISOString() });
       }
     }
 

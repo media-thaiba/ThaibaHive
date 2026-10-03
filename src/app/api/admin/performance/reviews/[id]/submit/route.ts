@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { ReviewWorkflowService } from "@/lib/performance/review-workflow-service";
 
 import { getUserInstitutionScope } from "@/lib/auth";
 
-export const POST = requireAuth(async (request: Request, session, context) => {
+export const POST = requireAuth(async (request: Request, _session, context) => {
   try {
     const params = context?.params ? await context.params : {};
     const reviewId = params.id || request.url.split("/reviews/")[1]?.split("/submit")[0];
