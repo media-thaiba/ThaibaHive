@@ -6,7 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog";import { getClientCspNonce } from "@/lib/csp-nonce";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X, Printer } from "lucide-react";
@@ -127,7 +128,7 @@ export function VisitorPassModal({
 </head>
 <body>
 ${htmlContent}
-<script>${scriptContent}<\/script>
+<script nonce="${getClientCspNonce()}">${scriptContent}<\/script>
 </body>
 </html>`;
 

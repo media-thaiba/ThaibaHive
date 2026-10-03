@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getClientCspNonce } from "@/lib/csp-nonce";
 
 export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
@@ -56,19 +57,23 @@ export default function ApiDocsPage() {
               </head>
               <body>
                 <div id="swagger-ui"></div>
-                <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
-                <script>
-                  window.onload = () => {
+                <script nonce="${getClientCspNonce()}">
+                  // Loaded via script element so 'strict-dynamic' permits the
+                  // unpkg origin (host allowlists are ignored under strict-dynamic).
+                  const bundle = document.createElement("script");
+                  bundle.src = "https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js";
+                  bundle.onload = () => {
                     SwaggerUIBundle({
-                      url: '/api/openapi.json',
-                      dom_id: '#swagger-ui',
+                      url: "/api/openapi.json",
+                      dom_id: "#swagger-ui",
                       deepLinking: true,
                       presets: [
                         SwaggerUIBundle.presets.apis,
-                        SwaggerUIBundle.SwaggerUIStandalonePreset
+                        SwaggerUIBundle.SwaggerUIStandalonePreset,
                       ],
                     });
                   };
+                  document.body.appendChild(bundle);
                 </script>
               </body>
             </html>
