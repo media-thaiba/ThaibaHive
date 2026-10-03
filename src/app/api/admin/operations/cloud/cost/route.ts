@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
@@ -38,7 +39,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const orchestrator = new SpotInstanceOrchestrator();
 

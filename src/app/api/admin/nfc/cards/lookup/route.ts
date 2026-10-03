@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { nfcCards, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, sql } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { tagId } = body;
 

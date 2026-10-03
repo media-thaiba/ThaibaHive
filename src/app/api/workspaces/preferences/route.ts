@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { workspacePreferences, staffInstitutions } from "@thaiba/db/schema";
 import { and, eq } from "drizzle-orm";

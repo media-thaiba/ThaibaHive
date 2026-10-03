@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 jest.mock("@/lib/api/auth-guard", () => ({
   requireAuth: (handler: any) => (req: any, session: any) => handler(req, session),
 }));

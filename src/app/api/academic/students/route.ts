@@ -1,25 +1,29 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, classes } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, like, or, and, sql, type SQL } from "drizzle-orm";
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
+  const requestedInst = url.searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
   const classId = url.searchParams.get("classId");
   const page = parseInt(url.searchParams.get("page") || "1", 10);
   const limit = parseInt(url.searchParams.get("limit") || "20", 10);
   const offset = (page - 1) * limit;
 
   const conditions: (SQL | undefined)[] = [eq(students.isActive, true)];
+  if (scopedInstId !== "global") {
+    conditions.push(eq(students.institutionId, scopedInstId));
+  }
   if (search) {
     conditions.push(
       or(
         like(students.firstName, `%${search}%`),
         like(students.lastName, `%${search}%`),
-        like(students.admissionNo, `%${search}%`),
-      )
+        like(students.admissionNo, `%${search}%`))
     );
   }
   if (classId) {
@@ -56,7 +60,7 @@ export const GET = requireAuth(async (request) => {
   return NextResponse.json({ students: rows, total: totalCount, page, limit });
 }, "students:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { admissionNo, firstName, lastName, email, phone, dateOfBirth, gender, classId, academicYearId, institutionId } = body;
 

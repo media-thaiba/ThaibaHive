@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
@@ -6,7 +7,7 @@ import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 import { hvacOptimizationSchema } from '@/lib/validation/aims-schemas';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
     const campusId = searchParams.get('campusId') || undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -35,7 +36,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = hvacOptimizationSchema.safeParse(body);
 

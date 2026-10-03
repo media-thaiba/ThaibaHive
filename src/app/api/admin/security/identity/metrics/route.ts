@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { withDPoP } from "@/lib/identity/dpop-middleware";
 import { revocationStore } from "@/lib/identity/revocation-store";
 import { getMigrationStats } from "@/lib/identity/migration-layer";
@@ -64,11 +64,9 @@ export const GET = withDPoP(requireAuth(async (_req) => {
   const oneMinuteAgo = Date.now() - 60_000;
   const last24hAgo = Date.now() - 86_400_000;
   const perMinute = recentRevocations.filter(
-    (r) => new Date(r.revokedAt).getTime() > oneMinuteAgo,
-  ).length;
+    (r) => new Date(r.revokedAt).getTime() > oneMinuteAgo).length;
   const last24h = recentRevocations.filter(
-    (r) => new Date(r.revokedAt).getTime() > last24hAgo,
-  ).length;
+    (r) => new Date(r.revokedAt).getTime() > last24hAgo).length;
 
   return NextResponse.json({
     sessionDistribution,

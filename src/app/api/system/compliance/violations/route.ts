@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { complianceViolations } from "@thaiba/db/schema";

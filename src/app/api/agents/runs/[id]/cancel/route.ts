@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AgentDbStore } from "@/lib/db/agent-store";
 import { rollbackCoordinator } from "@/lib/agents/guardrails/rollback-coordinator";
 import { TenantContext } from "@/lib/agents/tools/contract";
@@ -7,10 +7,10 @@ import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const POST = requireAuth(async (req: Request, user: any, context?: any) => {
+export const POST = requireAuth(async (req: Request, session: any, context?: any) => {
   const params = await context?.params;
   const runId = params?.id;
-  const tenantId = user?.institutionId || "global";
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -34,9 +34,9 @@ export const POST = requireAuth(async (req: Request, user: any, context?: any) =
 
   const tenant: TenantContext = {
     institutionId: tenantId,
-    userId: user?.staffId || user?.userId || "user_sys",
-    userRole: user?.role || "staff",
-    permissions: user?.permissions || ["*"],
+    userId: session?.staffId || session?.userId || "user_sys",
+    userRole: session?.role || "staff",
+    permissions: session?.permissions || ["*"],
     traceId: req.headers.get("x-trace-id") || `trace_cancel_${Date.now()}`,
   };
 
@@ -44,7 +44,7 @@ export const POST = requireAuth(async (req: Request, user: any, context?: any) =
     runId,
     tenant,
     reason: body.reason || "Cancelled by administrator",
-    requestedBy: user?.staffId || user?.userId || "admin",
+    requestedBy: session?.staffId || session?.userId || "admin",
   });
 
   return NextResponse.json({

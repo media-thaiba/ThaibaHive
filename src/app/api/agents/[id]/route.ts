@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AgentRegistry } from "@/lib/agents/core/registry";
 import { AgentDbStore } from "@/lib/db/agent-store";
 import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const GET = requireAuth(async (req: Request, user: any, context?: any) => {
+export const GET = requireAuth(async (req: Request, session: any, context?: any) => {
   const params = await context?.params;
   const agentId = params?.id;
-  const tenantId = user?.institutionId || "global";
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });

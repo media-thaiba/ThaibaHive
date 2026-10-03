@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { VisionDbStore } from '@/lib/db/vision-store';
@@ -6,9 +7,9 @@ import { incidentUpdateSchema } from '@/lib/validation/vision-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const status = searchParams.get('status') || undefined;
   const facilityId = searchParams.get('facilityId') || undefined;
 
@@ -17,7 +18,7 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   return NextResponse.json({ incidents });
 }, 'vision:alerts:view');
 
-export const PATCH = requireAuth(async (req: Request, user: any) => {
+export const PATCH = requireAuth(async (req: Request, session: any) => {
   try {
     const { searchParams } = new URL(req.url);
     const incidentId = searchParams.get('incidentId');
@@ -31,7 +32,7 @@ export const PATCH = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
     }
 
-    const tenantId = user?.institutionId || 'global';
+    const tenantId = session?.institutionId || 'global';
     const engine = new IncidentLedgerEngine();
     const updated = await engine.transitionIncidentStatus(
       incidentId,

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FederatedAggregationServer } from '@/lib/operations/federated/fed-aggregation-server';
@@ -18,7 +19,7 @@ const trainRoundSchema = z.object({
   ),
 });
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, session) => {
   try {
     const body = await req.json();
     const parsed = trainRoundSchema.safeParse(body);

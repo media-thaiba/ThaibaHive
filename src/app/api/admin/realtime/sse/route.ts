@@ -1,9 +1,10 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { defaultStreamingService } from "../../../../../lib/realtime/realtime-streaming-service";
 import { formatSSEResponse, getSSEHeaders } from "../../../../../lib/realtime/sse-handler";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const channel = searchParams.get("channel") || "copilot_feed";
   const lastEventId = searchParams.get("lastEventId") || request.headers.get("Last-Event-ID") || undefined;

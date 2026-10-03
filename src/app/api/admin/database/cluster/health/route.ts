@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { PostgresClusterMonitor } from "@/lib/database/cluster-monitor";
 
 export const GET = requireAuth(async (_request: Request, _session) => {

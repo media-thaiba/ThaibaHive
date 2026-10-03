@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AgentKillSwitch } from "@/lib/agents/guardrails/kill-switch";
 import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const GET = requireAuth(async (req: Request, user: any) => {
-  const tenantId = user?.institutionId || "global";
+export const GET = requireAuth(async (req: Request, session: any) => {
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -20,8 +20,8 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   });
 }, "agent:workflows:view");
 
-export const POST = requireAuth(async (req: Request, user: any) => {
-  const tenantId = user?.institutionId || "global";
+export const POST = requireAuth(async (req: Request, session: any) => {
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -39,9 +39,9 @@ export const POST = requireAuth(async (req: Request, user: any) => {
   const killSwitch = AgentKillSwitch.getInstance();
 
   const authData = {
-    userId: user?.staffId || user?.userId || "unknown",
-    userRole: user?.role || "unknown",
-    sessionAuthenticatedAt: sessionAuthenticatedAt || (user?.iat ? new Date(user.iat * 1000).toISOString() : new Date().toISOString()),
+    userId: session?.staffId || session?.userId || "unknown",
+    userRole: session?.role || "unknown",
+    sessionAuthenticatedAt: sessionAuthenticatedAt || (session?.iat ? new Date(session.iat * 1000).toISOString() : new Date().toISOString()),
     confirmationText,
   };
 

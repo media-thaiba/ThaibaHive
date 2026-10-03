@@ -88,6 +88,51 @@ export async function resolveScopedInstitutionId(
 }
 
 /**
+ * Resolves request institution ID against caller session and verified memberships (B8).
+ * - admin/super_admin/system: return requested || "global"
+ * - everyone else:
+ *     - if requested is present and not in caller's verified memberships: throw TenantMismatchError (403)
+ *     - if requested is "global": throw TenantMismatchError (403)
+ *     - if requested is valid: return requested
+ *     - if requested is absent: return session.institutionId || memberships[0]
+ *     - if no memberships exist: throw TenantMismatchError (403)
+ * - Never returns "global" or a hardcoded ID for non-admins.
+ */
+export async function resolveRequestInstitution(
+  session: SessionPayload | { staffId: string; role: string; institutionId?: string | null },
+  requested?: string | null
+): Promise<string> {
+  if (session.role === "super_admin" || session.role === "admin" || session.role === "system") {
+    return requested || "global";
+  }
+
+  const memberships = await getStaffInstitutionMemberships(session.staffId);
+  const membershipSet = new Set(memberships);
+  if (session.institutionId && session.institutionId !== "global") {
+    membershipSet.add(session.institutionId);
+  }
+
+  if (requested) {
+    if (requested === "global" || !membershipSet.has(requested)) {
+      throw new TenantMismatchError(
+        `Forbidden: Actor does not belong to the requested institution (${requested}).`
+      );
+    }
+    return requested;
+  }
+
+  const primary = (session.institutionId && session.institutionId !== "global")
+    ? session.institutionId
+    : memberships[0];
+
+  if (!primary) {
+    throw new TenantMismatchError("Forbidden: User has no assigned institution.");
+  }
+
+  return primary;
+}
+
+/**
  * Resolves tenant scope for session in auth guard and middleware.
  * If hostOrSubdomain is provided, checks if it maps to one of the user's institutions.
  * If user accesses a specific subdomain they are NOT a member of => returns null (fails closed).

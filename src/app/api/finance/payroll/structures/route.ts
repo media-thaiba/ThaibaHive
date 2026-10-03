@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db, payrollSalaryStructures, eq } from "@/db";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { payrollSalaryStructureCreateSchema } from "@/lib/validation/schemas";
 import { payrollEngine } from "@/lib/finance/payroll/payroll-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get("staffId");
@@ -33,7 +33,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "finance:payroll:view");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = payrollSalaryStructureCreateSchema.safeParse(body);

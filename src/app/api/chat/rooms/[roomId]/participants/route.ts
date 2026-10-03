@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { chatParticipantAddSchema } from "@/lib/validation/schemas";
 import { sendToConnection } from "@/lib/api/realtime";
 import {

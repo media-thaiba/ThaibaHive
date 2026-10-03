@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { curriculumStore } from '@/lib/db/curriculum-store';
@@ -6,10 +7,10 @@ import { advisingMetrics } from '@/lib/operations/curriculum/telemetry/advising-
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
-  const studentId = searchParams.get('studentId') || user?.id;
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
+  const studentId = searchParams.get('studentId') || session?.staffId;
   const programCode = searchParams.get('programCode') || 'CS_BS';
 
   if (!studentId) {

@@ -1,12 +1,13 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { endowmentCampaignEngine } from '@/lib/operations/alumni/endowments/endowment-campaign-engine';
 import { alumniStore } from '@/db/alumni-store';
 import { createCampaignSchema } from '@/lib/validation/alumni-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const campaignId = url.searchParams.get('id');
 
   if (campaignId) {
@@ -21,7 +22,7 @@ export const GET = requireAuth(async (request) => {
   return NextResponse.json({ success: true, campaigns: list });
 }, 'alumni:donations:view');
 
-export const POST = requireAuth(async (request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = createCampaignSchema.safeParse(body);

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { emergencySimulateSchema } from '@/lib/validation/twin-schemas';
@@ -9,7 +10,7 @@ const graphEngine = new SpatialGraphEngine();
 const emergencyRouter = new EmergencyEvacuationRouter(graphEngine);
 const metrics = TwinMetrics.getInstance();
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = emergencySimulateSchema.safeParse(body);
@@ -18,7 +19,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
     }
 
     const { facilityId, hazardType, blockedNodeIds, blockedEdgeIds, headcountsPerNode, institutionId } = parse.data;
-    const tenantId = institutionId || user?.institutionId || 'global';
+    const tenantId = institutionId || session?.institutionId || 'global';
 
     // Setup base evacuation graph if empty
     if (graphEngine.getExitNodes().length === 0) {

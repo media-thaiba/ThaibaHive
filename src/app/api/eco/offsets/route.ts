@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { CarbonOffsetManager } from '@/lib/operations/eco/carbon/carbon-offset-manager';
@@ -5,16 +6,16 @@ import { offsetRegisterSchema, offsetRetireSchema } from '@/lib/validation/eco-s
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
   const manager = new CarbonOffsetManager();
   const balance = await manager.getOffsetBalance(tenantId);
   return NextResponse.json({ balance });
 }, 'eco:carbon:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const action = body.action || 'register';
@@ -26,7 +27,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
         return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid retire payload' }, { status: 400 });
       }
 
-      const tenantId = user?.institutionId || parsed.data.institutionId || 'global';
+      const tenantId = session?.institutionId || parsed.data.institutionId || 'global';
       const result = await manager.retireOffset(parsed.data.offsetId, parsed.data.reportingPeriod, tenantId);
       if (!result.success) {
         return NextResponse.json({ error: result.error || 'Failed to retire offset' }, { status: 400 });
@@ -39,7 +40,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
         return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid register payload' }, { status: 400 });
       }
 
-      const tenantId = user?.institutionId || parsed.data.institutionId || 'global';
+      const tenantId = session?.institutionId || parsed.data.institutionId || 'global';
       const offset = await manager.registerOffset({
         ...parsed.data,
         institutionId: tenantId,

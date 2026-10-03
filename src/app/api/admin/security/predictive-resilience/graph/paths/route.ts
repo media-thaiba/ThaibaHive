@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin Attack Path Traversal API Route
  * Sprint-042 (ARES) — ARES-020
@@ -10,7 +11,7 @@ import { ThreatGraphQueryEngine } from '@/lib/security/graph/graph-query-engine'
 import { attackPathQuerySchema } from '@/lib/validation/ares-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = attackPathQuerySchema.safeParse(body);
 

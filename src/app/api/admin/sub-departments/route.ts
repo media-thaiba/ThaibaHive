@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { subDepartments } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 export const GET = requireAuth(async () => {
   const all = await db.select().from(subDepartments).orderBy(subDepartments.name);
   return NextResponse.json({ subDepartments: all });
 }, "org:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { name, code, departmentId, description } = body;
 

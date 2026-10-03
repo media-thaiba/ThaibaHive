@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { GET, POST } from "../scheduled-jobs/route";
 import { PATCH } from "../scheduled-jobs/[id]/route";
 import { db } from "@/db";

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { neuroStore } from '@/lib/db/neuro-store';
@@ -5,9 +6,9 @@ import { jobUpdateSchema } from '@/lib/validation/neuro-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (_req, user: any, context) => {
+export const GET = requireAuth(async (_req, session: any, context) => {
   const { id } = await context!.params;
-  const tenantId = (user as any)?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session);
   const job = await neuroStore.getJobById(id, tenantId);
 
   if (!job) {
@@ -18,9 +19,9 @@ export const GET = requireAuth(async (_req, user: any, context) => {
   return NextResponse.json({ job, checkpoints });
 }, 'neuro:jobs:view');
 
-export const PATCH = requireAuth(async (req: Request, user: any, context) => {
+export const PATCH = requireAuth(async (req: Request, session: any, context) => {
   const { id } = await context!.params;
-  const tenantId = (user as any)?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session);
 
   try {
     const body = await req.json();

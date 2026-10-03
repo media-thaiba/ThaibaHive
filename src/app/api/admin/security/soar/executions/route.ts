@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Executions Query API Route
  * Sprint-040 — Administration API
@@ -10,7 +11,7 @@ import { soarOrchestrator } from '@/lib/security/soar/orchestrator';
 import { soarDbStore } from '@/lib/security/soar/soar-db-store';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const url = new URL(req.url);
     const status = url.searchParams.get('status') as any;
     const limit = parseInt(url.searchParams.get('limit') || '50', 10);

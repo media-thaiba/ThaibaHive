@@ -1,10 +1,11 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { mdmEnrolledDevices } from '@/db/schema';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { eq } from 'drizzle-orm';
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const url = new URL(request.url);
     const deviceUuid = url.searchParams.get('deviceUuid');

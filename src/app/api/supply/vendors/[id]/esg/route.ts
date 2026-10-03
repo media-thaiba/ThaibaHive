@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { SupplyDbStore } from '@/lib/db/supply-store';
@@ -8,10 +9,10 @@ export const dynamic = 'force-dynamic';
 const store = SupplyDbStore.getInstance();
 const esgEngine = EsgScoringEngine.getInstance();
 
-export const POST = requireAuth(async (req: Request, user: any, context) => {
+export const POST = requireAuth(async (req: Request, session: any, context) => {
   const { id } = await context!.params;
   try {
-    const institutionId = user?.institutionId || 'global';
+    const institutionId = session?.institutionId || 'global';
     const vendor = await store.getVendorById(id, institutionId);
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });

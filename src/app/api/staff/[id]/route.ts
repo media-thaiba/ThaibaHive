@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLog } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { autoAssignOffboardingChecklists } from "@/lib/onboarding/auto-assign";

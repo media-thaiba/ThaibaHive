@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { accessRequests, userAppAssignments, appDefaultRoles, notifications, auditLog } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { sendPushNotification } from "@/lib/notifications/push-service";
 import { eq, and } from "drizzle-orm";
 

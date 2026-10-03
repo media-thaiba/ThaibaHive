@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db, financialReconciliations, eq, desc } from "@/db";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { financialReconciliationCreateSchema } from "@/lib/validation/schemas";
 import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const institutionId = await resolveScopedInstitutionId(searchParams.get("institutionId"));

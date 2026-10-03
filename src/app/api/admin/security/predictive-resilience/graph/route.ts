@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin Threat Intelligence Graph Query Route
  * Sprint-042 (ARES) — ARES-020

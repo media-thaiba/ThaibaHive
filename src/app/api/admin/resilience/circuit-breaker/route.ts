@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { QueryCircuitBreaker } from "@/lib/resilience/query-circuit-breaker";
 
 const globalCircuitBreaker = new QueryCircuitBreaker({
@@ -21,7 +21,7 @@ export const GET = requireAuth(async () => {
   }
 }, "resilience:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: any = {};
   try {
     body = await request.json();

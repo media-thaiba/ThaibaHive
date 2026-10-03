@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { FederatedAuditAggregator, AuditSeverity } from "@/lib/federated/federated-audit-aggregator";
 
 const defaultAuditAggregator = new FederatedAuditAggregator();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get("tenantId") || undefined;
@@ -28,7 +28,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "federated:audit");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: any = {};
   try {
     body = await request.json();

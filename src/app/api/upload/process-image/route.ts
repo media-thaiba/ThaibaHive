@@ -12,7 +12,7 @@
  *   pnpm add sharp
  */
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 
 const MAX_AVATAR_SIZE = 512;
 const MAX_BANNER_WIDTH = 1920;
@@ -36,7 +36,7 @@ async function getSharp() {
 
 function _getSharpInstance(): any { return null; }
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("multipart/form-data")) {
     return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });

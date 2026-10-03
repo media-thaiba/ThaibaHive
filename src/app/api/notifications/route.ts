@@ -1,10 +1,12 @@
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and, desc } from "drizzle-orm";
 import { sendToConnection } from "@/lib/api/realtime";
 
-export const GET = requireAuth(async (_request, session) => {
+export const GET = requireAuth(async (request, session) => {
+  const { searchParams } = new URL(request.url);
+  await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const all = await db
     .select()
     .from(notifications)

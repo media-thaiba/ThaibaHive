@@ -1,12 +1,13 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { alumniEventEngine } from '@/lib/operations/alumni/events/alumni-event-engine';
 import { alumniStore } from '@/db/alumni-store';
 import { createEventSchema, registerEventRsvpSchema } from '@/lib/validation/alumni-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const chapterId = url.searchParams.get('chapterId') || undefined;
   const eventId = url.searchParams.get('id');
 

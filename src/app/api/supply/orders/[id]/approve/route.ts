@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { SupplyDbStore } from '@/lib/db/supply-store';
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 const store = SupplyDbStore.getInstance();
 const merkleAnchor = new SupplyMerkleAnchor(store);
 
-export const POST = requireAuth(async (req: Request, user: any, context) => {
+export const POST = requireAuth(async (req: Request, session: any, context) => {
   const { id } = await context!.params;
   try {
     const body = await req.json();
@@ -18,7 +19,7 @@ export const POST = requireAuth(async (req: Request, user: any, context) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid approval payload' }, { status: 400 });
     }
 
-    const institutionId = user?.institutionId || 'global';
+    const institutionId = session?.institutionId || 'global';
     const order = await store.getPurchaseOrderById(id, institutionId);
     if (!order) {
       return NextResponse.json({ error: 'Purchase order not found' }, { status: 404 });
@@ -29,8 +30,8 @@ export const POST = requireAuth(async (req: Request, user: any, context) => {
 
     // Merkle Anchor
     await merkleAnchor.anchorEvent(
-      user?.id || 'approver',
-      user?.role || 'admin',
+      session?.staffId || 'approver',
+      session?.role || 'admin',
       parsed.data.action === 'approve' ? 'requisition_approved' : 'order_rejected',
       'purchase_order',
       id,

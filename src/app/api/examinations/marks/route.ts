@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { markEntries, students } from "@thaiba/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq,  } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const examScheduleId = searchParams.get("examScheduleId");
   const doubleBlind = searchParams.get("doubleBlind") === "true";

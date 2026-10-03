@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { executiveAnalyticsQuerySchema } from "@/lib/validation/schemas";
 import { db } from "@/db";
 

@@ -1,19 +1,20 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
 import { ReconciliationEngine } from '@/lib/operations/finance/reconciliation/reconciliation-engine';
 import { reconcileStatementSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
 
   const store = FeeDbStore.getInstance();
   const batches = await store.listReconciliationBatches(institutionId);
   return NextResponse.json({ success: true, batches });
 }, 'finance:reconciliation:manage');
 
-export const POST = requireAuth(async (request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = reconcileStatementSchema.safeParse(body);

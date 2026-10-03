@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { IndexAutoTuner } from '@/lib/database/index-auto-tuner';
@@ -5,7 +6,7 @@ import { db } from '@/db';
 import { indexTuningRecommendations } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const { recommendationId } = body;

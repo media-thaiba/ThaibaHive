@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { alumniStore } from '@/db/alumni-store';
@@ -5,7 +6,7 @@ import { privacyConsentManager, ViewerRole } from '@/lib/operations/alumni/priva
 
 export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const batchYear = url.searchParams.get('batchYear') ? Number(url.searchParams.get('batchYear')) : undefined;
   const department = url.searchParams.get('department') || undefined;
   const industry = url.searchParams.get('industry') || undefined;

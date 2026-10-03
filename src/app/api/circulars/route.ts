@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { circulars, staff, staffDepartments, staffInstitutions, departments } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { circularCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, inArray, sql } from "drizzle-orm";

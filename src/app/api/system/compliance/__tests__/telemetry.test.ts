@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { GET as getTelemetry } from "../telemetry/route";
 import { GET as getViolations } from "../violations/route";
 import { PATCH as patchViolation } from "../violations/[id]/route";

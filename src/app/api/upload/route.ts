@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { uploadToDrive } from "@/lib/drive";
 import { isStorageConfigured, uploadToSupabase, checkStorageConfig } from "@/lib/storage";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";

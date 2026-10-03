@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitors, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { logActivity } from "@/lib/api/activity-log";
 import { eq } from "drizzle-orm";
 
@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
  */
 import { VisitorQrPassService } from "@/lib/visitors/qr-pass-service";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const passToken = searchParams.get("passToken") || searchParams.get("id") || searchParams.get("qrPayload");
 

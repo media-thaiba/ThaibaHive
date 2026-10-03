@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Metrics & Emergency Killswitch API Route
  * Sprint-040 — Administration API
@@ -29,7 +30,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, user: any) => {
+  requireAuth(async (req: Request, session: any) => {
     try {
       const body = await req.json();
       const enabled = !!body.enabled;
@@ -37,7 +38,7 @@ export const POST = withDPoP(
       soarOrchestrator.setEngineEnabled(enabled);
 
       soarMeshSync.publish(enabled ? 'KILLSWITCH_DEACTIVATED' : 'KILLSWITCH_ACTIVATED', {
-        actor: user?.userId || 'admin',
+        actor: session?.userId || 'admin',
         enabled,
       });
 

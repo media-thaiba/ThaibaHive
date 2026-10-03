@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { GET, POST } from "../snapshots/route";
 
 jest.mock("@/lib/auth/require-auth", () => ({

@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import {
   registerSSEConnection,
   unregisterSSEConnection,

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { curriculumStore } from '@/lib/db/curriculum-store';
@@ -7,11 +8,11 @@ import { advisingMerkleAnchor } from '@/lib/operations/curriculum/security/advis
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const planId = searchParams.get('planId') || undefined;
-  const studentId = searchParams.get('studentId') || user?.id || undefined;
+  const studentId = searchParams.get('studentId') || session?.staffId || undefined;
 
   if (planId) {
     const plan = await curriculumStore.getDegreePlan(planId, tenantId);
@@ -27,7 +28,7 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   return NextResponse.json({ error: 'Missing planId or studentId parameter' }, { status: 400 });
 }, 'curriculum:plans:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = planCreateSchema.safeParse(body);
@@ -35,7 +36,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
     }
 
-    const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const { courses: _courses, ...planData } = parsed.data;
 
     // Create plan header
@@ -63,13 +64,13 @@ export const POST = requireAuth(async (req: Request, user: any) => {
   }
 }, 'curriculum:plans:edit');
 
-export const PATCH = requireAuth(async (req: Request, user: any) => {
+export const PATCH = requireAuth(async (req: Request, session: any) => {
   try {
     const { searchParams } = new URL(req.url);
     const planId = searchParams.get('planId');
     if (!planId) return NextResponse.json({ error: 'Missing planId parameter' }, { status: 400 });
 
-    const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
     const body = await req.json();
     const parsed = planApprovalSchema.safeParse(body);
     if (!parsed.success) {
@@ -82,8 +83,8 @@ export const PATCH = requireAuth(async (req: Request, user: any) => {
         auditId: `audit_plan_${Date.now()}`,
         actionType: 'plan_approved',
         planId,
-        performedByUserId: user?.id || 'advisor',
-        actorRole: user?.role || 'staff',
+        performedByUserId: session?.staffId || 'advisor',
+        actorRole: session?.role || 'staff',
         justification: parsed.data.justification || 'Degree plan approved by advisor',
         auditTimestamp: new Date().toISOString(),
       });
@@ -93,7 +94,7 @@ export const PATCH = requireAuth(async (req: Request, user: any) => {
     const updated = await curriculumStore.updateDegreePlanStatus(
       planId,
       parsed.data.status,
-      parsed.data.advisorId || user?.id,
+      parsed.data.advisorId || session?.staffId,
       auditHash,
       tenantId
     );

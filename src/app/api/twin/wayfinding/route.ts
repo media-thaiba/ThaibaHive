@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { wayfindingRouteSchema } from '@/lib/validation/twin-schemas';
@@ -7,7 +8,7 @@ import { TwinDbStore } from '@/lib/db/twin-store';
 const store = TwinDbStore.getInstance();
 const graphEngine = new SpatialGraphEngine();
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = wayfindingRouteSchema.safeParse(body);
@@ -16,7 +17,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
     }
 
     const { facilityId, sourceNodeId, targetNodeId, requireStepFree, institutionId } = parse.data;
-    const tenantId = institutionId || user?.institutionId || 'global';
+    const tenantId = institutionId || session?.institutionId || 'global';
 
     // Populate graph with DB nodes & edges
     const dbNodes = await store.listWayfindingNodes(tenantId, facilityId);

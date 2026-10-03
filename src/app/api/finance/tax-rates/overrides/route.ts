@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db, taxRateOverrides, eq, desc } from "@/db";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { taxRateOverrideCreateSchema } from "@/lib/validation/schemas";
 import { taxRateEngine } from "@/lib/finance/tax/tax-rate-engine";
 import { resolveInstitutionId, resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const institutionId = await resolveInstitutionId(searchParams.get("institutionId"));

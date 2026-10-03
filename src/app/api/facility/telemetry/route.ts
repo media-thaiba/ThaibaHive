@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { sensorIngestionGateway } from '@/lib/operations/facility/ingestion/sensor-ingestion-gateway';
@@ -9,13 +10,13 @@ import { telemetryBatchSchema, telemetryPacketSchema } from '@/lib/validation/fa
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   const startTime = Date.now();
   try {
     const body = await req.json();
 
     let packets: any[] = [];
-    let institutionId = user?.institutionId || 'global';
+    let institutionId = session?.institutionId || 'global';
 
     if (body.packets && Array.isArray(body.packets)) {
       const parsedBatch = telemetryBatchSchema.safeParse(body);

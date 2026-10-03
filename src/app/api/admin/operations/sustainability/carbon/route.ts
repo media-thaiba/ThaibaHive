@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
@@ -6,7 +7,7 @@ import { EsgReportGenerator } from '@/lib/operations/sustainability/esg-report-g
 import { CarbonReductionPlanner } from '@/lib/operations/sustainability/carbon-reduction-planner';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
     const campusId = searchParams.get('campusId') || 'campus_main';
 

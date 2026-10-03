@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin Threat Intelligence Feeds API Route
  * Sprint-039 / TIF-013

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
@@ -5,9 +6,9 @@ import { FeeStructureEngine } from '@/lib/operations/finance/fee-structure-engin
 import { InstallmentFineEngine } from '@/lib/operations/finance/installment-fine-engine';
 import { allocateFeeSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const studentId = url.searchParams.get('studentId') || undefined;
 
   const store = FeeDbStore.getInstance();
@@ -20,7 +21,7 @@ export const GET = requireAuth(async (request) => {
   return NextResponse.json({ success: true, allocations: list });
 }, 'finance:fees:view');
 
-export const POST = requireAuth(async (request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = allocateFeeSchema.safeParse(body);

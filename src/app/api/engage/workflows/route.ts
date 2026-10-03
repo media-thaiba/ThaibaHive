@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { engageWorkflowCreateSchema } from '@/lib/validation/engage-schemas';
@@ -14,7 +15,7 @@ export const GET = requireAuth(async () => {
   }
 }, 'engage:workflow:manage');
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parse = engageWorkflowCreateSchema.safeParse(body);

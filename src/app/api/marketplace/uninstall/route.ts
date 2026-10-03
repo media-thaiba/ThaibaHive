@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { userAppAssignments, marketplaceApps, auditLog } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
 export const DELETE = requireAuth(async (request: Request, session) => {

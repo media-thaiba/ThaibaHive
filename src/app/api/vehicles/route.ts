@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { vehicles, institutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { vehicleCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc } from "drizzle-orm";
 
-export const GET = requireAuth(async () => {
-  const all = await db
+export const GET = requireAuth(async (request: Request, session) => {
+  const url = new URL(request.url);
+  const requestedInst = url.searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
+
+  let query = db
     .select({
       id: vehicles.id,
       registrationNumber: vehicles.registrationNumber,
@@ -20,13 +24,18 @@ export const GET = requireAuth(async () => {
     })
     .from(vehicles)
     .leftJoin(institutions, eq(vehicles.institutionId, institutions.id))
-    .orderBy(desc(vehicles.createdAt))
-    .all();
+    .$dynamic();
+
+  if (scopedInstId !== "global") {
+    query = query.where(eq(vehicles.institutionId, scopedInstId));
+  }
+
+  const all = await query.orderBy(desc(vehicles.createdAt)).all();
 
   return NextResponse.json({ vehicles: all });
 }, "vehicles:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const parsed = vehicleCreateSchema.safeParse(body);
   if (!parsed.success) {

@@ -1,12 +1,13 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { requireAuth } from '@/lib/api/auth-guard';
 import { advisingStream } from '@/lib/operations/curriculum/streaming/advising-stream-manager';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get('sessionId');
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
   const encoder = new TextEncoder();
 

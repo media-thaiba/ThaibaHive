@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { tasks, staff, staffDepartments, departments, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { taskCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -18,7 +18,7 @@ export const GET = requireAuth(async (request, session) => {
   });
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
   let query = db
     .select({

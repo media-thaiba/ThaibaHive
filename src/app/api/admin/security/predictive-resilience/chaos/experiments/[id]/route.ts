@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin Chaos Experiment Detail Route
  * Sprint-042 (ARES) — ARES-020

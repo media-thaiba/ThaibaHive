@@ -1,11 +1,12 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
 import { createFeeStructureSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const academicYear = url.searchParams.get('academicYear') || undefined;
 
   const store = FeeDbStore.getInstance();

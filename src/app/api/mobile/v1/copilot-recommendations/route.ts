@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { aiCopilotRecommendations } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const tenantId = searchParams.get("tenantId") || "inst_101";
 

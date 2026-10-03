@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { afedPrivacyBudgetResetSchema } from '@/lib/validation/schemas';
@@ -6,7 +7,7 @@ import { AfedAuditLogger } from '@/lib/operations/persistence/afed-audit-events'
 
 const dbStore = AfedDbStore.getInstance();
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parse = afedPrivacyBudgetResetSchema.safeParse(body);

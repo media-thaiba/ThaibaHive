@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { studentEnquiries, institutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, desc, and } from "drizzle-orm";
 
 const ALLOWED_ENQUIRY_STATUSES = new Set(["pending", "under_review", "admitted", "rejected"]);

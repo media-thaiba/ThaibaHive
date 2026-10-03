@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { pushTokenSchema } from "@/lib/validation/schemas";
 import { db } from "@/db";
 import { pushNotificationTokens } from "@thaiba/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
-  return requireAuth(async (req, user) => {
+  return requireAuth(async (req: Request, session) => {
     try {
       const body = await req.json();
       const parseResult = pushTokenSchema.safeParse(body);
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
           await db
             .update(pushNotificationTokens)
             .set({
-              userId: user.staffId,
+              userId: session.staffId,
               platform,
               deviceModel: deviceModel || existing[0].deviceModel,
               isActive: true,
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         } else {
           await db.insert(pushNotificationTokens).values({
             id: tokenId,
-            userId: user.staffId,
+            userId: session.staffId,
             token,
             platform,
             deviceModel: deviceModel || "Unknown Mobile Device",
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  return requireAuth(async (req, user) => {
+  return requireAuth(async (req: Request, session) => {
     try {
       const { searchParams } = new URL(req.url);
       const token = searchParams.get("token");
@@ -87,7 +87,7 @@ export async function DELETE(req: NextRequest) {
           .where(
             and(
               eq(pushNotificationTokens.token, token),
-              eq(pushNotificationTokens.userId, user.staffId)
+              eq(pushNotificationTokens.userId, session.staffId)
             )
           )
           .limit(1);

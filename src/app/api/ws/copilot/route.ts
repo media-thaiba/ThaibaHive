@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { wsClientManager } from '@/lib/operations/km/streaming/ws-client-manager';
@@ -5,11 +6,11 @@ import { edgeWebSocketServer } from '@/lib/operations/km/streaming/edge-websocke
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request) => {
+export const GET = requireAuth(async (req: Request, session) => {
   const url = new URL(req.url);
   const userId = url.searchParams.get('userId') || 'guest_user';
   const role = url.searchParams.get('role') || 'student';
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
 
   // For HTTP/SSE fallback or healthcheck
   return NextResponse.json({
@@ -22,7 +23,7 @@ export const GET = requireAuth(async (req: Request) => {
   });
 }, 'km:knowledge:search');
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, session) => {
   try {
     const body = await req.json();
     const connectionId = body.connectionId || `conn_${Date.now()}`;

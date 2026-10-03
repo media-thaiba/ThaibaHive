@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { staffDeviceTokens, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";

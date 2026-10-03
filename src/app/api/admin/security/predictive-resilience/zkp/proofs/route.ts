@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin ZKP Proofs List Route
  * Sprint-042 (ARES) — ARES-020

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { assetCreateSchema } from '@/lib/validation/twin-schemas';
@@ -6,14 +7,14 @@ import { SpatialPrivacyShield } from '@/lib/operations/twin/security/spatial-pri
 
 const store = TwinDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request, user: any) => {
+export const GET = requireAuth(async (request: Request, session: any) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
     const facilityId = searchParams.get('facilityId') || undefined;
 
     const assets = await store.listAssets(tenantId, facilityId);
-    const userRole = user?.role || 'student';
+    const userRole = session?.role || 'student';
 
     const sanitized = assets.map((a) => {
       let coords = { x: 0, y: 0, z: 0 };

@@ -1,12 +1,12 @@
 import {  } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
 import { RegionalBenchmarkingService } from "@/lib/regional/regional-benchmarking-service";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const regionalGroupId = url.searchParams.get("regionalGroupId") || "rg_default";
   const metricDomain = (url.searchParams.get("metricDomain") || "all") as any;

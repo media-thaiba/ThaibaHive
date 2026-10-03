@@ -1,9 +1,10 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { exportStreamSchema } from '@/lib/validation/docgen-schemas';
 import { UniversalExportEngine } from '@/lib/operations/docgen/export/universal-export-engine';
 
-export const POST = requireAuth(async (request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = exportStreamSchema.safeParse(body);

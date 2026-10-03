@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { polls, pollResponses, staffDepartments, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and, or, isNull, inArray } from "drizzle-orm";
 import type { StaffRole } from "@/types";
 

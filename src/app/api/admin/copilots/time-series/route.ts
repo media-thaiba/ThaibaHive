@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { timeSeriesQuerySchema } from "@/lib/validation/schemas";
 import { timeSeriesDecompositionEngine } from "@/lib/services/time-series-decomposition-engine";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const campusId = searchParams.get("campusId") || "inst_101";
   const granularity = (searchParams.get("granularity") || "monthly") as "monthly" | "quarterly" | "weekly";

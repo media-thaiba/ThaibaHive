@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { generateExecutiveBriefing } from "@/lib/ai/executive-summarizer";
 import { getUserInstitutionScope } from "@/lib/auth";
 

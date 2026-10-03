@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { facilityStore } from '@/lib/db/facility-store';
@@ -7,9 +8,9 @@ import { workOrderCreateSchema, workOrderTransitionSchema } from '@/lib/validati
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const status = (searchParams.get('status') as any) || undefined;
   const priority = (searchParams.get('priority') as any) || undefined;
 
@@ -17,13 +18,13 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   return NextResponse.json({ workOrders });
 }, 'facility:workorders:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
 
     // Check if auto-creating from anomaly alert
     if (body.anomalyAlertId && !body.title) {
-      const tenantId = body.institutionId || user?.institutionId || 'global';
+      const tenantId = body.institutionId || session?.institutionId || 'global';
       const created = await workOrderEngine.autoCreateFromAnomaly(body.anomalyAlertId, tenantId);
       if (!created) {
         return NextResponse.json({ error: `Anomaly alert '${body.anomalyAlertId}' not found` }, { status: 404 });
@@ -36,7 +37,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid work order payload' }, { status: 400 });
     }
 
-    const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const woNumber = parsed.data.workOrderNumber || `WO-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const workOrder = await facilityStore.createWorkOrder({
@@ -58,7 +59,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
   }
 }, 'facility:workorders:create');
 
-export const PATCH = requireAuth(async (req: Request, user: any) => {
+export const PATCH = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = workOrderTransitionSchema.safeParse(body);
@@ -66,14 +67,14 @@ export const PATCH = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid transition payload' }, { status: 400 });
     }
 
-    const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const transitionRes = await workOrderEngine.transitionState(
       {
         workOrderNumber: parsed.data.workOrderNumber,
         fromStatus: parsed.data.fromStatus,
         toStatus: parsed.data.toStatus,
-        actorId: user?.staffId || 'admin_user',
-        actorRole: user?.role || 'staff',
+        actorId: session?.staffId || 'admin_user',
+        actorRole: session?.role || 'staff',
         notes: parsed.data.notes,
         technicianSignature: parsed.data.technicianSignature,
         actualDurationMinutes: parsed.data.actualDurationMinutes,

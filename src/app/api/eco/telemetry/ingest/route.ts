@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { EnergyTelemetryIngester } from '@/lib/operations/eco/telemetry/energy-telemetry-ingester';
@@ -5,7 +6,7 @@ import { energyTelemetryIngestSchema } from '@/lib/validation/eco-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = energyTelemetryIngestSchema.safeParse(body);
@@ -13,7 +14,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid telemetry payload' }, { status: 400 });
     }
 
-    const tenantId = user?.institutionId || parsed.data.institutionId || 'global';
+    const tenantId = session?.institutionId || parsed.data.institutionId || 'global';
     const ingester = EnergyTelemetryIngester.getInstance();
 
     const telemetry = {

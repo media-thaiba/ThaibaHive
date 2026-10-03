@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { activityLogs, staffDepartments } from "@thaiba/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -8,6 +8,8 @@ export const GET = requireAuth(async (request, session) => {
   await pruneOldLogs();
 
   const url = new URL(request.url);
+  const requestedInst = url.searchParams.get("institutionId");
+  await resolveRequestInstitution(session, requestedInst);
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10)));
   const offset = (page - 1) * limit;

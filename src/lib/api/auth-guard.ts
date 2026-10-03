@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySession, resolveInstitutionScopeForSession, type SessionPayload, hasPermission } from "@thaiba/auth";
+import { verifySession, resolveInstitutionScopeForSession, type SessionPayload, hasPermission, TenantMismatchError } from "@thaiba/auth";
 import type { StaffRole } from "@/types";
 import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
@@ -196,6 +196,25 @@ export function requireAuth(
 
       return response;
     } catch (error) {
+      if (
+        error instanceof TenantMismatchError ||
+        (error instanceof Error && (error.name === "TenantMismatchError" || error.message.startsWith("Forbidden:")))
+      ) {
+        const forbiddenMsg = error instanceof Error ? error.message : "Forbidden";
+        console.warn(
+          JSON.stringify({
+            event: "tenant_mismatch_blocked",
+            staffId: session.staffId,
+            role: session.role,
+            url: request.url,
+            error: forbiddenMsg,
+            timestamp: new Date().toISOString(),
+          })
+        );
+        recordApm(403);
+        return NextResponse.json({ error: forbiddenMsg }, { status: 403 });
+      }
+
       recordApm(500);
       const errorMsg = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
@@ -213,3 +232,5 @@ export function requireAuth(
     }
   };
 }
+
+export { resolveRequestInstitution, resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";

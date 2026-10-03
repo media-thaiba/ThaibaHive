@@ -1,12 +1,12 @@
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AgentMetricsExporter } from "@/lib/agents/telemetry/metrics-exporter";
 import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get("tenantId") || user?.institutionId || "global";
+  const tenantId = searchParams.get("tenantId") || session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return new Response("Agentic workflows feature is disabled\n", { status: 403 });

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { SupplyDbStore } from '@/lib/db/supply-store';
@@ -15,7 +16,7 @@ const encumbranceEngine = BudgetEncumbranceEngine.getInstance();
 const merkleAnchor = new SupplyMerkleAnchor(store);
 const streamManager = SupplyStreamManager.getInstance();
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = invoiceMatchSchema.safeParse(body);
@@ -24,7 +25,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
     }
 
     // Tenant scope is server-resolved by requireAuth; client-body institutionId is never trusted.
-    const institutionId = user?.institutionId || 'global';
+    const institutionId = session?.institutionId || 'global';
     
     // 1. Run 3-Way Reconciliation
     const evaluation = matchingEngine.reconcileDocuments(
@@ -75,8 +76,8 @@ export const POST = requireAuth(async (req: Request, user: any) => {
 
     // 4. Merkle Anchor
     await merkleAnchor.anchorEvent(
-      user?.id || 'system-matcher',
-      user?.role || 'admin',
+      session?.staffId || 'system-matcher',
+      session?.role || 'admin',
       'three_way_matched',
       'three_way_match',
       matchId,

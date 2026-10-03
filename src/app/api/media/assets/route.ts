@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { mediaAssetCreateSchema } from "@/lib/validation/schemas";
 import { eq, asc, and, like, or, sql } from "drizzle-orm";

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin ZKP Proof Generation Route
  * Sprint-042 (ARES) — ARES-020
@@ -12,7 +13,7 @@ import { AresAuditLogger } from '@/lib/security/ares/ares-audit-events';
 import { zkpGenerateProofSchema } from '@/lib/validation/ares-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = zkpGenerateProofSchema.safeParse(body);
 

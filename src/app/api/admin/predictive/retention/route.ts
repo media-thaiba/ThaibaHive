@@ -1,8 +1,9 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { defaultRetentionPredictor } from "../../../../../lib/predictive/student-retention-predictor";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const campusId = searchParams.get("campusId") || "inst-001";
 

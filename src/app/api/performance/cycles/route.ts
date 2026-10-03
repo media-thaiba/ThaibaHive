@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceCycles, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { performanceCycleCreateSchema } from "@/lib/validation/schemas";
 import { eq, inArray, and } from "drizzle-orm";
 

@@ -1,6 +1,7 @@
 import {
   resolveInstitutionScopeForSession,
   resolveScopedInstitutionId,
+  resolveRequestInstitution,
   TenantMismatchError,
 } from "../institution-scope";
 import { db, staff, institutions, staffInstitutions } from "@thaiba/db";
@@ -149,6 +150,84 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
 
       expect(await resolveScopedInstitutionId(instGamma, session)).toBe(instGamma);
       expect(await resolveScopedInstitutionId(null, session)).toBe("global");
+    });
+  });
+
+  describe("resolveRequestInstitution (Blocker B8)", () => {
+    it("should return requested institution or global for super_admin / admin / system", async () => {
+      const adminSession = {
+        staffId: staffAdmin,
+        role: "super_admin",
+        email: "admin@test.com",
+        employeeId: "EMP_ADM",
+        name: "Admin",
+        tokenVersion: 1,
+      };
+
+      expect(await resolveRequestInstitution(adminSession, instGamma)).toBe(instGamma);
+      expect(await resolveRequestInstitution(adminSession, null)).toBe("global");
+      expect(await resolveRequestInstitution(adminSession, undefined)).toBe("global");
+    });
+
+    it("should throw TenantMismatchError if unmapped staff calls resolveRequestInstitution", async () => {
+      const unmappedSession = {
+        staffId: staffUnmapped,
+        role: "staff",
+        email: "unmapped@test.com",
+        employeeId: "EMP_UNM",
+        name: "Unmapped",
+        tokenVersion: 1,
+      };
+
+      await expect(resolveRequestInstitution(unmappedSession, null)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveRequestInstitution(unmappedSession, instAlpha)).rejects.toThrow(TenantMismatchError);
+    });
+
+    it("should throw TenantMismatchError if non-admin staff requests an institution they are not a member of", async () => {
+      const alphaSession = {
+        staffId: staffAlpha,
+        role: "staff",
+        email: "alpha@test.com",
+        employeeId: "EMP_ALP",
+        name: "Alpha",
+        tokenVersion: 1,
+        institutionId: instAlpha,
+      };
+
+      await expect(resolveRequestInstitution(alphaSession, instBeta)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveRequestInstitution(alphaSession, instGamma)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveRequestInstitution(alphaSession, "global")).rejects.toThrow(TenantMismatchError);
+    });
+
+    it("should return caller institution when requested is omitted or matches membership", async () => {
+      const alphaSession = {
+        staffId: staffAlpha,
+        role: "staff",
+        email: "alpha@test.com",
+        employeeId: "EMP_ALP",
+        name: "Alpha",
+        tokenVersion: 1,
+        institutionId: instAlpha,
+      };
+
+      expect(await resolveRequestInstitution(alphaSession, null)).toBe(instAlpha);
+      expect(await resolveRequestInstitution(alphaSession, undefined)).toBe(instAlpha);
+      expect(await resolveRequestInstitution(alphaSession, instAlpha)).toBe(instAlpha);
+    });
+
+    it("should allow multi-institution staff to request any of their valid institutions", async () => {
+      const multiSession = {
+        staffId: staffMulti,
+        role: "staff",
+        email: "multi@test.com",
+        employeeId: "EMP_MUL",
+        name: "Multi",
+        tokenVersion: 1,
+      };
+
+      expect(await resolveRequestInstitution(multiSession, instAlpha)).toBe(instAlpha);
+      expect(await resolveRequestInstitution(multiSession, instBeta)).toBe(instBeta);
+      await expect(resolveRequestInstitution(multiSession, instGamma)).rejects.toThrow(TenantMismatchError);
     });
   });
 });

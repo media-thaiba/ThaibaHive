@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { copilotQuerySchema } from "@/lib/validation/schemas";
 import { academicAdvisorAgent } from "@/lib/services/academic-advisor-agent";
 import { financialControllerAgent } from "@/lib/services/financial-controller-agent";
 import { complianceAuditorAgent } from "@/lib/services/compliance-auditor-agent";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: unknown = {};
   try {
     const text = await request.text();

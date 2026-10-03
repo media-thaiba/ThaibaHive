@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Manual Execution Trigger API Route
  * Sprint-040 — Administration API
@@ -16,7 +17,7 @@ import { registerBuiltinActions } from '@/lib/security/soar/actions';
 registerBuiltinActions();
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, user: any) => {
+  requireAuth(async (req: Request, session: any) => {
     try {
       const body = await req.json();
       const parsed = ManualTriggerRequestSchema.safeParse(body);
@@ -37,7 +38,7 @@ export const POST = withDPoP(
         playbook,
         payload,
         { type: target_type, value: target_value },
-        { actorId: user?.userId || 'admin' }
+        { actorId: session?.userId || 'admin' }
       );
 
       // Async save to database

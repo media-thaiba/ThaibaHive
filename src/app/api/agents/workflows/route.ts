@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AgentDbStore } from "@/lib/db/agent-store";
 import { parseWorkflowDsl } from "@/lib/agents/workflow/dsl/parser";
 import { validateWorkflowDsl } from "@/lib/agents/workflow/dsl/validator";
@@ -7,8 +7,8 @@ import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const GET = requireAuth(async (req: Request, user: any) => {
-  const tenantId = user?.institutionId || "global";
+export const GET = requireAuth(async (req: Request, session: any) => {
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -26,8 +26,8 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   });
 }, "agent:workflows:view");
 
-export const POST = requireAuth(async (req: Request, user: any) => {
-  const tenantId = user?.institutionId || "global";
+export const POST = requireAuth(async (req: Request, session: any) => {
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -67,7 +67,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
     version: dsl.version || 1,
     definitionJson: JSON.stringify(dsl),
     status: "active",
-    createdBy: user?.staffId || user?.userId || "system",
+    createdBy: session?.staffId || session?.userId || "system",
   });
 
   return NextResponse.json({ workflow: created }, { status: 201 });

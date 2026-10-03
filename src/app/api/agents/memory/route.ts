@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AgentMemoryStore } from "@/lib/agents/memory/memory-store";
 import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const GET = requireAuth(async (req: Request, user: any) => {
-  const tenantId = user?.institutionId || "global";
+export const GET = requireAuth(async (req: Request, session: any) => {
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -38,8 +38,8 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   });
 }, "agent:memory:view");
 
-export const POST = requireAuth(async (req: Request, user: any) => {
-  const tenantId = user?.institutionId || "global";
+export const POST = requireAuth(async (req: Request, session: any) => {
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });

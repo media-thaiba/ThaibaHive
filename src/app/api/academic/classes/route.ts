@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { classes, academicYears, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, like, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
-  const institutionId = url.searchParams.get("institutionId");
+  const requestedInst = url.searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, requestedInst);
   const departmentId = url.searchParams.get("departmentId");
 
   const conditions = [eq(classes.isActive, true)];
   if (search) {
     conditions.push(like(classes.name, `%${search}%`));
   }
-  if (institutionId) {
+  if (institutionId && institutionId !== "global") {
     conditions.push(eq(classes.institutionId, institutionId));
   }
   if (departmentId) {
@@ -43,7 +44,7 @@ export const GET = requireAuth(async (request) => {
   return NextResponse.json({ classes: rows });
 }, "classes:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { name, section, institutionId, departmentId, academicYearId, teacherId } = body;
 

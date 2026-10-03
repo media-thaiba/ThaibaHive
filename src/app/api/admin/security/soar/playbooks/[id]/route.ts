@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Single Playbook Management API Route
  * Sprint-040 — Administration API

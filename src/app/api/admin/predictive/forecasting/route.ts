@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { defaultEnrollmentForecaster } from "../../../../../lib/predictive/enrollment-forecasting-engine";

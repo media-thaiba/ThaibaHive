@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { POST } from "../route";
 import { db } from "@/db";
 import type { NextRequest } from "next/server";

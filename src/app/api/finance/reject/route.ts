@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { POST as approveHandler } from "../approve/route";
 
 export const POST = requireAuth(async (request: Request, session: any) => {

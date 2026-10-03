@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { RegionHealthManager } from "@/lib/mesh/region-health";
 
 export const GET = requireAuth(async (_request: Request, _session) => {

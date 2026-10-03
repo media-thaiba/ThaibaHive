@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { DatabaseIndexTuner } from "@/lib/resilience/database-index-tuner";
 import { QueryMetricsCollector } from "@/lib/resilience/query-metrics-collector";
 
 const globalMetricsCollector = new QueryMetricsCollector();
 const globalIndexTuner = new DatabaseIndexTuner(globalMetricsCollector);
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get("tenantId") || "tenant-main";
@@ -23,7 +23,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "resilience:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: any = {};
   try {
     body = await request.json();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { students } from "@thaiba/db/schema";
 import { eq, and,  } from "drizzle-orm";
@@ -25,15 +25,16 @@ const studentCreateSchema = z.object({
   qrCode: z.string().optional(),
 });
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const institutionId = searchParams.get("institutionId") || undefined;
+  const requestedInst = searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, requestedInst);
   const classId = searchParams.get("classId") || undefined;
   const limit = Math.min(Number(searchParams.get("limit") || "20"), 100);
   const offset = Number(searchParams.get("offset") || "0");
 
   const conditions = [];
-  if (institutionId) conditions.push(eq(students.institutionId, institutionId));
+  if (institutionId && institutionId !== "global") conditions.push(eq(students.institutionId, institutionId));
   if (classId) conditions.push(eq(students.classId, classId));
 
   const query = conditions.length > 0

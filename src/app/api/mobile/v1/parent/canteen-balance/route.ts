@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenMealPasses, canteenTransactions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -35,7 +35,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   });
 }, "canteen:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { studentId, dietaryFlags } = body;
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { studentAttendanceLogs, attendanceRegister, classes,  } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -15,7 +15,7 @@ const bulkAttendanceSchema = z.object({
   })).min(1),
 });
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const parsed = bulkAttendanceSchema.safeParse(body);
 
@@ -69,8 +69,7 @@ export const POST = requireAuth(async (request: Request) => {
     .from(studentAttendanceLogs)
     .where(and(
       eq(studentAttendanceLogs.classId, classId),
-      eq(studentAttendanceLogs.date, date),
-    ))
+      eq(studentAttendanceLogs.date, date)))
     .groupBy(studentAttendanceLogs.status)
     .all();
 

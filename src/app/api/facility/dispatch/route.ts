@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { facilityStore } from '@/lib/db/facility-store';
@@ -6,10 +7,10 @@ import { ContractorDispatcher } from '@/lib/operations/facility/workorders/contr
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
-    const tenantId = body.institutionId || user?.institutionId || 'global';
+    const tenantId = body.institutionId || session?.institutionId || 'global';
     const { workOrderNumber, equipmentId, targetLocation, requiredSkill, candidates, dispatchExternalContractor } = body;
 
     // External contractor dispatch option

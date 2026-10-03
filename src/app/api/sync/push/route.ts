@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { processSyncPush } from "@/lib/sync/sync-engine-service";
 import { syncPushPayloadSchema } from "@/lib/validation/schemas";
 import { getUserInstitutionScope } from "@/lib/auth";

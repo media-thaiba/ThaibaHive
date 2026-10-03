@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, taxJurisdictions, desc } from "@/db";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { taxJurisdictionCreateSchema } from "@/lib/validation/schemas";
 import { taxRateEngine } from "@/lib/finance/tax/tax-rate-engine";
 
@@ -17,7 +17,7 @@ export const GET = requireAuth(async () => {
   }
 }, "finance:tax:view");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = taxJurisdictionCreateSchema.safeParse(body);

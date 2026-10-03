@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { CarbonAccountingEngine } from '@/lib/operations/eco/carbon/carbon-accounting-engine';
@@ -5,7 +6,7 @@ import { carbonCalculateSchema } from '@/lib/validation/eco-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, session) => {
   try {
     const body = await req.json();
     const parsed = carbonCalculateSchema.safeParse(body);

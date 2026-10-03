@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { EcoDbStore } from '@/lib/db/eco-store';
@@ -5,16 +6,16 @@ import { esgReportCreateSchema } from '@/lib/validation/eco-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
   const store = EcoDbStore.getInstance();
   const reports = await store.listEsgReports(tenantId);
   return NextResponse.json({ reports });
 }, 'eco:carbon:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = esgReportCreateSchema.safeParse(body);
@@ -22,13 +23,13 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid ESG report payload' }, { status: 400 });
     }
 
-    const tenantId = user?.institutionId || parsed.data.institutionId || 'global';
+    const tenantId = session?.institutionId || parsed.data.institutionId || 'global';
     const store = EcoDbStore.getInstance();
     const report = await store.createEsgReport({
       ...parsed.data,
       status: 'published',
       publishedAt: new Date().toISOString(),
-      signedByUserId: user?.id || 'admin_user',
+      signedByUserId: session?.staffId || 'admin_user',
       institutionId: tenantId,
     });
 

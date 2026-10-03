@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { presence } from "@thaiba/db/schema";
 import { logActivity } from "@/lib/api/activity-log";

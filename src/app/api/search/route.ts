@@ -1,7 +1,7 @@
 /* Global Search API Route - P4-101 - Main Entry Point */
 
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { globalSearchSchema } from "@/lib/validation/schemas";
 import { globalSearch } from "@/lib/api/global-search/service";
 

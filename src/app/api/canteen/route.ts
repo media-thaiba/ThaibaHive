@@ -1,32 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mealNotifications, staff, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { canteenCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
+  const requestedInst = url.searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
   const date = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
 
   const conditions = [eq(mealNotifications.date, date)];
 
-  if (session.role !== "super_admin" && session.role !== "admin") {
-    const userInst = await db
-      .select({ institutionId: staffInstitutions.institutionId })
-      .from(staffInstitutions)
-      .where(eq(staffInstitutions.staffId, session.staffId))
-      .all();
-    const userInstIds = userInst.map((i) => i.institutionId);
-    if (userInstIds.length > 0) {
-      const instStaff = await db
-        .select({ sid: staffInstitutions.staffId })
-        .from(staffInstitutions)
-        .where(inArray(staffInstitutions.institutionId, userInstIds))
-        .all();
-      conditions.push(inArray(mealNotifications.staffId, [...new Set(instStaff.map((s) => s.sid))]));
-    }
+  if (scopedInstId !== "global") {
+    conditions.push(eq(mealNotifications.institutionId, scopedInstId));
   }
 
   const notifications = await db

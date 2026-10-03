@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, leaveRequests, tasks, dailyReports, staffRecognition, expenseClaims } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq, desc } from "drizzle-orm";
 

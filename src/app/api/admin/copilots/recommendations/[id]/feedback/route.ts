@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { copilotFeedbackSchema } from "@/lib/validation/schemas";
 import { agentReasoningEngine } from "@/lib/services/agent-reasoning-engine";
 import type { SessionPayload } from "@/lib/auth";

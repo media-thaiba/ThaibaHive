@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams,  } from "@thaiba/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { examCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -10,7 +10,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const status = searchParams.get("status");
   const academicYear = searchParams.get("academicYear");
   const term = searchParams.get("term");
-  const institutionId = searchParams.get("institutionId") || (session as any).institutionId || "inst_campus_main";
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
   const pagination = paginationSchema.parse({
     page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
@@ -19,12 +19,15 @@ export const GET = requireAuth(async (request: Request, session) => {
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
 
-  const conditions = [eq(exams.institutionId, institutionId)];
+  const conditions = [];
+  if (institutionId !== "global") {
+    conditions.push(eq(exams.institutionId, institutionId));
+  }
   if (status) conditions.push(eq(exams.status, status));
   if (academicYear) conditions.push(eq(exams.academicYear, academicYear));
   if (term) conditions.push(eq(exams.term, term));
 
-  const whereClause = and(...conditions);
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const countResult = await db
     .select({ count: sql<number>`count(*)` })
@@ -54,7 +57,10 @@ export const POST = requireAuth(async (request: Request, session) => {
     const body = await request.json();
     const parsed = examCreateSchema.parse(body);
 
-    const institutionId = parsed.institutionId || (session as any).institutionId || "inst_campus_main";
+    const institutionId = await resolveRequestInstitution(session, parsed.institutionId);
+    if (institutionId === "global") {
+      return NextResponse.json({ error: "Explicit institutionId required for exam creation" }, { status: 400 });
+    }
     const examId = `exam_${Date.now()}`;
 
     const newExam = {

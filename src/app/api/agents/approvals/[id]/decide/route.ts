@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { ApprovalGateEngine } from "@/lib/agents/approvals/approval-engine";
 import { isAgenticWorkflowsEnabled } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
-export const POST = requireAuth(async (req: Request, user: any, context?: any) => {
+export const POST = requireAuth(async (req: Request, session: any, context?: any) => {
   const params = await context?.params;
   const gateId = params?.id;
-  const tenantId = user?.institutionId || "global";
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -30,8 +30,8 @@ export const POST = requireAuth(async (req: Request, user: any, context?: any) =
     return NextResponse.json({ error: "Decision must be 'approved' or 'rejected'" }, { status: 400 });
   }
 
-  const approverId = user?.staffId || user?.userId || "unknown_approver";
-  const reason = body.reason || `Decided by ${user?.role || "approver"}`;
+  const approverId = session?.staffId || session?.userId || "unknown_approver";
+  const reason = body.reason || `Decided by ${session?.role || "approver"}`;
 
   const engine = ApprovalGateEngine.getInstance();
   const result = await engine.decideGate(gateId, decision, approverId, reason, tenantId);

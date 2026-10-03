@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { RegionalHierarchyService } from "@/lib/regional/regional-hierarchy-service";
 import { regionalGroupCreateSchema } from "@/lib/validation/schemas";
 
@@ -12,7 +12,7 @@ export const GET = requireAuth(async () => {
   }
 }, "regional:view");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: unknown = {};
   try {
     body = await request.json();

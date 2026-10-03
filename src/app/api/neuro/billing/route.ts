@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { neuroStore } from '@/lib/db/neuro-store';
@@ -7,9 +8,9 @@ import { grantAllocationSchema } from '@/lib/validation/neuro-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const departmentId = searchParams.get('departmentId') || undefined;
   const accountId = searchParams.get('accountId') || undefined;
   const action = searchParams.get('action');
@@ -26,7 +27,7 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   return NextResponse.json({ accounts, transactions });
 }, 'neuro:billing:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = grantAllocationSchema.safeParse(body);
@@ -34,7 +35,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid grant allocation payload' }, { status: 400 });
     }
 
-    const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const manager = new GrantAllocationManager(neuroStore);
 
     const result = await manager.allocateGrantTokens(
@@ -43,7 +44,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       parsed.data.grantNumber,
       parsed.data.fundingAgency,
       parsed.data.tokens,
-      user?.id || 'staff_admin',
+      session?.staffId || 'staff_admin',
       parsed.data.effectiveDate,
       parsed.data.expiryDate,
       tenantId

@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { facilityCreateSchema } from '@/lib/validation/twin-schemas';
@@ -7,10 +8,10 @@ import { TwinAuditLogger } from '@/lib/operations/twin/security/twin-audit-logge
 const store = TwinDbStore.getInstance();
 const auditLogger = TwinAuditLogger.getInstance();
 
-export const GET = requireAuth(async (request: Request, user: any) => {
+export const GET = requireAuth(async (request: Request, session: any) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
     const facilities = await store.listFacilities(tenantId);
     return NextResponse.json({ success: true, facilities }, { status: 200 });
   } catch (error: any) {
@@ -18,7 +19,7 @@ export const GET = requireAuth(async (request: Request, user: any) => {
   }
 }, 'twin:facilities:read');
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = facilityCreateSchema.safeParse(body);
@@ -27,7 +28,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
     }
 
     const facility = await store.createFacility(parse.data);
-    auditLogger.logEvent('facility_created', user?.id || 'system', { facilityId: facility.facilityId }, parse.data.institutionId, facility.facilityId);
+    auditLogger.logEvent('facility_created', session?.staffId || 'system', { facilityId: facility.facilityId }, parse.data.institutionId, facility.facilityId);
 
     return NextResponse.json({ success: true, facility }, { status: 201 });
   } catch (error: any) {

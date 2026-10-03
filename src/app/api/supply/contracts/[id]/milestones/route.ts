@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { SupplyDbStore } from '@/lib/db/supply-store';
@@ -8,16 +9,16 @@ export const dynamic = 'force-dynamic';
 
 const store = SupplyDbStore.getInstance();
 
-export const GET = requireAuth(async (req: Request, user: any, context) => {
+export const GET = requireAuth(async (req: Request, session: any, context) => {
   const { id } = await context!.params;
   const { searchParams } = new URL(req.url);
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
   const milestones = await store.listMilestonesByContract(id, institutionId);
   return NextResponse.json({ milestones });
 }, 'supply:contracts:manage');
 
-export const POST = requireAuth(async (req: Request, user: any, context) => {
+export const POST = requireAuth(async (req: Request, session: any, context) => {
   const { id } = await context!.params;
   try {
     const body = await req.json();
@@ -26,7 +27,7 @@ export const POST = requireAuth(async (req: Request, user: any, context) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid milestone payload' }, { status: 400 });
     }
 
-    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const institutionId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || session?.institutionId || 'global';
     const milestoneId = `mile-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     const milestone = {

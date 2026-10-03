@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { kmSearchSchema } from '@/lib/validation/km-schemas';
@@ -5,7 +6,7 @@ import { hybridFusionEngine } from '@/lib/operations/km/retrieval/hybrid-fusion-
 import { kmAuditLogger } from '@/lib/operations/km/governance/km-audit-logger';
 import { kmTelemetry } from '@/lib/operations/km/km-telemetry';
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = kmSearchSchema.safeParse(body);
@@ -25,7 +26,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
 
     const latencySec = (Date.now() - start) / 1000;
     kmTelemetry.trackQuery('search', 'success', latencySec, institutionId);
-    kmAuditLogger.logEvent('query', user?.id || 'anonymous', { query, hits: results.length }, institutionId);
+    kmAuditLogger.logEvent('query', session?.staffId || 'anonymous', { query, hits: results.length }, institutionId);
 
     return NextResponse.json({ success: true, query, totalHits: results.length, results }, { status: 200 });
   } catch (error: any) {

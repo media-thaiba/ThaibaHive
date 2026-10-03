@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { db } from "@/db";
 import { backgroundSyncLogs } from "@thaiba/db/schema";
 import { z } from "zod";
@@ -14,7 +14,7 @@ const backgroundSyncStatusSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  return requireAuth(async (req, user) => {
+  return requireAuth(async (req: Request, session) => {
     try {
       const body = await req.json();
       const parseResult = backgroundSyncStatusSchema.safeParse(body);
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       try {
         await db.insert(backgroundSyncLogs).values({
           id: logId,
-          userId: user.staffId,
+          userId: session.staffId,
           deviceId,
           recordsProcessed,
           recordsFailed,

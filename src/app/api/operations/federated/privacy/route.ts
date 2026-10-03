@@ -1,8 +1,9 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { PrivacyBudgetManager } from '@/lib/operations/privacy/privacy-budget-manager';
 
-export const GET = requireAuth(async (req: Request) => {
+export const GET = requireAuth(async (req: Request, session) => {
   try {
     const { searchParams } = new URL(req.url);
     const tenantId = searchParams.get('tenantId') || 'global';

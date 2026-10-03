@@ -1,12 +1,13 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { DocDbStore } from '@/lib/db/docgen-store';
 import { TemplateEngine } from '@/lib/operations/docgen/templates/template-engine';
 import { createDocTemplateSchema } from '@/lib/validation/docgen-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
 
   const engine = TemplateEngine.getInstance();
   const allTemplates = await engine.listAllTemplates(institutionId);

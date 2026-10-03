@@ -14,7 +14,13 @@ interface UnmappedStaffRow {
 async function main() {
   const args = process.argv.slice(2);
   const isApply = args.includes("--apply");
-  const targetInstitutionId = process.env.DEFAULT_TARGET_INSTITUTION_ID || "inst_campus_main";
+  const targetInstitutionId = process.env.DEFAULT_TARGET_INSTITUTION_ID;
+
+  if (!targetInstitutionId) {
+    console.error("❌ ERROR: DEFAULT_TARGET_INSTITUTION_ID environment variable is required.");
+    console.error("Please specify an explicit target institution (e.g., DEFAULT_TARGET_INSTITUTION_ID=inst_... tsx scripts/db/proposals/backfill-unmapped-staff.ts)");
+    process.exit(1);
+  }
 
   const queryStr = `
     SELECT s.id, s.email, s.first_name, s.last_name, s.role, s.is_active

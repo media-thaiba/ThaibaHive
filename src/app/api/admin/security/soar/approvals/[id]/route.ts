@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * SOAR Approval Resolution API Route
  * Sprint-040 — Administration API
@@ -16,7 +17,7 @@ import { registerBuiltinActions } from '@/lib/security/soar/actions';
 registerBuiltinActions();
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, user: any, context?: { params: Promise<Record<string, string>> }) => {
+  requireAuth(async (req: Request, session: any, context?: { params: Promise<Record<string, string>> }) => {
     try {
       const resolvedParams = context?.params ? await context.params : (context as any)?.params;
       const id = resolvedParams?.id;
@@ -31,7 +32,7 @@ export const POST = withDPoP(
       }
 
       const { decision, reason } = parsed.data;
-      const resolvedBy = user?.userId || 'admin';
+      const resolvedBy = session?.userId || 'admin';
 
       const approval = approvalQueue.resolve(id, decision, resolvedBy, reason);
       if (!approval) {

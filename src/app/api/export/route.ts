@@ -18,7 +18,7 @@ import {
   timetableEntries,
   timetableSlots,
 } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and, gte, lte, inArray, type SQL } from "drizzle-orm";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";

@@ -1,10 +1,11 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { kmRecommendationsSchema } from '@/lib/validation/km-schemas';
 import { careerMatcher } from '@/lib/operations/km/advising/career-matcher';
 import { scheduleOptimizer } from '@/lib/operations/km/advising/schedule-optimizer';
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parse = kmRecommendationsSchema.safeParse(body);

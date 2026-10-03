@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, departments } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { pick } from "@/lib/api/pick";
 import { hashPassword } from "@/lib/auth";
@@ -27,6 +27,7 @@ const SAFE_STAFF_FIELDS = {
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
+  await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const pagination = paginationSchema.parse({
     page: searchParams.get("page"),
     limit: searchParams.get("limit"),

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { RemediationTicketService } from "@/lib/services/remediation-ticket-service";
 import { remediationTicketSchema } from "@/lib/validation/schemas";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const institutionId = searchParams.get("institutionId") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
@@ -30,7 +30,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "autonomy:view");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: unknown = {};
   try {
     const text = await request.text();

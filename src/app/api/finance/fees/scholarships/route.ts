@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
@@ -5,9 +6,9 @@ import { ScholarshipEngine } from '@/lib/operations/finance/scholarships/scholar
 import { ScholarshipApprovalWorkflow } from '@/lib/operations/finance/scholarships/scholarship-approval-workflow';
 import { applyConcessionSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const type = url.searchParams.get('type') || 'scholarships'; // 'scholarships' | 'concessions'
 
   const store = FeeDbStore.getInstance();

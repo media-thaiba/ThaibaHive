@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { ComplianceReportingService } from "@/lib/services/compliance-reporting-service";
 import { complianceReportSchema } from "@/lib/validation/schemas";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const frameworkCode = searchParams.get("framework") || searchParams.get("frameworkCode") || "regional_privacy_v1";
   const institutionId = searchParams.get("institutionId") ?? undefined;

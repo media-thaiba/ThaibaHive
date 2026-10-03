@@ -6,7 +6,7 @@ import {
   staff,
   checklistTemplates,
 } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, asc, sql } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 

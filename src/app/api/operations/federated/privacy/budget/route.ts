@@ -1,10 +1,11 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { AfedDbStore } from '@/lib/operations/persistence/afed-db-store';
 
 const dbStore = AfedDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'global';

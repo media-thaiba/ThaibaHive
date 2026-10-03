@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { optimizationPredictSchema } from '@/lib/validation/twin-schemas';
@@ -9,7 +10,7 @@ import { TwinMetrics } from '@/lib/operations/twin/telemetry/twin-metrics';
 const store = TwinDbStore.getInstance();
 const metrics = TwinMetrics.getInstance();
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = optimizationPredictSchema.safeParse(body);
@@ -18,7 +19,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
     }
 
     const { facilityId, spaceId, enableHvacOptimization, institutionId } = parse.data;
-    const tenantId = institutionId || user?.institutionId || 'global';
+    const tenantId = institutionId || session?.institutionId || 'global';
 
     const space = await store.getSpaceById(spaceId, tenantId);
     if (!space) {

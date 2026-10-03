@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { evaluationForms } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { evaluationFormCreateSchema } from "@/lib/validation/schemas";
 import { getUserInstitutionScope } from "@/lib/auth";
 import { eq } from "drizzle-orm";

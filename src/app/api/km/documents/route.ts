@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { kmDocumentIngestSchema } from '@/lib/validation/km-schemas';
@@ -13,7 +14,7 @@ export const GET = requireAuth(async (_request: Request) => {
   }
 }, 'km:knowledge:search');
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parse = kmDocumentIngestSchema.safeParse(body);

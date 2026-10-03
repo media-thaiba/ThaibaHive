@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { curriculumStore } from '@/lib/db/curriculum-store';
@@ -7,9 +8,9 @@ import { RiskFeatureExtractor } from '@/lib/operations/curriculum/retention/risk
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const riskTier = searchParams.get('riskTier') || undefined;
   const status = searchParams.get('status') || undefined;
 
@@ -17,10 +18,10 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   return NextResponse.json({ alerts });
 }, 'curriculum:retention:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
-    const tenantId = (body.institutionId !== 'global' ? body.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = (body.institutionId !== 'global' ? body.institutionId : undefined) || session?.institutionId || 'global';
 
     const extractor = new RiskFeatureExtractor();
     const workflow = new EarlyInterventionWorkflow();
@@ -50,13 +51,13 @@ export const POST = requireAuth(async (req: Request, user: any) => {
   }
 }, 'curriculum:retention:intervene');
 
-export const PATCH = requireAuth(async (req: Request, user: any) => {
+export const PATCH = requireAuth(async (req: Request, session: any) => {
   try {
     const { searchParams } = new URL(req.url);
     const alertId = searchParams.get('alertId');
     if (!alertId) return NextResponse.json({ error: 'Missing alertId parameter' }, { status: 400 });
 
-    const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
     const body = await req.json();
     const parsed = retentionAlertUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -67,7 +68,7 @@ export const PATCH = requireAuth(async (req: Request, user: any) => {
       alertId,
       parsed.data.status,
       parsed.data.resolutionNotes,
-      parsed.data.assignedCounselorId || user?.id,
+      parsed.data.assignedCounselorId || session?.staffId,
       tenantId
     );
 

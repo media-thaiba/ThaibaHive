@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { hallTickets, exams, examAuditLogs } from "@thaiba/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { hallTicketIssueSchema } from "@/lib/validation/schemas";
 import { checkStudentFeeClearance, generateQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");

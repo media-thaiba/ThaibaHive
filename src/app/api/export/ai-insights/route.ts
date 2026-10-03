@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { aiPredictions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
