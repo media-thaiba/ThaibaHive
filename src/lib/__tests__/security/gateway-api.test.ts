@@ -13,15 +13,19 @@ import { POST as overrideBreaker } from "../../../app/api/admin/security/gateway
 import { QuarantineManager } from "../../security/quarantine-manager";
 import { GatewayCircuitBreaker } from "../../security/circuit-breaker";
 
-jest.mock("../../../../packages/auth", () => ({
-  verifySession: jest.fn().mockResolvedValue({
-    userId: "admin-1",
-    email: "admin@thaibahive.org",
-    role: "super_admin",
-    permissions: ["system:security:view", "system:security:manage"],
-  }),
-  hasPermission: jest.fn().mockReturnValue(true),
-}));
+jest.mock("../../../../packages/auth", () => {
+  const actual = jest.requireActual("../../../../packages/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      userId: "admin-1",
+      email: "admin@thaibahive.org",
+      role: "super_admin",
+      permissions: ["system:security:view", "system:security:manage"],
+    }),
+    hasPermission: jest.fn().mockReturnValue(true),
+  };
+});
 
 describe("Gateway API Routes (AGS-012)", () => {
   beforeEach(() => {

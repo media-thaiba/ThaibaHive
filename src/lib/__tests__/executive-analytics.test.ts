@@ -10,6 +10,8 @@ jest.mock("@/lib/api/auth-guard", () => ({
     }
     return handler(req, { id: "user-1", role: "super_admin" });
   },
+  resolveRequestInstitution: jest.fn((_session: any, inst?: string) => Promise.resolve(inst || "global")),
+  resolveScopedInstitutions: jest.fn((_session: any, inst?: string) => Promise.resolve([inst || "global"])),
 }));
 
 describe("MHD-009 & MHD-012: Executive Analytics Aggregation API Endpoint", () => {

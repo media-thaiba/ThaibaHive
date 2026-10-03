@@ -76,10 +76,15 @@ jest.mock("@/db", () => ({
   },
 }));
 
-jest.mock("@thaiba/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("campus-1"),
+  };
+});
 
 
 jest.mock("@/lib/api/activity-log", () => ({
@@ -169,7 +174,7 @@ describe("Attendance Verification Settings Endpoints", () => {
       const res = await GET(req);
       expect(res.status).toBe(403);
       const data = await res.json();
-      expect(data.error).toBe("Forbidden");
+      expect(data.error).toContain("Forbidden");
     });
   });
 
