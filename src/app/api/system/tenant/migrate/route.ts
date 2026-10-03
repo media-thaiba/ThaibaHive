@@ -27,7 +27,7 @@ async function postHandler(request: Request, session: any) {
       );
     }
 
-    const resolvedTenant = resolveRequestInstitution(session, tenantId);
+    const resolvedTenant = await resolveRequestInstitution(session, tenantId);
     const result = await tenantMigrationOrchestrator.migrateTenant(resolvedTenant, targetRegion);
     return NextResponse.json({ success: true, result });
   } catch (err: any) {

@@ -25,7 +25,7 @@ async function handler(req: Request, session: any) {
     }
 
     const { standard, tenantId, format } = parsed.data;
-    const resolvedTenant = resolveRequestInstitution(session, tenantId);
+    const resolvedTenant = await resolveRequestInstitution(session, tenantId);
 
     const exportPack = await regulatoryExportEngine.generateExportPack({
       standard,

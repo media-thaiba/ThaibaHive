@@ -10,7 +10,7 @@ export const GET = withDPoP(
   requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
     const rawCampusId = searchParams.get('campusId') || undefined;
-    const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
     const store = AimsDbStore.getInstance();
     const dispatches = store.getDispatches(resolvedCampusId);
 
@@ -31,7 +31,7 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const resolvedCampusId = resolveRequestInstitution(session, parsed.data.campusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, parsed.data.campusId);
 
     const router = new VehicleRoutingEngine();
     const vehicle = {

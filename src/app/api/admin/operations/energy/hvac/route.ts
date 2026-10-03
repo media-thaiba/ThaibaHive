@@ -13,7 +13,7 @@ export const GET = withDPoP(
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
-    const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
 
     const store = AimsDbStore.getInstance();
     const allOptimizations = store.getEnergyOptimizations(resolvedCampusId);
@@ -46,7 +46,7 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const resolvedCampusId = resolveRequestInstitution(session, parsed.data.campusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, parsed.data.campusId);
 
     const optimizer = new HvacOptimizer();
     const reading = {

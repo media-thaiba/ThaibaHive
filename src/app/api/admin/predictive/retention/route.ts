@@ -6,7 +6,7 @@ import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
 export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const rawCampusId = searchParams.get("campusId") || undefined;
-  const campusId = resolveRequestInstitution(session, rawCampusId);
+  const campusId = await resolveRequestInstitution(session, rawCampusId);
 
   try {
     const mockStudents = [

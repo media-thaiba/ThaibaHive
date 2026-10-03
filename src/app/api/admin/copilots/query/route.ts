@@ -21,7 +21,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { agentType, campusId, query } = parse.data;
-  const resolvedCampusId = resolveRequestInstitution(session, campusId);
+  const resolvedCampusId = await resolveRequestInstitution(session, campusId);
 
   try {
     if (agentType === "academic_advisor") {

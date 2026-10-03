@@ -10,7 +10,7 @@ export const GET = withDPoP(
   requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
     const rawCampusId = searchParams.get('campusId') || undefined;
-    const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
 
     const calculator = new CarbonCalculator();
     const generator = new EsgReportGenerator();

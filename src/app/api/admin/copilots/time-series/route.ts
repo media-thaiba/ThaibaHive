@@ -9,7 +9,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const rawCampusId = searchParams.get("campusId") || undefined;
   const granularity = (searchParams.get("granularity") || "monthly") as "monthly" | "quarterly" | "weekly";
 
-  const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
+  const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
 
   const parse = timeSeriesQuerySchema.safeParse({ campusId: resolvedCampusId, granularity });
   if (!parse.success) {

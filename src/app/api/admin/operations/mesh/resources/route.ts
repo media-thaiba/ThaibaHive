@@ -10,7 +10,7 @@ export const GET = withDPoP(
   requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
     const rawCampusId = searchParams.get('campusId') || undefined;
-    const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
 
     const broker = new CampusResourceBroker();
     const optimizer = new CapacityOptimizer();
@@ -64,7 +64,7 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const resolvedCampusId = resolveRequestInstitution(session, parsed.data.requestingCampusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, parsed.data.requestingCampusId);
 
     const broker = new CampusResourceBroker();
     broker.registerResource({

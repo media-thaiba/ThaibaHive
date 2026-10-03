@@ -30,7 +30,7 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const resolvedCampusId = resolveRequestInstitution(session, parsed.data.campusId);
+    const resolvedCampusId = await resolveRequestInstitution(session, parsed.data.campusId);
 
     const engine = new EdgeVerificationEngine();
     // Register mock active user template for verification endpoint
