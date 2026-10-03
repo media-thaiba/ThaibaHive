@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'hive_migration_handler.dart';
 
@@ -52,6 +52,21 @@ class LocalDbAdapter {
   static const String keyStorageKey = 'hive_encryption_key_v1';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   static List<int>? _encryptionKey;
+  static Future<void>? _hiveHomeInit;
+
+  static Future<void> ensureHiveHome() =>
+      _hiveHomeInit ??= _initializeHiveHome();
+
+  static Future<void> _initializeHiveHome() async {
+    try {
+      await Hive.initFlutter().timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
+  static void configureHiveHome(String path) {
+    Hive.init(path);
+    _hiveHomeInit = Future<void>.value();
+  }
 
   static Future<List<int>> _getOrCreateEncryptionKey() async {
     if (_encryptionKey == null) {
@@ -73,6 +88,7 @@ class LocalDbAdapter {
 
   Future<void> init() async {
     try {
+      await LocalDbAdapter.ensureHiveHome();
       await HiveMigrationHandler.checkAndMigrate();
       final key = await _getOrCreateEncryptionKey();
       _box = await Hive.openBox<String>(

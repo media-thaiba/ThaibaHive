@@ -26,6 +26,11 @@ import crypto from "crypto";
 export interface SyncApplierContext {
   staffId: string;
   role: string;
+  institutionId?: string | null;
+}
+
+function actorScope(ctx: SyncApplierContext): string | null {
+  return ctx.institutionId && ctx.institutionId !== "global" ? ctx.institutionId : null;
 }
 
 /**
@@ -96,6 +101,7 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
 
   const { leaveTypeId, startDate, endDate, daysCount, reason } = parsed.data;
   const year = new Date().getFullYear();
+  const scope = actorScope(ctx);
 
   await db.transaction(async (tx) => {
     const balance = await tx
@@ -138,7 +144,7 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
         daysCount,
         reason: reason || null,
         status: "pending",
-        institutionId: actorInstId,
+        institutionId: scope ?? actorInstId,
       })
       .run();
   });
@@ -147,11 +153,14 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
 async function applyLeaveCancel(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
   const payload = asRecord(raw);
   const id = asString(payload.id, "id");
+  const scope = actorScope(ctx);
+  const idClause = eq(leaveRequests.id, id);
+  const whereClause = scope ? and(idClause, eq(leaveRequests.institutionId, scope)) : idClause;
 
   const existing = await db
     .select()
     .from(leaveRequests)
-    .where(eq(leaveRequests.id, id))
+    .where(whereClause)
     .get();
 
   if (!existing || existing.staffId !== ctx.staffId) {
@@ -166,7 +175,7 @@ async function applyLeaveCancel(ctx: SyncApplierContext, raw: Record<string, unk
     .set({ status: "cancelled", updatedAt: new Date().toISOString() })
     .where(
       and(
-        eq(leaveRequests.id, id),
+        whereClause,
         ne(leaveRequests.status, "approved"),
         ne(leaveRequests.status, "rejected")
       )
@@ -185,6 +194,7 @@ async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unkn
     throw new Error(parsed.error.issues[0]?.message || "Invalid task payload");
   }
 
+  const scope = actorScope(ctx);
   const instRow = await db
     .select({ institutionId: staffInstitutions.institutionId })
     .from(staffInstitutions)
@@ -204,13 +214,16 @@ async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unkn
       departmentId: parsed.data.departmentId || null,
       dueDate: parsed.data.dueDate || null,
       status: "todo",
-      institutionId: actorInstId,
+      institutionId: scope ?? actorInstId,
     })
     .run();
 }
 
 async function loadOwnedTask(ctx: SyncApplierContext, id: string) {
-  const existing = await db.select().from(tasks).where(eq(tasks.id, id)).get();
+  const scope = actorScope(ctx);
+  const idClause = eq(tasks.id, id);
+  const whereClause = scope ? and(idClause, eq(tasks.institutionId, scope)) : idClause;
+  const existing = await db.select().from(tasks).where(whereClause).get();
   if (!existing) throw new Error("Task not found");
 
   const elevated = ctx.role === "super_admin" || ctx.role === "admin";
@@ -235,14 +248,25 @@ async function applyTaskUpdate(ctx: SyncApplierContext, raw: Record<string, unkn
     updates.completedAt = new Date().toISOString();
   }
 
-  await db.update(tasks).set(updates).where(eq(tasks.id, id)).run();
+  const scope = actorScope(ctx);
+  const idClause = eq(tasks.id, id);
+  await db
+    .update(tasks)
+    .set(updates)
+    .where(scope ? and(idClause, eq(tasks.institutionId, scope)) : idClause)
+    .run();
 }
 
 async function applyTaskDelete(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
   const payload = asRecord(raw);
   const id = asString(payload.id, "id");
   await loadOwnedTask(ctx, id);
-  await db.delete(tasks).where(eq(tasks.id, id)).run();
+  const scope = actorScope(ctx);
+  const idClause = eq(tasks.id, id);
+  await db
+    .delete(tasks)
+    .where(scope ? and(idClause, eq(tasks.institutionId, scope)) : idClause)
+    .run();
 }
 
 // ─── Expenses ───
@@ -329,9 +353,15 @@ async function applyApprovalDecision(
   const notes = typeof payload.notes === "string" ? payload.notes : null;
   const now = new Date().toISOString();
   const elevated = ctx.role === "super_admin" || ctx.role === "admin";
+  const scope = actorScope(ctx);
 
   if (type === "leave") {
-    const leave = await db.select().from(leaveRequests).where(eq(leaveRequests.id, id)).get();
+    const leaveIdClause = eq(leaveRequests.id, id);
+    const leave = await db
+      .select()
+      .from(leaveRequests)
+      .where(scope ? and(leaveIdClause, eq(leaveRequests.institutionId, scope)) : leaveIdClause)
+      .get();
     if (!leave) throw new Error("Leave request not found");
     if (!elevated && leave.staffId === ctx.staffId) {
       throw new Error("Requesters cannot review their own leave requests.");
@@ -347,7 +377,12 @@ async function applyApprovalDecision(
         .update(leaveRequests)
         .set({ status: nextStatus, reviewedById: ctx.staffId, reviewedAt: now, reviewNotes: notes, updatedAt: now })
         .where(
-          and(eq(leaveRequests.id, id), ne(leaveRequests.status, "approved"), ne(leaveRequests.status, "rejected"))
+          and(
+            leaveIdClause,
+            scope ? eq(leaveRequests.institutionId, scope) : undefined,
+            ne(leaveRequests.status, "approved"),
+            ne(leaveRequests.status, "rejected")
+          )
         )
         .returning()
         .get();
@@ -460,6 +495,14 @@ async function applyApprovalDecision(
   }
 
   if (type === "booking") {
+    const bookingIdClause = eq(bookings.id, id);
+    const booking = await db
+      .select()
+      .from(bookings)
+      .where(scope ? and(bookingIdClause, eq(bookings.institutionId, scope)) : bookingIdClause)
+      .get();
+    if (!booking) throw new Error("Booking not found");
+
     const updated = await db
       .update(bookings)
       .set({
@@ -469,7 +512,12 @@ async function applyApprovalDecision(
         updatedAt: now,
       })
       .where(
-        and(eq(bookings.id, id), ne(bookings.status, "approved"), ne(bookings.status, "rejected"))
+        and(
+          bookingIdClause,
+          scope ? eq(bookings.institutionId, scope) : undefined,
+          ne(bookings.status, "approved"),
+          ne(bookings.status, "rejected")
+        )
       )
       .returning()
       .get();

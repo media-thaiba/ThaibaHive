@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:path_provider/path_provider.dart';
 import 'background_sync_isolate.dart';
 import 'isolate_message_protocol.dart';
 import 'network_diagnostics_collector.dart';
@@ -121,7 +122,14 @@ class BackgroundTaskManager {
     );
 
     final receivePort = ReceivePort();
-    final isolate = await Isolate.spawn(backgroundSyncIsolateEntryPoint, receivePort.sendPort);
+    String? hiveHomePath;
+    try {
+      hiveHomePath = (await getApplicationDocumentsDirectory()).path;
+    } catch (_) {}
+    final isolate = await Isolate.spawn(
+      backgroundSyncIsolateEntryPoint,
+      {'sendPort': receivePort.sendPort, 'hiveHomePath': hiveHomePath},
+    );
 
     try {
       final completer = Completer<Map<String, dynamic>>();

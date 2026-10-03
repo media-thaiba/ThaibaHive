@@ -6,9 +6,16 @@ import 'package:flutter/foundation.dart';
 import 'adaptive_sync_decision_engine.dart';
 import 'compression_util.dart';
 import 'isolate_message_protocol.dart';
+import 'local_db_adapter.dart';
 import 'offline_sync_queue.dart';
 
-void backgroundSyncIsolateEntryPoint(SendPort sendPort) {
+void backgroundSyncIsolateEntryPoint(dynamic message) {
+  final sendPort = (message as Map)['sendPort'] as SendPort;
+  final hiveHomePath = message['hiveHomePath'] as String?;
+  if (hiveHomePath != null && hiveHomePath.isNotEmpty) {
+    LocalDbAdapter.configureHiveHome(hiveHomePath);
+  }
+
   final receivePort = ReceivePort();
   sendPort.send(receivePort.sendPort);
 

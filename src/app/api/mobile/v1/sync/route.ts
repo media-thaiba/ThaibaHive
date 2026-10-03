@@ -42,7 +42,11 @@ export const POST = requireAuth(async (request: Request, session) => {
 
         if (!alreadyProcessed) {
           await applySyncMutation(
-            { staffId: session.staffId, role: session.role },
+            {
+              staffId: session.staffId,
+              role: session.role,
+              institutionId: session.institutionId,
+            },
             mut.action,
             mut.payload || {}
           );
