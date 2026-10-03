@@ -76,6 +76,7 @@ describe("Examination API Routes", () => {
         term: "Term 1",
         startDate: "2026-03-01",
         endDate: "2026-03-15",
+        institutionId: "inst_campus_main",
       }),
     });
 

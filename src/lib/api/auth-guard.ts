@@ -197,7 +197,7 @@ export function requireAuth(
       return response;
     } catch (error) {
       if (
-        error instanceof TenantMismatchError ||
+        (error as any)?.name === "TenantMismatchError" ||
         (error instanceof Error && (error.name === "TenantMismatchError" || error.message.startsWith("Forbidden:")))
       ) {
         const forbiddenMsg = error instanceof Error ? error.message : "Forbidden";
