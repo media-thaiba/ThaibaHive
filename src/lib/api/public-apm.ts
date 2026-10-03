@@ -4,7 +4,7 @@ import { normalizeRoutePath } from "@/lib/observability/route-normalizer";
 /**
  * Wraps public API route handlers (unauthenticated) to record telemetry in the Node.js APM aggregator.
  */
-export function withPublicApm<T extends (req: Request, ...args: any[]) => Promise<Response>>(
+export function withPublicApm<T extends (req: Request, ...args: unknown[]) => Promise<Response>>(
   handler: T,
   explicitRoute?: string
 ): T {

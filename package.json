@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144\" next build --experimental-app-only",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" next build --webpack",
     "postbuild": "tsx scripts/copy-standalone-assets.ts",
     "start": "next start",
     "lint": "eslint .",

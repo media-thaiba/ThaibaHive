@@ -14,9 +14,10 @@ export const GET = withDPoP(
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
     const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
+    const targetCampusId = resolvedCampusId === "global" ? undefined : resolvedCampusId;
 
     const store = AimsDbStore.getInstance();
-    const allOptimizations = store.getEnergyOptimizations(resolvedCampusId);
+    const allOptimizations = store.getEnergyOptimizations(targetCampusId);
     const offset = (page - 1) * limit;
     const paginated = allOptimizations.slice(offset, offset + limit);
 

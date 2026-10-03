@@ -11,8 +11,9 @@ export const GET = withDPoP(
     const { searchParams } = new URL(req.url);
     const rawCampusId = searchParams.get('campusId') || undefined;
     const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
+    const targetCampusId = resolvedCampusId === "global" ? undefined : resolvedCampusId;
     const store = AimsDbStore.getInstance();
-    const dispatches = store.getDispatches(resolvedCampusId);
+    const dispatches = store.getDispatches(targetCampusId);
 
     return NextResponse.json({
       dispatches,

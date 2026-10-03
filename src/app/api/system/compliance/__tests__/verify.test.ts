@@ -2,6 +2,12 @@ import { POST, GET } from "../verify/route";
 
 jest.mock("@/lib/auth/require-auth", () => ({
   requireAuth: (fn: any) => fn,
+  resolveRequestInstitution: jest.fn().mockImplementation((_s, inst) => Promise.resolve(inst || "default")),
+}));
+
+jest.mock("@/lib/api/auth-guard", () => ({
+  requireAuth: (fn: any) => fn,
+  resolveRequestInstitution: jest.fn().mockImplementation((_s, inst) => Promise.resolve(inst || "default")),
 }));
 
 jest.mock("@/db", () => {

@@ -36,6 +36,7 @@ export const POST = requireAuth(async (request, session) => {
     const created = await alumniStore.createAlumniProfile({
       id,
       ...parsed.data,
+      institutionId,
       isVerified: session.role === 'super_admin' || session.role === 'admin',
       verifiedAt: session.role === 'super_admin' || session.role === 'admin' ? now : undefined,
       verifiedById: session.role === 'super_admin' || session.role === 'admin' ? session.staffId : undefined,
