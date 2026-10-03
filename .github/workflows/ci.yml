@@ -225,7 +225,7 @@ jobs:
           tar -xzf e2e-standalone.tar.gz -C .next
           test -f .next/standalone/server.js
           test -d .next/standalone/.next/server
-          node -e "const { createRequire } = require('module'); const fs = require('fs'); const dir = process.cwd() + '/.next/standalone/.next/node_modules/@libsql'; const entry = fs.readdirSync(dir).find((d) => d.startsWith('client-')); if (!entry) throw new Error('hashed @libsql/client entry missing'); const req = createRequire(dir + '/' + entry + '/lib-esm/node.js'); console.log('OK @libsql/core ->', req.resolve('@libsql/core'));"
+          node -e "const fs=require('fs');const {pathToFileURL}=require('url');const dir=process.cwd()+'/.next/standalone/.next/node_modules/@libsql';const entry=fs.readdirSync(dir).find(d=>d.startsWith('client-'));if(!entry)throw new Error('hashed @libsql/client entry missing');const p=dir+'/'+entry;console.log('entry is symlink:',fs.lstatSync(p).isSymbolicLink());import(pathToFileURL(p+'/lib-esm/node.js').href).then(()=>console.log('OK runtime import: @libsql/client loaded')).catch(e=>{console.error(e);process.exit(1)})"
           echo "Standalone build verified with symlinks intact: .next/standalone/server.js"
 
       - name: Install Playwright browsers
