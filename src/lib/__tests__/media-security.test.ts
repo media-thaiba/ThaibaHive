@@ -1,4 +1,4 @@
-import { proxy as middleware } from "@/proxy";
+import { middleware } from "@/middleware";
 
 jest.mock("next/server", () => {
   class MockNextResponse {
@@ -92,9 +92,10 @@ jest.mock("next/server", () => {
 });
 
 import { SignJWT } from "jose";
+import { getJwtSecretBytes } from "@thaiba/auth";
 
 async function createMediaTestToken() {
-  const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_for_thaibahive_auth");
+  const secret = getJwtSecretBytes("session");
   return new SignJWT({ staffId: "test-staff", role: "admin", email: "test@example.com" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

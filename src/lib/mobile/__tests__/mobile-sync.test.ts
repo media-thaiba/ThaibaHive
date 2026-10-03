@@ -35,6 +35,7 @@ describe("Mobile Sync Reconciliation API", () => {
       staffId: "usr_mock",
       email: "mock@thaibahive.edu",
       role: "staff",
+      institutionId: "inst_001",
     });
   });
 

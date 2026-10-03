@@ -1,5 +1,4 @@
 import { db, staff, staffInstitutions } from "../../src/db";
-import { eq, isNull, and } from "drizzle-orm";
 
 async function main() {
   console.log("=== Querying Active Staff Without Institution Mapping ===");
@@ -8,7 +7,7 @@ async function main() {
   const mappings = await db.select().from(staffInstitutions);
 
   const mappedStaffIds = new Set(mappings.map((m) => m.staffId));
-  const unmapped = allStaff.filter((s) => s.status === "active" && !mappedStaffIds.has(s.id));
+  const unmapped = allStaff.filter((s) => s.isActive && !mappedStaffIds.has(s.id));
 
   console.log(`Total staff in DB: ${allStaff.length}`);
   console.log(`Total active unmapped staff members: ${unmapped.length}`);

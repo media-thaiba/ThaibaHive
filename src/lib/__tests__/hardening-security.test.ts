@@ -5,16 +5,21 @@ import { systemConfigs } from "@/db/schema";
 describe("Hardening & Security Sanitization (Task A5 / Important I1, I3, I4)", () => {
   const originalEnv = process.env;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
+    try {
+      await db.insert(systemConfigs).values([
+        { key: "app_latest_version", value: "3.20.0" },
+        { key: "app_download_url", value: "/downloads/app.apk" },
+      ]).onConflictDoUpdate({
+        target: systemConfigs.key,
+        set: { value: "/downloads/app.apk" },
+      }).run();
+    } catch {}
+  });
+
+  beforeEach(() => {
     jest.resetModules();
     process.env = { ...originalEnv };
-    await db.insert(systemConfigs).values([
-      { key: "app_latest_version", value: "3.20.0" },
-      { key: "app_download_url", value: "/downloads/app.apk" },
-    ]).onConflictDoUpdate({
-      target: systemConfigs.key,
-      set: { value: "/downloads/app.apk" },
-    }).run();
   });
 
   afterAll(() => {

@@ -35,13 +35,14 @@ export function checkRateLimit(
 ): { allowed: boolean; remaining: number; resetMs: number } {
   // In production, NEVER bypass rate limiting via test flags
   if (process.env.NODE_ENV !== "production") {
-    if (
-      process.env.ENABLE_RATE_LIMIT !== "true" ||
-      process.env.PLAYWRIGHT_TEST === "true" ||
-      process.env.CI === "true" ||
-      process.env.NODE_ENV === "test"
-    ) {
-      return { allowed: true, remaining: 999, resetMs: 0 };
+    if (process.env.ENABLE_RATE_LIMIT !== "true") {
+      if (
+        process.env.PLAYWRIGHT_TEST === "true" ||
+        process.env.CI === "true" ||
+        process.env.NODE_ENV === "test"
+      ) {
+        return { allowed: true, remaining: 999, resetMs: 0 };
+      }
     }
   }
 
@@ -72,13 +73,14 @@ export async function checkDistributedRateLimit(
 ): Promise<{ allowed: boolean; remaining: number; resetMs: number; retryAfterSeconds: number }> {
   // In production, NEVER bypass rate limiting via test flags
   if (process.env.NODE_ENV !== "production") {
-    if (
-      process.env.ENABLE_RATE_LIMIT !== "true" ||
-      process.env.PLAYWRIGHT_TEST === "true" ||
-      process.env.CI === "true" ||
-      process.env.NODE_ENV === "test"
-    ) {
-      return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
+    if (process.env.ENABLE_RATE_LIMIT !== "true") {
+      if (
+        process.env.PLAYWRIGHT_TEST === "true" ||
+        process.env.CI === "true" ||
+        process.env.NODE_ENV === "test"
+      ) {
+        return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
+      }
     }
   }
 

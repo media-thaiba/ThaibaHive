@@ -117,6 +117,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: requesterId,
       role: "hod", // Even if holding hod role
       email: `requester-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {
@@ -138,6 +139,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: hodId,
       role: "hod",
       email: `hodp-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {
@@ -160,6 +162,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: accountsId,
       role: "accounts",
       email: `accp-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {
@@ -182,6 +185,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: purchaseOfficerId,
       role: "purchase",
       email: `purchofficer-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {

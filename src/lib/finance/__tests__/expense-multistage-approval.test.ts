@@ -113,6 +113,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId,
       role: "hod", // Even if claimant has hod role
       email: `claimant-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {
@@ -134,6 +135,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: hodId,
       role: "hod",
       email: `hod-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {
@@ -156,6 +158,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: financeId,
       role: "accounts",
       email: `finance-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {
@@ -178,6 +181,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: financeId,
       role: "accounts",
       email: `finance-${timestamp}@thaibahive.local`,
+      institutionId: "inst-001",
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {

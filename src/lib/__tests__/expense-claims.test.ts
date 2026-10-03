@@ -83,7 +83,7 @@ describe("Expense Claims API Flow", () => {
 
   describe("POST /api/expense-claims", () => {
     it("should require receipt attachment for claims >= ₹1,000", async () => {
-      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com" };
+      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       const req = new Request("http://localhost/api/expense-claims", {
@@ -102,7 +102,7 @@ describe("Expense Claims API Flow", () => {
     });
 
     it("should allow claims < ₹1,000 without receipt attachment", async () => {
-      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com" };
+      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockGet.mockResolvedValue({
@@ -132,7 +132,7 @@ describe("Expense Claims API Flow", () => {
 
   describe("PATCH /api/expense-claims/[id]", () => {
     it("should allow HOD to forward claim to Finance (pending_finance)", async () => {
-      const session = { staffId: "hod_1", role: "hod", email: "hod@example.com" };
+      const session = { staffId: "hod_1", role: "hod", email: "hod@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockGet.mockResolvedValueOnce({
