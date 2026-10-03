@@ -15,7 +15,8 @@ export class TenantMismatchError extends Error {
  */
 export async function getStaffInstitutionMemberships(staffId: string): Promise<string[]> {
   try {
-    const isDbMocked = typeof (db?.select as any)?._isMockFunction === "boolean" && (db.select as any)._isMockFunction;
+    const dbSelectObj = db?.select as unknown as { _isMockFunction?: boolean } | undefined;
+    const isDbMocked = typeof dbSelectObj?._isMockFunction === "boolean" && dbSelectObj._isMockFunction;
     if (isDbMocked && process.env.NODE_ENV === "test") {
       return [];
     }
@@ -56,7 +57,7 @@ export async function getUserInstitutionScope(sessionParam?: SessionPayload | nu
       } catch {
         // Mock DB
       }
-      return (session as any).institutionId || "inst_campus_main";
+      return (session as SessionPayload & { institutionId?: string }).institutionId || "inst_campus_main";
     }
     return null;
   }
@@ -100,7 +101,7 @@ export async function resolveScopedInstitutionId(
       } catch (e) {
         if (e instanceof TenantMismatchError) throw e;
       }
-      return (session as any).institutionId || requestedInstitutionId || "inst_campus_main";
+      return (session as SessionPayload & { institutionId?: string }).institutionId || requestedInstitutionId || "inst_campus_main";
     }
     throw new TenantMismatchError("Forbidden: User has no assigned institution.");
   }
