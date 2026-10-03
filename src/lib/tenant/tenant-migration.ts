@@ -124,7 +124,7 @@ export class TenantMigrationOrchestrator {
       this.migrationHistory.unshift(result);
       if (this.migrationHistory.length > 20) this.migrationHistory.pop();
       return result;
-    } catch (err: any) {
+    } catch (err) {
       this.lockedTenants.delete(tenantId);
       const result: TenantMigrationResult = {
         migrationId,
@@ -140,7 +140,7 @@ export class TenantMigrationOrchestrator {
         sourceChecksum: "na",
         targetChecksum: "na",
         checksumMatched: false,
-        errorMessage: err?.message || String(err),
+        errorMessage: err instanceof Error ? err.message : String(err),
       };
 
       this.migrationHistory.unshift(result);

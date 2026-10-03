@@ -6,11 +6,11 @@ import { ilike, or, sql } from "drizzle-orm";
 import {  } from "@/lib/validation/schemas";
 
 export interface GlobalSearchResult {
-  students: any[];
-  staff: any[];
-  tasks: any[];
-  events: any[];
-  announcements: any[];
+  students: (typeof students.$inferSelect)[];
+  staff: (typeof staff.$inferSelect)[];
+  tasks: (typeof tasks.$inferSelect)[];
+  events: (typeof events.$inferSelect)[];
+  announcements: (typeof announcements.$inferSelect)[];
   totalResults: number;
 }
 
@@ -216,7 +216,7 @@ export async function getSearchSuggestions(query: string): Promise<string[]> {
       .where(ilike(students.firstName, `%${query}%`))
       .limit(5)
       .all();
-    studentNames.forEach((item: any) => suggestions.add(item.suggestion));
+    studentNames.forEach((item) => suggestions.add(item.suggestion));
 
     // Get staff name suggestions
     const staffNames = await db
@@ -225,7 +225,7 @@ export async function getSearchSuggestions(query: string): Promise<string[]> {
       .where(ilike(staff.firstName, `%${query}%`))
       .limit(5)
       .all();
-    staffNames.forEach((item: any) => suggestions.add(item.suggestion));
+    staffNames.forEach((item) => suggestions.add(item.suggestion));
 
     return Array.from(suggestions).slice(0, 10);
 
