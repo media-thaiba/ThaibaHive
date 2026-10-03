@@ -4,17 +4,22 @@ import { EngageDbStore } from '../../../db/engage-store';
 export class PreferenceService {
   private static instance: PreferenceService;
   private store: EngageDbStore;
-  private readonly secretKey: string;
+  private readonly customSecretKey?: string;
 
   private constructor(secretKey?: string) {
     this.store = EngageDbStore.getInstance();
-    const resolved = secretKey || process.env.ENGAGE_AUTH_SECRET || process.env.AUTH_JWT_SECRET;
+    this.customSecretKey = secretKey;
+  }
+
+  private getSecretKey(): string {
+    const resolved = this.customSecretKey || process.env.ENGAGE_AUTH_SECRET || process.env.AUTH_JWT_SECRET;
     if (!resolved) {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
         throw new Error('ENGAGE_AUTH_SECRET or AUTH_JWT_SECRET must be configured in environment');
       }
+      return process.env.NODE_ENV === 'test' ? 'test-engage-auth-secret-key-32' : 'dev-engage-auth-secret-key-32';
     }
-    this.secretKey = resolved || (process.env.NODE_ENV === 'test' ? 'test-engage-auth-secret-key-32' : '');
+    return resolved;
   }
 
   public static getInstance(): PreferenceService {
@@ -26,7 +31,7 @@ export class PreferenceService {
 
   public generateUnsubscribeToken(recipientId: string, institutionId = 'global'): string {
     const data = `${recipientId}:${institutionId}`;
-    const hmac = createHmac('sha256', this.secretKey).update(data).digest('hex');
+    const hmac = createHmac('sha256', this.getSecretKey()).update(data).digest('hex');
     return Buffer.from(`${data}:${hmac}`).toString('base64url');
   }
 
@@ -34,7 +39,7 @@ export class PreferenceService {
     try {
       const decoded = Buffer.from(token, 'base64url').toString('utf8');
       const [recipientId, institutionId, providedHmac] = decoded.split(':');
-      const expectedHmac = createHmac('sha256', this.secretKey).update(`${recipientId}:${institutionId}`).digest('hex');
+      const expectedHmac = createHmac('sha256', this.getSecretKey()).update(`${recipientId}:${institutionId}`).digest('hex');
 
       if (providedHmac === expectedHmac) {
         return { valid: true, recipientId, institutionId };

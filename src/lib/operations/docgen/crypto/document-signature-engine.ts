@@ -23,17 +23,22 @@ export interface GeneratedSignatureResult {
 export class DocumentSignatureEngine {
   private static instance: DocumentSignatureEngine;
   private store: DocDbStore;
-  private secretKey: string;
+  private customSecretKey?: string;
 
   private constructor(secretKey?: string) {
     this.store = DocDbStore.getInstance();
-    const resolved = secretKey || process.env.DOC_SIGNING_SECRET || process.env.AUTH_JWT_SECRET;
+    this.customSecretKey = secretKey;
+  }
+
+  private getSecretKey(): string {
+    const resolved = this.customSecretKey || process.env.DOC_SIGNING_SECRET || process.env.AUTH_JWT_SECRET;
     if (!resolved) {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
         throw new Error('DOC_SIGNING_SECRET or AUTH_JWT_SECRET must be configured in environment');
       }
+      return process.env.NODE_ENV === 'test' ? 'test-doc-signing-secret-key-32' : 'dev-doc-signing-secret-key-32';
     }
-    this.secretKey = resolved || (process.env.NODE_ENV === 'test' ? 'test-doc-signing-secret-key-32' : '');
+    return resolved;
   }
 
   public static getInstance(): DocumentSignatureEngine {
@@ -65,7 +70,7 @@ export class DocumentSignatureEngine {
 
     // Cryptographic signature using HMAC-SHA256
     const signature = crypto
-      .createHmac('sha256', this.secretKey)
+      .createHmac('sha256', this.getSecretKey())
       .update(documentHash)
       .digest('base64');
 
@@ -84,7 +89,7 @@ export class DocumentSignatureEngine {
 
   public verifySignature(documentHash: string, signature: string): boolean {
     const expectedSignature = crypto
-      .createHmac('sha256', this.secretKey)
+      .createHmac('sha256', this.getSecretKey())
       .update(documentHash)
       .digest('base64');
 

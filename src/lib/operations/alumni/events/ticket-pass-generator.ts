@@ -7,16 +7,21 @@ export interface GeneratedEventPass {
 }
 
 export class TicketPassGenerator {
-  private secretKey: string;
+  private customSecretKey?: string;
 
   constructor(secretKey?: string) {
-    const resolved = secretKey || process.env.EVENT_TICKET_KEY || process.env.AUTH_JWT_SECRET;
+    this.customSecretKey = secretKey;
+  }
+
+  private getSecretKey(): string {
+    const resolved = this.customSecretKey || process.env.EVENT_TICKET_KEY || process.env.AUTH_JWT_SECRET;
     if (!resolved) {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
         throw new Error('EVENT_TICKET_KEY must be configured in environment');
       }
+      return process.env.NODE_ENV === 'test' ? 'test-event-ticket-secret-key-32' : 'dev-event-ticket-secret-key-32';
     }
-    this.secretKey = resolved || (process.env.NODE_ENV === 'test' ? 'test-event-ticket-secret-key-32' : '');
+    return resolved;
   }
 
   public generateTicketPass(eventId: string, attendeeEmail: string, timestamp: Date = new Date()): GeneratedEventPass {
@@ -25,7 +30,7 @@ export class TicketPassGenerator {
     const randomSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
     const ticketNumber = `TKT-${year}-${shortEvent}-${randomSuffix}`;
 
-    const raw = `${ticketNumber}|${eventId}|${attendeeEmail}|${this.secretKey}`;
+    const raw = `${ticketNumber}|${eventId}|${attendeeEmail}|${this.getSecretKey()}`;
     const ticketPassHash = crypto.createHash('sha256').update(raw).digest('hex');
 
     const qrPayload = JSON.stringify({
@@ -44,7 +49,7 @@ export class TicketPassGenerator {
   }
 
   public verifyTicketPass(ticketNumber: string, eventId: string, attendeeEmail: string, ticketPassHash: string): boolean {
-    const raw = `${ticketNumber}|${eventId}|${attendeeEmail}|${this.secretKey}`;
+    const raw = `${ticketNumber}|${eventId}|${attendeeEmail}|${this.getSecretKey()}`;
     const expected = crypto.createHash('sha256').update(raw).digest('hex');
     return expected === ticketPassHash;
   }
