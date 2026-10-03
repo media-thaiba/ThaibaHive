@@ -170,15 +170,18 @@ jobs:
           cp -r public .next/standalone/public
           cp -r .next/static .next/standalone/.next/static
 
+      - name: Package standalone build as tarball (preserves symlinks)
+        run: |
+          tar -czf e2e-standalone.tar.gz \
+            --exclude='.env' --exclude='.env.*' \
+            --exclude='*/.env' --exclude='*/.env.*' \
+            -C .next standalone
+
       - name: Upload standalone build artifact
         uses: actions/upload-artifact@v4
         with:
           name: e2e-standalone
-          path: |
-            .next/standalone
-            !**/.env
-            !**/.env.*
-          include-hidden-files: true
+          path: e2e-standalone.tar.gz
           if-no-files-found: error
           retention-days: 1
 
@@ -215,22 +218,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: e2e-standalone
-          path: .next/standalone
 
-      - name: Verify standalone build integrity
+      - name: Extract standalone build (symlink-preserving)
         run: |
-          if [ -f .next/standalone/standalone/server.js ]; then
-            shopt -s dotglob
-            mv .next/standalone/standalone/* .next/standalone/
-            rmdir .next/standalone/standalone
-          fi
-          if [ -f standalone/server.js ]; then
-            mkdir -p .next
-            mv standalone .next/standalone
-          fi
+          mkdir -p .next
+          tar -xzf e2e-standalone.tar.gz -C .next
           test -f .next/standalone/server.js
           test -d .next/standalone/.next/server
-          echo "Standalone build verified: .next/standalone/server.js"
+          node -e "const { createRequire } = require('module'); const fs = require('fs'); const dir = process.cwd() + '/.next/standalone/.next/node_modules/@libsql'; const entry = fs.readdirSync(dir).find((d) => d.startsWith('client-')); if (!entry) throw new Error('hashed @libsql/client entry missing'); const req = createRequire(dir + '/' + entry + '/lib-esm/node.js'); console.log('OK @libsql/core ->', req.resolve('@libsql/core'));"
+          echo "Standalone build verified with symlinks intact: .next/standalone/server.js"
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
