@@ -2,8 +2,9 @@
  * Single source of truth for HTTP security headers (O4 consolidation).
  *
  * Consumed by:
- *  - `next.config.ts` headers()      -> `securityHeaderPairs()`
- *  - `src/proxy.ts` addSecurityHeaders -> `applySecurityHeaders()`
+ *  - `next.config.ts` headers()              -> `securityHeaderPairs()`
+ *  - middleware entry (`src/proxy.ts` or its
+ *    `src/middleware.ts` rename)             -> `applySecurityHeaders()`
  *
  * The two layers must never drift: next.config headers apply to every
  * response (static, error pages, non-proxied), while the proxy re-applies

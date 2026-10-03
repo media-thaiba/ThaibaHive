@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import {
   SECURITY_HEADERS,
@@ -10,7 +10,10 @@ import {
 } from "../security/security-headers";
 
 const nextConfigSource = readFileSync(join(process.cwd(), "next.config.ts"), "utf8");
-const proxySource = readFileSync(join(process.cwd(), "src", "proxy.ts"), "utf8");
+const middlewarePath = existsSync(join(process.cwd(), "src", "middleware.ts"))
+  ? join(process.cwd(), "src", "middleware.ts")
+  : join(process.cwd(), "src", "proxy.ts");
+const proxySource = readFileSync(middlewarePath, "utf8");
 
 describe("shared security header module (single source of truth)", () => {
   test("SECURITY_HEADERS exposes the full static set", () => {
@@ -102,7 +105,7 @@ describe("anti-drift guards (consolidation invariants)", () => {
     expect(nextConfigSource).not.toContain("cspDirective");
   });
 
-  test("proxy.ts consumes the shared module and declares no inline header literals", () => {
+  test("middleware/proxy entry consumes the shared module and declares no inline header literals", () => {
     expect(proxySource).toContain("applySecurityHeaders");
     expect(proxySource).not.toContain('"Content-Security-Policy"');
     expect(proxySource).not.toContain('"X-Frame-Options"');
