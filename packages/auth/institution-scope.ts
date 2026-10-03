@@ -1,5 +1,5 @@
 import { verifySession, type SessionPayload } from "./session";
-import { db, staffInstitutions, institutions, staff } from "@thaiba/db";
+import { db, staffInstitutions, institutions } from "@thaiba/db";
 import { eq, inArray } from "drizzle-orm";
 
 export class TenantMismatchError extends Error {
@@ -103,7 +103,7 @@ export async function resolveRequestInstitution(
   requested?: string | null
 ): Promise<string> {
   if (session.role === "super_admin" || session.role === "admin" || session.role === "system") {
-    return requested || (session as any).institutionId || "global";
+    return requested || session.institutionId || "global";
   }
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
@@ -131,6 +131,35 @@ export async function resolveRequestInstitution(
 
   return primary;
 }
+
+/**
+ * Resolves list of allowed institution IDs for a session query (supports multi-institution staff).
+ * - If requested is provided: returns [resolvedInstitutionId]
+ * - If requested is omitted:
+ *     - Admin/System: returns ["global"]
+ *     - Non-admin: returns all caller's verified memberships
+ */
+export async function resolveScopedInstitutions(
+  session: SessionPayload | { staffId: string; role: string; institutionId?: string | null },
+  requested?: string | null
+): Promise<string[]> {
+  if (requested) {
+    const single = await resolveRequestInstitution(session, requested);
+    return [single];
+  }
+  if (session.role === "super_admin" || session.role === "admin" || session.role === "system") {
+    return ["global"];
+  }
+  const memberships = await getStaffInstitutionMemberships(session.staffId);
+  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
+    memberships.push(session.institutionId);
+  }
+  if (memberships.length === 0) {
+    throw new TenantMismatchError("Forbidden: User has no assigned institution.");
+  }
+  return memberships;
+}
+
 
 /**
  * Resolves tenant scope for session in auth guard and middleware.

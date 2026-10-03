@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySession, resolveInstitutionScopeForSession, type SessionPayload, hasPermission, TenantMismatchError } from "@thaiba/auth";
+import { verifySession, resolveInstitutionScopeForSession, type SessionPayload, hasPermission } from "@thaiba/auth";
 import type { StaffRole } from "@/types";
 import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
@@ -197,7 +197,7 @@ export function requireAuth(
       return response;
     } catch (error) {
       if (
-        (error as any)?.name === "TenantMismatchError" ||
+        (typeof error === "object" && error !== null && "name" in error && (error as { name: string }).name === "TenantMismatchError") ||
         (error instanceof Error && (error.name === "TenantMismatchError" || error.message.startsWith("Forbidden:")))
       ) {
         const forbiddenMsg = error instanceof Error ? error.message : "Forbidden";
@@ -233,4 +233,5 @@ export function requireAuth(
   };
 }
 
-export { resolveRequestInstitution, resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";
+export { resolveRequestInstitution, resolveScopedInstitutions, resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";
+
