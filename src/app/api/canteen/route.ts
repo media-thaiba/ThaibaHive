@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mealNotifications, staff, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { canteenCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, inArray } from "drizzle-orm";
 
@@ -59,6 +60,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { date, mealType, status, guestCount, notes } = parsed.data;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const existing = await db
     .select()
@@ -70,7 +72,14 @@ export const POST = requireAuth(async (request: Request, session) => {
     await db.update(mealNotifications).set({ status, guestCount: guestCount || 0, notes }).where(eq(mealNotifications.id, existing.id)).run();
   } else {
     await db.insert(mealNotifications).values({
-      id: crypto.randomUUID(), staffId: session.staffId, date, mealType, status, guestCount: guestCount || 0, notes,
+      id: crypto.randomUUID(),
+      staffId: session.staffId,
+      date,
+      mealType,
+      status,
+      guestCount: guestCount || 0,
+      notes,
+      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
     }).run();
   }
 

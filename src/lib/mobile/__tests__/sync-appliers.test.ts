@@ -16,7 +16,7 @@ jest.mock("@/lib/attendance/validation", () => ({
   AttendanceValidationError: class AttendanceValidationError extends Error {},
 }));
 
-function chainable(terminal: Record<string, jest.Mock>) {
+function chainable(terminal: Record<string, jest.Mock> = {}) {
   const chain: Record<string, jest.Mock> = {};
   for (const key of [
     "select",
@@ -28,9 +28,13 @@ function chainable(terminal: Record<string, jest.Mock>) {
     "values",
     "delete",
     "returning",
+    "limit",
   ]) {
     chain[key] = jest.fn().mockReturnValue(chain);
   }
+  chain.get = jest.fn(async () => undefined);
+  chain.all = jest.fn(async () => []);
+  chain.run = jest.fn(async () => undefined);
   Object.assign(chain, terminal);
   return chain;
 }
@@ -41,6 +45,7 @@ const ADMIN = { staffId: "admin_1", role: "admin" };
 describe("applySyncMutation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (db.select as jest.Mock).mockImplementation(() => chainable());
   });
 
   function mockSelectOnce(value: unknown) {

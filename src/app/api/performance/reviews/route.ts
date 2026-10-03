@@ -87,7 +87,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     }
 
     // Resolve scoped institution
-    const institutionId = await resolveScopedInstitutionId(body.institutionId);
+    const rawInstitutionId = await resolveScopedInstitutionId(body.institutionId || session.institutionId);
+    const institutionId = rawInstitutionId === "global" ? null : rawInstitutionId;
 
     const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newReview = {

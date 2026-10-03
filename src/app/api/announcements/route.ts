@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 import { db, isPostgres } from "@/db";
 import { announcements, announcementReads, staff, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { announcementCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, sql, inArray } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";
@@ -22,6 +23,16 @@ export const GET = requireAuth(async (request, session) => {
   const isAdmin = ADMIN_ROLES.includes(session.role as StaffRole);
 
   if (isAdmin) {
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    const conditions = [];
+    if (!includeInactive) {
+      conditions.push(eq(announcements.isActive, true));
+    }
+    if (scopedInstitutionId && scopedInstitutionId !== "global") {
+      conditions.push(or(isNull(announcements.targetInstitutionId), eq(announcements.targetInstitutionId, scopedInstitutionId)));
+    }
+    const adminWhere = conditions.length > 0 ? and(...conditions) : sql`1=1`;
+
     // Admin/Super Admin/Principal: get all announcements with read receipt counts
     const all = await db
       .select({
@@ -44,7 +55,7 @@ export const GET = requireAuth(async (request, session) => {
       })
       .from(announcements)
       .leftJoin(staff, eq(announcements.createdById, staff.id))
-      .where(includeInactive ? sql`1=1` : eq(announcements.isActive, true))
+      .where(adminWhere)
       .orderBy(
         desc(pinnedUntilOrderSql()),
         desc(announcements.createdAt)

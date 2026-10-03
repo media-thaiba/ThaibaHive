@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { tasks, staff, staffDepartments, departments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { taskCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { sendPushNotification } from "@/lib/notifications/push-service";
@@ -17,6 +18,7 @@ export const GET = requireAuth(async (request, session) => {
   });
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   let query = db
     .select({
@@ -108,6 +110,9 @@ export const GET = requireAuth(async (request, session) => {
   }
 
   const conditions = [];
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    conditions.push(eq(tasks.institutionId, scopedInstitutionId));
+  }
   if (accessFilter) {
     conditions.push(accessFilter);
   }
@@ -173,6 +178,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const { title, description, priority, assignedToId, departmentId, dueDate } = parsed.data;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   // Find the max sortOrder in the 'todo' list to insert the new task at the end
   const maxRow = await db
@@ -190,13 +196,14 @@ export const POST = requireAuth(async (request: Request, session) => {
     .values({
       id: crypto.randomUUID(),
       title,
-      description,
+      description: description || null,
       priority: priority || "medium",
-      assignedToId,
+      assignedToId: assignedToId || null,
       assignedById: session.staffId,
-      departmentId,
-      dueDate,
+      departmentId: departmentId || null,
+      dueDate: dueDate || null,
       sortOrder: nextOrder,
+      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
     })
     .returning()
     .get();

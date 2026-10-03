@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { helpDeskTickets, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { helpDeskTicketCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -31,6 +32,11 @@ export const GET = requireAuth(async (request: Request, session) => {
   }
 
   const conditions = [];
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    conditions.push(eq(helpDeskTickets.institutionId, scopedInstitutionId));
+  }
+
   const isAdminRole = ["super_admin", "admin"].includes(session.role);
   if (!isAdminRole) {
     conditions.push(eq(helpDeskTickets.submittedById, session.staffId));
@@ -72,6 +78,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const { title, description, category, priority } = parsed.data;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const ticket = await db.insert(helpDeskTickets).values({
     id: crypto.randomUUID(),
@@ -81,6 +88,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     priority: priority || "medium",
     submittedById: session.staffId,
     status: "open",
+    institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
   }).returning().get();
 
   return NextResponse.json({ ticket }, { status: 201 });

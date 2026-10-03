@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { events, eventRsvps, staff, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eventCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, inArray, sql } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";
@@ -13,6 +14,12 @@ export const GET = requireAuth(async (request, session) => {
   const isManager = ADMIN_ROLES.includes(session.role as StaffRole);
 
   if (isManager) {
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    let managerWhere = undefined;
+    if (scopedInstitutionId && scopedInstitutionId !== "global") {
+      managerWhere = or(isNull(events.institutionId), eq(events.institutionId, scopedInstitutionId));
+    }
+
     // Admin/Manager/HOD: Retrieve all active and inactive events along with counts of RSVPs categorized by status
     const all = await db
       .select({
@@ -48,6 +55,7 @@ export const GET = requireAuth(async (request, session) => {
         eventRsvps,
         and(eq(eventRsvps.eventId, events.id), eq(eventRsvps.staffId, session.staffId))
       )
+      .where(managerWhere)
       .orderBy(desc(events.startDate))
       .all();
 

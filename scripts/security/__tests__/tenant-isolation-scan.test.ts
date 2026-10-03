@@ -1,53 +1,94 @@
-/**
- * Tenant Isolation & Security Scanner Tests
- * Part of Sprint-035: Global Multi-Tenant Cross-Region Disaster Recovery Drills & Automated Failover Verification
- */
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { runTenantScan } from "../tenant-isolation-scan";
 
-import { TenantGuard } from "../../../src/lib/security/tenant-guard";
-import { TenantIsolationError } from "../../../packages/db";
+describe("Tenant Isolation Scanner Security Rules & Fixtures", () => {
+  let tmpDir: string;
 
-describe("TenantGuard & Isolation Scanner", () => {
-  it("should allow super_admin cross-tenant access", () => {
-    expect(() => {
-      TenantGuard.validateScope(
-        { isSuperAdmin: true, role: "super_admin" },
-        "inst-999",
-        "adminAudit"
-      );
-    }).not.toThrow();
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tenant-scan-test-"));
+    fs.mkdirSync(path.join(tmpDir, "packages/db"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, "src/app/api/sample/[id]"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, "src/app/api/admin/system"), { recursive: true });
+
+    // Minimal dummy schema with scoped table
+    const dummySchema = `
+      import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+      export const mockScopedTable = sqliteTable("mock_scoped", {
+        id: text("id").primaryKey(),
+        institutionId: text("institution_id"),
+      });
+    `;
+    fs.writeFileSync(path.join(tmpDir, "packages/db/schema.ts"), dummySchema, "utf8");
   });
 
-  it("should allow tenant users to access their own institution", () => {
-    expect(() => {
-      TenantGuard.validateScope(
-        { institutionId: "inst-101", role: "hod" },
-        "inst-101",
-        "getDepartment"
-      );
-    }).not.toThrow();
+  afterEach(() => {
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
-  it("should block tenant users from accessing a different institution", () => {
-    expect(() => {
-      TenantGuard.validateScope(
-        { institutionId: "inst-101", role: "hod" },
-        "inst-202",
-        "getDepartment"
-      );
-    }).toThrow(TenantIsolationError);
+  it("detects UNSCOPED_MUTATION when a scoped table is mutated without resolver", () => {
+    const unScopingCode = `
+      import { db } from "@/db";
+      import { mockScopedTable } from "@/db/schema";
+      import { eq } from "drizzle-orm";
+
+      export async function DELETE(req, { params }) {
+        await db.delete(mockScopedTable).where(eq(mockScopedTable.id, params.id)).run();
+      }
+    `;
+    const targetFile = path.join(tmpDir, "src/app/api/sample/[id]/route.ts");
+    fs.writeFileSync(targetFile, unScopingCode, "utf8");
+
+    const report = runTenantScan({ rootDir: tmpDir, files: [targetFile] });
+    expect(report.passed).toBe(false);
+    expect(report.criticalCount).toBeGreaterThan(0);
+    const mutationFinding = report.findings.find((f) => f.rule === "UNSCOPED_MUTATION");
+    expect(mutationFinding).toBeDefined();
+    expect(mutationFinding?.severity).toBe("CRITICAL");
   });
 
-  it("should enforce institutionId filter on queries", () => {
-    const filters = { status: "ACTIVE", grade: "10A" };
-    const scoped = TenantGuard.enforceFilter(
-      { institutionId: "inst-101", role: "staff" },
-      filters
-    );
+  it("detects INSERT_WITHOUT_INSTITUTION when insert values omit institutionId", () => {
+    const insertMissingInstCode = `
+      import { db } from "@/db";
+      import { mockScopedTable } from "@/db/schema";
+      import { resolveScopedInstitutionId } from "@/lib/auth";
 
-    expect(scoped).toEqual({
-      status: "ACTIVE",
-      grade: "10A",
-      institutionId: "inst-101",
-    });
+      export async function POST(req) {
+        await db.insert(mockScopedTable).values({
+          id: "123",
+        }).run();
+      }
+    `;
+    const targetFile = path.join(tmpDir, "src/app/api/sample/route.ts");
+    fs.writeFileSync(targetFile, insertMissingInstCode, "utf8");
+
+    const report = runTenantScan({ rootDir: tmpDir, files: [targetFile] });
+    expect(report.passed).toBe(false);
+    expect(report.highCount).toBeGreaterThan(0);
+    const insertFinding = report.findings.find((f) => f.rule === "INSERT_WITHOUT_INSTITUTION");
+    expect(insertFinding).toBeDefined();
+    expect(insertFinding?.severity).toBe("HIGH");
+  });
+
+  it("allows unscoped mutations in allowlisted paths as INFO debt", () => {
+    const systemAdminCode = `
+      import { db } from "@/db";
+      import { mockScopedTable } from "@/db/schema";
+      import { eq } from "drizzle-orm";
+
+      export async function DELETE(req, { params }) {
+        await db.delete(mockScopedTable).where(eq(mockScopedTable.id, params.id)).run();
+      }
+    `;
+    const targetFile = path.join(tmpDir, "src/app/api/admin/system/route.ts");
+    fs.writeFileSync(targetFile, systemAdminCode, "utf8");
+
+    const report = runTenantScan({ rootDir: tmpDir, files: [targetFile] });
+    expect(report.passed).toBe(true);
+    expect(report.criticalCount).toBe(0);
+    expect(report.allowlistedCount).toBeGreaterThan(0);
   });
 });

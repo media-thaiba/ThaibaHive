@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings, bookingResources, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { bookingCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, desc, gte, lte, lt, gt } from "drizzle-orm";
 
@@ -10,6 +11,11 @@ export const GET = requireAuth(async (request: Request, session) => {
   const resourceId = url.searchParams.get("resourceId");
   const date = url.searchParams.get("date");
   const conditions = [];
+
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    conditions.push(eq(bookings.institutionId, scopedInstitutionId));
+  }
 
   if (resourceId) conditions.push(eq(bookings.resourceId, resourceId));
   if (date) {
@@ -57,6 +63,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const { resourceId, title, startTime, endTime, notes, description } = parsed.data;
   const noteText = notes || description || null;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   // Check for overlapping bookings on the same resource
   const overlapping = await db
@@ -85,6 +92,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     notes: noteText,
     bookerId: session.staffId,
     status: "confirmed",
+    institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
   }).returning().get();
 
   return NextResponse.json({ booking }, { status: 201 });

@@ -65,7 +65,12 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const isPublic = publicPaths.some((p) => pathname.startsWith(p));
+    const isProtectedPortal =
+      pathname.startsWith("/portal/alumni") ||
+      pathname.startsWith("/portal/facilities") ||
+      pathname.startsWith("/portal/fees") ||
+      pathname.startsWith("/portal/documents");
+    const isPublic = !isProtectedPortal && publicPaths.some((p) => pathname.startsWith(p));
     if (isPublic) return addSecurityHeaders(request, NextResponse.next(), pathname);
 
     let token = request.cookies.get("thaibahive_session")?.value;

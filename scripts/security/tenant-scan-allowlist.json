@@ -1,0 +1,23 @@
+{
+  "description": "Tenant scan allowlist for Tier 3 routes and system-level operations to be refactored in follow-up sprints",
+  "entries": {
+    "src/app/api/admin/system/": "Global system admin routes operate across all institutions",
+    "src/app/api/auth/": "Global authentication and onboarding endpoints",
+    "src/app/api/mobile/mdm/": "System device-level MDM operations",
+    "src/app/api/cron/": "System scheduled background cron workers",
+    "src/app/api/dr/": "System disaster recovery drills and health checks",
+    "src/app/api/cache/": "System cache invalidation endpoints",
+    "src/app/api/admin/nfc/": "Tier 3: Campus NFC card management scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/accounts/": "Tier 3: Financial transaction mutations scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/admin/attendance-locations/": "Tier 3: Campus attendance location beacons scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/admin/performance/": "Tier 3: Enterprise performance review cycles scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/performance/": "Tier 3: Performance goals and feedback modules scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/reviews/": "Tier 3: Performance reviews module scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/bookings/resources/": "Tier 3: Booking resources setup scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/circulars/": "Tier 3: Institutional circulars delivery scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/examinations/": "Tier 3: Academic examinations engine scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/staff/[id]/nfc-card/": "Tier 3: Staff NFC card issuance scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/visitors/approvals/": "Tier 3: Visitor pass approvals scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/visitors/verify/": "Tier 3: Gatekeeper visitor verification scheduled for Sprint-053 tenant isolation refactor"
+  }
+}

@@ -373,6 +373,7 @@ export const leaveRequests = sqliteTable("leave_requests", {
   reviewedById: text("reviewed_by_id").references(() => staff.id, { onDelete: "set null" }),
   reviewedAt: text("reviewed_at"),
   reviewNotes: text("review_notes"),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
@@ -927,6 +928,7 @@ export const mealNotifications = sqliteTable("meal_notifications", {
   status: text("status").notNull().default("skip"),
   guestCount: integer("guest_count").default(0),
   notes: text("notes"),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 

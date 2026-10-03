@@ -7,6 +7,7 @@ import {
   leaveRequests,
   purchaseRequests,
   tasks,
+  staffInstitutions,
 } from "@/db/schema";
 import {
   expenseClaimCreateSchema,
@@ -119,6 +120,13 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
       );
     }
 
+    const instRow = await tx
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, ctx.staffId))
+      .get();
+    const actorInstId = instRow?.institutionId ?? null;
+
     await tx
       .insert(leaveRequests)
       .values({
@@ -130,6 +138,7 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
         daysCount,
         reason: reason || null,
         status: "pending",
+        institutionId: actorInstId,
       })
       .run();
   });
@@ -176,6 +185,13 @@ async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unkn
     throw new Error(parsed.error.issues[0]?.message || "Invalid task payload");
   }
 
+  const instRow = await db
+    .select({ institutionId: staffInstitutions.institutionId })
+    .from(staffInstitutions)
+    .where(eq(staffInstitutions.staffId, ctx.staffId))
+    .get();
+  const actorInstId = instRow?.institutionId ?? null;
+
   await db
     .insert(tasks)
     .values({
@@ -188,6 +204,7 @@ async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unkn
       departmentId: parsed.data.departmentId || null,
       dueDate: parsed.data.dueDate || null,
       status: "todo",
+      institutionId: actorInstId,
     })
     .run();
 }

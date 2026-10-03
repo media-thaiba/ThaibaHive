@@ -25,6 +25,7 @@ jest.mock("@/db", () => ({
 jest.mock("@/db/schema", () => ({
   mediaAssets: {},
   mediaFolders: {},
+  departments: {},
 }));
 
 jest.mock("drizzle-orm", () => ({

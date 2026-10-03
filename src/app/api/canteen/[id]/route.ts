@@ -2,16 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mealNotifications } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(mealNotifications.id, id), eq(mealNotifications.institutionId, scopedInstitutionId))
+    : eq(mealNotifications.id, id);
   
   const existing = await db
     .select()
     .from(mealNotifications)
-    .where(eq(mealNotifications.id, id))
+    .where(whereClause)
     .get();
 
   if (!existing) {
@@ -25,7 +30,7 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     }
   }
 
-  await db.delete(mealNotifications).where(eq(mealNotifications.id, id)).run();
+  await db.delete(mealNotifications).where(whereClause).run();
   return NextResponse.json({ success: true });
 }, "canteen:delete");
 

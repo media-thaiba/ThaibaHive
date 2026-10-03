@@ -2,20 +2,26 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { mediaAssetCreateSchema } from "@/lib/validation/schemas";
 import { eq, asc, and, like, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
-export const GET = requireAuth(async (req) => {
+export const GET = requireAuth(async (req, session) => {
   try {
     const { searchParams } = new URL(req.url);
     const folderId = searchParams.get("folderId");
     const fileType = searchParams.get("fileType");
     const tag = searchParams.get("tag");
     const search = searchParams.get("search");
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
     let query = db.select().from(mediaAssets).$dynamic();
     const conditions = [];
+
+    if (scopedInstitutionId && scopedInstitutionId !== "global") {
+      conditions.push(eq(mediaAssets.institutionId, scopedInstitutionId));
+    }
 
     if (folderId) conditions.push(eq(mediaAssets.folderId, folderId));
     if (fileType) conditions.push(eq(mediaAssets.fileType, fileType));
@@ -63,6 +69,7 @@ export const POST = requireAuth(async (req, session) => {
       name, fileUrl, thumbnailUrl, fileSize, mimeType, fileType,
       status, folderId, tags, metadata
     } = result.data;
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
     const id = uuidv4();
     const newAsset = await db.insert(mediaAssets).values({
@@ -78,6 +85,7 @@ export const POST = requireAuth(async (req, session) => {
       tags: tags || null,
       metadata: metadata || null,
       createdById: session.staffId,
+      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }).returning().get();

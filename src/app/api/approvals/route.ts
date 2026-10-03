@@ -13,6 +13,7 @@ import {
   approvalDelegations,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
@@ -667,10 +668,15 @@ export const PATCH = requireAuth(async (request, session) => {
 
   try {
     if (type === "leave") {
+      const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
+      const leaveWhere = scopedInstId && scopedInstId !== "global"
+        ? and(eq(leaveRequests.id, id), eq(leaveRequests.institutionId, scopedInstId))
+        : eq(leaveRequests.id, id);
+
       const leave = await db
         .select()
         .from(leaveRequests)
-        .where(eq(leaveRequests.id, id))
+        .where(leaveWhere)
         .get();
 
       if (!leave) {
@@ -716,7 +722,7 @@ export const PATCH = requireAuth(async (request, session) => {
         })
         .where(
           and(
-            eq(leaveRequests.id, id),
+            leaveWhere,
             ne(leaveRequests.status, "approved"),
             ne(leaveRequests.status, "rejected")
           )

@@ -2,7 +2,7 @@ import { readdir, stat, readFile } from "fs/promises";
 import { join, relative, extname, basename, dirname } from "path";
 import { createHash, randomUUID } from "crypto";
 import { db } from "@/db";
-import { mediaAssets, mediaFolders } from "@/db/schema";
+import { mediaAssets, mediaFolders, departments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export interface NASWatchConfig {
@@ -272,6 +272,16 @@ export class NASSyncService {
       return { id: existing.id, name: existing.name };
     }
 
+    let instId: string | null = null;
+    if (params.departmentId) {
+      const dept = await db
+        .select({ institutionId: departments.institutionId })
+        .from(departments)
+        .where(eq(departments.id, params.departmentId))
+        .get();
+      instId = dept?.institutionId ?? null;
+    }
+
     const newFolder = await db
       .insert(mediaFolders)
       .values({
@@ -279,6 +289,7 @@ export class NASSyncService {
         name: params.name,
         parentId: params.parentId,
         departmentId: params.departmentId || null,
+        institutionId: instId,
         createdById: "system-nas-sync",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -324,6 +335,12 @@ export class NASSyncService {
       importedAt: new Date().toISOString(),
     };
 
+    const folder = await db
+      .select({ institutionId: mediaFolders.institutionId })
+      .from(mediaFolders)
+      .where(eq(mediaFolders.id, folderId))
+      .get();
+
     await db
       .insert(mediaAssets)
       .values({
@@ -335,6 +352,7 @@ export class NASSyncService {
         fileType: file.fileType,
         status: "ready",
         folderId,
+        institutionId: folder?.institutionId ?? null,
         tags: ["nas-import"],
         metadata,
         downloadCount: 0,

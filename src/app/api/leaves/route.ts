@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, leaveBalances } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { leaveCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
@@ -18,7 +19,11 @@ export const GET = requireAuth(async (request, session) => {
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const conditions = [eq(leaveRequests.staffId, session.staffId)];
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    conditions.push(eq(leaveRequests.institutionId, scopedInstitutionId));
+  }
   if (startDate) conditions.push(gte(leaveRequests.startDate, startDate));
   if (endDate) conditions.push(lte(leaveRequests.endDate, endDate));
   const whereClause = and(...conditions);
@@ -57,6 +62,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const { leaveTypeId, startDate, endDate, daysCount, reason } = parsed.data;
   const year = new Date().getFullYear();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   // Atomic transaction to eliminate race conditions between balance check and insertion
   const result = await db.transaction(async (tx) => {
@@ -98,6 +104,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         daysCount,
         reason,
         status: "pending",
+        institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
       })
       .returning()
       .get();

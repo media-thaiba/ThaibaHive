@@ -2,13 +2,19 @@ import { NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, leaveBalances } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
 import { sendPushNotification } from "@/lib/notifications/push-service";
 import { eq, and, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
-  const leave = await db.select().from(leaveRequests).where(eq(leaveRequests.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(leaveRequests.id, id), eq(leaveRequests.institutionId, scopedInstitutionId))
+    : eq(leaveRequests.id, id);
+
+  const leave = await db.select().from(leaveRequests).where(whereClause).get();
   if (!leave) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const authorized = await isAuthorizedToViewLeave(session.staffId, session.role, leave.staffId);
@@ -23,7 +29,12 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
 
-  const leave = await db.select().from(leaveRequests).where(eq(leaveRequests.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(leaveRequests.id, id), eq(leaveRequests.institutionId, scopedInstitutionId))
+    : eq(leaveRequests.id, id);
+
+  const leave = await db.select().from(leaveRequests).where(whereClause).get();
   if (!leave) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (leave.staffId === session.staffId) {
@@ -62,7 +73,7 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     .set(updates)
     .where(
       and(
-        eq(leaveRequests.id, id),
+        whereClause,
         ne(leaveRequests.status, "approved"),
         ne(leaveRequests.status, "rejected")
       )
@@ -122,7 +133,12 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
 
 export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
-  const leave = await db.select({ staffId: leaveRequests.staffId }).from(leaveRequests).where(eq(leaveRequests.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(leaveRequests.id, id), eq(leaveRequests.institutionId, scopedInstitutionId))
+    : eq(leaveRequests.id, id);
+
+  const leave = await db.select({ staffId: leaveRequests.staffId }).from(leaveRequests).where(whereClause).get();
   if (!leave) return NextResponse.json({ error: "Not found" }, { status: 404 });
   
   if (leave.staffId !== session.staffId && session.role !== "super_admin" && session.role !== "admin") {
@@ -132,7 +148,7 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     }
   }
 
-  await db.delete(leaveRequests).where(eq(leaveRequests.id, id)).run();
+  await db.delete(leaveRequests).where(whereClause).run();
   return NextResponse.json({ success: true });
 }, "leaves:delete");
 

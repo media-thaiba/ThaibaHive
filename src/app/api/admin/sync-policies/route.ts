@@ -7,7 +7,19 @@ import { syncPolicyUpdateSchema } from "@/lib/validation/schemas";
 
 export const GET = requireAuth(async (_request, _session) => {
   try {
-    const policies = await db.select().from(syncTuningPolicies).all();
+    let policies = await db.select().from(syncTuningPolicies).all();
+    if (policies.length === 0) {
+      const now = new Date().toISOString();
+      const defaults = [
+        { id: "policy-wifi", networkType: "WIFI", minBandwidthKbps: 1000, maxLatencyMs: 300, batchSize: 50, compressionLevel: 6, retryBackoffMs: 2000, updatedAt: now },
+        { id: "policy-cellular", networkType: "CELLULAR", minBandwidthKbps: 200, maxLatencyMs: 800, batchSize: 20, compressionLevel: 9, retryBackoffMs: 5000, updatedAt: now },
+        { id: "policy-default", networkType: "DEFAULT", minBandwidthKbps: 0, maxLatencyMs: 0, batchSize: 30, compressionLevel: 4, retryBackoffMs: 3000, updatedAt: now },
+      ];
+      for (const p of defaults) {
+        await db.insert(syncTuningPolicies).values(p).onConflictDoNothing().run();
+      }
+      policies = await db.select().from(syncTuningPolicies).all();
+    }
     return NextResponse.json({ success: true, policies });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
