@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as fs from "fs";
 import * as path from "path";
+import * as crypto from "crypto";
 
 const PORT = process.env.PORT || 3000;
 const envFlag = fs.existsSync(".env") ? "--env-file=.env " : "";

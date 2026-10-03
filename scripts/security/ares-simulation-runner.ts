@@ -6,6 +6,7 @@
  *   pnpm ares:simulate
  */
 
+import * as crypto from "crypto";
 import { ThreatForecaster } from '../../src/lib/security/ares/threat-forecaster';
 import { PredictiveAlertSystem } from '../../src/lib/security/ares/predictive-alert-system';
 import { PreemptiveHardeningController } from '../../src/lib/security/ares/preemptive-hardening';
