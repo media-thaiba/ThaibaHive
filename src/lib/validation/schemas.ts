@@ -376,9 +376,11 @@ export const financialTransactionCreateSchema = z.object({
 
 export const systemUpdatePostSchema = z.object({
   version: z.string().optional(),
-  downloadUrl: z.string().url().optional(),
+  downloadUrl: z.string().optional(),
   releaseNotes: z.string().optional(),
   isForceUpdate: z.boolean().optional(),
+  sha256: z.string().optional(),
+  fileSize: z.number().int().nonnegative().optional(),
 });
 
 export const globalSearchSchema = z.object({

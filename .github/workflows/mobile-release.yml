@@ -49,11 +49,45 @@ jobs:
           cd thaibahive_mobile_app
           flutter build appbundle --release --split-debug-info=build/app/outputs/symbols
 
+      - name: Build Android Release APK
+        run: |
+          cd thaibahive_mobile_app
+          flutter build apk --release
+
+      - name: Verify Release APK Signing Certificate Integrity
+        run: |
+          APK_PATH="thaibahive_mobile_app/build/app/outputs/flutter-apk/app-release.apk"
+          echo "Verifying signing certificate of $APK_PATH..."
+          
+          CERT_OUTPUT=$(apksigner verify --print-certs "$APK_PATH")
+          echo "$CERT_OUTPUT"
+          
+          # Fail if APK was signed with a debug certificate
+          if echo "$CERT_OUTPUT" | grep -iq "Android Debug"; then
+            echo "::error::Release APK is signed with an insecure DEBUG certificate! Production release requires valid keystore."
+            exit 1
+          fi
+          
+          # Fail if no signer certificate is present
+          if ! echo "$CERT_OUTPUT" | grep -iq "Signer #1"; then
+            echo "::error::Release APK verification failed: No valid signature found."
+            exit 1
+          fi
+          
+          echo "Production release signing certificate verified successfully."
+
       - name: Upload Android App Bundle artifact
         uses: actions/upload-artifact@v4
         with:
           name: thaibahive-android-release-aab
           path: thaibahive_mobile_app/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 14
+
+      - name: Upload Android Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: thaibahive-android-release-apk
+          path: thaibahive_mobile_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
 
       - name: Cleanup sensitive signing files

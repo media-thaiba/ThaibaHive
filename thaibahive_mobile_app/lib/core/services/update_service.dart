@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,6 +17,8 @@ class UpdateInfo {
   final String downloadUrl;
   final String releaseNotes;
   final bool isForceUpdate;
+  final String? sha256;
+  final int? fileSize;
 
   UpdateInfo({
     required this.isUpdateAvailable,
@@ -23,6 +27,8 @@ class UpdateInfo {
     required this.downloadUrl,
     required this.releaseNotes,
     required this.isForceUpdate,
+    this.sha256,
+    this.fileSize,
   });
 
   factory UpdateInfo.noUpdate(String currentVersion) {
@@ -33,6 +39,8 @@ class UpdateInfo {
       downloadUrl: '',
       releaseNotes: '',
       isForceUpdate: false,
+      sha256: null,
+      fileSize: null,
     );
   }
 }
@@ -41,6 +49,55 @@ class UpdateService {
   CancelToken? _cancelToken;
 
   UpdateService({Dio? dio});
+
+  /// Validates that download URL uses HTTPS and originates from an allow-listed domain
+  bool isDownloadUrlAllowed(String urlString) {
+    try {
+      final uri = Uri.parse(urlString);
+
+      // 1. Enforce HTTPS (HTTP permitted on localhost/emulator in debug mode only)
+      if (uri.scheme != 'https') {
+        if (kDebugMode && (uri.host == 'localhost' || uri.host == '10.0.2.2' || uri.host == '127.0.0.1')) {
+          // Permitted in debug mode only
+        } else {
+          logger.error('UPDATE_SERVICE: Insecure download URL rejected (HTTPS required): $urlString');
+          return false;
+        }
+      }
+
+      // 2. Allow-list check
+      final allowedHosts = <String>{
+        'thaibahive.com',
+        'www.thaibahive.com',
+        'thaiba-hive.vercel.app',
+        'github.com',
+        'objects.githubusercontent.com',
+      };
+
+      try {
+        final configuredWebHost = Uri.parse(AppConstants.webBaseUrl).host;
+        if (configuredWebHost.isNotEmpty) {
+          allowedHosts.add(configuredWebHost);
+        }
+      } catch (_) {}
+
+      if (kDebugMode) {
+        allowedHosts.addAll(['localhost', '10.0.2.2', '127.0.0.1']);
+      }
+
+      final host = uri.host.toLowerCase();
+      final isAllowed = allowedHosts.contains(host) || allowedHosts.any((allowed) => host.endsWith('.$allowed'));
+      if (!isAllowed) {
+        logger.error('UPDATE_SERVICE: Download host not in allowlist: $host');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      logger.error('UPDATE_SERVICE: Invalid download URL: $e');
+      return false;
+    }
+  }
 
   /// Compares version strings. Returns true if latest > current.
   bool compareVersions(String current, String latest) {
@@ -99,9 +156,6 @@ class UpdateService {
       final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
       final baseUrl = apiBaseUrl ?? AppConstants.apiBaseUrl;
-      // Use a plain, unauthenticated Dio — /system/update is a public endpoint.
-      // The shared _dio carries the auth interceptor which triggers a 401 before
-      // the user's token has been restored from secure storage on app startup.
       final plainDio = Dio(BaseOptions(
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
@@ -121,6 +175,10 @@ class UpdateService {
         final releaseNotes = configs['releaseNotes'] as String? ??
             'General stability fixes and performance improvements.';
         final isForceUpdate = configs['forceUpdate'] == true;
+        final sha256 = configs['sha256'] as String?;
+        final fileSize = configs['fileSize'] is int
+            ? configs['fileSize'] as int
+            : int.tryParse(configs['fileSize']?.toString() ?? '');
 
         if (latestVersion == null || downloadUrl == null || downloadUrl.isEmpty) {
           logger.info('UPDATE_SERVICE: No update config found on server');
@@ -137,6 +195,8 @@ class UpdateService {
           downloadUrl: downloadUrl,
           releaseNotes: releaseNotes,
           isForceUpdate: isForceUpdate,
+          sha256: sha256,
+          fileSize: fileSize,
         );
       }
 
@@ -152,9 +212,19 @@ class UpdateService {
     }
   }
 
-  /// Downloads the APK to the local cache directory and tracks progress
-  Future<String?> downloadApk(String url, Function(double) onProgress) async {
+  /// Downloads the APK to the local cache directory, verifies SHA-256, and tracks progress
+  Future<String?> downloadApk(
+    String url,
+    Function(double) onProgress, {
+    String? expectedSha256,
+  }) async {
     logger.info('UPDATE_SERVICE: Starting APK download from $url');
+
+    if (!isDownloadUrlAllowed(url)) {
+      logger.error('UPDATE_SERVICE: Download aborted: URL violates security allowlist');
+      return null;
+    }
+
     _cancelToken = CancelToken();
 
     try {
@@ -166,8 +236,6 @@ class UpdateService {
         await file.delete();
       }
 
-      // Use a plain, unauthenticated Dio instance to prevent header pollution (Bearer auth token)
-      // from causing HTTP 400/403/CORS errors when GitHub Release URLs redirect to AWS S3 storage.
       final downloadDio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(minutes: 15),
@@ -188,6 +256,25 @@ class UpdateService {
       );
 
       logger.info('UPDATE_SERVICE: APK download completed: $filePath');
+
+      // Verify cryptographic SHA-256 checksum if provided
+      if (expectedSha256 != null && expectedSha256.trim().isNotEmpty) {
+        logger.info('UPDATE_SERVICE: Verifying SHA-256 integrity checksum...');
+        final bytes = await file.readAsBytes();
+        final digest = sha256.convert(bytes);
+        final computedHash = digest.toString().toLowerCase();
+        final targetHash = expectedSha256.trim().toLowerCase();
+
+        if (computedHash != targetHash) {
+          logger.error('UPDATE_SERVICE: Integrity check failed! SHA-256 mismatch: expected $targetHash, got $computedHash');
+          if (await file.exists()) {
+            await file.delete();
+          }
+          return null;
+        }
+        logger.info('UPDATE_SERVICE: SHA-256 checksum integrity verified successfully.');
+      }
+
       return filePath;
     } catch (e) {
       if (e is DioException && CancelToken.isCancel(e)) {
