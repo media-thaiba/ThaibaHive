@@ -68,8 +68,6 @@ async function main() {
       id: `si-${crypto.randomUUID()}`,
       staffId: row.id,
       institutionId: targetInstitutionId,
-      isPrimary: 1,
-      createdAt: new Date().toISOString(),
     });
     console.log(`✅ Successfully mapped staff ${row.id} to ${targetInstitutionId}`);
   }
