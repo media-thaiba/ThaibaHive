@@ -17,8 +17,9 @@ export const GET = requireAuth(async (request: Request) => {
       .orderBy(desc(taxRateOverrides.createdAt));
 
     return NextResponse.json({ overrides });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to fetch tax overrides" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Tax Overrides Fetch Error]:", error instanceof Error ? error.stack : error);
+    return NextResponse.json({ error: "Failed to fetch tax overrides" }, { status: 500 });
   }
 }, "finance:tax:view");
 
@@ -38,8 +39,10 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     });
 
     return NextResponse.json({ override: created }, { status: 201 });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to create tax override" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Tax Override Create Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to create tax override" }, { status });
   }
 }, "finance:tax:override");

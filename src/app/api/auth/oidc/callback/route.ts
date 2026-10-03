@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { OidcService } from '@/lib/auth/oidc-service';
 import { FederatedUserMapper } from '@/lib/auth/federated-user-mapper';
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 export async function GET(request: Request) {
+  const ip = extractIp(request);
+  const rateLimit = await checkDistributedRateLimit(`auth:oidc-callback:${ip}`, "auth");
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetMs);
+  }
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get('code');

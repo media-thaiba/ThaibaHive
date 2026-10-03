@@ -13,7 +13,10 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: 'deviceUuid and enrollmentToken are required' }, { status: 400 });
     }
 
-    const expectedToken = process.env.MDM_ENROLLMENT_TOKEN || 'valid_enterprise_token';
+    const expectedToken = process.env.MDM_ENROLLMENT_TOKEN;
+    if (!expectedToken) {
+      return NextResponse.json({ error: 'MDM enrollment token is not configured on server' }, { status: 500 });
+    }
     const submittedBuf = Buffer.from(String(enrollmentToken));
     const expectedBuf = Buffer.from(expectedToken);
 

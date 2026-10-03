@@ -25,9 +25,11 @@ export const GET = requireAuth(async (request: Request) => {
       .where(eq(payrollSalaryStructures.institutionId, institutionId));
 
     return NextResponse.json({ structures });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to fetch salary structures" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Payroll Structures Fetch Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to fetch salary structures" }, { status });
   }
 }, "finance:payroll:view");
 
@@ -42,8 +44,10 @@ export const POST = requireAuth(async (request: Request) => {
     const institutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
     const structure = await payrollEngine.createOrUpdateSalaryStructure({ ...parsed.data, institutionId });
     return NextResponse.json({ structure }, { status: 201 });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to configure salary structure" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Payroll Structures Configure Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to configure salary structure" }, { status });
   }
 }, "finance:payroll:manage");

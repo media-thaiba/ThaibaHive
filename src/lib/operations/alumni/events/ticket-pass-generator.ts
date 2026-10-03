@@ -9,8 +9,14 @@ export interface GeneratedEventPass {
 export class TicketPassGenerator {
   private secretKey: string;
 
-  constructor(secretKey: string = process.env.EVENT_TICKET_KEY || 'thaiba_event_pass_secret_2026') {
-    this.secretKey = secretKey;
+  constructor(secretKey?: string) {
+    const resolved = secretKey || process.env.EVENT_TICKET_KEY || process.env.AUTH_JWT_SECRET;
+    if (!resolved) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('EVENT_TICKET_KEY must be configured in environment');
+      }
+    }
+    this.secretKey = resolved || (process.env.NODE_ENV === 'test' ? 'test-event-ticket-secret-key-32' : '');
   }
 
   public generateTicketPass(eventId: string, attendeeEmail: string, timestamp: Date = new Date()): GeneratedEventPass {

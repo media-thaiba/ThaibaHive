@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { SamlService } from '@/lib/auth/saml-service';
 import { FederatedUserMapper } from '@/lib/auth/federated-user-mapper';
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 export async function POST(request: Request) {
+  const ip = extractIp(request);
+  const rateLimit = await checkDistributedRateLimit(`auth:saml-acs:${ip}`, "auth");
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetMs);
+  }
   try {
     const formData = await request.formData();
     const samlResponse = formData.get('SAMLResponse') as string;

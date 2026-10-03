@@ -98,7 +98,7 @@ jest.mock("next/server", () => {
   };
 });
 
-import { proxy, config } from "@/middleware";
+import { proxy, config } from "@/proxy";
 import { SignJWT } from "jose";
 import { getJwtSecretBytes } from "@thaiba/auth";
 

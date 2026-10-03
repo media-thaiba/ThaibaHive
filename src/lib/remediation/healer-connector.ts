@@ -5,11 +5,20 @@ import { EdgeHealer } from "../agents/healing/edge-healer";
 import * as crypto from "crypto";
 
 export class HealerConnector {
-  private static secret = process.env.HEALER_SECRET || "default_healer_secret";
+  private static getSecret(): string {
+    const secret = process.env.HEALER_SECRET || process.env.AUTH_JWT_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('HEALER_SECRET or AUTH_JWT_SECRET must be configured in environment');
+      }
+      return 'test_healer_secret';
+    }
+    return secret;
+  }
 
   static generateToken(action: string, timestamp: number): string {
     const data = `${action}:${timestamp}`;
-    return crypto.createHmac("sha256", this.secret).update(data).digest("hex");
+    return crypto.createHmac("sha256", this.getSecret()).update(data).digest("hex");
   }
 
   static verifyToken(action: string, timestamp: number, token: string): boolean {

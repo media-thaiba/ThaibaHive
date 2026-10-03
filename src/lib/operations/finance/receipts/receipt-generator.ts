@@ -27,7 +27,13 @@ export class ReceiptGenerator {
 
   constructor(store?: FeeDbStore, secretKey?: string) {
     this.store = store || FeeDbStore.getInstance();
-    this.secretKey = secretKey || process.env.RECEIPT_SIGNING_SECRET || 'thaiba_receipt_signing_key_2026';
+    const resolvedSecret = secretKey || process.env.RECEIPT_SIGNING_SECRET || process.env.RECEIPT_SIGNING_KEY || process.env.AUTH_JWT_SECRET;
+    if (!resolvedSecret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('RECEIPT_SIGNING_SECRET or AUTH_JWT_SECRET must be configured in environment');
+      }
+    }
+    this.secretKey = resolvedSecret || (process.env.NODE_ENV === 'test' ? 'test-receipt-signing-secret-key-32' : '');
   }
 
   /**

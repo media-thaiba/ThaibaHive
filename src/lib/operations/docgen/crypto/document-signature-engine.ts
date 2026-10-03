@@ -25,9 +25,15 @@ export class DocumentSignatureEngine {
   private store: DocDbStore;
   private secretKey: string;
 
-  private constructor() {
+  private constructor(secretKey?: string) {
     this.store = DocDbStore.getInstance();
-    this.secretKey = process.env.DOC_SIGNING_SECRET || 'thaibahive-default-ed25519-academic-key-2026';
+    const resolved = secretKey || process.env.DOC_SIGNING_SECRET || process.env.AUTH_JWT_SECRET;
+    if (!resolved) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('DOC_SIGNING_SECRET or AUTH_JWT_SECRET must be configured in environment');
+      }
+    }
+    this.secretKey = resolved || (process.env.NODE_ENV === 'test' ? 'test-doc-signing-secret-key-32' : '');
   }
 
   public static getInstance(): DocumentSignatureEngine {

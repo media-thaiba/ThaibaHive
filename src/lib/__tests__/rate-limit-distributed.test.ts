@@ -85,10 +85,21 @@ describe("Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5)"
       expect(extractIp(req)).toBe("203.0.113.50");
     });
 
-    it("should extract client IP from X-Forwarded-For properly", () => {
+    it("should extract authentic rightmost client IP from X-Forwarded-For when attacker prepends spoofed IP", () => {
+      // Attacker prepends '198.51.100.99' in an attempt to rotate IPs, but proxy appends authentic IP '203.0.113.55'
       const req = new Request("http://localhost/api/auth/login", {
         headers: {
-          "x-forwarded-for": "192.0.2.55, 10.0.0.1",
+          "x-forwarded-for": "198.51.100.99, 203.0.113.55",
+        },
+      });
+
+      expect(extractIp(req)).toBe("203.0.113.55");
+    });
+
+    it("should extract single IP from X-Forwarded-For", () => {
+      const req = new Request("http://localhost/api/auth/login", {
+        headers: {
+          "x-forwarded-for": "192.0.2.55",
         },
       });
 
@@ -98,6 +109,25 @@ describe("Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5)"
     it("should fallback to unknown when no IP headers exist", () => {
       const req = new Request("http://localhost/api/auth/login");
       expect(extractIp(req)).toBe("unknown");
+    });
+  });
+
+  describe("Redis Fallback Security Alert", () => {
+    it("logs a HIGH severity warning when Redis client is disconnected and fallback activates", async () => {
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const { RedisRateLimiterAdapter } = require("../security/rate-limit-redis");
+      const limiter = new RedisRateLimiterAdapter(null);
+
+      const result = await limiter.evaluate("test-key", { windowMs: 60_000, maxRequests: 5 });
+      expect(result.allowed).toBe(true);
+      expect(limiter.isUsingFallback()).toBe(true);
+
+      expect(warnSpy).toHaveBeenCalled();
+      const logged = JSON.parse(warnSpy.mock.calls[0][0]);
+      expect(logged.event).toBe("rate_limit_redis_fallback_activated");
+      expect(logged.severity).toBe("HIGH");
+
+      warnSpy.mockRestore();
     });
   });
 });

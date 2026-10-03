@@ -103,11 +103,9 @@ export async function checkDistributedRateLimit(
 
 /**
  * Extracts client IP using trusted reverse proxy / edge headers.
- * Order of precedence:
- * 1. Vercel Edge Header (x-vercel-forwarded-for)
- * 2. Cloudflare CF-Connecting-IP (if TRUST_CF_CONNECTING_IP === "true" or CF headers verified)
- * 3. Reverse Proxy X-Real-IP
- * 4. Leftmost client IP in validated X-Forwarded-For
+ * Standard reverse proxies (Nginx, Caddy, AWS ALB, Cloudflare, etc.) append the connecting client IP
+ * on the right of X-Forwarded-For. Reading leftmost allows clients to prepend spoofed IP addresses.
+ * Therefore, we parse the rightmost valid IP address to guarantee anti-spoofing integrity.
  */
 export function extractIp(request: Request): string {
   // If running on Vercel, x-vercel-forwarded-for is set by Vercel edge and cannot be forged by clients
@@ -123,18 +121,18 @@ export function extractIp(request: Request): string {
     if (cfIp && cfIp.trim()) return cfIp.trim();
   }
 
-  // Reverse Proxy X-Real-IP
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp && realIp.trim()) return realIp.trim();
-
-  // Parse X-Forwarded-For: leftmost IP is client IP if reverse proxy appends
+  // Parse X-Forwarded-For: rightmost IP is the authentic connecting client appended by the reverse proxy
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
     const parts = forwardedFor.split(",").map((p) => p.trim()).filter(Boolean);
     if (parts.length > 0) {
-      return parts[0];
+      return parts[parts.length - 1];
     }
   }
+
+  // Reverse Proxy X-Real-IP
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp && realIp.trim()) return realIp.trim();
 
   return "unknown";
 }

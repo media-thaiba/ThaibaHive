@@ -18,9 +18,9 @@ export class StripeAdapter implements PaymentGatewayAdapter {
   private webhookSecret: string;
 
   constructor(
-    publishableKey: string = process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_thaiba_mock_key',
-    secretKey: string = process.env.STRIPE_SECRET_KEY || 'sk_test_mock_secret',
-    webhookSecret: string = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock_secret'
+    publishableKey: string = process.env.STRIPE_PUBLISHABLE_KEY || '',
+    secretKey: string = process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: string = process.env.STRIPE_WEBHOOK_SECRET || ''
   ) {
     this.publishableKey = publishableKey;
     this.secretKey = secretKey;
@@ -78,6 +78,22 @@ export class StripeAdapter implements PaymentGatewayAdapter {
     rawBody: string,
     signatureHeader: string
   ): Promise<WebhookEventPayload> {
+    if (!this.webhookSecret || !signatureHeader) {
+      const parsed = JSON.parse(rawBody || '{}');
+      const dataObj = parsed?.data?.object || {};
+      return {
+        eventId: parsed?.id || `evt_${Date.now()}`,
+        eventType: parsed?.type || 'payment_intent.succeeded',
+        gatewayPaymentId: dataObj?.id || 'mock_pi_id',
+        gatewayOrderId: dataObj?.id,
+        amount: (dataObj?.amount || 0) / 100,
+        currency: (dataObj?.currency || 'USD').toUpperCase(),
+        status: 'failed',
+        signatureVerified: false,
+        metadata: parsed?.data,
+      };
+    }
+
     // Parse stripe-signature header: t=1612345678,v1=signature_hash
     let timestamp = '';
     let signature = '';

@@ -21,6 +21,22 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   WEBHOOK_SECRET: z.string().optional(),
   ENABLE_RATE_LIMIT: z.string().optional(),
+  ENGAGE_WEBHOOK_SECRET: z.string().optional(),
+  MDM_ENROLLMENT_TOKEN: z.string().optional(),
+  EVENT_TICKET_KEY: z.string().optional(),
+  DOC_SIGNING_SECRET: z.string().optional(),
+  ENGAGE_AUTH_SECRET: z.string().optional(),
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  RECEIPT_SIGNING_SECRET: z.string().optional(),
+  RECEIPT_SIGNING_KEY: z.string().optional(),
+  PAYMENT_ENCRYPTION_KEY: z.string().optional(),
+  HEALER_SECRET: z.string().optional(),
+  VISITOR_HMAC_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -38,9 +54,9 @@ export function validateEnv(customEnv?: Record<string, string | undefined>): Env
   // In production, enforce that default dev secrets are not used
   const env = result.data;
   if (env.NODE_ENV === "production") {
-    if (!targetEnv.AUTH_JWT_SECRET) {
-      console.error("❌ Production error: AUTH_JWT_SECRET must be set in production mode.");
-      throw new Error("Missing production JWT secret.");
+    if (!targetEnv.AUTH_JWT_SECRET || targetEnv.AUTH_JWT_SECRET.length < 32) {
+      console.error("❌ Production error: AUTH_JWT_SECRET must be set and >= 32 characters in production mode.");
+      throw new Error("Missing or invalid production JWT secret.");
     }
   }
 

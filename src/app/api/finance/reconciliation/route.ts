@@ -17,9 +17,11 @@ export const GET = requireAuth(async (request: Request) => {
       .orderBy(desc(financialReconciliations.createdAt));
 
     return NextResponse.json({ reconciliations: sessions });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to fetch reconciliations" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Reconciliation Fetch Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to fetch reconciliations" }, { status });
   }
 }, "finance:reconciliation:view");
 
@@ -42,8 +44,10 @@ export const POST = requireAuth(async (request: Request, session: any) => {
     });
 
     return NextResponse.json(result, { status: 201 });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to execute reconciliation" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Reconciliation Execute Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to execute reconciliation" }, { status });
   }
 }, "finance:reconciliation:execute");

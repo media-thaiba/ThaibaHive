@@ -14,7 +14,7 @@ export const POST = withPublicApm(async function POST(
     const headers = request.headers;
 
     // ─── Provider Signature Verification (UMC-003 AC-1) ──────────────────────
-    const webhookSecret = process.env.ENGAGE_WEBHOOK_SECRET || 'thaiba_engage_webhook_secret_2026';
+    const webhookSecret = process.env.ENGAGE_WEBHOOK_SECRET;
     const isExplicitTestMock = headers.get('x-mock-test-bypass') === 'true';
 
     if (!isExplicitTestMock) {
@@ -30,11 +30,16 @@ export const POST = withPublicApm(async function POST(
         }
       } else {
         const signature = headers.get('x-webhook-signature') || headers.get('x-hub-signature-256');
+        if (!webhookSecret) {
+          return NextResponse.json({ error: 'Webhook secret is not configured' }, { status: 401 });
+        }
         if (signature) {
           const expectedSig = 'sha256=' + createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
           if (signature !== expectedSig) {
             return NextResponse.json({ error: 'Invalid HMAC webhook signature' }, { status: 401 });
           }
+        } else if (process.env.NODE_ENV === 'production') {
+          return NextResponse.json({ error: 'Missing webhook signature header' }, { status: 401 });
         }
       }
     }

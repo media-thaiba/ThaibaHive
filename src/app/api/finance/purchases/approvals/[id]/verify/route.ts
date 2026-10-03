@@ -21,9 +21,10 @@ export const GET = requireAuth(
         .orderBy(asc(purchaseApprovalLogs.actionTimestamp));
 
       return NextResponse.json({ verification, logs });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error("[Purchase Verification Error]:", error instanceof Error ? error.stack : error);
       return NextResponse.json(
-        { error: error.message || "Failed to verify purchase audit trail" },
+        { error: "Failed to verify purchase audit trail" },
         { status: 500 }
       );
     }

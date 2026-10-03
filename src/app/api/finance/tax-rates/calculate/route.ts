@@ -22,7 +22,8 @@ export const POST = requireAuth(async (request: Request) => {
     );
 
     return NextResponse.json({ calculation: result });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to calculate tax" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Tax Calculation Error]:", error instanceof Error ? error.stack : error);
+    return NextResponse.json({ error: "Failed to calculate tax" }, { status: 500 });
   }
 }, "finance:tax:view");

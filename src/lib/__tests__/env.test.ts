@@ -32,7 +32,7 @@ describe("Runtime Env Var Validation (env.ts)", () => {
       validateEnv({
         NODE_ENV: "production",
       })
-    ).toThrow("Missing production JWT secret.");
+    ).toThrow("Missing or invalid production JWT secret.");
 
     consoleSpy.mockRestore();
   });

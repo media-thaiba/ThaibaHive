@@ -100,10 +100,11 @@ export function requireAuth(
       }
     }
 
-    // Server-side tenant scope resolution: never derived from JWT claims,
-    // request params, or client body. Admins resolve to "global" (the
-    // sanctioned unscoped bypass); mapped staff resolve to their institution.
-    if (typeof session.institutionId !== "string" && typeof resolveInstitutionScopeForSession === "function") {
+    // Server-side tenant scope resolution: always verified in real-time from DB
+    // memberships, never trusted blindly from JWT claims, request params, or client body.
+    // Admins resolve to "global" (the sanctioned unscoped bypass); mapped staff resolve
+    // to their verified active institution membership.
+    if (typeof resolveInstitutionScopeForSession === "function") {
       try {
         const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
         const scope = await resolveInstitutionScopeForSession(session, host);

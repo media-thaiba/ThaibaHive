@@ -21,8 +21,10 @@ export const POST = requireAuth(async (request: Request) => {
     );
 
     return NextResponse.json({ records, count: records.length }, { status: 201 });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to generate payroll" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Payroll Generate Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to generate payroll" }, { status });
   }
 }, "finance:payroll:manage");

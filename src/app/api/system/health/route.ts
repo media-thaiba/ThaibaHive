@@ -32,7 +32,11 @@ export async function GET(request: Request) {
 
   try {
     // Perform fast database ping query
-    await db.run(sql`SELECT 1`);
+    if (typeof (db as any).run === "function") {
+      await (db as any).run(sql`SELECT 1`);
+    } else if (typeof (db as any).execute === "function") {
+      await (db as any).execute(sql`SELECT 1`);
+    }
     const responseTimeMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startTime;
 
     if (!isAuthorized) {

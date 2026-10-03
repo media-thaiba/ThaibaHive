@@ -4,10 +4,17 @@ import { EngageDbStore } from '../../../db/engage-store';
 export class PreferenceService {
   private static instance: PreferenceService;
   private store: EngageDbStore;
-  private readonly secretKey: string = process.env.ENGAGE_AUTH_SECRET || 'thaiba_engage_consent_secret_key_2026';
+  private readonly secretKey: string;
 
-  private constructor() {
+  private constructor(secretKey?: string) {
     this.store = EngageDbStore.getInstance();
+    const resolved = secretKey || process.env.ENGAGE_AUTH_SECRET || process.env.AUTH_JWT_SECRET;
+    if (!resolved) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('ENGAGE_AUTH_SECRET or AUTH_JWT_SECRET must be configured in environment');
+      }
+    }
+    this.secretKey = resolved || (process.env.NODE_ENV === 'test' ? 'test-engage-auth-secret-key-32' : '');
   }
 
   public static getInstance(): PreferenceService {
