@@ -319,10 +319,17 @@ describe("middleware public paths (B4 webhook bypass)", () => {
     ? "src/proxy.ts"
     : "src/middleware.ts";
   const src = fs.readFileSync(middlewarePath, "utf-8");
-  const arr = src.match(/const publicPaths = \[([\s\S]*?)\]/);
-  const paths = arr
-    ? [...arr[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
-    : [];
+  const exactMatch = src.match(/exactPublicPaths\s*=\s*new\s+Set\(\[([\s\S]*?)\]\)/);
+  const prefixMatch = src.match(/prefixPublicPaths\s*=\s*\[([\s\S]*?)\]/);
+  const legacyMatch = src.match(/const\s+publicPaths\s*=\s*\[([\s\S]*?)\]/);
+  
+  const extractedSections = [
+    exactMatch ? exactMatch[1] : "",
+    prefixMatch ? prefixMatch[1] : "",
+    legacyMatch ? legacyMatch[1] : "",
+  ].join("\n");
+
+  const paths = [...extractedSections.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 
   it.each([
     "/api/finance/fees/webhooks",
