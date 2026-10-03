@@ -9,6 +9,10 @@ on:
 env:
   NODE_OPTIONS: "--max-old-space-size=6144"
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   web-ci:
     name: Next.js Web CI
@@ -127,15 +131,10 @@ jobs:
       - name: Run ${{ matrix.module }} simulation harness
         run: pnpm ${{ matrix.module }}:simulate
 
-  e2e-tests:
-    name: Playwright E2E Tests (${{ matrix.browser }})
+  e2e-build:
+    name: E2E Standalone Build
     runs-on: ubuntu-latest
-    needs: web-ci
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium, firefox, webkit]
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -171,6 +170,68 @@ jobs:
           cp -r public .next/standalone/public
           cp -r .next/static .next/standalone/.next/static
 
+      - name: Upload standalone build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-standalone
+          path: |
+            .next/standalone
+            !**/.env
+            !**/.env.*
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  e2e-tests:
+    name: Playwright E2E Tests (${{ matrix.browser }} ${{ matrix.shard }}/${{ matrix.shardCount }})
+    runs-on: ubuntu-latest
+    needs: [web-ci, e2e-build]
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        shard: [1, 2, 3]
+        shardCount: [3]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download standalone build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-standalone
+          path: .next/standalone
+
+      - name: Verify standalone build integrity
+        run: |
+          if [ -f .next/standalone/standalone/server.js ]; then
+            shopt -s dotglob
+            mv .next/standalone/standalone/* .next/standalone/
+            rmdir .next/standalone/standalone
+          fi
+          if [ -f standalone/server.js ]; then
+            mkdir -p .next
+            mv standalone .next/standalone
+          fi
+          test -f .next/standalone/server.js
+          test -d .next/standalone/.next/server
+          echo "Standalone build verified: .next/standalone/server.js"
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
 
@@ -179,8 +240,8 @@ jobs:
         env:
           DATABASE_URL: file:${{ github.workspace }}/dev.db
 
-      - name: Run E2E tests (${{ matrix.browser }})
-        run: pnpm exec playwright test --project=${{ matrix.browser }}
+      - name: Run E2E tests (${{ matrix.browser }} shard ${{ matrix.shard }}/${{ matrix.shardCount }})
+        run: pnpm exec playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/${{ matrix.shardCount }}
         env:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
@@ -195,8 +256,10 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report-${{ matrix.browser }}
-          path: playwright-report/
+          name: playwright-report-${{ matrix.browser }}-shard${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 30
 
   load-tests:
