@@ -8,6 +8,7 @@ import { ParentFeeCard } from '@/components/operations/finance/parent-fee-card';
 import { PaymentHistoryTable } from '@/components/operations/finance/payment-history-table';
 import { CheckoutModal } from '@/components/operations/finance/checkout-modal';
 import { PermissionGate } from '@/components/ui/permission-gate';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export default function ParentFeesPortalPage() {
   const { allocation, paymentHistory, loading, error, refresh } = useParentFees();
@@ -65,8 +66,15 @@ export default function ParentFeesPortalPage() {
           </Alert>
         )}
 
-        {allocation && (
+        {allocation ? (
           <ParentFeeCard allocation={allocation} onPayClick={handlePayClick} />
+        ) : (
+          !error && (
+            <EmptyState
+              title="No outstanding fees"
+              description="There are no pending fee allocations for this student right now. New invoices and installments will appear here."
+            />
+          )
         )}
 
         <PaymentHistoryTable payments={paymentHistory} />
