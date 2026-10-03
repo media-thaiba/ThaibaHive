@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mealNotifications, staff } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth, resolveScopedInstitutions } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { canteenCreateSchema } from "@/lib/validation/schemas";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const requestedInst = url.searchParams.get("institutionId");
-  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
+  const allowedInstitutions = await resolveScopedInstitutions(session, requestedInst);
   const date = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
 
   const conditions = [eq(mealNotifications.date, date)];
 
-  if (scopedInstId !== "global") {
-    conditions.push(eq(mealNotifications.institutionId, scopedInstId));
+  if (!allowedInstitutions.includes("global")) {
+    if (allowedInstitutions.length === 1) {
+      conditions.push(eq(mealNotifications.institutionId, allowedInstitutions[0]));
+    } else if (allowedInstitutions.length > 1) {
+      conditions.push(inArray(mealNotifications.institutionId, allowedInstitutions));
+    }
   }
 
   const notifications = await db
