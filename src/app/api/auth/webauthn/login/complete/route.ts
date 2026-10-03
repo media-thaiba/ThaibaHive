@@ -2,8 +2,15 @@ import { NextResponse } from "next/server";
 import { db, credentialChallenges, webauthnCredentials, staff } from "@/db";
 import { eq, and, sql } from "drizzle-orm";
 import { createSession } from "@/lib/auth";
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export async function POST(request: Request) {
+  const ip = extractIp(request);
+  const rl = await checkDistributedRateLimit(ip, "auth");
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.resetMs);
+  }
+
   const { id, rawId, response } = await request.json();
 
   if (!id || !rawId || !response) {

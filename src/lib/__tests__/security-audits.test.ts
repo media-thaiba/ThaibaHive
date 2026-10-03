@@ -103,7 +103,7 @@ describe("Security and Regression Audits", () => {
       delete process.env.SYSTEM_UPDATE_SECRET;
       const req = new Request("http://localhost/api/system/update", {
         method: "POST",
-        headers: { Authorization: "Bearer fallback-secret-key-123456" },
+        headers: { Authorization: "Bearer test-unauthorized-secret-xyz" },
         body: JSON.stringify({}),
       });
       const res = await systemUpdatePost(req);
@@ -116,7 +116,7 @@ describe("Security and Regression Audits", () => {
       process.env.SYSTEM_UPDATE_SECRET = "";
       const req = new Request("http://localhost/api/system/update", {
         method: "POST",
-        headers: { Authorization: "Bearer fallback-secret-key-123456" },
+        headers: { Authorization: "Bearer test-unauthorized-secret-xyz" },
         body: JSON.stringify({}),
       });
       const res = await systemUpdatePost(req);
@@ -127,7 +127,7 @@ describe("Security and Regression Audits", () => {
       process.env.SYSTEM_UPDATE_SECRET = "   ";
       const req = new Request("http://localhost/api/system/update", {
         method: "POST",
-        headers: { Authorization: "Bearer fallback-secret-key-123456" },
+        headers: { Authorization: "Bearer test-unauthorized-secret-xyz" },
         body: JSON.stringify({}),
       });
       const res = await systemUpdatePost(req);

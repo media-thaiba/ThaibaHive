@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 class SignJWT {
   constructor(payload) {
     this.payload = payload;
@@ -5,21 +7,40 @@ class SignJWT {
   setProtectedHeader() { return this; }
   setIssuedAt() { return this; }
   setExpirationTime() { return this; }
-  sign() {
+  async sign(secret) {
     const payloadStr = JSON.stringify(this.payload || {});
-    const token = "mock." + Buffer.from(payloadStr, "utf8").toString("base64url") + ".sig";
-    return Promise.resolve(token);
+    const headerStr = JSON.stringify({ alg: "HS256", typ: "JWT" });
+    const b64Header = Buffer.from(headerStr, "utf8").toString("base64url");
+    const b64Payload = Buffer.from(payloadStr, "utf8").toString("base64url");
+    const data = `${b64Header}.${b64Payload}`;
+    
+    let sig = "mock_sig";
+    if (secret) {
+      const keyBuffer = Buffer.isBuffer(secret) ? secret : Buffer.from(secret);
+      sig = crypto.createHmac("sha256", keyBuffer).update(data).digest("base64url");
+    }
+    return `${data}.${sig}`;
   }
 }
 
-async function jwtVerify(token) {
+async function jwtVerify(token, secret) {
   try {
     const parts = (token || "").split(".");
-    if (parts.length >= 2) {
+    if (parts.length === 3) {
+      const data = `${parts[0]}.${parts[1]}`;
+      if (secret) {
+        const keyBuffer = Buffer.isBuffer(secret) ? secret : Buffer.from(secret);
+        const expectedSig = crypto.createHmac("sha256", keyBuffer).update(data).digest("base64url");
+        if (parts[2] !== expectedSig) {
+          throw new Error("signature verification failed");
+        }
+      }
       const decoded = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
       return { payload: decoded };
     }
-  } catch {}
+  } catch (err) {
+    throw new Error(err.message || "Invalid JWT token");
+  }
   throw new Error("Invalid JWT token");
 }
 

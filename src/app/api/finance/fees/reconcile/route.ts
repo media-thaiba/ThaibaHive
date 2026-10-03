@@ -32,7 +32,8 @@ export const POST = requireAuth(async (request) => {
     );
 
     return NextResponse.json({ success: true, batch, result }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Reconciliation failed' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Reconcile Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Reconciliation failed" }, { status: 500 });
   }
 }, 'finance:reconciliation:manage');

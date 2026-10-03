@@ -1,8 +1,15 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createChallenge } from "@/lib/identity/webauthn-service";
 import { resolveStepUpIdentity } from "@/lib/identity/stepup-auth-helper";
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export async function POST(request: Request) {
+  const ip = extractIp(request);
+  const rl = await checkDistributedRateLimit(ip, "auth");
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.resetMs);
+  }
+
   let body: any = {};
   try {
     body = await request.json();

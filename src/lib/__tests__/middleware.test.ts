@@ -100,9 +100,10 @@ jest.mock("next/server", () => {
 
 import { proxy, config } from "@/middleware";
 import { SignJWT } from "jose";
+import { getJwtSecretBytes } from "@thaiba/auth";
 
 async function createValidTestToken(payload: Record<string, any> = { role: "admin", staffId: "stf-1", email: "test@example.com" }) {
-  const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_key_for_testing");
+  const secret = getJwtSecretBytes("session");
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -206,6 +207,23 @@ describe("proxy", () => {
       const res = (await proxy(req as any)) as any;
       expect(res.status).toBe(307);
       expect(res.get("location")).toBe("http://localhost/auth/login");
+    });
+
+    it("should allow unauthenticated webhook endpoints through proxy without 401 (Task A3 / Blocker B4)", async () => {
+      const webhookEndpoints = [
+        "/api/finance/fees/webhooks",
+        "/api/webhooks/edge-security",
+        "/api/engage/voice",
+      ];
+
+      for (const endpoint of webhookEndpoints) {
+        const req = makeRequest(endpoint, {
+          method: "POST",
+          contentType: "application/x-www-form-urlencoded",
+        });
+        const res = await proxy(req as any);
+        expect(res.status).toBe(200);
+      }
     });
   });
 

@@ -61,7 +61,8 @@ export const POST = requireAuth(async (request, session) => {
     });
 
     return NextResponse.json({ success: true, structure: created }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to create fee structure' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Structures Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to create fee structure" }, { status: 500 });
   }
 }, 'finance:fees:manage');

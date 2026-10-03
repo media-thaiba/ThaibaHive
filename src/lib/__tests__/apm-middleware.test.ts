@@ -90,7 +90,7 @@ jest.mock("next/server", () => {
 import { NextRequest, NextResponse } from "next/server";
 import { startApmTracking, completeApmTracking } from "../middleware/apm-telemetry";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
-import { proxy } from "../../middleware";
+import { proxy } from "@/proxy";
 import { requireAuth } from "../api/auth-guard";
 
 jest.mock("../../../packages/auth", () => ({

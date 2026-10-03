@@ -41,7 +41,8 @@ export const POST = requireAuth(async (request) => {
     );
 
     return NextResponse.json({ success: true, result }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to dispatch reminder' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Aging Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to dispatch reminder" }, { status: 500 });
   }
 }, 'finance:fees:manage');

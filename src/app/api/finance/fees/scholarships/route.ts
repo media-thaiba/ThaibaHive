@@ -75,7 +75,8 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     return NextResponse.json({ error: 'Invalid scholarship action' }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Scholarship operation failed' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Scholarships Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Scholarship operation failed" }, { status: 500 });
   }
 }, 'finance:scholarships:approve');

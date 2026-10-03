@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(),
+  resolveInstitutionScopeForSession: jest.fn(),
 }));
 
 
@@ -18,6 +19,10 @@ describe("requireAuth middleware", () => {
     mockHandler = jest.fn().mockResolvedValue(NextResponse.json({ success: true }, { status: 200 }));
     warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
     errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const { resolveInstitutionScopeForSession } = jest.requireMock("@thaiba/auth");
+    if (resolveInstitutionScopeForSession) {
+      resolveInstitutionScopeForSession.mockResolvedValue("inst_default");
+    }
   });
 
   afterEach(() => {
@@ -106,5 +111,60 @@ describe("requireAuth middleware", () => {
     const body = await res.json();
     expect(body).toEqual({ error: "Internal server error" });
     expect(errorSpy).toHaveBeenCalledTimes(1);
+  });
+
+  describe("tenant scope fail-closed (Task A2 / Blocker B3)", () => {
+    it("should return 403 Forbidden if non-admin staff has no institution mapping (fails closed, never 'global')", async () => {
+      const sessionPayload = { staffId: "unmapped_staff", role: "staff", email: "unmapped@example.com" };
+      (verifySession as jest.Mock).mockResolvedValue(sessionPayload);
+      const { resolveInstitutionScopeForSession } = jest.requireMock("@thaiba/auth");
+      resolveInstitutionScopeForSession.mockResolvedValue(null);
+
+      const wrapped = requireAuth(mockHandler);
+      const req = new Request("http://localhost/api/tasks");
+      const res = await wrapped(req);
+
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body).toEqual({ error: "Forbidden: No institution assigned or access denied to tenant" });
+      expect(mockHandler).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it("should allow super_admin to resolve to 'global' scope", async () => {
+      const sessionPayload = { staffId: "admin_1", role: "super_admin", email: "admin@example.com" };
+      (verifySession as jest.Mock).mockResolvedValue(sessionPayload);
+      const { resolveInstitutionScopeForSession } = jest.requireMock("@thaiba/auth");
+      resolveInstitutionScopeForSession.mockResolvedValue("global");
+
+      const wrapped = requireAuth(mockHandler);
+      const req = new Request("http://localhost/api/tasks");
+      const res = await wrapped(req);
+
+      expect(res.status).toBe(200);
+      expect(mockHandler).toHaveBeenCalledWith(
+        req,
+        expect.objectContaining({ staffId: "admin_1", institutionId: "global" }),
+        undefined
+      );
+    });
+
+    it("should attach resolved institutionId for mapped staff member", async () => {
+      const sessionPayload = { staffId: "staff_1", role: "staff", email: "staff@example.com" };
+      (verifySession as jest.Mock).mockResolvedValue(sessionPayload);
+      const { resolveInstitutionScopeForSession } = jest.requireMock("@thaiba/auth");
+      resolveInstitutionScopeForSession.mockResolvedValue("inst_campus_a");
+
+      const wrapped = requireAuth(mockHandler);
+      const req = new Request("http://localhost/api/tasks");
+      const res = await wrapped(req);
+
+      expect(res.status).toBe(200);
+      expect(mockHandler).toHaveBeenCalledWith(
+        req,
+        expect.objectContaining({ staffId: "staff_1", institutionId: "inst_campus_a" }),
+        undefined
+      );
+    });
   });
 });

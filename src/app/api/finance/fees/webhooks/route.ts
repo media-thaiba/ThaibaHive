@@ -21,11 +21,12 @@ export const POST = withPublicApm(async (request: Request) => {
     const result = await processor.handleWebhook(gateway, rawBody, signature);
 
     if (!result.success && result.error === 'INVALID_SIGNATURE') {
-      return NextResponse.json({ error: result.message }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
     }
 
     return NextResponse.json(result, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Webhook processing failed' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error('[Finance Webhook Error]:', err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 });

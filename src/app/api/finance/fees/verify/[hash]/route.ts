@@ -41,7 +41,8 @@ export const GET = withPublicApm(async (_req: Request, { params }: { params: Pro
       receiptHash: receipt.receiptHash,
       signatureVerified: isSignatureValid,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Verification failed' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Verify Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
 });

@@ -5,10 +5,7 @@ import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-tele
 import { applyTenantRegionHeaders } from "./middleware/tenant-region";
 import { applyEdgeCaching } from "./lib/edge/cache-control";
 
-function getJwtSecretBytes(): Uint8Array {
-  const secret = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847";
-  return new TextEncoder().encode(secret);
-}
+import { getJwtSecretBytes } from "@thaiba/auth";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -24,6 +21,9 @@ const publicPaths = [
   "/api/auth/signup",
   "/api/auth/google",
   "/api/auth/mobile-handoff",
+  "/api/finance/fees/webhooks",
+  "/api/webhooks/edge-security",
+  "/api/engage/voice",
   "/api/system/health",
   "/api/health",
   "/api/system/csp-report",

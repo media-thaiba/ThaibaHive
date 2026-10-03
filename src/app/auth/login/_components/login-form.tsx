@@ -222,9 +222,10 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={mode}
+    <>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={mode}
         initial={{ opacity: 0, x: 12 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -12 }}
@@ -636,24 +637,25 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
           </form>
         )}
       </motion.div>
-
-      <DeviceFingerprintCollector onFingerprint={setFingerprint} />
-      <StepUpChallengeDialog
-        isOpen={stepUpState.isOpen}
-        riskLevel={stepUpState.riskLevel}
-        challengeId={stepUpState.challengeId}
-        challenge={stepUpState.challenge}
-        stepUpToken={stepUpState.stepUpToken}
-        staffId={stepUpState.staffId}
-        onSuccess={() => {
-          setStepUpState((prev) => ({ ...prev, isOpen: false }));
-          window.location.href = "/";
-        }}
-        onFailure={() => {
-          setStepUpState((prev) => ({ ...prev, isOpen: false }));
-          setError("Step-up authentication failed. Please try again.");
-        }}
-      />
     </AnimatePresence>
-  );
+
+    <DeviceFingerprintCollector onFingerprint={setFingerprint} />
+    <StepUpChallengeDialog
+      isOpen={stepUpState.isOpen}
+      riskLevel={stepUpState.riskLevel}
+      challengeId={stepUpState.challengeId}
+      challenge={stepUpState.challenge}
+      stepUpToken={stepUpState.stepUpToken}
+      staffId={stepUpState.staffId}
+      onSuccess={() => {
+        setStepUpState((prev) => ({ ...prev, isOpen: false }));
+        window.location.href = "/";
+      }}
+      onFailure={() => {
+        setStepUpState((prev) => ({ ...prev, isOpen: false }));
+        setError("Step-up authentication failed. Please try again.");
+      }}
+    />
+  </>
+);
 }

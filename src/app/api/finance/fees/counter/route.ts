@@ -99,7 +99,8 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     return NextResponse.json({ error: 'Invalid counter action' }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Counter operation failed' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Counter Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Counter operation failed" }, { status: 500 });
   }
 }, 'finance:fees:collect');

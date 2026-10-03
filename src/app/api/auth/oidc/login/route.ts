@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { OidcService } from '@/lib/auth/oidc-service';
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 export async function GET(request: Request) {
+  const ip = extractIp(request);
+  const rl = await checkDistributedRateLimit(ip, "auth");
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.resetMs);
+  }
+
   const url = new URL(request.url);
   const tenantId = url.searchParams.get('tenantId') || 'inst-001';
 

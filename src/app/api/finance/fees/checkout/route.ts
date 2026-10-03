@@ -66,7 +66,8 @@ export const POST = requireAuth(async (request, session) => {
       payment,
       order,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to initiate checkout order' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Checkout Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to initiate checkout order" }, { status: 500 });
   }
 }, 'finance:fees:view');

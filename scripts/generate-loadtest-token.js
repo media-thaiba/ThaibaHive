@@ -1,7 +1,7 @@
 const { SignJWT } = require("jose");
 
 const secret = new TextEncoder().encode(
-  process.env.AUTH_JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847"
+  process.env.AUTH_JWT_SECRET || "test-loadtest-jwt-secret-key-32-chars-long"
 );
 
 async function generate() {

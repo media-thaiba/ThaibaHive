@@ -3,14 +3,14 @@ import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { hashPassword, createSession } from "@/lib/auth";
 import { signupSchema } from "@/lib/auth/schemas";
-import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq } from "drizzle-orm";
 import { withPublicApm } from "@/lib/api/public-apm";
 
 export const POST = withPublicApm(async function POST(request: Request) {
   try {
     const ip = extractIp(request);
-    const rl = checkRateLimit(ip, "auth-signup");
+    const rl = await checkDistributedRateLimit(ip, "auth-signup");
     if (!rl.allowed) return rateLimitResponse(rl.resetMs);
     const body = await request.json();
     

@@ -33,13 +33,16 @@ export function checkRateLimit(
   identifier: string,
   config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
 ): { allowed: boolean; remaining: number; resetMs: number } {
-  if (
-    (process.env.NODE_ENV !== "production" && process.env.ENABLE_RATE_LIMIT !== "true") ||
-    process.env.PLAYWRIGHT_TEST === "true" ||
-    (process.env.CI === "true" && process.env.ENABLE_RATE_LIMIT !== "true") ||
-    (process.env.NODE_ENV === "test" && process.env.ENABLE_RATE_LIMIT !== "true")
-  ) {
-    return { allowed: true, remaining: 999, resetMs: 0 };
+  // In production, NEVER bypass rate limiting via test flags
+  if (process.env.NODE_ENV !== "production") {
+    if (
+      process.env.ENABLE_RATE_LIMIT !== "true" ||
+      process.env.PLAYWRIGHT_TEST === "true" ||
+      process.env.CI === "true" ||
+      process.env.NODE_ENV === "test"
+    ) {
+      return { allowed: true, remaining: 999, resetMs: 0 };
+    }
   }
 
   const resolved = typeof config === "string" ? DEFAULT_CONFIGS[config] : config;
@@ -67,13 +70,16 @@ export async function checkDistributedRateLimit(
   identifier: string,
   config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
 ): Promise<{ allowed: boolean; remaining: number; resetMs: number; retryAfterSeconds: number }> {
-  if (
-    (process.env.NODE_ENV !== "production" && process.env.ENABLE_RATE_LIMIT !== "true") ||
-    process.env.PLAYWRIGHT_TEST === "true" ||
-    (process.env.CI === "true" && process.env.ENABLE_RATE_LIMIT !== "true") ||
-    (process.env.NODE_ENV === "test" && process.env.ENABLE_RATE_LIMIT !== "true")
-  ) {
-    return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
+  // In production, NEVER bypass rate limiting via test flags
+  if (process.env.NODE_ENV !== "production") {
+    if (
+      process.env.ENABLE_RATE_LIMIT !== "true" ||
+      process.env.PLAYWRIGHT_TEST === "true" ||
+      process.env.CI === "true" ||
+      process.env.NODE_ENV === "test"
+    ) {
+      return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
+    }
   }
 
   const resolved = typeof config === "string" ? DEFAULT_CONFIGS[config] : config;
@@ -93,12 +99,42 @@ export async function checkDistributedRateLimit(
   };
 }
 
+/**
+ * Extracts client IP using trusted reverse proxy / edge headers.
+ * Order of precedence:
+ * 1. Vercel Edge Header (x-vercel-forwarded-for)
+ * 2. Cloudflare CF-Connecting-IP (if TRUST_CF_CONNECTING_IP === "true" or CF headers verified)
+ * 3. Reverse Proxy X-Real-IP
+ * 4. Leftmost client IP in validated X-Forwarded-For
+ */
 export function extractIp(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  // If running on Vercel, x-vercel-forwarded-for is set by Vercel edge and cannot be forged by clients
+  const vercelIp = request.headers.get("x-vercel-forwarded-for");
+  if (vercelIp && vercelIp.trim()) {
+    const parts = vercelIp.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[0];
+  }
+
+  // Cloudflare CF-Connecting-IP is trusted when explicitly configured or in Cloudflare environment
+  if (process.env.TRUST_CF_CONNECTING_IP === "true") {
+    const cfIp = request.headers.get("cf-connecting-ip");
+    if (cfIp && cfIp.trim()) return cfIp.trim();
+  }
+
+  // Reverse Proxy X-Real-IP
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp && realIp.trim()) return realIp.trim();
+
+  // Parse X-Forwarded-For: leftmost IP is client IP if reverse proxy appends
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const parts = forwardedFor.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) {
+      return parts[0];
+    }
+  }
+
+  return "unknown";
 }
 
 export function rateLimitResponse(resetMs: number): Response {

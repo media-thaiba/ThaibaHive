@@ -1,7 +1,6 @@
 import { jwtVerify } from "jose";
 import { TenantContext } from "./types";
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key-123456");
+import { getJwtSecretBytes } from "@thaiba/auth";
 
 /**
  * Extracts and verifies tenant context from JWT authentication tokens at the Edge runtime level.
@@ -9,7 +8,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secr
  */
 export async function parseTenantContext(token: string): Promise<TenantContext> {
   try {
-    const { payload } = await jwtVerify(token, secret, {
+    const { payload } = await jwtVerify(token, getJwtSecretBytes("session"), {
       algorithms: ["HS256"],
     });
 

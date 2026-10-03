@@ -11,14 +11,21 @@ export interface Generated80GReceipt {
 }
 
 export class Receipt80GGenerator {
-  private secretKey: string;
+  private explicitSecretKey?: string;
 
   constructor(secretKey?: string) {
-    const key = secretKey || process.env.RECEIPT_SIGNING_KEY;
-    if (process.env.NODE_ENV === 'production' && !key) {
-      throw new Error('RECEIPT_SIGNING_KEY must be configured in production environment');
+    this.explicitSecretKey = secretKey;
+  }
+
+  private getSigningKey(): string {
+    const key = this.explicitSecretKey || process.env.RECEIPT_SIGNING_KEY || process.env.AUTH_JWT_SECRET;
+    if (!key || key.trim() === "") {
+      if (process.env.NODE_ENV === "test") {
+        return "test-receipt-80g-signing-key-minimum-32-chars-long";
+      }
+      throw new Error("RECEIPT_SIGNING_KEY is not configured. A valid cryptographic key is required.");
     }
-    this.secretKey = key || 'thaiba_endowment_80g_secret_key_2026';
+    return key;
   }
 
   public generateReceiptNumber(donationId: string, timestamp: Date = new Date()): string {
@@ -28,12 +35,14 @@ export class Receipt80GGenerator {
   }
 
   public computeReceiptHash(receiptNumber: string, amount: number, panTaxId: string, timestamp: string): string {
-    const raw = `${receiptNumber}|${amount}|${panTaxId || 'ANONYMOUS'}|${timestamp}|${this.secretKey}`;
+    const key = this.getSigningKey();
+    const raw = `${receiptNumber}|${amount}|${panTaxId || 'ANONYMOUS'}|${timestamp}|${key}`;
     return crypto.createHash('sha256').update(raw).digest('hex');
   }
 
   public computeSignature(receiptHash: string): string {
-    return crypto.createHmac('sha256', this.secretKey).update(receiptHash).digest('hex');
+    const key = this.getSigningKey();
+    return crypto.createHmac('sha256', key).update(receiptHash).digest('hex');
   }
 
   public compileReceiptDocument(

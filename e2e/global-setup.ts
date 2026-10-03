@@ -313,7 +313,7 @@ async function globalSetup() {
 
   // Generate deterministic storageState files for each user role
   console.log("Generating deterministic E2E storageStates for all test roles...");
-  const jwtSecret = process.env.AUTH_JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847";
+  const jwtSecret = process.env.AUTH_JWT_SECRET || "test-e2e-jwt-secret-key-32-chars-long";
   const secretKey = new TextEncoder().encode(jwtSecret);
 
   const testUsers = [

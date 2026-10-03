@@ -46,7 +46,7 @@ export default defineConfig({
       PLAYWRIGHT_TEST: "true",
       PORT: String(PORT),
       DATABASE_URL: resolvedDbPath,
-      AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847",
+      AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET || "test-playwright-jwt-secret-key-32-chars-long",
       BIOMETRIC_MASTER_KEY: process.env.BIOMETRIC_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       TENANT_ENCRYPTION_MASTER_KEY: process.env.TENANT_ENCRYPTION_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
