@@ -88,6 +88,7 @@ jest.mock("next/server", () => {
 });
 
 import { NextRequest, NextResponse } from "next/server";
+import { proxy } from "@/proxy";
 import { startApmTracking, completeApmTracking } from "../middleware/apm-telemetry";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
 import { requireAuth } from "../api/auth-guard";
@@ -95,6 +96,10 @@ import { requireAuth } from "../api/auth-guard";
 jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn().mockResolvedValue({ staffId: "usr_123", role: "admin", institutionId: "inst_1" }),
   hasPermission: jest.fn().mockReturnValue(true),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_1"),
+  getUserInstitutionScope: jest.fn().mockResolvedValue("inst_1"),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_1"),
+  getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_1"]),
 }));
 
 describe("APM Middleware & Telemetry Tests", () => {
@@ -159,12 +164,12 @@ describe("APM Middleware & Telemetry Tests", () => {
     expect(snapshot.routes[0].status4xx).toBe(1);
   });
 
-  test("handles middleware APM telemetry end-to-end for public route", async () => {
+  test("handles middleware APM telemetry and security headers end-to-end via proxy(req) (R4-5)", async () => {
     const req = new NextRequest("http://localhost:3000/api/system/health");
-    const ctx = startApmTracking(req);
-    const initialRes = NextResponse.json({ ok: true });
-    const res = completeApmTracking(ctx, initialRes);
+    const res = await proxy(req);
 
+    expect(res.status).toBe(200);
     expect(res.headers.get("x-response-time")).toBeDefined();
+    expect(res.headers.get("x-request-id")).toBeDefined();
   });
 });
