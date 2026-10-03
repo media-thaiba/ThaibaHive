@@ -21,9 +21,8 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB input limit
 
 async function getSharp() {
   try {
-     
-    // @ts-expect-error sharp is optional — install with: pnpm add sharp
-    const sharp = await import("sharp");
+    const sharpModule = "sharp";
+    const sharp = await import(sharpModule);
     return sharp.default as (input: Buffer) => {
       resize: (w: number, h: number, opts?: object) => ReturnType<typeof _getSharpInstance>;
       webp: (opts?: object) => ReturnType<typeof _getSharpInstance>;
