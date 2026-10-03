@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-10-03T04:08:48.528Z",
+  "dialect": "sqlite",
+  "totalUpdated": 0,
+  "totalSkipped": 0,
+  "totalAmbiguous": 0,
+  "tableStats": [
+    {
+      "table": "leave_requests",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "meal_notifications",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "help_desk_tickets",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "tasks",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "visitors",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "bookings",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "media_folders",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "media_assets",
+      "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    }
+  ]
+}
