@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import bcrypt from "bcryptjs";
 import { db } from "./index";
 import {
@@ -93,11 +94,11 @@ function uuid(): string {
 }
 
 async function seed() {
-  console.log("Seeding Thaiba Garden org structure...");
+  logger.info("Seeding Thaiba Garden org structure...");
 
   const existingInstitutions = await db.select().from(institutions).limit(1).all();
   if (existingInstitutions.length > 0) {
-    console.log("Seed already run. Skipping.");
+    logger.info("Seed already run. Skipping.");
     process.exit(0);
   }
 
@@ -115,7 +116,7 @@ async function seed() {
       isActive: true,
     }).run();
   }
-  console.log(`Created ${institutionData.length} institutions.`);
+  logger.info(`Created ${institutionData.length} institutions.`);
 
   const departmentIdMap: Record<string, string> = {};
   for (const dept of departmentData) {
@@ -129,14 +130,14 @@ async function seed() {
       isActive: true,
     }).run();
   }
-  console.log(`Created ${departmentData.length} departments.`);
+  logger.info(`Created ${departmentData.length} departments.`);
 
   const seedPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   const passwordHashMgmt = await bcrypt.hash(seedPassword, 10);
   for (const s of managementStaff) {
     const existingStaff = await db.select().from(staff).where(eq(staff.email, s.email)).get();
     if (existingStaff) {
-      console.log(`  ${s.email} already exists, skipping.`);
+      logger.info(`  ${s.email} already exists, skipping.`);
       continue;
     }
 
@@ -169,15 +170,15 @@ async function seed() {
       institutionId: mainCampusId,
     }).run();
   }
-  console.log(`Created ${managementStaff.length} management accounts.`);
+  logger.info(`Created ${managementStaff.length} management accounts.`);
 
   await seedMarketplace();
   await seedAcademic();
 
-  console.log("\n--- Seed Complete ---");
-  console.log("Management accounts (change these passwords immediately):");
+  logger.info("\n--- Seed Complete ---");
+  logger.info("Management accounts (change these passwords immediately):");
   for (const s of managementStaff) {
-    console.log(`  ${s.designation}: ${s.email} / ${seedPassword}`);
+    logger.info(`  ${s.designation}: ${s.email} / ${seedPassword}`);
   }
   process.exit(0);
 }
@@ -187,7 +188,7 @@ async function seed() {
 async function seedMarketplace() {
   const existing = await db.select().from(marketplaceApps).limit(1).get();
   if (existing) {
-    console.log("Marketplace already seeded.");
+    logger.info("Marketplace already seeded.");
     return;
   }
 
@@ -234,11 +235,11 @@ async function seedMarketplace() {
     }).run();
   }
 
-  console.log(`Seeded ${allApps.length} marketplace apps (${instantApps.length} instant, ${restrictedApps.length} restricted).`);
+  logger.info(`Seeded ${allApps.length} marketplace apps (${instantApps.length} instant, ${restrictedApps.length} restricted).`);
 }
 
 async function seedAcademic() {
-  console.log("Seeding academic and examination data fixtures...");
+  logger.info("Seeding academic and examination data fixtures...");
 
   const institutionId = "inst_campus_main";
   const existingInst = await db.select().from(institutions).where(eq(institutions.id, institutionId)).get();
@@ -359,11 +360,11 @@ async function seedAcademic() {
     }).run();
   }
 
-  console.log("Academic, examination (exam_100), and attendance fixtures seeded successfully.");
+  logger.info("Academic, examination (exam_100), and attendance fixtures seeded successfully.");
 }
 
 async function seedAgentWorkflows() {
-  console.log("Seeding institutional agent workflow templates...");
+  logger.info("Seeding institutional agent workflow templates...");
   try {
     await db.run(
       `CREATE TABLE IF NOT EXISTS agentic_workflows (
@@ -398,7 +399,7 @@ async function seedAgentWorkflows() {
         }).run();
       }
     }
-    console.log(`Seeded ${institutionalWorkflowTemplates.length} agent workflow templates.`);
+    logger.info(`Seeded ${institutionalWorkflowTemplates.length} agent workflow templates.`);
   } catch (err: any) {
     console.warn("Agent workflows seeding notice:", err?.message || err);
   }

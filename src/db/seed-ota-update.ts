@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import { db } from "./index";
 import { systemConfigs } from "./schema";
 
@@ -20,7 +21,7 @@ async function main() {
       .run();
   }
 
-  console.log("Successfully updated system_configs for mobile OTA update 1.0.0+9!");
+  logger.info("Successfully updated system_configs for mobile OTA update 1.0.0+9!");
 }
 
 main().catch((err) => {
