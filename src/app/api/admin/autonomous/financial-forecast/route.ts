@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { FinancialRealizationService } from "@/lib/services/financial-realization-service";
 import { financialForecastQuerySchema } from "@/lib/validation/schemas";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const campusId = searchParams.get("campusId") ?? undefined;
+  const rawCampusId = searchParams.get("campusId") ?? undefined;
+  const campusId = await resolveRequestInstitution(session, rawCampusId);
   const horizonDaysStr = searchParams.get("horizonDays");
   const confidenceLevelStr = searchParams.get("confidenceLevel");
 
   const queryParams = {
-    campusId,
+    campusId: campusId === "global" ? undefined : campusId,
     horizonDays: horizonDaysStr ? parseInt(horizonDaysStr, 10) : undefined,
     confidenceLevel: confidenceLevelStr ? parseFloat(confidenceLevelStr) : undefined,
   };
@@ -29,6 +30,7 @@ export const GET = requireAuth(async (request: Request, _session) => {
 
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
+    if ((error as any)?.name === "TenantMismatchError") throw error;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Financial realization forecast failed" },
       { status: 500 }

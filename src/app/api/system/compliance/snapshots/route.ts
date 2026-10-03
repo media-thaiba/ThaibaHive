@@ -2,26 +2,28 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { forensicSnapshots } from "@thaiba/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { forensicSnapshotEngine } from "@/lib/compliance/forensic-snapshot-engine";
 import { z } from "zod";
 
 const createSnapshotSchema = z.object({
-  tenantId: z.string().optional().default("default"),
+  tenantId: z.string().optional(),
   snapshotType: z.enum(["SCHEDULED", "MANUAL", "PRE_INCIDENT", "AUDIT"]).optional().default("MANUAL"),
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-async function getHandler(req: Request, _session: any) {
+async function getHandler(req: Request, session: any) {
   try {
     const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const rawInst = searchParams.get("tenantId") || searchParams.get("institutionId") || undefined;
+    const resolvedTenant = await resolveRequestInstitution(session, rawInst);
+    const tenantId = resolvedTenant === "global" ? undefined : resolvedTenant;
     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
     const snapshots = await db
       .select()
       .from(forensicSnapshots)
-      .where(tenantId && tenantId !== "all" ? eq(forensicSnapshots.tenantId, tenantId) : undefined)
+      .where(tenantId ? eq(forensicSnapshots.tenantId, tenantId) : undefined)
       .orderBy(desc(forensicSnapshots.createdAt))
       .limit(limit);
 
@@ -34,6 +36,7 @@ async function getHandler(req: Request, _session: any) {
       total: snapshots.length,
     });
   } catch (error: any) {
+    if (error?.name === "TenantMismatchError") throw error;
     console.error("[@thaiba/compliance] Get snapshots error:", error);
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }
@@ -53,14 +56,15 @@ async function postHandler(req: Request, session: any) {
       return NextResponse.json({ error: parsed.error.message }, { status: 400 });
     }
 
-    const { tenantId, snapshotType, metadata } = parsed.data;
+    const rawInst = parsed.data.tenantId && parsed.data.tenantId !== "default" ? parsed.data.tenantId : undefined;
+    const tenantId = await resolveRequestInstitution(session, rawInst);
 
     const manifest = await forensicSnapshotEngine.captureSnapshot({
       tenantId,
-      snapshotType,
+      snapshotType: parsed.data.snapshotType,
       metadata: {
-        ...metadata,
-        requestedBy: session?.userId || session?.sub || "admin",
+        ...parsed.data.metadata,
+        requestedBy: session?.staffId || session?.userId || session?.sub || "admin",
       },
     });
 
@@ -70,6 +74,7 @@ async function postHandler(req: Request, session: any) {
       message: `Forensic snapshot ${manifest.id} successfully captured and signed`,
     }, { status: 201 });
   } catch (error: any) {
+    if (error?.name === "TenantMismatchError") throw error;
     console.error("[@thaiba/compliance] Create snapshot error:", error);
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }

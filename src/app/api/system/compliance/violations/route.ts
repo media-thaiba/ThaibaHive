@@ -2,19 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { complianceViolations } from "@thaiba/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { ViolationSeverity, ViolationStatus } from "@/lib/compliance/types";
 
-async function getHandler(req: Request, _session: any) {
+async function getHandler(req: Request, session: any) {
   try {
     const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const rawInst = searchParams.get("tenantId") || searchParams.get("institutionId") || undefined;
+    const resolved = await resolveRequestInstitution(session, rawInst);
+    const tenantId = resolved === "global" ? undefined : resolved;
     const severity = searchParams.get("severity") || undefined;
     const status = searchParams.get("status") || undefined;
     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
     const conditions = [];
-    if (tenantId && tenantId !== "all") {
+    if (tenantId) {
       conditions.push(eq(complianceViolations.tenantId, tenantId));
     }
     if (severity) {
@@ -43,6 +45,7 @@ async function getHandler(req: Request, _session: any) {
       total: records.length,
     });
   } catch (error: any) {
+    if (error?.name === "TenantMismatchError") throw error;
     console.error("[@thaiba/compliance] Get violations error:", error);
     return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
   }

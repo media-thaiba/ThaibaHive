@@ -4,11 +4,13 @@ import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { CarbonCalculator } from '@/lib/operations/sustainability/carbon-calculator';
 import { EsgReportGenerator } from '@/lib/operations/sustainability/esg-report-generator';
 import { CarbonReductionPlanner } from '@/lib/operations/sustainability/carbon-reduction-planner';
+import { resolveRequestInstitution } from '@thaiba/auth/institution-scope';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request, _session) => {
+  requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
-    const campusId = searchParams.get('campusId') || 'campus_main';
+    const rawCampusId = searchParams.get('campusId') || undefined;
+    const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
 
     const calculator = new CarbonCalculator();
     const generator = new EsgReportGenerator();
@@ -21,12 +23,12 @@ export const GET = withDPoP(
     });
 
     const esgReport = generator.generateReport(
-      campusId,
+      resolvedCampusId,
       '2026-Q3',
       emissions,
       2500,
       42.0,
-      'inst_default'
+      resolvedCampusId
     );
 
     const initiatives = planner.generateAbatementPlan(45000, 1200);

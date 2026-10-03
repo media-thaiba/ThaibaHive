@@ -4,6 +4,7 @@ import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { EdgeVerificationEngine } from '@/lib/operations/biometrics/edge-verification-engine';
 import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 import { biometricAttendanceSchema } from '@/lib/validation/aims-schemas';
+import { resolveRequestInstitution } from '@thaiba/auth/institution-scope';
 
 export const GET = withDPoP(
   requireAuth(async (req: Request, _session) => {
@@ -21,13 +22,15 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, _session) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = biometricAttendanceSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
+
+    const resolvedCampusId = resolveRequestInstitution(session, parsed.data.campusId);
 
     const engine = new EdgeVerificationEngine();
     // Register mock active user template for verification endpoint
@@ -37,15 +40,15 @@ export const POST = withDPoP(
       dimension: 128,
       vector: parsed.data.queryEmbedding.slice(0, 128),
       enrolledAt: new Date().toISOString(),
-      institutionId: 'inst_default',
+      institutionId: resolvedCampusId,
     });
 
     const result = engine.verifyAttendance({
-      campusId: parsed.data.campusId,
+      campusId: resolvedCampusId,
       locationName: parsed.data.locationName,
       sessionId: parsed.data.sessionId,
       queryEmbedding: parsed.data.queryEmbedding.slice(0, 128),
-      institutionId: 'inst_default',
+      institutionId: resolvedCampusId,
     });
 
     if (result.record) {

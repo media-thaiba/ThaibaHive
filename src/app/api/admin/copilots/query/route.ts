@@ -4,8 +4,9 @@ import { copilotQuerySchema } from "@/lib/validation/schemas";
 import { academicAdvisorAgent } from "@/lib/services/academic-advisor-agent";
 import { financialControllerAgent } from "@/lib/services/financial-controller-agent";
 import { complianceAuditorAgent } from "@/lib/services/compliance-auditor-agent";
+import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: unknown = {};
   try {
     const text = await request.text();
@@ -19,17 +20,18 @@ export const POST = requireAuth(async (request: Request, _session) => {
     return NextResponse.json({ error: "Validation failed", details: parse.error.format() }, { status: 400 });
   }
 
-  const { agentType, campusId = "inst_101", query } = parse.data;
+  const { agentType, campusId, query } = parse.data;
+  const resolvedCampusId = resolveRequestInstitution(session, campusId);
 
   try {
     if (agentType === "academic_advisor") {
-      const rec = await academicAdvisorAgent.analyzeAndRecommend(campusId, [], query);
+      const rec = await academicAdvisorAgent.analyzeAndRecommend(resolvedCampusId, [], query);
       return NextResponse.json(rec, { status: 200 });
     } else if (agentType === "financial_controller") {
       const rec = await financialControllerAgent.analyzeAndRecommend(
-        campusId,
+        resolvedCampusId,
         {
-          campusId,
+          campusId: resolvedCampusId,
           campusName: "Main Campus",
           targetBudget: 1000000,
           currentRealization: 920000,
@@ -41,9 +43,9 @@ export const POST = requireAuth(async (request: Request, _session) => {
       return NextResponse.json(rec, { status: 200 });
     } else {
       const rec = await complianceAuditorAgent.analyzeAndRecommend(
-        campusId,
+        resolvedCampusId,
         {
-          campusId,
+          campusId: resolvedCampusId,
           frameworkCode: "regional_privacy_v1",
           overallComplianceScore: 94.5,
           vaultIntegrityStatus: "VALIDATED",
@@ -54,7 +56,10 @@ export const POST = requireAuth(async (request: Request, _session) => {
       );
       return NextResponse.json(rec, { status: 200 });
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.name === "TenantMismatchError") {
+      throw error;
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to execute copilot query" },
       { status: 500 }

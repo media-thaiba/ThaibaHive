@@ -1,0 +1,88 @@
+================================================================================
+ROUND 8 TENANT BYPASS SCANNER & REGRESSION GUARD DEMONSTRATION EVIDENCE
+================================================================================
+
+Date: 2026-10-03
+Branch: audit/antigravity-r1
+
+Part 1: Pre-R8-1 AST Scan Findings on unshielded routes (captured before R8-1 fix)
+--------------------------------------------------------------------------------
+Command: pnpm tsx scripts/security/ast-tenant-scan.ts
+
+Scan Result Output:
+Total handler findings: 6
+[
+  {
+    "file": "src/app/api/system/compliance/snapshots/route.ts",
+    "method": "GET",
+    "reasons": [
+      "Reads query tenant/institution parameter without calling resolver"
+    ]
+  },
+  {
+    "file": "src/app/api/system/compliance/snapshots/route.ts",
+    "method": "POST",
+    "reasons": [
+      "Reads body/parsed tenant/institution parameter without calling resolver"
+    ]
+  },
+  {
+    "file": "src/app/api/system/compliance/telemetry/route.ts",
+    "method": "GET",
+    "reasons": [
+      "Reads query tenant/institution parameter without calling resolver"
+    ]
+  },
+  {
+    "file": "src/app/api/system/compliance/verify/route.ts",
+    "method": "GET",
+    "reasons": [
+      "Reads query tenant/institution parameter without calling resolver"
+    ]
+  },
+  {
+    "file": "src/app/api/system/compliance/violations/route.ts",
+    "method": "GET",
+    "reasons": [
+      "Reads query tenant/institution parameter without calling resolver"
+    ]
+  },
+  {
+    "file": "src/app/api/admin/autonomous/financial-forecast/route.ts",
+    "method": "GET",
+    "reasons": [
+      "Reads query tenant/institution parameter without calling resolver"
+    ]
+  }
+]
+
+Part 2: Guard Failure Demonstration (Reverting a route to unshielded)
+--------------------------------------------------------------------------------
+Simulated revert: Reverting src/app/api/system/compliance/violations/route.ts to raw searchParams.get("tenantId") without resolver.
+
+Jest Run Result:
+FAIL src/lib/__tests__/b8-tenant-bypass-guard.test.ts
+  ● B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call Scanner) › fails if any API route handler reads institutionId/tenantId without calling a resolver inside that same handler
+
+    B8 Handler-Level Tenant Bypass Violation: The following 1 handlers read client-supplied tenant parameters without calling a resolver inside the handler:
+      - [GET] src/app/api/system/compliance/violations/route.ts: Reads query tenant/institution parameter without calling resolver
+
+      at Object.<anonymous> (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:11:13)
+
+Part 3: Guard Pass Demonstration (With all routes properly shielded with resolver)
+--------------------------------------------------------------------------------
+Command: pnpm test src/lib/__tests__/b8-tenant-bypass-guard.test.ts
+
+Output:
+$ jest --passWithNoTests "src/lib/__tests__/b8-tenant-bypass-guard.test.ts"
+PASS src/lib/__tests__/b8-tenant-bypass-guard.test.ts
+  B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call Scanner)
+    √ fails if any API route handler reads institutionId/tenantId without calling a resolver inside that same handler (447 ms)
+    √ detects unshielded tenant parameter in separated function declaration (1 ms)
+    √ detects unshielded alternative parameter names (campusId, branchId, institution_id)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        1.55 s
+================================================================================

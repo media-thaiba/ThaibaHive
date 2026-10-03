@@ -4,11 +4,13 @@ import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { CampusResourceBroker } from '@/lib/operations/mesh/campus-resource-broker';
 import { CapacityOptimizer } from '@/lib/operations/mesh/capacity-optimizer';
 import { resourceBookingSchema } from '@/lib/validation/aims-schemas';
+import { resolveRequestInstitution } from '@thaiba/auth/institution-scope';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request, _session) => {
+  requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
-    const campusId = searchParams.get('campusId') || 'campus_main';
+    const rawCampusId = searchParams.get('campusId') || undefined;
+    const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
 
     const broker = new CampusResourceBroker();
     const optimizer = new CapacityOptimizer();
@@ -23,7 +25,7 @@ export const GET = withDPoP(
         isShareableCrossCampus: true,
         hourlyCostRateDollars: 60,
         activeReservations: [],
-        institutionId: 'inst_default',
+        institutionId: resolvedCampusId,
       },
       {
         resourceId: 'res_hpc_cluster',
@@ -34,7 +36,7 @@ export const GET = withDPoP(
         isShareableCrossCampus: true,
         hourlyCostRateDollars: 45,
         activeReservations: [],
-        institutionId: 'inst_default',
+        institutionId: resolvedCampusId,
       },
     ];
 
@@ -42,8 +44,8 @@ export const GET = withDPoP(
       broker.registerResource(r);
     }
 
-    const shareable = broker.getShareableResources(campusId);
-    const recommendations = optimizer.optimizeAllocations(mockResources, campusId);
+    const shareable = broker.getShareableResources(resolvedCampusId);
+    const recommendations = optimizer.optimizeAllocations(mockResources, resolvedCampusId);
 
     return NextResponse.json({
       resources: shareable,
@@ -54,13 +56,15 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request, _session) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = resourceBookingSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
+
+    const resolvedCampusId = resolveRequestInstitution(session, parsed.data.requestingCampusId);
 
     const broker = new CampusResourceBroker();
     broker.registerResource({
@@ -72,13 +76,13 @@ export const POST = withDPoP(
       isShareableCrossCampus: true,
       hourlyCostRateDollars: 30,
       activeReservations: [],
-      institutionId: 'inst_default',
+      institutionId: resolvedCampusId,
     });
 
     const result = broker.bookResource({
       reservationId: `res_${Date.now()}`,
       resourceId: parsed.data.resourceId,
-      requestingCampusId: parsed.data.requestingCampusId,
+      requestingCampusId: resolvedCampusId,
       hostCampusId: parsed.data.hostCampusId,
       reservedByUserId: 'admin_user',
       startTimeIso: parsed.data.startTimeIso,

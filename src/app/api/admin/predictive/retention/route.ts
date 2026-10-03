@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { defaultRetentionPredictor } from "../../../../../lib/predictive/student-retention-predictor";
+import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const campusId = searchParams.get("campusId") || "inst-001";
+  const rawCampusId = searchParams.get("campusId") || undefined;
+  const campusId = resolveRequestInstitution(session, rawCampusId);
 
   try {
     const mockStudents = [
@@ -16,7 +18,10 @@ export const GET = requireAuth(async (request: Request, _session) => {
 
     const result = defaultRetentionPredictor.predictCampusRetention(campusId, mockStudents);
     return NextResponse.json(result, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.name === "TenantMismatchError") {
+      throw error;
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to generate retention predictions" },
       { status: 500 }

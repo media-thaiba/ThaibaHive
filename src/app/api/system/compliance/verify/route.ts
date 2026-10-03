@@ -2,18 +2,18 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { auditLogs, auditMerkleRoots } from "@thaiba/db/schema";
 import { eq, and, gte, lte, asc, count } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { verifyAuditChain } from "@/lib/audit/crypto-audit-engine";
 import { z } from "zod";
 
 const verifyQuerySchema = z.object({
-  tenantId: z.string().optional().default("default"),
+  tenantId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50000).optional().default(10000),
 });
 
-async function handler(req: Request, _session: any) {
+async function handler(req: Request, session: any) {
   try {
     let body = {};
     if (req.method === "POST") {
@@ -25,7 +25,7 @@ async function handler(req: Request, _session: any) {
     } else {
       const { searchParams } = new URL(req.url);
       body = {
-        tenantId: searchParams.get("tenantId") || undefined,
+        tenantId: searchParams.get("tenantId") || searchParams.get("institutionId") || undefined,
         startDate: searchParams.get("startDate") || undefined,
         endDate: searchParams.get("endDate") || undefined,
         limit: searchParams.get("limit") || undefined,
@@ -37,10 +37,13 @@ async function handler(req: Request, _session: any) {
       return NextResponse.json({ error: parsed.error.message }, { status: 400 });
     }
 
-    const { tenantId, startDate, endDate, limit } = parsed.data;
+    const rawInst = parsed.data.tenantId && parsed.data.tenantId !== "default" && parsed.data.tenantId !== "all" ? parsed.data.tenantId : undefined;
+    const resolved = await resolveRequestInstitution(session, rawInst);
+    const tenantId = resolved === "global" ? undefined : resolved;
+    const { startDate, endDate, limit } = parsed.data;
 
     const conditions = [];
-    if (tenantId && tenantId !== "all") {
+    if (tenantId) {
       conditions.push(eq(auditLogs.tenantId, tenantId));
     }
     if (startDate) {
@@ -67,7 +70,7 @@ async function handler(req: Request, _session: any) {
       const rootRes = await db
         .select({ count: count() })
         .from(auditMerkleRoots)
-        .where(tenantId && tenantId !== "all" ? eq(auditMerkleRoots.tenantId, tenantId) : undefined);
+        .where(tenantId ? eq(auditMerkleRoots.tenantId, tenantId) : undefined);
       rootCount = rootRes[0]?.count ?? 0;
     } catch {
       rootCount = 0;
@@ -79,6 +82,7 @@ async function handler(req: Request, _session: any) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
+    if (error?.name === "TenantMismatchError") throw error;
     console.error("[@thaiba/compliance] Audit verification error:", error);
     return NextResponse.json(
       { error: error?.message || "Internal server error during audit chain verification" },

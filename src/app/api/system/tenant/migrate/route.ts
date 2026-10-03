@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { tenantRouter, TenantRegion } from "@/db";
 import { tenantMigrationOrchestrator } from "@/lib/tenant/tenant-migration";
+import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
 
 async function getHandler(_request: Request, _session: any) {
   return NextResponse.json({
@@ -10,7 +11,7 @@ async function getHandler(_request: Request, _session: any) {
   });
 }
 
-async function postHandler(request: Request, _session: any) {
+async function postHandler(request: Request, session: any) {
   try {
     const body = await request.json();
     const { tenantId, targetRegion } = body;
@@ -26,9 +27,13 @@ async function postHandler(request: Request, _session: any) {
       );
     }
 
-    const result = await tenantMigrationOrchestrator.migrateTenant(tenantId, targetRegion);
+    const resolvedTenant = resolveRequestInstitution(session, tenantId);
+    const result = await tenantMigrationOrchestrator.migrateTenant(resolvedTenant, targetRegion);
     return NextResponse.json({ success: true, result });
   } catch (err: any) {
+    if (err?.name === "TenantMismatchError") {
+      throw err;
+    }
     return NextResponse.json(
       { error: "Tenant migration failed", details: err?.message || String(err) },
       { status: 500 }

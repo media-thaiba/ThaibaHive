@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { timeSeriesQuerySchema } from "@/lib/validation/schemas";
 import { timeSeriesDecompositionEngine } from "@/lib/services/time-series-decomposition-engine";
+import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const campusId = searchParams.get("campusId") || "inst_101";
+  const rawCampusId = searchParams.get("campusId") || undefined;
   const granularity = (searchParams.get("granularity") || "monthly") as "monthly" | "quarterly" | "weekly";
 
-  const parse = timeSeriesQuerySchema.safeParse({ campusId, granularity });
+  const resolvedCampusId = resolveRequestInstitution(session, rawCampusId);
+
+  const parse = timeSeriesQuerySchema.safeParse({ campusId: resolvedCampusId, granularity });
   if (!parse.success) {
     return NextResponse.json({ error: "Validation failed", details: parse.error.format() }, { status: 400 });
   }
@@ -21,13 +24,16 @@ export const GET = requireAuth(async (request: Request, _session) => {
 
   try {
     const decomposition = await timeSeriesDecompositionEngine.runDecomposition(
-      campusId,
+      resolvedCampusId,
       "fee_collections",
       sampleObserved,
       granularity
     );
     return NextResponse.json(decomposition, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.name === "TenantMismatchError") {
+      throw error;
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to generate time-series decomposition" },
       { status: 500 }
