@@ -9,8 +9,8 @@ export const GET = withPublicApm(async (_req: Request, context: { params: Promis
       return NextResponse.json({ error: "Fee receipt hash is required" }, { status: 400 });
     }
 
-    const receipt = await FeeDbStore.getInstance().getReceiptByHash(hash);
-    if (!receipt) {
+    const verification = await FeeDbStore.getInstance().getReceiptByHash(hash);
+    if (!verification) {
       return NextResponse.json(
         {
           success: false,
@@ -21,20 +21,21 @@ export const GET = withPublicApm(async (_req: Request, context: { params: Promis
       );
     }
 
-    const payment = await FeeDbStore.getInstance().getPaymentById(receipt.paymentId, receipt.institutionId);
-
     return NextResponse.json({
       success: true,
       status: "VERIFIED_FEE_RECEIPT",
-      receiptNumber: receipt.receiptNumber,
-      institutionId: receipt.institutionId,
-      studentId: receipt.studentId,
-      amount: payment?.amount ?? 0,
-      currency: payment?.currency ?? "INR",
-      paymentMethod: payment?.paymentMethod ?? "OTHER",
-      paymentStatus: payment?.paymentStatus ?? "SUCCESS",
-      paidAt: payment?.paidAt ?? receipt.issuedAt,
-      confirmedAt: receipt.issuedAt,
+      receiptNumber: verification.receiptNumber,
+      institutionId: verification.institutionId,
+      studentId: verification.studentId,
+      paymentId: verification.paymentId,
+      receiptHash: verification.receiptHash,
+      signature: verification.signature,
+      qrPayload: verification.qrPayload,
+      receiptHtml: verification.receiptHtml,
+      receiptPdfUrl: verification.receiptPdfUrl,
+      downloadCount: verification.downloadCount,
+      issuedAt: verification.issuedAt,
+      createdAt: verification.createdAt,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Verification failed" }, { status: 500 });
