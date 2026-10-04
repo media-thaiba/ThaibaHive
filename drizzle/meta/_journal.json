@@ -218,6 +218,13 @@
       "when": 1790965769736,
       "tag": "0030_mixed_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1791119408956,
+      "tag": "0031_faithful_karen_page",
+      "breakpoints": true
     }
   ]
 }
