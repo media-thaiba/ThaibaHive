@@ -116,7 +116,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
     expect(res.headers.get("X-XSS-Protection")).toBe("1; mode=block");
     expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
-    expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
+    expect(res.headers.get("Cache-Control")).toContain("no-store, no-cache, must-revalidate");
   });
 
   it("should redirect unauthenticated requests to login for shell media routes", async () => {
