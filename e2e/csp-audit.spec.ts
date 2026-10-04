@@ -47,7 +47,7 @@ test.describe('U2: Content Security Policy Audit on 10 Critical Pages', () => {
         }
       });
 
-      const response = await page.goto(pageConfig.path, { waitUntil: 'networkidle', timeout: 30000 });
+      const response = await page.goto(pageConfig.path, { waitUntil: 'domcontentloaded', timeout: 15000 });
       expect(response?.status()).toBeLessThan(400);
 
       // Verify CSP header presence

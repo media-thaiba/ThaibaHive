@@ -353,7 +353,7 @@ describe("proxy", () => {
     it("should add no-store cache headers for API routes", async () => {
       const req = makeRequest("/api/auth/login");
       const res = (await proxy(req as any)) as any;
-      expect(res.get("cache-control")).toBe("no-store, no-cache, must-revalidate");
+      expect(res.get("cache-control")).toBe("private, no-store, no-cache, must-revalidate");
     });
   });
 

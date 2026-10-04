@@ -1,2 +1,44 @@
-﻿Error: Timed out waiting 120000ms from config.webServer.
+﻿[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[standalone] Copied public -> .next/standalone/public
+Seeding test users and leave types for Playwright E2E tests...
+Updated test user fields and reset password: test-superadmin@thaibahive.local
+Updated test user fields and reset password: test-admin@thaibahive.local
+Updated test user fields and reset password: test-staff@thaibahive.local
+Updated test user fields and reset password: test-hod@thaibahive.local
+Updated test user fields and reset password: test-principal@thaibahive.local
+Updated test user fields and reset password: test-accounts@thaibahive.local
+Updated test user fields and reset password: test-purchase@thaibahive.local
+Successfully cleaned up old E2E institutions using PRAGMA foreign_keys = OFF
+Seeded test institution: Test Institution E2E
+Generating deterministic E2E storageStates for all test roles...
+Successfully generated and cached E2E storageState for role: super_admin
+Successfully generated and cached E2E storageState for role: admin
+Successfully generated and cached E2E storageState for role: staff
+Successfully generated and cached E2E storageState for role: hod
+Successfully generated and cached E2E storageState for role: principal
+Successfully generated and cached E2E storageState for role: accounts
+Successfully generated and cached E2E storageState for role: purchase
+Global setup complete. Cached E2E storageStates.
 
+Running 18 tests using 4 workers
+
+  ok  3 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [login] (/auth/login) has zero CSP violations (1.4s)
+  ok  4 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [portal home] (/portal/tgcis) has zero CSP violations (1.5s)
+  ok  2 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [tasks] (/tasks) has zero CSP violations (1.7s)
+  ok  1 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [staff list] (/staff) has zero CSP violations (1.7s)
+  ok  5 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [attendance] (/attendance) has zero CSP violations (1.3s)
+  ok  6 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [leaves] (/leaves) has zero CSP violations (1.4s)
+  ok  7 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [finance] (/finance) has zero CSP violations (1.4s)
+  ok  8 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [media] (/media) has zero CSP violations (1.4s)
+  ok  9 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [admin] (/admin) has zero CSP violations (1.3s)
+  ok 10 [chromium] ΓÇ║ e2e\csp-audit.spec.ts:20:9 ΓÇ║ U2: Content Security Policy Audit on 10 Critical Pages ΓÇ║ page [settings] (/settings) has zero CSP violations (1.4s)
+  ok 12 [chromium] ΓÇ║ e2e\keyboard-a11y.spec.ts:33:7 ΓÇ║ U4: Keyboard-Only Accessibility & Focus-Visible Verification ΓÇ║ 2. Attendance Marking: Keyboard navigation and interaction (1.6s)
+  ok 11 [chromium] ΓÇ║ e2e\keyboard-a11y.spec.ts:9:7 ΓÇ║ U4: Keyboard-Only Accessibility & Focus-Visible Verification ΓÇ║ 1. Login: Full keyboard-only workflow (2.9s)
+  ok 13 [chromium] ΓÇ║ e2e\keyboard-a11y.spec.ts:53:7 ΓÇ║ U4: Keyboard-Only Accessibility & Focus-Visible Verification ΓÇ║ 3. Leave Request: Keyboard navigation to leave request modal (2.7s)
+  ok 14 [chromium] ΓÇ║ e2e\keyboard-a11y.spec.ts:73:7 ΓÇ║ U4: Keyboard-Only Accessibility & Focus-Visible Verification ΓÇ║ 4. NFC Check-In: Keyboard interaction for tag entry (5.9s)
+  ok 17 [chromium] ΓÇ║ e2e\route-boundaries.spec.ts:27:7 ΓÇ║ U3: Route Boundaries (loading.tsx skeletons and error recovery) ΓÇ║ Attendance page: displays skeleton during delayed load and renders page (9.5s)
+  ok 16 [chromium] ΓÇ║ e2e\route-boundaries.spec.ts:8:7 ΓÇ║ U3: Route Boundaries (loading.tsx skeletons and error recovery) ΓÇ║ Tasks page: displays skeleton during delayed API load and renders page (10.2s)
+  ok 18 [chromium] ΓÇ║ e2e\route-boundaries.spec.ts:46:7 ΓÇ║ U3: Route Boundaries (loading.tsx skeletons and error recovery) ΓÇ║ Leaves page: displays skeleton during delayed load and renders page (5.8s)
+  ok 15 [chromium] ΓÇ║ e2e\keyboard-a11y.spec.ts:93:7 ΓÇ║ U4: Keyboard-Only Accessibility & Focus-Visible Verification ΓÇ║ 5. Focus-Visible & Contrast verification on 5 busiest screens (14.7s)
+
+  18 passed (21.4s)

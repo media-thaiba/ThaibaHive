@@ -26,4 +26,4 @@ process.env.APP_URL = `http://localhost:${PORT}`;
 process.env.PLAYWRIGHT_TEST = "true";
 
 // Require standalone server
-require("../.next/standalone/server.js");
+require(path.resolve(__dirname, "../.next/standalone/server.js"));

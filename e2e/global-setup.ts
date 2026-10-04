@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { SignJWT } from "jose";
 import { copyStandaloneAssets } from "../scripts/copy-standalone-assets";
+import { getJwtSecretBytes } from "../packages/auth/config";
 
 async function globalSetup() {
   copyStandaloneAssets();
@@ -313,8 +314,7 @@ async function globalSetup() {
 
   // Generate deterministic storageState files for each user role
   console.log("Generating deterministic E2E storageStates for all test roles...");
-  const jwtSecret = process.env.AUTH_JWT_SECRET || "test-e2e-jwt-secret-key-32-chars-long";
-  const secretKey = new TextEncoder().encode(jwtSecret);
+  const secretKey = getJwtSecretBytes("session");
 
   const testUsers = [
     { staffId: _superAdminId, email: "test-superadmin@thaibahive.local", employeeId: "TEST-SUPERADMIN-99", name: "Test Super", role: "super_admin" },

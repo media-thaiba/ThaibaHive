@@ -1,9 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
-import * as fs from "fs";
 import * as path from "path";
 
 const PORT = process.env.PORT || 3000;
-const envFlag = fs.existsSync(".env") ? "--env-file=.env " : "";
 const resolvedDbPath = process.env.DATABASE_URL || `file:${path.resolve("dev.db")}`;
 
 // Ensure deterministic secrets across global-setup and webServer process
