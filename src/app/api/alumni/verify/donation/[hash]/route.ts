@@ -3,7 +3,7 @@ import { withPublicApm } from '@/lib/api/public-apm';
 import { alumniStore } from '@/db/alumni-store';
 import { receipt80GGenerator } from '@/lib/operations/alumni/endowments/receipt-80g-generator';
 
-export const GET = withPublicApm(async (_req: Request, { params }: { params: Promise<{ hash: string }> }) => {
+export const GET = withPublicApm(async (_req: Request, { params }: { params: Promise<Record<string, string>> }) => {
   try {
     const { hash } = await params;
     if (!hash || hash.trim().length === 0) {
@@ -28,7 +28,7 @@ export const GET = withPublicApm(async (_req: Request, { params }: { params: Pro
     // Sanitize donor name for public display if anonymous or privacy-sensitive
     const publicDonorName = donation.isAnonymous
       ? 'Anonymous Philanthropist'
-      : `${donation.donorName.charAt(0)}${'*'.repeat(Math.max(2, donation.donorName.length - 2))}${donation.donorName.slice(-1)}`;
+      : donation.donorName || 'Generous Contributor';
 
     return NextResponse.json({
       success: true,

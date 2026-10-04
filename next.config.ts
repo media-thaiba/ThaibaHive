@@ -11,12 +11,6 @@ const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: process.env.DEV_ORIGINS?.split(",") || [],
   serverExternalPackages: ["pdfkit"],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
