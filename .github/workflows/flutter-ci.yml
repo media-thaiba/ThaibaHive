@@ -2,9 +2,9 @@ name: Flutter Mobile CI Quality Gate
 
 on:
   push:
-    branches: [ main, develop, 'feature/*' ]
+    branches: [ main, master, develop, 'feature/*', 'audit/**' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, master, develop, 'audit/**' ]
 
 jobs:
   analyze-and-test:
