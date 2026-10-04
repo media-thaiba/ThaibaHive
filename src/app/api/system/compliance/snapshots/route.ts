@@ -4,6 +4,8 @@ import { forensicSnapshots } from "@thaiba/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { forensicSnapshotEngine } from "@/lib/compliance/forensic-snapshot-engine";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { z } from "zod";
 
 const createSnapshotSchema = z.object({
@@ -12,7 +14,7 @@ const createSnapshotSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-async function getHandler(req: Request, session: any) {
+async function getHandler(req: Request, session: SessionPayload) {
   try {
     const { searchParams } = new URL(req.url);
     const rawInst = searchParams.get("tenantId") || searchParams.get("institutionId") || undefined;
@@ -37,12 +39,13 @@ async function getHandler(req: Request, session: any) {
     });
   } catch (error: any) {
     if (error?.name === "TenantMismatchError") throw error;
-    console.error("[@thaiba/compliance] Get snapshots error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Get snapshots error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 
-async function postHandler(req: Request, session: any) {
+async function postHandler(req: Request, session: SessionPayload) {
   try {
     let body = {};
     try {
@@ -64,7 +67,7 @@ async function postHandler(req: Request, session: any) {
       snapshotType: parsed.data.snapshotType,
       metadata: {
         ...parsed.data.metadata,
-        requestedBy: session?.staffId || session?.userId || session?.sub || "admin",
+        requestedBy: session?.staffId || "admin",
       },
     });
 
@@ -75,8 +78,9 @@ async function postHandler(req: Request, session: any) {
     }, { status: 201 });
   } catch (error: any) {
     if (error?.name === "TenantMismatchError") throw error;
-    console.error("[@thaiba/compliance] Create snapshot error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Create snapshot error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

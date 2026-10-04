@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { snapshotReconstructor } from "@/lib/compliance/snapshot-reconstructor";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { z } from "zod";
 
 const diffSchema = z.object({
@@ -8,7 +10,7 @@ const diffSchema = z.object({
   targetSnapshotUri: z.string().min(1),
 });
 
-async function handler(req: Request, _session: any) {
+async function handler(req: Request, _session: SessionPayload) {
   try {
     const body = await req.json();
     const parsed = diffSchema.safeParse(body);
@@ -36,8 +38,9 @@ async function handler(req: Request, _session: any) {
       targetVerified: targetResult.verified,
     });
   } catch (error: any) {
-    console.error("[@thaiba/compliance] Snapshot diff error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Snapshot diff error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

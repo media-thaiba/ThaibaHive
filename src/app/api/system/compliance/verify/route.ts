@@ -4,6 +4,8 @@ import { auditLogs, auditMerkleRoots } from "@thaiba/db/schema";
 import { eq, and, gte, lte, asc, count } from "drizzle-orm";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { verifyAuditChain } from "@/lib/audit/crypto-audit-engine";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { z } from "zod";
 
 const verifyQuerySchema = z.object({
@@ -13,7 +15,7 @@ const verifyQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50000).optional().default(10000),
 });
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, session: SessionPayload) {
   try {
     let body = {};
     if (req.method === "POST") {
@@ -83,9 +85,10 @@ async function handler(req: Request, session: any) {
     });
   } catch (error: any) {
     if (error?.name === "TenantMismatchError") throw error;
-    console.error("[@thaiba/compliance] Audit verification error:", error);
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Audit verification error:`, error);
     return NextResponse.json(
-      { error: error?.message || "Internal server error during audit chain verification" },
+      { error: "Internal server error during audit chain verification", requestId },
       { status: 500 }
     );
   }

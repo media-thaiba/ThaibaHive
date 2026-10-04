@@ -6,8 +6,10 @@ import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { auditAnomalyDetector } from "@/lib/compliance/anomaly-detector";
 import { complianceMetrics } from "@/lib/observability/compliance-metrics";
 import { ViolationSeverity, TelemetrySummary } from "@/lib/compliance/types";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, session: SessionPayload) {
   try {
     const { searchParams } = new URL(req.url);
     const rawInst = searchParams.get("tenantId") || searchParams.get("institutionId") || undefined;
@@ -67,8 +69,9 @@ async function handler(req: Request, session: any) {
     return NextResponse.json(summary);
   } catch (error: any) {
     if (error?.name === "TenantMismatchError") throw error;
-    console.error("[@thaiba/compliance] Telemetry route error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Telemetry route error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

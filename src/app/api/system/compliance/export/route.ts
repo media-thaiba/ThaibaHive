@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { regulatoryExportEngine } from "@/lib/compliance/regulatory-export-engine";
 import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { z } from "zod";
 
 const exportSchema = z.object({
@@ -10,7 +12,7 @@ const exportSchema = z.object({
   format: z.enum(["json", "pdf"]).optional().default("json"),
 });
 
-async function handler(req: Request, session: any) {
+async function handler(req: Request, session: SessionPayload) {
   try {
     let body = {};
     try {
@@ -50,8 +52,9 @@ async function handler(req: Request, session: any) {
     if (error?.name === "TenantMismatchError") {
       throw error;
     }
-    console.error("[@thaiba/compliance] Regulatory export error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Regulatory export error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

@@ -3,9 +3,11 @@ import { db } from "@/db";
 import { complianceViolations } from "@thaiba/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { ViolationSeverity, ViolationStatus } from "@/lib/compliance/types";
 
-async function getHandler(req: Request, session: any) {
+async function getHandler(req: Request, session: SessionPayload) {
   try {
     const { searchParams } = new URL(req.url);
     const rawInst = searchParams.get("tenantId") || searchParams.get("institutionId") || undefined;
@@ -46,8 +48,9 @@ async function getHandler(req: Request, session: any) {
     });
   } catch (error: any) {
     if (error?.name === "TenantMismatchError") throw error;
-    console.error("[@thaiba/compliance] Get violations error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Get violations error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 
