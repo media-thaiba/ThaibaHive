@@ -1,0 +1,58 @@
+$ cross-env NODE_OPTIONS="--max-old-space-size=8192" next build --webpack
+▲ Next.js 16.3.8 (webpack)
+✓ Running next.config.ts took 45ms
+Warning: Custom Cache-Control headers detected for the following routes:
+  - /_next/static/:path*
+
+Setting a custom Cache-Control header can break Next.js development behavior.
+- Experiments (use with caution):
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+⚠ Compiled with warnings in 47s
+
+./src/app/api/upload/process-image/route.ts
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./src/app/api/upload/process-image/route.ts
+
+  Running TypeScript ...
+  Finished TypeScript in 15.7s ...
+  Collecting page data using 19 workers ...
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba.db] Initializing database in SQLite/LibSQL mode
+[@thaiba.db] Initializing database in SQLite/LibSQL mode
+[@thaiba.db] Initializing database in SQLite/LibSQL mode
+[@thaiba.db] Initializing database in SQLite/LibSQL mode
+[@thaiba.db] Initializing database in SQLite/LibSQL mode
+[@thaiba.db] Initializing database in SQLite/LibSQL mode
+  Generating static pages using 19 workers (0/419) ...
+  Generating static pages using 19 workers (104/419) 
+  Generating static pages using 19 workers (209/419) 
+  Generating static pages using 19 workers (314/419) 
+✓ Generating static pages using 19 workers (419/419) in 1562ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+... (419 routes generated successfully)
+
+$ tsx scripts/copy-standalone-assets.ts
+[standalone] Copied .next/static -> .next/standalone/.next/static
+[standalone] Copied public -> .next/standalone/public
+
+BUILD: SUCCESS
