@@ -23,6 +23,7 @@
     "db:migrate": "tsx scripts/db/migrate.ts",
     "db:backfill:institution": "tsx scripts/db/backfill-institution-ids.ts",
     "db:verify:columns": "tsx scripts/db/verify-tenant-columns.ts",
+    "db:verify:restore": "tsx scripts/db/verify-restore.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
     "db:replica:check": "tsx scripts/db/replica-parity-check.ts",
