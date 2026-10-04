@@ -185,7 +185,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "visitors:create", "visitors:update", "visitors:read", "visitors:manage", "visitor:read", "visitor:issue", "visitor:verify",
     "system:telemetry", "system:manage", "system:admin",
     "system:security:view", "system:security:manage", "system:threat-intel:view", "system:threat-intel:manage", "system:threat-intel:federate",
-    "admin:all", "admin:audit", "remediation:approve", "cache:manage", "database:admin", "lakehouse:manage", "mesh:admin", "agents:manage", "edge:monitor", "features:read", "streaming:access",
+    "admin:all", "admin:audit", "admin:view", "remediation:approve", "cache:manage", "database:admin", "lakehouse:manage", "mesh:admin", "agents:manage", "edge:monitor", "features:read", "streaming:access",
     "operations:read", "operations:write", "observability:read", "observability:write",
     "profile:read", "profile:write",
     "org:manage",

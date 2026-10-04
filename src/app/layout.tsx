@@ -42,7 +42,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const headerList = await headers();
-  const nonce = headerList.get("x-nonce") ?? undefined;
+  const _nonce = headerList.get("x-nonce") ?? undefined;
 
   return (
     <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>

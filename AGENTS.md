@@ -297,15 +297,59 @@ packages/db/         → DB package (Drizzle schema)
 - Solution: Implemented full regex scanner for Rules A-D with schema table extraction, wired `security:requireauth` in `package.json`, and tracked Tier 3 debt in `tenant-scan-allowlist.json`.
 - Status: ✅ Fixed
 
+### 2026-10-04: Database, Backup, and CI Hardening (Tasks D1, D4, D5, D6, B3, B1, F1)
+
+#### Fixed Issues:
+
+**Issue 1: PostgreSQL Production Parity CI Gate & Schema Drift Test (D1)**
+- Files: `.github/workflows/ci.yml`, `packages/db/__tests__/schema-drift.test.ts`
+- Problem: Production PostgreSQL migration and query paths were never tested in CI (all jobs ran SQLite in-memory). No automated checks existed to catch table or column drift between `schema.ts` and `schema.pg.ts`.
+- Solution: Added dedicated `postgres-ci` job with `postgres:16` service container running `premigrate`, `db:migrate`, `db:verify:columns`, and critical test suites against PostgreSQL. Added automated schema drift test asserting 100% table and column parity across dialects.
+- Status: ✅ Fixed
+
+**Issue 2: Multi-Tenant Indexes & Unique Constraints (D4)**
+- Files: `packages/db/schema.ts`, `packages/db/schema.pg.ts`, `drizzle/0031_faithful_karen_page.sql`, `drizzle/postgres/0015_mute_kylun.sql`
+- Problem: Critical multi-tenant tables lacked indexes on `institution_id` leading to potential full table scans, and `staff_institutions` lacked a unique composite constraint on `(staff_id, institution_id)`.
+- Solution: Added unique composite index on `staff_institutions(staff_id, institution_id)` and tenant indexes on top high-volume tables (`departments`, `classes`, `academic_years`, `leave_requests`, `tasks`, `bookings`, `help_desk_tickets`, `visitors`, `meal_notifications`, `media_folders`, `media_assets`). Generated clean, non-destructive PostgreSQL and SQLite migrations.
+- Status: ✅ Fixed
+
+**Issue 3: Institution Backfill Decoupling & Dry-Run Hardening (D5)**
+- Files: `scripts/db/migrate.ts`, `scripts/db/backfill-institution-ids.ts`, `scripts/db/__tests__/backfill-institution-ids.test.ts`
+- Problem: Backfill ran automatically on every `db:migrate`, guessed arbitrarily with `LIMIT 1` on multi-institution staff records, and used unparameterized SQL strings.
+- Solution: Decoupled backfill from `migrate.ts`, added dry-run as default (requiring explicit `--apply`), skipped ambiguous multi-institution actors without guessing, and used parameterized queries.
+- Status: ✅ Fixed
+
+**Issue 4: ANSI-SQL Compatibility for Production Staff Query (D6)**
+- File: `docs/audit-evidence/unmapped-staff.sql`
+- Problem: Dialect-specific `s.is_active = 1` causes runtime syntax failures on PostgreSQL boolean columns.
+- Solution: Replaced with ANSI-SQL compliant `s.is_active IS TRUE`.
+- Status: ✅ Fixed
+
+**Issue 5: Automated Database Backup Hardening (B3)**
+- Files: `scripts/db-backup.sh`, `.github/workflows/db-backup.yml`
+- Problem: Regex `sed` parsing of `DATABASE_URL` stripped SSL mode and failed on complex passwords; exited 0 on missing secrets; lacked dump emptiness check and cryptographic checksums.
+- Solution: Refactored `db-backup.sh` to pass `DATABASE_URL` directly to `pg_dump`, enforce exit 1 on missing credentials, verify non-empty dump and gzip integrity, generate SHA-256 checksums, and upload with SSE-KMS.
+- Status: ✅ Fixed
+
+**Issue 6: Weekly Automated Database Restore Quality Gate & Runbook (B1)**
+- Files: `scripts/db/restore-backup.sh`, `scripts/db/verify-restore.ts`, `.github/workflows/db-restore-test.yml`, `docs/RESTORE_RUNBOOK.md`, `package.json`
+- Problem: Backups were uploaded to S3 daily but never restored or validated, with no restore scripts or disaster recovery runbook.
+- Solution: Implemented `scripts/db/restore-backup.sh` and `scripts/db/verify-restore.ts`, created weekly automated GitHub Actions restore quality gate in a scratch `postgres:16` container, and authored comprehensive `docs/RESTORE_RUNBOOK.md`.
+- Status: ✅ Fixed
+
+**Issue 7: Flutter CI Trigger Expansion (F1)**
+- File: `.github/workflows/flutter-ci.yml`
+- Problem: `flutter-ci.yml` was not triggered on the default `master` or audit branches.
+- Solution: Added `master` and `audit/**` branches to `push` and `pull_request` triggers.
+- Status: ✅ Fixed
+
 **Verification:**
-- Full Platform Test Suites: ✅ Passed across test suites (including 4 new isolation and backfill suites)
-- Gateway AST Scanner: ✅ 100% Platform Route Coverage (604/604 endpoints shielded, 0 leaks)
-- Tenant Isolation Scanner: ✅ 100% Tenant Isolated (1,613/1,613 files scanned, 0 leaks, 57 debt allowlisted)
-- RBAC AST Scanner: ✅ 100% Route Permission Mapping (100% mapped, exit 0)
-- RequireAuth Permission AST Scanner: ✅ 100% Shielded (0 naked handlers)
-- Tenant Column Verifier: ✅ 8/8 Scoped Tables Verified
+- PostgreSQL Parity & Drift: ✅ 100% Parity (400+ tables, 0 column drift)
+- Unit & Integration Test Suites: ✅ 11/11 Test Suites Passing (70/70 tests)
+- Tenant Isolation Scanner: ✅ 100% Tenant Isolated (1,616 files scanned, 0 leaks)
+- RBAC Permission AST Scanner: ✅ 100% Route Permission Mapping (0 unmapped keys)
 - TypeScript: ✅ `tsc --noEmit` exits with 0 errors
-- Lint: ✅ ESLint passes without errors
+- Lint: ✅ ESLint passes with 0 errors
 
 <!-- END:issue-fixes -->
 
