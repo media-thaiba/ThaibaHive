@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import { withPublicApm } from '@/lib/api/public-apm';
-import { alumniStore } from '@/db/alumni-store';
-import { receipt80GGenerator } from '@/lib/operations/alumni/endowments/receipt-80g-generator';
+import { NextResponse } from "next/server";
+import { withPublicApm } from "@/lib/api/public-apm";
+import { alumniStore } from "@/db/alumni-store";
+import { receipt80GGenerator } from "@/lib/operations/alumni/endowments/receipt-80g-generator";
 
-export const GET = withPublicApm(async (_req: Request, { params }: { params: Promise<Record<string, string>> }) => {
+export const GET = withPublicApm(async (_req: Request, context: { params: Promise<Record<string, string>> }) => {
   try {
-    const { hash } = await params;
+    const { hash } = await context.params;
     if (!hash || hash.trim().length === 0) {
-      return NextResponse.json({ error: 'Donation receipt hash is required' }, { status: 400 });
+      return NextResponse.json({ error: "Donation receipt hash is required" }, { status: 400 });
     }
 
     const donation = await alumniStore.getDonationByReceiptHash(hash);
@@ -15,8 +15,8 @@ export const GET = withPublicApm(async (_req: Request, { params }: { params: Pro
       return NextResponse.json(
         {
           success: false,
-          status: 'INVALID_OR_NOT_FOUND',
-          message: 'No official Section 80G donation receipt matches this cryptographic hash.',
+          status: "INVALID_OR_NOT_FOUND",
+          message: "No official Section 80G donation receipt matches this cryptographic hash.",
         },
         { status: 404 }
       );
@@ -27,15 +27,15 @@ export const GET = withPublicApm(async (_req: Request, { params }: { params: Pro
 
     // Sanitize donor name for public display if anonymous or privacy-sensitive
     const publicDonorName = donation.isAnonymous
-      ? 'Anonymous Philanthropist'
-      : donation.donorName || 'Generous Contributor';
+      ? "Anonymous Philanthropist"
+      : `${donation.donorName.charAt(0)}${'*'.repeat(Math.max(2, donation.donorName.length - 2))}${donation.donorName.slice(-1)}`;
 
     return NextResponse.json({
       success: true,
-      status: 'GENUINE_80G_CERTIFICATE_VERIFIED',
+      status: "GENUINE_80G_CERTIFICATE_VERIFIED",
       receiptNumber: donation.receipt80GNumber,
       institutionId: donation.institutionId,
-      campaignTitle: campaign?.title || 'Institution Endowment Fund',
+      campaignTitle: campaign?.title || "Institution Endowment Fund",
       donorName: publicDonorName,
       amount: donation.amount,
       currency: donation.currency,
@@ -46,6 +46,6 @@ export const GET = withPublicApm(async (_req: Request, { params }: { params: Pro
       signature,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Verification failed' }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Verification failed" }, { status: 500 });
   }
 });
