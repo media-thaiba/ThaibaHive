@@ -9,6 +9,22 @@ import { SignJWT } from "jose";
 import { copyStandaloneAssets } from "../scripts/copy-standalone-assets";
 
 async function globalSetup() {
+  if (fs.existsSync(".env")) {
+    const envContent = fs.readFileSync(".env", "utf8");
+    for (const line of envContent.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#")) {
+        const idx = trimmed.indexOf("=");
+        if (idx !== -1) {
+          const key = trimmed.slice(0, idx).trim();
+          const value = trimmed.slice(idx + 1).trim();
+          if (key && !process.env[key]) {
+            process.env[key] = value;
+          }
+        }
+      }
+    }
+  }
   copyStandaloneAssets();
   console.log("Seeding test users and leave types for Playwright E2E tests...");
   const passwordHash = await hashPassword("Password123");

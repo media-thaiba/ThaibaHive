@@ -88,7 +88,8 @@ export function buildContentSecurityPolicy(isProd: boolean, nonce?: string): str
 }
 
 function resolveIsProd(isProd?: boolean): boolean {
-  return isProd ?? process.env.NODE_ENV === "production";
+  if (typeof isProd === "boolean") return isProd;
+  return process.env.NODE_ENV === "production" || process.env.NODE_ENV !== "development";
 }
 
 /** `next.config.ts` headers() entry shape: every static security header + CSP fallback. */

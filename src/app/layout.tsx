@@ -46,6 +46,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
+      <head>
+        {_nonce && <meta name="csp-nonce" content={_nonce} />}
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         {/* Per-request CSP nonce for client-created documents (print windows, srcDoc iframes) */}
         <meta name="csp-nonce" content={nonce} />
