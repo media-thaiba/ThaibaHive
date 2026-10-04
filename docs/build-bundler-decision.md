@@ -17,6 +17,6 @@ We explicitly configure `next build --webpack` in `package.json` with dedicated 
 ```
 
 ## 3. Guarantees & Verification
-1. **Type Validation is 100% Enabled**: No `typescript.ignoreBuildErrors` or `eslint.ignoreDuringBuilds` flags are present in `next.config.ts`. The build pipeline executes full TypeScript compilation (`Running TypeScript ... Finished TypeScript in 16.6s ...`) and generates static pages for all 419 routes.
+1. **Type Validation is 100% Enabled**: No `typescript.ignoreBuildErrors` or `eslint.ignoreDuringBuilds` flags are present in `next.config.ts`. The build pipeline executes full TypeScript compilation (`Running TypeScript ... Finished TypeScript in 15.1s ...`) and completes static/dynamic generation across the ~600 API routes and 419 page paths.
 2. **Environment Consistency**: All build invocations across local environments, `.github/workflows/ci.yml` (line 77), and deployment preflight scripts trigger the unified `pnpm build` script.
 3. **Automated Guardrail**: A dedicated Jest test suite (`src/lib/__tests__/build-config-guard.test.ts`) guarantees that no `ignoreBuildErrors` or bypass flags can be committed to `next.config.ts`.

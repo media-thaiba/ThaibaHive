@@ -42,9 +42,10 @@ Multi-institution staff access is verified by `src/app/api/canteen/__tests__/can
 
 ---
 
-## 4. Round 9 Audit Confirmation
+## 4. Round 9 & 10 Audit Confirmation
 
-A complete scan of `src/app/api` was conducted across all 419 routes:
+A complete scan of `src/app/api` was conducted across all 604 route handler files:
 - `src/app/api/canteen/route.ts` (GET) is confirmed as the primary cross-institution aggregation route for multi-campus staff, using `resolveScopedInstitutions`.
 - All other authenticated operational endpoints require and enforce strict single-tenant or explicitly authorized scoping via `resolveRequestInstitution` and `resolveScopedInstitutionId`.
 - No unshielded cross-tenant data leaks exist across the application boundary.
+- Erroneous requests from unmapped staff or unauthorized cross-tenant requests throw `TenantMismatchError`, returning `403 Forbidden`.
