@@ -96,10 +96,73 @@ jobs:
           pnpm db:generate:pg
           git diff --exit-code drizzle/postgres/*.sql 2>/dev/null || (echo "❌ PostgreSQL migrations are out of date. Run 'pnpm db:generate:pg' and commit the changes." && exit 1)
 
+  postgres-ci:
+    name: PostgreSQL 16 Production Parity Gate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test_postgres_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup ephemeral test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Run PostgreSQL migrations
+        run: |
+          pnpm premigrate
+          pnpm db:migrate
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
+
+      - name: Verify PostgreSQL columns & schema drift
+        run: |
+          pnpm db:verify:columns
+          pnpm test packages/db/__tests__/schema-drift.test.ts
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
+
+      - name: Run PostgreSQL Auth, Tenant & Finance test suites
+        run: |
+          pnpm test packages/auth/ packages/db/ src/lib/finance/ src/lib/audit/
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
+          CI: "true"
+
   platform-simulations:
     name: Platform OS Simulation (${{ matrix.module }})
     runs-on: ubuntu-latest
-    needs: web-ci
+    needs: [web-ci, postgres-ci]
     strategy:
       fail-fast: false
       matrix:
