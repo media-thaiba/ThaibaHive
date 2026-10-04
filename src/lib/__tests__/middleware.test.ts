@@ -373,6 +373,7 @@ describe("proxy", () => {
       });
       const res = (await proxy(req as any)) as any;
       expect(res.get("access-control-allow-origin")).toBe("https://dept.campus.thaibahive.com");
+      expect(res.get("access-control-allow-credentials")).toBe("true");
     });
 
     it("should reject malicious origin (evil-thaibahive.com)", async () => {
@@ -417,7 +418,9 @@ describe("proxy", () => {
     });
 
     it("should exclude .svg files from matcher", () => {
-      expect(config.matcher[0]).toContain("\\.svg$");
+      // The matcher pattern uses regex: .*\.svg$ to match any .svg file
+      // Use toMatch with regex to handle potential escaping differences
+      expect(config.matcher[0]).toMatch(/\.svg\$/);
     });
   });
 });
