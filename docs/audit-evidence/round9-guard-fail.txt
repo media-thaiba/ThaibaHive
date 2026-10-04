@@ -1,0 +1,56 @@
+$ pnpm test src/lib/__tests__/b8-tenant-bypass-guard.test.ts
+
+> @thaiba/root@1.0.0 test
+> jest --passWithNoTests "src/lib/__tests__/b8-tenant-bypass-guard.test.ts"
+
+  console.log
+    Allowlist size: 4
+
+      at Object.log (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:6:13)
+
+  console.log
+      [ALLOWLIST] src/app/api/public/enquiries/route.ts:POST => Public enquiry submission allows prospective students to submit an admission enquiry for an institution
+
+      at Object.log (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:8:15)
+
+  console.log
+      [ALLOWLIST] src/app/api/auth/switch-institution/route.ts:POST => Dedicated institution switcher validates membership against staffInstitutions and reissues scoped JWT session
+
+      at Object.log (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:8:15)
+
+  console.log
+      [ALLOWLIST] src/app/api/auth/oidc/login/route.ts:GET => Public SSO entry; tenantId selects the IdP, no data returned
+
+      at Object.log (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:8:15)
+
+  console.log
+      [ALLOWLIST] src/app/api/auth/saml/sso/route.ts:GET => Public SSO entry; tenantId selects the IdP, no data returned
+
+      at Object.log (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:8:15)
+
+FAIL src/lib/__tests__/b8-tenant-bypass-guard.test.ts
+  B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call Scanner)
+    × fails if any API route handler reads institutionId/tenantId without calling a resolver inside that same handler (465 ms)
+    √ detects unshielded tenant parameter in separated function declaration (1 ms)
+    √ detects unshielded alternative parameter names (campusId, branchId, institution_id)
+
+  ● B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call Scanner) › fails if any API route handler reads institutionId/tenantId without calling a resolver inside that same handler
+
+    B8 Handler-Level Tenant Bypass Violation: The following 1 handlers read client-supplied tenant parameters without calling a resolver inside the handler:
+      - [GET] src/app/api/system/compliance/violations/route.ts (handler: getHandler): Reads query tenant/institution parameter without calling resolver
+
+      15 |         .map((v) => `  - [${v.method}] ${v.file}${v.handlerName ? ` (handler: ${v.handlerName})` : ""}: ${v.reasons.join(", ")}`)
+      16 |         .join("\n");
+    > 17 |       throw new Error(
+         |             ^
+      18 |         `B8 Handler-Level Tenant Bypass Violation: The following ${violations.length} handlers read client-supplied tenant parameters without calling a resolver inside the handler:\n${formatted}`
+      19 |       );
+      20 |     }
+
+      at Object.<anonymous> (src/lib/__tests__/b8-tenant-bypass-guard.test.ts:17:13)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        1.524 s, estimated 2 s
+Ran all test suites matching src/lib/__tests__/b8-tenant-bypass-guard.test.ts.

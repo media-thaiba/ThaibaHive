@@ -86,3 +86,9 @@ Tests:       3 passed, 3 total
 Snapshots:   0 total
 Time:        1.55 s
 ================================================================================
+
+Note for Round 9:
+The full, real Jest failure transcript demonstrating regression detection when
+reverting `src/app/api/system/compliance/violations/route.ts` is saved verbatim
+in `docs/audit-evidence/round9-guard-fail.txt`.
+================================================================================

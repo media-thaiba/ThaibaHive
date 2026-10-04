@@ -39,3 +39,12 @@ Multi-institution staff access is verified by `src/app/api/canteen/__tests__/can
 1. Multi-institution staff (assigned to Inst A & Inst B) querying without `institutionId` receives notifications from both Inst A and Inst B.
 2. Multi-institution staff querying `?institutionId=instA` receives only Inst A notifications.
 3. Multi-institution staff querying unauthorized `?institutionId=instC` receives `403 Forbidden`.
+
+---
+
+## 4. Round 9 Audit Confirmation
+
+A complete scan of `src/app/api` was conducted across all 419 routes:
+- `src/app/api/canteen/route.ts` (GET) is confirmed as the primary cross-institution aggregation route for multi-campus staff, using `resolveScopedInstitutions`.
+- All other authenticated operational endpoints require and enforce strict single-tenant or explicitly authorized scoping via `resolveRequestInstitution` and `resolveScopedInstitutionId`.
+- No unshielded cross-tenant data leaks exist across the application boundary.

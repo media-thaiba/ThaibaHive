@@ -2,6 +2,12 @@ import { runScan, scanRouteSource, ALLOW_LIST } from "../../../scripts/security/
 
 describe("B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call Scanner)", () => {
   it("fails if any API route handler reads institutionId/tenantId without calling a resolver inside that same handler", () => {
+    const allowlistCount = Object.keys(ALLOW_LIST).length;
+    console.log(`Allowlist size: ${allowlistCount}`);
+    for (const [key, reason] of Object.entries(ALLOW_LIST)) {
+      console.log(`  [ALLOWLIST] ${key} => ${reason}`);
+    }
+
     const violations = runScan("src/app/api");
 
     if (violations.length > 0) {
@@ -14,6 +20,7 @@ describe("B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call
     }
 
     expect(violations).toHaveLength(0);
+    expect(allowlistCount).toBe(4);
   });
 
   it("detects unshielded tenant parameter in separated function declaration", () => {

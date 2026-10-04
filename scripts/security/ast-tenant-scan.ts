@@ -121,8 +121,8 @@ export const ALLOW_LIST: Record<string, string> = {
   // Public unauthenticated endpoints where tenant parameter is solely used for routing/discovery
   "src/app/api/public/enquiries/route.ts:POST": "Public enquiry submission allows prospective students to submit an admission enquiry for an institution",
   "src/app/api/auth/switch-institution/route.ts:POST": "Dedicated institution switcher validates membership against staffInstitutions and reissues scoped JWT session",
-  "src/app/api/auth/oidc/login/route.ts:GET": "Public unauthenticated OIDC SP-initiated SSO login flow specifying tenantId for IDP routing",
-  "src/app/api/auth/saml/sso/route.ts:GET": "Public unauthenticated SAML SP-initiated SSO redirect specifying target tenantId for SAML AuthnRequest",
+  "src/app/api/auth/oidc/login/route.ts:GET": "Public SSO entry; tenantId selects the IdP, no data returned",
+  "src/app/api/auth/saml/sso/route.ts:GET": "Public SSO entry; tenantId selects the IdP, no data returned",
 };
 
 export function runScan(dir: string = 'src/app/api'): ScanFinding[] {
