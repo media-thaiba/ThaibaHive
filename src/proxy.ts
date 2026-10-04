@@ -221,9 +221,9 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
   // Multi-Region Edge Caching integration (Sprint-034 / EDG-001)
   if (pathname.startsWith("/_next/static/") || pathname.startsWith("/Logo") || pathname.endsWith(".png") || pathname.endsWith(".jpg")) {
     applyEdgeCaching(response, "PUBLIC_IMMUTABLE", { tags: ["static-assets"] });
-  } else if (pathname === "/api/departments" || pathname === "/api/institutions" || pathname === "/api/canteen/menu") {
-    applyEdgeCaching(response, "PUBLIC_SEMI_STATIC", { tags: ["catalog-data", "public-api"] });
-  } else if (pathname.startsWith("/api/media/share-links/") || pathname.startsWith("/api/media/edge/")) {
+  } else if (pathname === "/api/public/circulars" || pathname === "/api/public/version" || pathname === "/.well-known/assetlinks.json" || pathname === "/.well-known/apple-app-site-association") {
+    applyEdgeCaching(response, "PUBLIC_SEMI_STATIC", { tags: ["public-api"] });
+  } else if (pathname.startsWith("/api/media/share-links/") || pathname.startsWith("/api/upload/files/avatars/")) {
     applyEdgeCaching(response, "PUBLIC_MEDIA_THUMBNAIL", { tags: ["media-edge"] });
   } else if (pathname.startsWith("/api/")) {
     applyEdgeCaching(response, "PRIVATE_DYNAMIC");

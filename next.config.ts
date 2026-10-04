@@ -66,9 +66,9 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/api/(dashboard|attendance/my|leaves/balances|tasks|approvals|auth/permissions|auth/me|departments|institutions|staff)",
+        source: "/api/:path*",
         headers: [
-          { key: "Cache-Control", value: "private, s-maxage=30, stale-while-revalidate=60" },
+          { key: "Cache-Control", value: "private, no-store" },
         ],
       },
       {

@@ -1,0 +1,75 @@
+﻿  console.error
+    Cache Header Violations Found:
+      - next.config.ts rule source "/api/(dashboard|attendance/my|leaves/balances|tasks|approvals|auth/permissions|auth/me|departments|institutions|staff)" assigns cache header "private, s-maxage=30, stale-while-revalidate=60" to API routes.
+
+    [0m [90m 70 |[39m
+     [90m 71 |[39m     [36mif[39m (violations[33m.[39mlength [33m>[39m [35m0[39m) {
+    [31m[1m>[22m[39m[90m 72 |[39m       console[33m.[39merror([32m"Cache Header Violations Found:\n"[39m [33m+[39m violations[33m.[39mmap(v [33m=>[39m [32m`  - ${v}`[39m)[33m.[39mjoin([32m"\n"[39m))[33m;[39m
+     [90m    |[39m               [31m[1m^[22m[39m
+     [90m 73 |[39m     }
+     [90m 74 |[39m
+     [90m 75 |[39m     expect(violations)[33m.[39mtoEqual([])[33m;[39m[0m
+
+      at Object.error (src/lib/__tests__/api-cache-headers-guard.test.ts:72:15)
+
+pnpm.exe : FAIL src/lib/__tests__/api-cache-headers-guard.test.ts (6.062 s)
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL src/lib/__...st.ts (6.062 s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  API Cache-Control Security Guard
+    ├ù ensures no requireAuth route receives public, s-maxage, or stale-while-revalidate cache headers (5726 ms)
+    ├ù ensures default Cache-Control for /api/:path* in next.config.ts is private, no-store (2 ms)
+
+  ΓùÅ API Cache-Control Security Guard ΓÇ║ ensures no requireAuth route receives public, s-maxage, or 
+stale-while-revalidate cache headers
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "next.config.ts rule source \"/api/(dashboard|attendance/my|leaves/balances|tasks|approvals|auth/permissions|au
+th/me|departments|institutions|staff)\" assigns cache header \"private, s-maxage=30, stale-while-revalidate=60\" to 
+API routes.",
+    + ]
+
+    [0m [90m 73 |[39m     }
+     [90m 74 |[39m
+    [31m[1m>[22m[39m[90m 75 |[39m     expect(violations)[33m.[39mtoEqual([])[33m;[39m
+     [90m    |[39m                        [31m[1m^[22m[39m
+     [90m 76 |[39m   })[33m;[39m
+     [90m 77 |[39m
+     [90m 78 |[39m   it([32m"ensures default Cache-Control for /api/:path* in next.config.ts is private, 
+no-store"[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toEqual (src/lib/__tests__/api-cache-headers-guard.test.ts:75:24)
+
+  ΓùÅ API Cache-Control Security Guard ΓÇ║ ensures default Cache-Control for /api/:path* in next.config.ts is private, 
+no-store
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+    [0m [90m 82 |[39m     )[33m;[39m
+     [90m 83 |[39m
+    [31m[1m>[22m[39m[90m 84 |[39m     expect(defaultApiRule)[33m.[39mtoBeDefined()[33m;[39m
+     [90m    |[39m                            [31m[1m^[22m[39m
+     [90m 85 |[39m     [36mconst[39m cacheHeader [33m=[39m 
+defaultApiRule[33m?[39m[33m.[39mheaders[33m.[39mfind(
+     [90m 86 |[39m       (h[33m:[39m { key[33m:[39m string[33m;[39m value[33m:[39m string }) [33m=>[39m 
+h[33m.[39mkey[33m.[39mtoLowerCase() [33m===[39m [32m"cache-control"[39m
+     [90m 87 |[39m     )[33m;[39m[0m
+
+      at Object.toBeDefined (src/lib/__tests__/api-cache-headers-guard.test.ts:84:28)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        6.729 s
+Ran all test suites matching src/lib/__tests__/api-cache-headers-guard.test.ts.

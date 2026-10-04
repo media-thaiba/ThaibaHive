@@ -21,7 +21,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     });
 
     const response = NextResponse.json(dashboardPayload);
-    response.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+    response.headers.set("Cache-Control", "private, no-store");
     response.headers.set("ETag", `"${Date.now()}"`);
 
     return response;

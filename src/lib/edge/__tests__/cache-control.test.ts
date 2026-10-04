@@ -3,7 +3,7 @@ import { getEdgeCacheHeaders, applyEdgeCaching, isEdgeCachingEnabled } from "../
 describe("EdgeCacheControl", () => {
   test("returns private no-store headers for PRIVATE_DYNAMIC policy", () => {
     const headers = getEdgeCacheHeaders("PRIVATE_DYNAMIC");
-    expect(headers["Cache-Control"]).toBe("no-store, no-cache, must-revalidate");
+    expect(headers["Cache-Control"]).toBe("private, no-store, no-cache, must-revalidate");
     expect(headers["CDN-Cache-Control"]).toBe("no-store");
   });
 
