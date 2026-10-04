@@ -14,18 +14,28 @@ export interface BackfillStats {
 export interface BackfillReport {
   timestamp: string;
   dialect: string;
+  dryRun: boolean;
   totalUpdated: number;
   totalSkipped: number;
   totalAmbiguous: number;
   tableStats: BackfillStats[];
 }
 
-export async function runInstitutionBackfill(customReportPath?: string): Promise<BackfillReport> {
-  console.log("[db:backfill] Starting institution ID backfill across 8 scoped tables...");
+export interface BackfillOptions {
+  apply?: boolean;
+  customReportPath?: string;
+}
+
+export async function runInstitutionBackfill(options?: BackfillOptions): Promise<BackfillReport> {
+  const isApply = options?.apply ?? (process.argv.includes("--apply") || process.env.BACKFILL_APPLY === "true");
+  const customReportPath = options?.customReportPath;
+
+  console.log(`[db:backfill] Starting institution ID backfill across 8 scoped tables (Mode: ${isApply ? "APPLY" : "DRY-RUN"})...`);
 
   const report: BackfillReport = {
     timestamp: new Date().toISOString(),
     dialect: isPostgres ? "postgres" : "sqlite",
+    dryRun: !isApply,
     totalUpdated: 0,
     totalSkipped: 0,
     totalAmbiguous: 0,
@@ -34,7 +44,7 @@ export async function runInstitutionBackfill(customReportPath?: string): Promise
 
   const CHUNK_SIZE = 5000;
 
-  // Helper to query multi-institution actors to track ambiguity
+  // Query multi-institution actors to track and skip ambiguous assignments
   const multiInstActorRows: { staffId: string; instCount: number }[] = await db.all(sql`
     SELECT staff_id as "staffId", COUNT(DISTINCT institution_id) as "instCount"
     FROM staff_institutions
@@ -85,21 +95,26 @@ export async function runInstitutionBackfill(customReportPath?: string): Promise
           continue;
         }
 
+        // If actor belongs to multiple institutions, do NOT guess. Mark ambiguous and skip.
         if (multiInstActorSet.has(row.actor_id)) {
           tableAmbiguous++;
           if (ambiguousIds.length < 20) {
             ambiguousIds.push(row.id);
           }
+          continue;
         }
 
-        // Resolve single primary / LIMIT 1 institution identical to getUserInstitutionScope
-        const instQuery = sql`SELECT institution_id as "institutionId" FROM staff_institutions WHERE staff_id = ${row.actor_id} LIMIT 1`;
+        // Query single deterministic institution for single-institution staff
+        const instQuery = sql`SELECT institution_id as "institutionId" FROM staff_institutions WHERE staff_id = ${row.actor_id}`;
         const instResult: { institutionId: string }[] = await db.all(instQuery);
 
         const targetInstId = instResult?.[0]?.institutionId;
         if (targetInstId) {
-          const updateSql = sql.raw(`UPDATE ${tableName} SET institution_id = '${targetInstId}' WHERE ${idCol} = '${row.id}' AND institution_id IS NULL`);
-          await db.run(updateSql);
+          if (isApply) {
+            // Parameterized update to prevent SQL injection and quoting issues
+            const updateSql = sql`UPDATE ${sql.identifier(tableName)} SET institution_id = ${targetInstId} WHERE ${sql.identifier(idCol)} = ${row.id} AND institution_id IS NULL`;
+            await db.run(updateSql);
+          }
           tableUpdated++;
         } else {
           tableSkipped++;
@@ -138,7 +153,7 @@ export async function runInstitutionBackfill(customReportPath?: string): Promise
   // 8. media_assets (created_by_id)
   await backfillTable("media_assets", "id", "created_by_id");
 
-  // Output report artifact (skip default file write in test mode to avoid dirtying git working tree)
+  // Output report artifact
   if (process.env.NODE_ENV !== "test" || customReportPath) {
     const reportsDir = path.resolve(__dirname, "../../docs/reports");
     if (!fs.existsSync(reportsDir)) {
@@ -148,7 +163,7 @@ export async function runInstitutionBackfill(customReportPath?: string): Promise
     const reportPath = customReportPath || path.join(reportsDir, "backfill-institution-report.json");
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf-8");
 
-    console.log(`[db:backfill] Backfill completed. Total updated: ${report.totalUpdated}, skipped: ${report.totalSkipped}, ambiguous: ${report.totalAmbiguous}. Report written to ${reportPath}`);
+    console.log(`[db:backfill] Backfill run finished (${isApply ? "APPLIED" : "DRY-RUN"}). Matched/Updated: ${report.totalUpdated}, skipped: ${report.totalSkipped}, ambiguous: ${report.totalAmbiguous}. Report written to ${reportPath}`);
   }
   return report;
 }

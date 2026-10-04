@@ -1,7 +1,6 @@
 import { execSync } from "child_process";
 import { migrate as pgMigrate } from "drizzle-orm/node-postgres/migrator";
 import { db, isPostgres } from "../../packages/db";
-import { runInstitutionBackfill } from "./backfill-institution-ids";
 
 export async function runMigrations() {
   if (isPostgres) {
@@ -12,9 +11,6 @@ export async function runMigrations() {
     execSync("drizzle-kit push", { stdio: "inherit", env: process.env });
   }
   console.log("[db:migrate] Migrations completed successfully.");
-
-  console.log("[db:migrate] Executing post-migration institution backfill...");
-  await runInstitutionBackfill();
 }
 
 if (require.main === module || process.argv[1]?.includes("migrate")) {
