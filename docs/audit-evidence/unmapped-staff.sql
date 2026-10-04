@@ -13,5 +13,5 @@ FROM staff s
 LEFT JOIN staff_institutions si ON s.id = si.staff_id
 WHERE si.staff_id IS NULL
   AND s.role NOT IN ('super_admin', 'admin', 'system')
-  AND s.is_active = 1
+  AND s.is_active IS TRUE
 ORDER BY s.created_at DESC;
