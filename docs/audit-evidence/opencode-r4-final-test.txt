@@ -1,0 +1,36 @@
+Test run completed with the following summary:
+
+Test Suites: 1 failed, 768 passed, 769 total
+Tests:       5 failed, 8 skipped, 4525 passed, 4538 total
+Snapshots:   0 total
+Time:        373.699 s
+
+FAILING SUITE:
+FAIL src/app/api/finance/approve/__tests__/approve-route.test.ts
+
+FAILING TESTS (5 tests):
+1. POST /api/finance/approve Route Integration › permits accounts specialist to approve expense claim
+2. POST /api/finance/approve Route Integration › permits purchase specialist to approve purchase request
+3. POST /api/finance/approve Route Integration › enforces anti-self-approval rule when requester attempts approval
+4. POST /api/finance/approve Route Integration › allows return action to return request for correction
+5. POST /api/finance/approve Route Integration › persists reviewer-attached receiptUrl during claim approval
+
+ROOT CAUSE:
+All 5 tests fail with FOREIGN KEY constraint failed when inserting into staff_institutions table.
+The test creates staff IDs (accountsId, purchaseId, hodId, requesterId) but does not first create the corresponding staff records in the staff table before inserting into staff_institutions junction table.
+
+Error details:
+- Failed query: insert into "staff_institutions" ("id", "staff_id", "institution_id") values ...
+- Cause: LibsqlError: SQLITE_CONSTRAINT: FOREIGN KEY constraint failed
+- The staff table requires records to exist before junction table entries can reference them.
+
+RECOMMENDATION:
+The test file needs to create unique staff records in the staff table before inserting into staff_institutions.
+This is consistent with the issue mentioned for expense-multistage-approval test needing to create its own unique rows.
+
+All other 768 test suites passed successfully including:
+- Sprint-017 Performance tests (12/12 passed)
+- Sprint-046 EngageOS/UMC simulation (8/8 stages successful)
+- Sprint-051 Advise-Mesh/Cognitive-Degree OS (8/8 stages successful)
+- Security audit tests
+- All unit and integration tests across the codebase
