@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================================
 # ThaibaHive Automated Database Backup Script
-# Task P3-89: Point-in-time PostgreSQL backups with S3 upload + retention
+# Scheduled PostgreSQL daily snapshot backups with S3 upload + SHA-256 verification
+# Target RPO: <= 24 hours (Scheduled Daily Snapshot)
 #
 # Required env vars:
-#   DATABASE_URL         - PostgreSQL connection string (host-format)
+#   DATABASE_URL         - PostgreSQL connection string (e.g. postgres://user:pass@host:5432/dbname?sslmode=require)
 #   BACKUP_S3_BUCKET     - S3 bucket name (e.g., thaibahive-backups)
 #   BACKUP_S3_PREFIX     - S3 key prefix (e.g., db-backups)
 #   AWS_ACCESS_KEY_ID    - AWS credentials
@@ -13,6 +14,8 @@
 #
 # Optional:
 #   BACKUP_RETENTION_DAYS - Days to keep backups (default: 30)
+#   AWS_KMS_KEY_ID        - Optional custom AWS KMS Key ARN / ID for encryption
+#   DRY_RUN               - "true" to skip database dump and S3 upload
 # ============================================================================
 set -euo pipefail
 
@@ -21,51 +24,65 @@ if [ "${DRY_RUN:-false}" = "true" ]; then
   exit 0
 fi
 
-if [ -z "${DATABASE_URL:-}" ] || [ -z "${BACKUP_S3_BUCKET:-}" ] || [ -z "${AWS_ACCESS_KEY_ID:-}" ]; then
-  echo "[backup] Skipping database backup: DATABASE_URL, BACKUP_S3_BUCKET, or AWS_ACCESS_KEY_ID is not configured in repository environment."
-  exit 0
+# Strict validation: Fail fast with non-zero exit code if required secrets are absent
+if [ -z "${DATABASE_URL:-}" ] || [ -z "${BACKUP_S3_BUCKET:-}" ] || [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+  echo "[backup] ERROR: Required backup environment variables (DATABASE_URL, BACKUP_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are missing." >&2
+  exit 1
 fi
 
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 TIMESTAMP=$(date -u +"%Y%m%dT%H%M%SZ")
 FILENAME="thaibahive_backup_${TIMESTAMP}.sql.gz"
+CHECKSUM_FILE="thaibahive_backup_${TIMESTAMP}.sql.gz.sha256"
 TMPDIR="/tmp/thaibahive-backups"
 S3_KEY="${BACKUP_S3_PREFIX}/${FILENAME}"
+S3_CHECKSUM_KEY="${BACKUP_S3_PREFIX}/${CHECKSUM_FILE}"
 
 mkdir -p "$TMPDIR"
 
 echo "[backup] Starting PostgreSQL backup at ${TIMESTAMP}..."
 
-# Extract connection details from DATABASE_URL
-# Expected format: postgres://user:pass@host:port/dbname
-DB_USER=$(echo "$DATABASE_URL" | sed -n 's|.*://\([^:]*\):.*@.*|\1|p')
-DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
-DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:/]*\)[:/].*|\1|p')
-DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
-DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
+# Execute pg_dump directly using DATABASE_URL to avoid fragile regex/sed parsing and preserve SSL parameters
+pg_dump --clean --if-exists --no-owner --no-privileges "$DATABASE_URL" | gzip -c > "${TMPDIR}/${FILENAME}"
 
-DB_PORT="${DB_PORT:-5432}"
+# Verify the dump file exists and has non-zero size
+if [ ! -s "${TMPDIR}/${FILENAME}" ]; then
+  echo "[backup] ERROR: Database dump produced an empty file. Backup aborted." >&2
+  rm -f "${TMPDIR}/${FILENAME}"
+  exit 1
+fi
 
-echo "[backup] Dumping database: ${DB_NAME} from ${DB_HOST}:${DB_PORT}..."
+# Verify gzip archive integrity
+if ! gzip -t "${TMPDIR}/${FILENAME}"; then
+  echo "[backup] ERROR: Database dump archive is corrupted. Backup aborted." >&2
+  rm -f "${TMPDIR}/${FILENAME}"
+  exit 1
+fi
 
-PGPASSWORD="${DB_PASS}" pg_dump \
-  --host="$DB_HOST" \
-  --port="$DB_PORT" \
-  --username="$DB_USER" \
-  --dbname="$DB_NAME" \
-  --format=plain \
-  --no-password \
-  | gzip > "${TMPDIR}/${FILENAME}"
+# Compute cryptographic SHA-256 checksum for audit and restore verification
+(cd "$TMPDIR" && sha256sum "$FILENAME" > "$CHECKSUM_FILE")
 
 BACKUP_SIZE=$(du -sh "${TMPDIR}/${FILENAME}" | cut -f1)
-echo "[backup] Backup created: ${TMPDIR}/${FILENAME} (${BACKUP_SIZE})"
+echo "[backup] Backup created successfully: ${TMPDIR}/${FILENAME} (${BACKUP_SIZE})"
+echo "[backup] SHA-256 Checksum: $(cat "${TMPDIR}/${CHECKSUM_FILE}")"
 
-echo "[backup] Uploading to s3://${BACKUP_S3_BUCKET}/${S3_KEY}..."
+# Configure Server-Side Encryption (SSE)
+SSE_ARGS=("--sse" "aws:kms")
+if [ -n "${AWS_KMS_KEY_ID:-}" ]; then
+  SSE_ARGS+=("--sse-kms-key-id" "${AWS_KMS_KEY_ID}")
+fi
+
+echo "[backup] Uploading backup to s3://${BACKUP_S3_BUCKET}/${S3_KEY}..."
 aws s3 cp "${TMPDIR}/${FILENAME}" "s3://${BACKUP_S3_BUCKET}/${S3_KEY}" \
   --storage-class STANDARD_IA \
-  --metadata "db=${DB_NAME},timestamp=${TIMESTAMP}"
+  "${SSE_ARGS[@]}" \
+  --metadata "timestamp=${TIMESTAMP}"
 
-echo "[backup] Upload complete."
+echo "[backup] Uploading SHA-256 checksum to s3://${BACKUP_S3_BUCKET}/${S3_CHECKSUM_KEY}..."
+aws s3 cp "${TMPDIR}/${CHECKSUM_FILE}" "s3://${BACKUP_S3_BUCKET}/${S3_CHECKSUM_KEY}" \
+  "${SSE_ARGS[@]}"
+
+echo "[backup] S3 upload completed with SSE-KMS."
 
 # Clean up old backups past retention period
 echo "[backup] Removing backups older than ${RETENTION_DAYS} days..."
@@ -75,11 +92,11 @@ aws s3 ls "s3://${BACKUP_S3_BUCKET}/${BACKUP_S3_PREFIX}/" \
   | while read -r key; do
       FILE_DATE=$(echo "$key" | grep -oP '\d{8}T\d{6}Z' | head -1 || true)
       if [[ -n "$FILE_DATE" ]] && [[ "$FILE_DATE" < "${CUTOFF_DATE//[-:]/}" ]]; then
-        echo "[backup] Deleting old backup: ${key}"
+        echo "[backup] Deleting expired backup asset: ${key}"
         aws s3 rm "s3://${BACKUP_S3_BUCKET}/${BACKUP_S3_PREFIX}/${key}"
       fi
     done
 
-# Cleanup temp file
-rm -f "${TMPDIR}/${FILENAME}"
-echo "[backup] Done."
+# Clean up local temporary files
+rm -f "${TMPDIR}/${FILENAME}" "${TMPDIR}/${CHECKSUM_FILE}"
+echo "[backup] Database backup process finished successfully."
