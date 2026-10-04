@@ -29,10 +29,12 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze(
   "Reporting-Endpoints": REPORTING_ENDPOINTS_VALUE,
 });
 
-export function buildContentSecurityPolicy(isProd: boolean): string {
-  const scriptSrc = isProd
-    ? "script-src 'self' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+export function buildContentSecurityPolicy(isProd: boolean, nonce?: string): string {
+  const scriptSrc = nonce
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? "" : " 'unsafe-eval'"}`
+    : isProd
+      ? "script-src 'self'"
+      : "script-src 'self' 'unsafe-eval'";
   return [
     "default-src 'self'",
     scriptSrc,
@@ -65,13 +67,14 @@ export function securityHeaderPairs(isProd?: boolean): { key: string; value: str
 /** proxy.ts injection: applies the full shared header set onto a response. */
 export function applySecurityHeaders(
   response: { headers: { set(key: string, value: string): unknown } },
-  isProd?: boolean
+  isProd?: boolean,
+  nonce?: string
 ): void {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
   }
   response.headers.set(
     "Content-Security-Policy",
-    buildContentSecurityPolicy(resolveIsProd(isProd))
+    buildContentSecurityPolicy(resolveIsProd(isProd), nonce)
   );
 }

@@ -53,12 +53,16 @@ const BLOCKED_PATHS = [
 ];
 
 export async function proxy(request: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
   const apmContext = startApmTracking(request);
-  const response = await handleProxy(request);
+  const response = await handleProxy(request, nonce, requestHeaders);
   return completeApmTracking(apmContext, response);
 }
 
-async function handleProxy(request: NextRequest): Promise<NextResponse> {
+async function handleProxy(request: NextRequest, nonce: string, requestHeaders: Headers): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // Block known scanner/bot paths
@@ -78,7 +82,7 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       !isProtectedPortal &&
       (exactPublicPaths.has(pathname) ||
         prefixPublicPaths.some((p) => pathname.startsWith(p)));
-    if (isPublic) return addSecurityHeaders(request, NextResponse.next(), pathname);
+    if (isPublic) return addSecurityHeaders(request, NextResponse.next({ request: { headers: requestHeaders } }), pathname, nonce);
 
     let token = request.cookies.get("thaibahive_session")?.value;
     if (!token) {
@@ -93,20 +97,23 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-          pathname
+          pathname,
+          nonce
         );
       }
       if (pathname === "/" || pathname === "") {
         return addSecurityHeaders(
           request,
           NextResponse.redirect(new URL("/portal/tgcis", request.url)),
-          pathname
+          pathname,
+          nonce
         );
       }
       return addSecurityHeaders(
         request,
         NextResponse.redirect(new URL("/auth/login", request.url)),
-        pathname
+        pathname,
+        nonce
       );
     }
 
@@ -120,13 +127,15 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: "Invalid or expired session token" }, { status: 401 }),
-          pathname
+          pathname,
+          nonce
         );
       }
       return addSecurityHeaders(
         request,
         NextResponse.redirect(new URL("/auth/login", request.url)),
-        pathname
+        pathname,
+        nonce
       );
     }
 
@@ -145,7 +154,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         return addSecurityHeaders(
           request,
           NextResponse.redirect(new URL(dest, request.url)),
-          pathname
+          pathname,
+          nonce
         );
       }
     }
@@ -161,7 +171,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: `Request body too large. Maximum size is ${isUploadRoute ? "50MB" : "5MB"}.` }, { status: 413 }),
-          pathname
+          pathname,
+          nonce
         );
       }
 
@@ -171,25 +182,28 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: "Invalid content type." }, { status: 415 }),
-          pathname
+          pathname,
+          nonce
         );
       }
     }
 
-    return addSecurityHeaders(request, NextResponse.next(), pathname);
+    return addSecurityHeaders(request, NextResponse.next({ request: { headers: requestHeaders } }), pathname, nonce);
   } catch (error) {
     console.error("Proxy error:", error);
     if (pathname.startsWith("/api/")) {
       return addSecurityHeaders(
         request,
         NextResponse.json({ error: "Internal server error" }, { status: 500 }),
-        pathname
+        pathname,
+        nonce
       );
     }
     return addSecurityHeaders(
       request,
       NextResponse.redirect(new URL("/auth/login", request.url)),
-      pathname
+      pathname,
+      nonce
     );
   }
 }
@@ -213,10 +227,10 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse): NextRes
   return response;
 }
 
-function addSecurityHeaders(request: NextRequest, response: NextResponse, pathname: string): NextResponse {
+function addSecurityHeaders(request: NextRequest, response: NextResponse, pathname: string, nonce?: string): NextResponse {
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
   response.headers.set("x-request-id", requestId);
-  applySecurityHeaders(response);
+  applySecurityHeaders(response, undefined, nonce);
 
   // Multi-Region Edge Caching integration (Sprint-034 / EDG-001)
   if (pathname.startsWith("/_next/static/") || pathname.startsWith("/Logo") || pathname.endsWith(".png") || pathname.endsWith(".jpg")) {
