@@ -16,8 +16,6 @@ overrides:
   sharp: '>=0.33.5'
   qs: '>=6.16.0'
 
-pnpmfileChecksum: sha256-BCyu+ZX7KORdmarChIvg6dMaMAXy1Ww+VgFO+x+LWeo=
-
 importers:
 
   .:
