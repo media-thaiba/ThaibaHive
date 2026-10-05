@@ -119,7 +119,6 @@ test.describe("End-to-End User Journey Certification Suite", () => {
           data: {
             title: `Annual Appraisal Cycle ${cycleSuffix}`,
             cycleType: "quarterly",
-            institutionId: "inst_test_01",
             startDate: "2026-01-01",
             endDate: "2026-12-31",
             selfAssessmentDeadline: "2026-06-30",

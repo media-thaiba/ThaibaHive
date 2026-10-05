@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { performanceCycles, staffInstitutions } from "@/db/schema";
+import { performanceCycles, staffInstitutions, institutions } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution, TenantMismatchError } from "@/lib/api/auth-guard";
 
 import { performanceCycleCreateSchema } from "@/lib/validation/schemas";
@@ -47,9 +47,14 @@ export const GET = requireAuth(async (request: Request, session) => {
 export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
-    const institutionId = await resolveRequestInstitution(session, body.institutionId);
+    let institutionId = await resolveRequestInstitution(session, body.institutionId);
     if (institutionId === "global") {
-      return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
+      const primaryInst = await db.select({ id: institutions.id }).from(institutions).limit(1).get();
+      if (primaryInst) {
+        institutionId = primaryInst.id;
+      } else {
+        return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
+      }
     }
     const validated = performanceCycleCreateSchema.parse(body);
 

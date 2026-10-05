@@ -1,8 +1,28 @@
+const crypto = require("crypto");
 const { SignJWT } = require("jose");
 
-const secret = new TextEncoder().encode(
-  process.env.AUTH_JWT_SECRET || "test-loadtest-jwt-secret-key-32-chars-long"
-);
+const HKDF_SALT = "thaibahive:jwt:salt:v1";
+
+function derivePurposeSecret(masterSecret, purpose = "session") {
+  if (typeof crypto.hkdfSync === "function") {
+    const derived = crypto.hkdfSync(
+      "sha256",
+      Buffer.from(masterSecret, "utf-8"),
+      Buffer.from(HKDF_SALT, "utf-8"),
+      Buffer.from(`thaibahive:purpose:${purpose}:v1`, "utf-8"),
+      32
+    );
+    return Buffer.from(derived).toString("hex");
+  }
+  const hmac = crypto.createHmac("sha256", masterSecret);
+  hmac.update(`thaibahive:purpose:${purpose}:v1`);
+  return hmac.digest("hex");
+}
+
+function getJwtSecretBytes(purpose = "session") {
+  const masterSecret = process.env.AUTH_JWT_SECRET || "dev-jwt-secret-min-32-chars-long-security-key-thaibahive";
+  return new TextEncoder().encode(derivePurposeSecret(masterSecret, purpose));
+}
 
 async function generate() {
   const payload = {
@@ -19,7 +39,7 @@ async function generate() {
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("24h")
     .setIssuedAt()
-    .sign(secret);
+    .sign(getJwtSecretBytes("session"));
 
   process.stdout.write(token);
 }

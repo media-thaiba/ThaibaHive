@@ -24,7 +24,8 @@ function impactRank(impact?: string): number {
 }
 
 async function assertNoSeriousViolations(page: Page): Promise<void> {
-  await page.waitForTimeout(500);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.waitForTimeout(1000);
   const results = await new AxeBuilder({ page }).withTags(RULESET).analyze();
   const seriousPlus: Result[] = results.violations.filter(
     (v) => impactRank(v.impact) >= GATE_IMPACT_RANK
