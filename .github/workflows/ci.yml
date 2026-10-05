@@ -66,7 +66,7 @@ jobs:
           echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Run unit & integration tests
-        run: pnpm test --forceExit
+        run: pnpm test
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
@@ -146,13 +146,13 @@ jobs:
       - name: Verify PostgreSQL columns & schema drift
         run: |
           pnpm db:verify:columns
-          pnpm test packages/db/__tests__/schema-drift.test.ts --forceExit
+          pnpm test packages/db/__tests__/schema-drift.test.ts
         env:
           DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
 
       - name: Run PostgreSQL Auth, Tenant & Schema Parity test suites
         run: |
-          pnpm test packages/auth/ packages/db/ --forceExit
+          pnpm test packages/auth/ packages/db/
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}

@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144\" tsc --noEmit",
-    "test": "jest --passWithNoTests",
+    "test": "jest --passWithNoTests --forceExit",
     "test:e2e": "playwright test",
     "test:load": "node load-tests/run-local-benchmark.js",
     "test:staging:smoke": "tsx scripts/staging/staging-smoke-runner.ts",
