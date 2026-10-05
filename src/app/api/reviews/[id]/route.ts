@@ -4,6 +4,7 @@ import { performanceReviews, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { performanceReviewUpdateSchema } from "@/lib/validation/schemas";
 import { isManagedBy } from "@/lib/auth/department-scope";
+import { parseJsonStringArray } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
@@ -44,7 +45,9 @@ export const GET = requireAuth(async (_request, session, context) => {
     }
   }
 
-  return NextResponse.json({ review });
+  return NextResponse.json({
+    review: { ...review, goals: parseJsonStringArray(review.goals) },
+  });
 }, "reviews:read");
 
 export const PATCH = requireAuth(async (request, session, context) => {

@@ -83,8 +83,8 @@ export class DLQManager {
         event.status = 'replayed';
         return true;
       }
-    } catch (err: any) {
-      event.errorReason = err?.message || 'Replay failure';
+    } catch (err) {
+      event.errorReason = err instanceof Error ? err.message : 'Replay failure';
     }
 
     if (event.retryCount >= event.maxRetries) {

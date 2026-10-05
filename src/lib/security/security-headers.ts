@@ -15,6 +15,19 @@ export const REPORTING_ENDPOINTS_VALUE = 'csp-endpoint="/api/system/csp-report"'
 
 export const HSTS_VALUE = "max-age=31536000; includeSubDomains; preload";
 
+/** Header names live here so consumers never inline the literals (anti-drift). */
+export const CSP_HEADER_NAME = "Content-Security-Policy";
+export const NONCE_REQUEST_HEADER_NAME = "x-nonce";
+
+/** Fresh per-request CSP nonce (crypto.getRandomValues via WebCrypto). */
+export function generateCspNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 /** camera/geolocation stay (self) for biometric attendance & geo features; everything else denied. */
 export const PERMISSIONS_POLICY_VALUE =
   "camera=(self), microphone=(), geolocation=(self), payment=()";
@@ -29,12 +42,34 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze(
   "Reporting-Endpoints": REPORTING_ENDPOINTS_VALUE,
 });
 
+/**
+ * Builds the CSP.
+ *
+ * - With a `nonce` (proxy, per request): script-src drops `'unsafe-inline'` in
+ *   favour of `'nonce-…' 'strict-dynamic'`; Next.js stamps the nonce onto its
+ *   framework/inline scripts during dynamic rendering (root layout is
+ *   `force-dynamic`). Dev keeps `'unsafe-eval'` (React debugging uses eval).
+ * - Without a `nonce` (next.config fallback for responses that bypass the
+ *   proxy, e.g. matcher-excluded static docs): previous `'unsafe-inline'`
+ *   policy so those documents keep working.
+ *
+ * `style-src` keeps `'unsafe-inline'` in every variant: Radix/Tailwind emit
+ * inline `style=` attributes (positioning, custom properties) which nonce
+ * cannot cover (`style-src-attr` would need `'unsafe-inline'` anyway).
+ * `worker-src 'self'` keeps the PWA service worker (public/sw.js) registrable
+ * under `'strict-dynamic'`.
+ */
 export function buildContentSecurityPolicy(isProd: boolean, nonce?: string): string {
   const scriptSrc = nonce
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isProd ? "" : " 'unsafe-eval'"}`
+    ? [
+        "script-src 'self'",
+        `'nonce-${nonce}'`,
+        "'strict-dynamic'",
+        ...(isProd ? [] : ["'unsafe-eval'"]),
+      ].join(" ")
     : isProd
-      ? "script-src 'self'"
-      : "script-src 'self' 'unsafe-eval'";
+      ? "script-src 'self' 'unsafe-inline'"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
   return [
     "default-src 'self'",
     scriptSrc,
@@ -53,20 +88,21 @@ export function buildContentSecurityPolicy(isProd: boolean, nonce?: string): str
 }
 
 function resolveIsProd(isProd?: boolean): boolean {
-  return isProd ?? process.env.NODE_ENV === "production";
+  if (typeof isProd === "boolean") return isProd;
+  return process.env.NODE_ENV === "production" || process.env.NODE_ENV !== "development";
 }
 
-/** `next.config.ts` headers() entry shape: every static security header + CSP. */
+/** `next.config.ts` headers() entry shape: every static security header + CSP fallback. */
 export function securityHeaderPairs(isProd?: boolean): { key: string; value: string }[] {
   const pairs = Object.entries(SECURITY_HEADERS).map(([key, value]) => ({ key, value }));
   pairs.push({
-    key: "Content-Security-Policy",
+    key: CSP_HEADER_NAME,
     value: buildContentSecurityPolicy(resolveIsProd(isProd)),
   });
   return pairs;
 }
 
-/** proxy.ts injection: applies the full shared header set onto a response. */
+/** proxy.ts injection: applies the full shared header set onto a response (with the per-request nonce when given). */
 export function applySecurityHeaders(
   response: { headers: { set(key: string, value: string): unknown } },
   isProd?: boolean,
@@ -76,7 +112,7 @@ export function applySecurityHeaders(
     response.headers.set(key, value);
   }
   response.headers.set(
-    "Content-Security-Policy",
+    CSP_HEADER_NAME,
     buildContentSecurityPolicy(resolveIsProd(isProd), nonce)
   );
 }

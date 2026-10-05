@@ -4,7 +4,13 @@ import { jwtVerify } from "jose";
 import { startApmTracking, completeApmTracking } from "./lib/middleware/apm-telemetry";
 import { applyTenantRegionHeaders } from "./middleware/tenant-region";
 import { applyEdgeCaching } from "./lib/edge/cache-control";
-import { applySecurityHeaders } from "./lib/security/security-headers";
+import {
+  applySecurityHeaders,
+  buildContentSecurityPolicy,
+  generateCspNonce,
+  CSP_HEADER_NAME,
+  NONCE_REQUEST_HEADER_NAME,
+} from "./lib/security/security-headers";
 
 import { getJwtSecretBytes } from "@thaiba/auth/config";
 
@@ -53,17 +59,18 @@ const BLOCKED_PATHS = [
 ];
 
 export async function proxy(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
-
   const apmContext = startApmTracking(request);
-  const response = await handleProxy(request, nonce, requestHeaders);
+  const response = await handleProxy(request);
   return completeApmTracking(apmContext, response);
 }
 
-async function handleProxy(request: NextRequest, nonce: string, requestHeaders: Headers): Promise<NextResponse> {
+async function handleProxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
+
+  // O4-R: fresh CSP nonce per request. Next.js extracts nonce from the
+  // CSP request header during dynamic rendering and stamps
+  // it onto framework + inline scripts (root layout is force-dynamic).
+  const nonce = generateCspNonce();
 
   // Block known scanner/bot paths
   for (const blocked of BLOCKED_PATHS) {
@@ -78,11 +85,15 @@ async function handleProxy(request: NextRequest, nonce: string, requestHeaders: 
       pathname.startsWith("/portal/facilities") ||
       pathname.startsWith("/portal/fees") ||
       pathname.startsWith("/portal/documents");
+
     const isPublic =
       !isProtectedPortal &&
       (exactPublicPaths.has(pathname) ||
         prefixPublicPaths.some((p) => pathname.startsWith(p)));
-    if (isPublic) return addSecurityHeaders(request, NextResponse.next({ request: { headers: requestHeaders } }), pathname, nonce);
+
+    if (isPublic) {
+      return addSecurityHeaders(request, nextWithNonce(request, nonce), pathname, nonce);
+    }
 
     let token = request.cookies.get("thaibahive_session")?.value;
     if (!token) {
@@ -139,15 +150,15 @@ async function handleProxy(request: NextRequest, nonce: string, requestHeaders: 
       );
     }
 
-    // Workspace root redirect: /workspace → /workspace/{role}
-    if (pathname === '/workspace' || pathname === '/workspace/') {
+    // Workspace root redirect: /workspace -> /workspace/{role}
+    if (pathname === "/workspace" || pathname === "/workspace/") {
       const role = verifiedRole;
       const workspaceMap: Record<string, string> = {
-        principal: '/workspace/principal',
-        staff: '/workspace/teacher',
-        hod: '/workspace/teacher',
-        accounts: '/workspace/cashier',
-        purchase: '/workspace/cashier',
+        principal: "/workspace/principal",
+        staff: "/workspace/teacher",
+        hod: "/workspace/teacher",
+        accounts: "/workspace/cashier",
+        purchase: "/workspace/cashier",
       };
       const dest = role ? workspaceMap[role] : null;
       if (dest) {
@@ -170,7 +181,10 @@ async function handleProxy(request: NextRequest, nonce: string, requestHeaders: 
       if (contentLength && parseInt(contentLength, 10) > maxLimit) {
         return addSecurityHeaders(
           request,
-          NextResponse.json({ error: `Request body too large. Maximum size is ${isUploadRoute ? "50MB" : "5MB"}.` }, { status: 413 }),
+          NextResponse.json(
+            { error: `Request body too large. Maximum size is ${isUploadRoute ? "50MB" : "5MB"}.` },
+            { status: 413 }
+          ),
           pathname,
           nonce
         );
@@ -188,7 +202,7 @@ async function handleProxy(request: NextRequest, nonce: string, requestHeaders: 
       }
     }
 
-    return addSecurityHeaders(request, NextResponse.next({ request: { headers: requestHeaders } }), pathname, nonce);
+    return addSecurityHeaders(request, nextWithNonce(request, nonce), pathname, nonce);
   } catch (error) {
     console.error("Proxy error:", error);
     if (pathname.startsWith("/api/")) {
@@ -214,7 +228,7 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse): NextRes
   const origin = request.headers.get("origin");
   if (!origin) return response;
 
-  const isDev = process.env.NODE_ENV !== "production" && 
+  const isDev = process.env.NODE_ENV !== "production" &&
     (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"));
 
   if (ALLOWED_ORIGIN_REGEX.test(origin) || isDev) {
@@ -227,7 +241,23 @@ function applyCorsHeaders(request: NextRequest, response: NextResponse): NextRes
   return response;
 }
 
-function addSecurityHeaders(request: NextRequest, response: NextResponse, pathname: string, nonce?: string): NextResponse {
+/**
+ * Proxy "continue" response: forwards the per-request CSP (+ nonce) as REQUEST
+ * headers so Next.js stamps the nonce onto framework/inline scripts during
+ * dynamic rendering, and as a RESPONSE header so the browser enforces it.
+ * Header names come from the shared security module (anti-drift guard).
+ */
+function nextWithNonce(request: NextRequest, nonce: string): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(
+    CSP_HEADER_NAME,
+    buildContentSecurityPolicy(process.env.NODE_ENV === "production", nonce)
+  );
+  requestHeaders.set(NONCE_REQUEST_HEADER_NAME, nonce);
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+function addSecurityHeaders(request: NextRequest, response: NextResponse, pathname: string, nonce: string): NextResponse {
   const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
   response.headers.set("x-request-id", requestId);
   applySecurityHeaders(response, undefined, nonce);
@@ -237,7 +267,7 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
     applyEdgeCaching(response, "PUBLIC_IMMUTABLE", { tags: ["static-assets"] });
   } else if (pathname === "/api/public/circulars" || pathname === "/api/public/version" || pathname === "/.well-known/assetlinks.json" || pathname === "/.well-known/apple-app-site-association") {
     applyEdgeCaching(response, "PUBLIC_SEMI_STATIC", { tags: ["public-api"] });
-  } else if (pathname.startsWith("/api/media/share-links/") || pathname.startsWith("/api/upload/files/avatars/")) {
+  } else if (pathname.startsWith("/api/media/share-links/") || pathname.startsWith("/api/media/edge/") || pathname.startsWith("/api/upload/files/avatars/")) {
     applyEdgeCaching(response, "PUBLIC_MEDIA_THUMBNAIL", { tags: ["media-edge"] });
   } else if (pathname.startsWith("/api/")) {
     applyEdgeCaching(response, "PRIVATE_DYNAMIC");
@@ -250,8 +280,6 @@ function addSecurityHeaders(request: NextRequest, response: NextResponse, pathna
   return applyCorsHeaders(request, response);
 }
 
-
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|Logo|manifest.json|sw.js|offline.html|.*\\.svg$).*)"],
 };
-

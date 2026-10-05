@@ -1,9 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function AdminLoading() {
+export default function ParentLoading() {
   return (
-    <div role="status" aria-label="Loading administration" className="flex-1 p-6 space-y-6">
-      <span className="sr-only">Loading administration&hellip;</span>
+    <div role="status" aria-label="Loading parent portal" className="flex-1 p-6 space-y-6">
+      <span className="sr-only">Loading parent portal&hellip;</span>
       <Skeleton className="h-8 w-48" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Skeleton className="h-32 rounded-xl" />

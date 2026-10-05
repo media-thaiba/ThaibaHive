@@ -12,7 +12,7 @@ export const GET = withPublicApm(async (_req: Request, context: { params: Promis
     const resolver = VerificationResolver.getInstance();
     const result = await resolver.resolve(docHash);
 
-    if (result.status === 'NOT_FOUND') {
+    if (result.status === "NOT_FOUND") {
       return NextResponse.json(
         {
           success: false,

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { db } from "@/db";
 import { reportSchedules, reportHistory, scheduledJobs, jobExecutions } from "@thaiba/db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -155,7 +156,7 @@ export class ReportQueue {
       .run();
 
     try {
-      console.log(`[ReportQueue] Processing job ${job.id} (${job.type} - ${job.format})...`);
+      logger.info(`[ReportQueue] Processing job ${job.id} (${job.type} - ${job.format})...`);
       const result = await ReportGeneratorService.generateReport(
         job.institutionId,
         job.type as any,
@@ -193,7 +194,7 @@ export class ReportQueue {
         .catch(() => {});
       this.publishQueueMetrics().catch(() => {});
 
-      console.log(`[ReportQueue] Report ${job.id} generated. File saved at ${result.filePath}.`);
+      logger.info(`[ReportQueue] Report ${job.id} generated. File saved at ${result.filePath}.`);
     } catch (err: any) {
       console.error(`[ReportQueue] Job ${job.id} failed:`, err);
       const errMsg = err.message || String(err);
@@ -219,7 +220,7 @@ export class ReportQueue {
       if (attemptsCount < 3) {
         // Re-queue with exponential backoff (2^attemptsCount seconds)
         const backoffMs = Math.pow(2, attemptsCount) * 1000;
-        console.log(`[ReportQueue] Job ${job.id} failed. Retrying in ${backoffMs}ms (Attempt ${attemptsCount + 1})...`);
+        logger.info(`[ReportQueue] Job ${job.id} failed. Retrying in ${backoffMs}ms (Attempt ${attemptsCount + 1})...`);
 
         await db
           .update(scheduledJobs)
@@ -325,7 +326,7 @@ export class ReportQueue {
 
 export async function checkAndRunScheduledReports() {
   try {
-    console.log("[Scheduler] Checking for pending report schedules...");
+    logger.info("[Scheduler] Checking for pending report schedules...");
     const activeSchedules = await db
       .select()
       .from(reportSchedules)
@@ -376,11 +377,11 @@ export async function checkAndRunScheduledReports() {
         );
 
         if (isAlreadyActive) {
-          console.log(`[Scheduler] Report schedule ${schedule.id} is already queued or processing. Skipping.`);
+          logger.info(`[Scheduler] Report schedule ${schedule.id} is already queued or processing. Skipping.`);
           continue;
         }
 
-        console.log(`[Scheduler] Schedule ${schedule.id} ("${schedule.title}") is due. Queueing report generation...`);
+        logger.info(`[Scheduler] Schedule ${schedule.id} ("${schedule.title}") is due. Queueing report generation...`);
 
         let type: "attendance" | "finance" | "academics" = "attendance";
         const titleLower = schedule.title.toLowerCase();

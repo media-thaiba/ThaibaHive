@@ -1,6 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as path from "path";
 
+import * as fs from "fs";
+
+if (fs.existsSync(".env")) {
+  const envContent = fs.readFileSync(".env", "utf8");
+  for (const line of envContent.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const idx = trimmed.indexOf("=");
+      if (idx !== -1) {
+        const key = trimmed.slice(0, idx).trim();
+        const value = trimmed.slice(idx + 1).trim();
+        if (key && !process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  }
+}
+
 const PORT = process.env.PORT || 3000;
 const resolvedDbPath = process.env.DATABASE_URL || `file:${path.resolve("dev.db")}`;
 

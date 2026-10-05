@@ -34,18 +34,21 @@ import {
   mealNotifications,
   mediaAssets,
   mediaFolders,
+  classes,
+  students,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { hasPermission } from "@thaiba/auth";
 import { VALID_STAFF_ROLES } from "@thaiba/auth/roles";
 import { buildManifest } from "@/lib/test-helpers/route-matrix";
 import { GET as getTask, DELETE as deleteTask } from "@/app/api/tasks/[id]/route";
-import { GET as getTicket } from "@/app/api/help-desk/[id]/route";
-import { GET as getVisitor } from "@/app/api/visitors/[id]/route";
-import { GET as getVehicle } from "@/app/api/vehicles/[id]/route";
+import { GET as getTicket, PATCH as patchTicket } from "@/app/api/help-desk/[id]/route";
+import { GET as getVisitor, PATCH as patchVisitor, DELETE as deleteVisitor } from "@/app/api/visitors/[id]/route";
+import { GET as getVehicle, PATCH as patchVehicle, DELETE as deleteVehicle } from "@/app/api/vehicles/[id]/route";
 import { DELETE as deleteMeal } from "@/app/api/canteen/[id]/route";
 import { DELETE as deleteAsset } from "@/app/api/media/assets/[id]/route";
 import { DELETE as deleteFolder } from "@/app/api/media/folders/[id]/route";
+import { GET as getClass } from "@/app/api/academic/classes/[id]/route";
 
 const { verifySession } = jest.requireMock("@thaiba/auth") as {
   verifySession: jest.Mock;
@@ -67,7 +70,7 @@ type Handler = (
 interface Fixture {
   name: string;
   file: string;
-  method: "GET" | "DELETE";
+  method: "GET" | "DELETE" | "PATCH";
   canary: string;
   /** Seed tenant A's row (the protected resource). */
   seedA: () => Promise<unknown>;
@@ -324,6 +327,186 @@ const fixtures: Fixture[] = [
       db.select().from(mediaFolders).where(eq(mediaFolders.id, id)).get(),
     handler: deleteFolder as Handler,
   },
+  {
+    name: "class",
+    file: "src/app/api/academic/classes/[id]/route.ts",
+    method: "GET",
+    canary: "CANARY-A-CLASS",
+    seedA: () =>
+      db
+        .insert(classes)
+        .values({
+          id: makeId("class", "a"),
+          name: "CANARY-A-CLASS",
+          section: "A",
+          institutionId: instA,
+        })
+        .run(),
+    seedB: () =>
+      db
+        .insert(classes)
+        .values({
+          id: makeId("class", "b"),
+          name: "CANARY-B-CLASS",
+          section: "B",
+          institutionId: instB,
+        })
+        .run(),
+    exists: async (id) => db.select().from(classes).where(eq(classes.id, id)).get(),
+    handler: getClass as Handler,
+  },
+  {
+    name: "ticket-patch",
+    file: "src/app/api/help-desk/[id]/route.ts",
+    method: "PATCH",
+    canary: "CANARY-A-TICKET-PATCH",
+    seedA: () =>
+      db
+        .insert(helpDeskTickets)
+        .values({
+          id: makeId("ticket-patch", "a"),
+          title: "CANARY-A-TICKET-PATCH",
+          description: "tenant A ticket",
+          submittedById: staffA,
+          institutionId: instA,
+          status: "open",
+        })
+        .run(),
+    seedB: () =>
+      db
+        .insert(helpDeskTickets)
+        .values({
+          id: makeId("ticket-patch", "b"),
+          title: "CANARY-B-TICKET-PATCH",
+          description: "tenant B ticket",
+          submittedById: staffB,
+          institutionId: instB,
+          status: "open",
+        })
+        .run(),
+    exists: async (id) => db.select().from(helpDeskTickets).where(eq(helpDeskTickets.id, id)).get(),
+    handler: patchTicket as Handler,
+  },
+  {
+    name: "visitor-patch",
+    file: "src/app/api/visitors/[id]/route.ts",
+    method: "PATCH",
+    canary: "CANARY-A-VISITOR-PATCH",
+    seedA: () =>
+      db
+        .insert(visitors)
+        .values({
+          id: makeId("visitor-patch", "a"),
+          name: "CANARY-A-VISITOR-PATCH",
+          purpose: "audit probe",
+          checkIn: "2026-10-03T09:00:00.000Z",
+          institutionId: instA,
+        })
+        .run(),
+    seedB: () =>
+      db
+        .insert(visitors)
+        .values({
+          id: makeId("visitor-patch", "b"),
+          name: "CANARY-B-VISITOR-PATCH",
+          purpose: "audit probe",
+          checkIn: "2026-10-03T09:00:00.000Z",
+          institutionId: instB,
+        })
+        .run(),
+    exists: async (id) => db.select().from(visitors).where(eq(visitors.id, id)).get(),
+    handler: patchVisitor as Handler,
+  },
+  {
+    name: "visitor-del",
+    file: "src/app/api/visitors/[id]/route.ts",
+    method: "DELETE",
+    canary: "CANARY-A-VISITOR-DEL",
+    seedA: () =>
+      db
+        .insert(visitors)
+        .values({
+          id: makeId("visitor-del", "a"),
+          name: "CANARY-A-VISITOR-DEL",
+          purpose: "audit probe",
+          checkIn: "2026-10-03T09:00:00.000Z",
+          institutionId: instA,
+        })
+        .run(),
+    seedB: () =>
+      db
+        .insert(visitors)
+        .values({
+          id: makeId("visitor-del", "b"),
+          name: "CANARY-B-VISITOR-DEL",
+          purpose: "audit probe",
+          checkIn: "2026-10-03T09:00:00.000Z",
+          institutionId: instB,
+        })
+        .run(),
+    exists: async (id) => db.select().from(visitors).where(eq(visitors.id, id)).get(),
+    handler: deleteVisitor as Handler,
+  },
+  {
+    name: "vehicle-patch",
+    file: "src/app/api/vehicles/[id]/route.ts",
+    method: "PATCH",
+    canary: "CANARY-A-VEHICLE-PATCH",
+    seedA: () =>
+      db
+        .insert(vehicles)
+        .values({
+          id: makeId("vehicle-patch", "a"),
+          registrationNumber: `KA-A-PATCH-${ts}`,
+          model: "CANARY-A-VEHICLE-PATCH",
+          type: "car",
+          institutionId: instA,
+        })
+        .run(),
+    seedB: () =>
+      db
+        .insert(vehicles)
+        .values({
+          id: makeId("vehicle-patch", "b"),
+          registrationNumber: `KA-B-PATCH-${ts}`,
+          model: "CANARY-B-VEHICLE-PATCH",
+          type: "car",
+          institutionId: instB,
+        })
+        .run(),
+    exists: async (id) => db.select().from(vehicles).where(eq(vehicles.id, id)).get(),
+    handler: patchVehicle as Handler,
+  },
+  {
+    name: "vehicle-del",
+    file: "src/app/api/vehicles/[id]/route.ts",
+    method: "DELETE",
+    canary: "CANARY-A-VEHICLE-DEL",
+    seedA: () =>
+      db
+        .insert(vehicles)
+        .values({
+          id: makeId("vehicle-del", "a"),
+          registrationNumber: `KA-A-DEL-${ts}`,
+          model: "CANARY-A-VEHICLE-DEL",
+          type: "car",
+          institutionId: instA,
+        })
+        .run(),
+    seedB: () =>
+      db
+        .insert(vehicles)
+        .values({
+          id: makeId("vehicle-del", "b"),
+          registrationNumber: `KA-B-DEL-${ts}`,
+          model: "CANARY-B-VEHICLE-DEL",
+          type: "car",
+          institutionId: instB,
+        })
+        .run(),
+    exists: async (id) => db.select().from(vehicles).where(eq(vehicles.id, id)).get(),
+    handler: deleteVehicle as Handler,
+  },
 ];
 
 const manifest = buildManifest();
@@ -444,6 +627,18 @@ afterAll(async () => {
   await db.delete(mediaAssets).where(eq(mediaAssets.id, makeId("asset", "b"))).run();
   await db.delete(mediaFolders).where(eq(mediaFolders.id, makeId("folder", "a"))).run();
   await db.delete(mediaFolders).where(eq(mediaFolders.id, makeId("folder", "b"))).run();
+  await db.delete(classes).where(eq(classes.id, makeId("class", "a"))).run();
+  await db.delete(classes).where(eq(classes.id, makeId("class", "b"))).run();
+  await db.delete(helpDeskTickets).where(eq(helpDeskTickets.id, makeId("ticket-patch", "a"))).run();
+  await db.delete(helpDeskTickets).where(eq(helpDeskTickets.id, makeId("ticket-patch", "b"))).run();
+  await db.delete(visitors).where(eq(visitors.id, makeId("visitor-patch", "a"))).run();
+  await db.delete(visitors).where(eq(visitors.id, makeId("visitor-patch", "b"))).run();
+  await db.delete(visitors).where(eq(visitors.id, makeId("visitor-del", "a"))).run();
+  await db.delete(visitors).where(eq(visitors.id, makeId("visitor-del", "b"))).run();
+  await db.delete(vehicles).where(eq(vehicles.id, makeId("vehicle-patch", "a"))).run();
+  await db.delete(vehicles).where(eq(vehicles.id, makeId("vehicle-patch", "b"))).run();
+  await db.delete(vehicles).where(eq(vehicles.id, makeId("vehicle-del", "a"))).run();
+  await db.delete(vehicles).where(eq(vehicles.id, makeId("vehicle-del", "b"))).run();
   await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, staffA)).run();
   await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, staffB)).run();
   await db.delete(staff).where(eq(staff.id, staffA)).run();

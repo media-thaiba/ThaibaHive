@@ -1,3 +1,4 @@
+import { serverLogger } from "@/lib/server-logger";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
@@ -64,7 +65,7 @@ export const POST = requireAuth(async (request, session) => {
 
     // Log audit trail
     const callerIp = request.headers.get("x-forwarded-for") || "unknown";
-    console.log(
+    serverLogger.info(
       JSON.stringify({
         event: "sync_policy_updated",
         callerId: session.staffId,
