@@ -1,4 +1,4 @@
-import { db } from "../../packages/db";
+import { db, isPostgres } from "../../packages/db";
 import { markEntries } from "../../packages/db/schema";
 import { inArray } from "drizzle-orm";
 
@@ -7,6 +7,11 @@ import { inArray } from "drizzle-orm";
  * Safe and idempotent.
  */
 export async function deduplicateMarkEntries(dbClient: typeof db = db): Promise<{ duplicateGroups: number; deletedRows: number }> {
+  if (isPostgres) {
+    console.log("[pre-migration] PostgreSQL environment detected; SQLite deduplication skipped.");
+    return { duplicateGroups: 0, deletedRows: 0 };
+  }
+
   console.log("[pre-migration] Checking mark_entries for duplicate records...");
 
   // Query all mark entries safely (if table does not exist yet, return gracefully)
