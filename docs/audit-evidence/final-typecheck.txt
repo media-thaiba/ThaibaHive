@@ -1,2 +1,9 @@
-$ cross-env NODE_OPTIONS="--max-old-space-size=6144" tsc --noEmit
+﻿pnpm.exe : $ cross-env NODE_OPTIONS="--max-old-space-size=6144" tsc --noEmit
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ cross-env NOD...4" tsc --noEmit:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
 [exit code: 0]

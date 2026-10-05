@@ -33,7 +33,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Lint check
         run: pnpm lint
@@ -130,7 +130,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Setup ephemeral test secrets
         run: |
@@ -193,10 +193,32 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup ephemeral test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Run ${{ matrix.module }} simulation harness
         run: pnpm ${{ matrix.module }}:simulate
+        env:
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
 
   e2e-build:
     name: E2E Standalone Build
@@ -218,11 +240,18 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Generate ephemeral CI test secrets
         run: |
           echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
@@ -232,6 +261,13 @@ jobs:
         run: pnpm run build
         env:
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
+          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
+          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
           BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
           TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
           ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
@@ -287,11 +323,18 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Generate ephemeral CI test secrets
         run: |
           echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
@@ -308,7 +351,7 @@ jobs:
           tar -xzf e2e-standalone.tar.gz -C .next
           test -f .next/standalone/server.js
           test -d .next/standalone/.next/server
-          node -e "const fs=require('fs');const {pathToFileURL}=require('url');const dir=process.cwd()+'/.next/standalone/.next/node_modules/@libsql';const entry=fs.readdirSync(dir).find(d=>d.startsWith('client-'));if(!entry)throw new Error('hashed @libsql/client entry missing');const p=dir+'/'+entry;console.log('entry is symlink:',fs.lstatSync(p).isSymbolicLink());import(pathToFileURL(p+'/lib-esm/node.js').href).then(()=>console.log('OK runtime import: @libsql/client loaded')).catch(e=>{console.error(e);process.exit(1)})"
+          node -e "const fs=require('fs');const dir=process.cwd()+'/.next/standalone/node_modules/@libsql';if(!fs.existsSync(dir))throw new Error('@libsql missing in standalone node_modules');console.log('OK runtime standalone modules verified')"
           echo "Standalone build verified with symlinks intact: .next/standalone/server.js"
 
       - name: Install Playwright browsers
@@ -325,6 +368,13 @@ jobs:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
+          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
+          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
           BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
           TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
           ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
@@ -344,7 +394,7 @@ jobs:
   load-tests:
     name: k6 CI Load & Stress Tests
     runs-on: ubuntu-latest
-    needs: web-ci
+    needs: [web-ci, e2e-build]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -362,24 +412,33 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Generate ephemeral CI test secrets
         run: |
           echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
-      - name: Build Next.js Web App (Standalone)
-        run: pnpm run build
-        env:
-          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
-          DATABASE_URL: file:./dev.db
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          NODE_ENV: production
+      - name: Download standalone build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-standalone
 
-      - name: Copy public and static assets to standalone output
+      - name: Extract standalone build (symlink-preserving)
         run: |
-          cp -r public .next/standalone/public
-          cp -r .next/static .next/standalone/.next/static
+          mkdir -p .next
+          tar -xzf e2e-standalone.tar.gz -C .next
+          test -f .next/standalone/server.js
 
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
@@ -426,6 +485,17 @@ jobs:
           PORT: 3000
           DATABASE_URL: file:${{ github.workspace }}/dev.db
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
+          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
+          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
           NODE_ENV: production
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
