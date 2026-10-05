@@ -120,6 +120,28 @@ export const db = dbInstance as ReturnType<typeof sqliteDrizzle>;
 export function wrapPgDb(pgDb: any): any {
   return new Proxy(pgDb, {
     get(target: any, prop: string | symbol, receiver: any): any {
+      if (prop === "all") {
+        return async function(query: any) {
+          const res = await target.execute(query);
+          return Array.isArray(res) ? res : (res?.rows ? res.rows : []);
+        };
+      }
+
+      if (prop === "get") {
+        return async function(query: any) {
+          const res = await target.execute(query);
+          const rows = Array.isArray(res) ? res : (res?.rows ? res.rows : []);
+          return rows[0];
+        };
+      }
+
+      if (prop === "run") {
+        return async function(query: any) {
+          const res = await target.execute(query);
+          return { changes: res?.rowCount ?? 0 };
+        };
+      }
+
       const val = Reflect.get(target, prop, receiver);
 
       if (typeof val === "function" && ["select", "insert", "update", "delete"].includes(prop as string)) {

@@ -19,19 +19,19 @@ export async function verifyTenantColumns(): Promise<boolean> {
 
   for (const tableName of REQUIRED_SCOPED_TABLES) {
     if (isPostgres) {
-      const res: { count: string | number }[] = await db.all(sql`
+      const res: any = await db.all(sql`
         SELECT COUNT(*) as count 
         FROM information_schema.columns 
         WHERE table_name = ${tableName} AND column_name = 'institution_id'
       `);
-      const count = Number(res[0]?.count ?? 0);
+      const count = Number(res[0]?.count ?? res[0]?.["count"] ?? 0);
       if (count === 0) {
         missing.push(tableName);
       }
     } else {
       const infoQuery = sql.raw(`PRAGMA table_info(${tableName})`);
-      const cols: { name: string }[] = await db.all(infoQuery);
-      const hasCol = (cols || []).some((c) => c.name === "institution_id");
+      const cols: any = await db.all(infoQuery);
+      const hasCol = (cols || []).some((c: any) => c.name === "institution_id");
       if (!hasCol) {
         missing.push(tableName);
       }
