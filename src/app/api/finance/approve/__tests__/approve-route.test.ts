@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { expenseClaims, purchaseRequests, staff, departments, staffDepartments, staffInstitutions } from "@/db/schema";
+import { expenseClaims, purchaseRequests, staff, departments, staffDepartments, staffInstitutions, institutions } from "@/db/schema";
 import { POST } from "../route";
 import { eq } from "drizzle-orm";
 
@@ -22,6 +22,16 @@ describe("POST /api/finance/approve Route Integration", () => {
   const purchaseReqId = `pr-test-${timestamp}`;
 
   beforeAll(async () => {
+    // Ensure test institution exists
+    const existingInst = await db.select().from(institutions).where(eq(institutions.id, "inst_alpha")).get();
+    if (!existingInst) {
+      await db.insert(institutions).values({
+        id: "inst_alpha",
+        name: "Alpha Institute",
+        code: `INST_ALPHA_${timestamp}`,
+      }).run();
+    }
+
     // Seed staff records
     await db.insert(staff).values([
       {
