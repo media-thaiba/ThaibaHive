@@ -105,7 +105,7 @@ test.describe("Marketplace — install & access-request workflows", () => {
 
     const card = appCard(page, RESTRICTED_NAME);
     await expect(card).toBeVisible();
-    await expect(card.getByText("Restricted")).toBeVisible();
+    await expect(card.getByText("Restricted", { exact: true })).toBeVisible();
     await card.locator('button:has-text("Request Access")').click();
 
     const dialog = page.getByRole("dialog");

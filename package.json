@@ -22,6 +22,7 @@
     "db:generate:pg": "drizzle-kit generate --config=drizzle.postgres.config.ts",
     "db:migrate": "tsx scripts/db/migrate.ts",
     "db:backfill:institution": "tsx scripts/db/backfill-institution-ids.ts",
+    "db:check:duplicates": "tsx scripts/db/check-duplicates.ts",
     "db:verify:columns": "tsx scripts/db/verify-tenant-columns.ts",
     "db:verify:restore": "tsx scripts/db/verify-restore.ts",
     "db:push": "drizzle-kit push",

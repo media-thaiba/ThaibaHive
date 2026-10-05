@@ -1,0 +1,73 @@
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[standalone] Copied .next/static -> .next/standalone/.next/static
+[standalone] Copied public -> .next/standalone/public
+Seeding test users and leave types for Playwright E2E tests...
+Updated test user fields and reset password: test-superadmin@thaibahive.local
+Updated test user fields and reset password: test-admin@thaibahive.local
+Updated test user fields and reset password: test-staff@thaibahive.local
+Updated test user fields and reset password: test-hod@thaibahive.local
+Updated test user fields and reset password: test-principal@thaibahive.local
+Updated test user fields and reset password: test-accounts@thaibahive.local
+Updated test user fields and reset password: test-purchase@thaibahive.local
+Successfully cleaned up old E2E institutions using PRAGMA foreign_keys = OFF
+Seeded test institution: Test Institution E2E
+Generating deterministic E2E storageStates for all test roles...
+Successfully generated and cached E2E storageState for role: super_admin
+Successfully generated and cached E2E storageState for role: admin
+Successfully generated and cached E2E storageState for role: staff
+Successfully generated and cached E2E storageState for role: hod
+Successfully generated and cached E2E storageState for role: principal
+Successfully generated and cached E2E storageState for role: accounts
+Successfully generated and cached E2E storageState for role: purchase
+Global setup complete. Cached E2E storageStates.
+
+Running 39 tests using 4 workers
+
+  ok  3 [chromium] › e2e\accessibility.spec.ts:47:7 › Phase 7.2: WCAG 2.1 AA accessibility audits › login page has no serious a11y violations (2.1s)
+  ok  1 [chromium] › e2e\accessibility.spec.ts:64:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — staff) › /tasks has no serious a11y violations (2.5s)
+  ok  2 [chromium] › e2e\accessibility.spec.ts:64:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — staff) › /attendance has no serious a11y violations (2.6s)
+  ok  4 [chromium] › e2e\accessibility.spec.ts:64:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — staff) › / has no serious a11y violations (2.6s)
+  ok  5 [chromium] › e2e\accessibility.spec.ts:53:7 › Phase 7.2: WCAG 2.1 AA accessibility audits › signup page has no serious a11y violations (1.7s)
+  ok  6 [chromium] › e2e\accessibility.spec.ts:64:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — staff) › /circulars has no serious a11y violations (1.9s)
+  ok  8 [chromium] › e2e\accessibility.spec.ts:76:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — admin) › /admin/departments has no serious a11y violations (2.1s)
+  ok  7 [chromium] › e2e\accessibility.spec.ts:76:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — admin) › /staff has no serious a11y violations (2.3s)
+  ok 10 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [login] (/auth/login) has zero CSP violations (1.6s)
+  ok 11 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [portal home] (/portal/tgcis) has zero CSP violations (1.5s)
+  ok 12 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [staff list] (/staff) has zero CSP violations (1.4s)
+  ok 13 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [tasks] (/tasks) has zero CSP violations (1.4s)
+  ok 14 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [attendance] (/attendance) has zero CSP violations (1.4s)
+  ok 15 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [leaves] (/leaves) has zero CSP violations (1.4s)
+  ok  9 [chromium] › e2e\accessibility.spec.ts:76:9 › Phase 7.2: WCAG 2.1 AA audits (authenticated — admin) › /admin/institutions has no serious a11y violations (5.0s)
+  ok 16 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [finance] (/finance) has zero CSP violations (1.4s)
+  ok 17 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [media] (/media) has zero CSP violations (1.4s)
+  ok 18 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [admin] (/admin) has zero CSP violations (1.4s)
+[WebServer] {"event":"rate_limit_redis_fallback_activated","severity":"HIGH","reason":"Redis unavailable or not connected, utilizing in-memory sliding log fallback","key":"auth:127.0.0.1","timestamp":"2026-10-05T06:21:24.432Z"}
+[WebServer] {"event":"rate_limit_redis_fallback_activated","severity":"HIGH","reason":"Redis unavailable or not connected, utilizing in-memory sliding log fallback","key":"auth:login-email:test-admin@thaibahive.local","timestamp":"2026-10-05T06:21:24.433Z"}
+  ok 22 [chromium] › e2e\keyboard-a11y.spec.ts:53:7 › U4: Keyboard-Only Accessibility & Focus-Visible Verification › 3. Leave Request: Keyboard navigation to leave request modal (915ms)
+  ok 21 [chromium] › e2e\keyboard-a11y.spec.ts:33:7 › U4: Keyboard-Only Accessibility & Focus-Visible Verification › 2. Attendance Marking: Keyboard navigation and interaction (1.0s)
+  ok 19 [chromium] › e2e\csp-audit.spec.ts:20:9 › U2: Content Security Policy Audit on 10 Critical Pages › page [settings] (/settings) has zero CSP violations (1.4s)
+  ok 20 [chromium] › e2e\keyboard-a11y.spec.ts:9:7 › U4: Keyboard-Only Accessibility & Focus-Visible Verification › 1. Login: Full keyboard-only workflow (1.6s)
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+  ok 23 [chromium] › e2e\keyboard-a11y.spec.ts:73:7 › U4: Keyboard-Only Accessibility & Focus-Visible Verification › 4. NFC Check-In: Keyboard interaction for tag entry (626ms)
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+  ok 24 [chromium] › e2e\keyboard-a11y.spec.ts:93:7 › U4: Keyboard-Only Accessibility & Focus-Visible Verification › 5. Focus-Visible & Contrast verification on 5 busiest screens (1.2s)
+  ok 25 [chromium] › e2e\marketplace.spec.ts:82:7 › Marketplace — install & access-request workflows › installs an instant app end-to-end (957ms)
+[@thaiba/db] Initializing database in SQLite/LibSQL mode
+  ok 26 [chromium] › e2e\marketplace.spec.ts:103:7 › Marketplace — install & access-request workflows › requests access to a restricted app via the dialog (1.1s)
+  ok 27 [chromium] › e2e\marketplace.spec.ts:132:7 › Marketplace — install & access-request workflows › filters apps by category tabs (1.0s)
+  ok 29 [chromium] › e2e\reviews.spec.ts:55:7 › Performance Reviews — Staff self-evaluation workflow › renders list row for the draft and opens the self-evaluation form (844ms)
+  ok 28 [chromium] › e2e\reviews.spec.ts:101:7 › Performance Reviews — Admin create & complete workflow › creates a review, rates it with stars and completes it (1.5s)
+  ok 30 [chromium] › e2e\reviews.spec.ts:164:7 › Performance Reviews — Admin create & complete workflow › admin reviews portal renders with no critical JS errors (1.3s)
+  ok 31 [chromium] › e2e\route-boundaries.spec.ts:8:7 › U3: Route Boundaries (loading.tsx skeletons and error recovery) › Tasks page: displays skeleton during delayed API load and renders page (1.4s)
+  ok 32 [chromium] › e2e\route-boundaries.spec.ts:27:7 › U3: Route Boundaries (loading.tsx skeletons and error recovery) › Attendance page: displays skeleton during delayed load and renders page (1.4s)
+  ok 33 [chromium] › e2e\route-boundaries.spec.ts:46:7 › U3: Route Boundaries (loading.tsx skeletons and error recovery) › Leaves page: displays skeleton during delayed load and renders page (1.3s)
+  ok 34 [chromium] › e2e\route-boundaries.spec.ts:65:7 › U3: Route Boundaries (loading.tsx skeletons and error recovery) › Tasks page: handles 500 error and recovers on retry (1.2s)
+  ok 35 [chromium] › e2e\route-boundaries.spec.ts:102:7 › U3: Route Boundaries (loading.tsx skeletons and error recovery) › Attendance page: handles 500 error and recovers on retry (1.2s)
+  ok 37 [chromium] › e2e\security-headers.spec.ts:24:7 › Security headers & nonce CSP (O4-R) › HTML document ships nonce CSP plus the static hardening headers (573ms)
+  ok 36 [chromium] › e2e\route-boundaries.spec.ts:138:7 › U3: Route Boundaries (loading.tsx skeletons and error recovery) › Leaves page: handles 500 error and recovers on retry (1.1s)
+  ok 39 [chromium] › e2e\security-headers.spec.ts:91:7 › Security headers & nonce CSP (O4-R) › session-scoped and tenant-scoped APIs are never shared-cacheable (505ms)
+  ok 38 [chromium] › e2e\security-headers.spec.ts:67:7 › Security headers & nonce CSP (O4-R) › page load produces zero CSP violations (3.0s)
+
+  39 passed (22.6s)
+[exit code: 0]

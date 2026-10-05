@@ -90,11 +90,15 @@ Expected output:
    ```bash
    DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:verify:columns
    ```
-3. **Smoke Testing**: Run application health check and smoke test suite:
+3. **Duplicate Integrity Pre-Check**:
+   ```sql
+   SELECT staff_id, institution_id, COUNT(*) FROM staff_institutions GROUP BY staff_id, institution_id HAVING COUNT(*) > 1;
+   ```
+4. **Smoke Testing**: Run application health check and smoke test suite:
    ```bash
    pnpm test:staging:smoke
    ```
-4. **DNS / Connection Switch**: Update `DATABASE_URL` secret on application hosts to point to the restored database.
+5. **DNS / Connection Switch**: Update `DATABASE_URL` secret on application hosts to point to the restored database.
 
 ---
 

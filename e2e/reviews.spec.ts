@@ -144,8 +144,11 @@ test.describe("Performance Reviews — Admin create & complete workflow", () => 
     await dialog.getByRole("button", { name: "Complete Review" }).click();
     await expect(page.locator("text=Review completed")).toBeVisible();
 
-    await expect(row.getByText("Completed")).toBeVisible();
-    await expect(row.getByText("4/5")).toBeVisible();
+    const updatedRow = page
+      .locator(`span:text-is("Period: ${period}")`)
+      .locator('xpath=ancestor::div[contains(@class,"rounded-xl") and contains(@class,"border")][1]');
+    await expect(updatedRow.getByText("Completed")).toBeVisible();
+    await expect(updatedRow.getByText("4/5")).toBeVisible();
 
     const saved = await db
       .select()

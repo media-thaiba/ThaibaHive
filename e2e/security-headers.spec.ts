@@ -60,7 +60,7 @@ test.describe("Security headers & nonce CSP (O4-R)", () => {
 
     const metaNonce = await page.locator('meta[name="csp-nonce"]').getAttribute("content");
     expect(metaNonce, "root layout exposes meta[name=csp-nonce]").toBeTruthy();
-    const firstScriptNonce = await noncedScripts.first().getAttribute("nonce");
+    const firstScriptNonce = await noncedScripts.first().evaluate((el: HTMLScriptElement) => el.nonce || el.getAttribute("nonce"));
     expect(firstScriptNonce).toBe(metaNonce);
   });
 
@@ -90,7 +90,7 @@ test.describe("Security headers & nonce CSP (O4-R)", () => {
 
   test("session-scoped and tenant-scoped APIs are never shared-cacheable", async ({ page }) => {
     const paths = [
-      "/api/dashboard",
+      "/api/tasks",
       "/api/staff",
       "/api/departments",
       "/api/institutions",
