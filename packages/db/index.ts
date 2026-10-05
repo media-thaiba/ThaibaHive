@@ -24,6 +24,7 @@ export function logSlowQuery(op: string, durationMs: number) {
 }
 
 let dbInstance: any;
+export let rawPgDb: any = null;
 const replicaInstances: any[] = [];
 const replicaUrls: string[] = [];
 
@@ -39,6 +40,7 @@ if (isPostgres) {
   });
 
   const pgDb = pgDrizzle(pool, { schema: pgSchema });
+  rawPgDb = pgDb;
   dbInstance = wrapPgDb(pgDb);
 
   // Parse replica URLs if configured (e.g. DB_REPLICA_URLS="postgres://...,postgres://...")

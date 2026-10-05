@@ -12,15 +12,22 @@ export async function deduplicateMarkEntries(dbClient: typeof db = db): Promise<
   // Query all mark entries safely (if table does not exist yet, return gracefully)
   let allEntries: any[] = [];
   try {
-    allEntries = await dbClient.select({
+    allEntries = await (dbClient.select({
       id: markEntries.id,
       examScheduleId: markEntries.examScheduleId,
       studentId: markEntries.studentId,
       createdAt: markEntries.createdAt,
-    }).from(markEntries).all();
+    }).from(markEntries) as any);
   } catch (err: any) {
-    const msg = `${err?.message || ""} ${err?.cause?.message || ""} ${String(err)}`;
-    if (msg.includes("no such table") || msg.includes("SQLITE_ERROR") || err?.code === "SQLITE_ERROR" || err?.cause?.code === "SQLITE_ERROR") {
+    const msg = `${err?.message || ""} ${err?.cause?.message || ""} ${String(err)}`.toLowerCase();
+    if (
+      msg.includes("no such table") ||
+      msg.includes("does not exist") ||
+      msg.includes("42p01") ||
+      msg.includes("sqlite_error") ||
+      err?.code === "SQLITE_ERROR" ||
+      err?.code === "42P01"
+    ) {
       console.log("[pre-migration] mark_entries table does not exist yet. Skipping dedup.");
       return { duplicateGroups: 0, deletedRows: 0 };
     }
@@ -64,7 +71,7 @@ export async function deduplicateMarkEntries(dbClient: typeof db = db): Promise<
     const chunkSize = 50;
     for (let i = 0; i < idsToDelete.length; i += chunkSize) {
       const chunk = idsToDelete.slice(i, i + chunkSize);
-      await dbClient.delete(markEntries).where(inArray(markEntries.id, chunk)).run();
+      await (dbClient.delete(markEntries).where(inArray(markEntries.id, chunk)) as any);
     }
     deletedRows = idsToDelete.length;
     console.log(`[pre-migration] Successfully scrubbed ${deletedRows} redundant mark_entries row(s).`);
