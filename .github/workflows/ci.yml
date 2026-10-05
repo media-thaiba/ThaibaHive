@@ -217,6 +217,9 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Generate ephemeral CI test secrets
         run: |
           echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
