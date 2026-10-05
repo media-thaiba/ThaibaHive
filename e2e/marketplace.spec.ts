@@ -87,7 +87,7 @@ test.describe("Marketplace — install & access-request workflows", () => {
     await expect(card).toBeVisible();
     await card.locator('button:has-text("Install")').click();
 
-    await expect(page.locator(`text=${INSTANT_NAME} installed`)).toBeVisible();
+    await expect(page.getByText(`${INSTANT_NAME} installed`, { exact: true }).first()).toBeVisible();
     await expect(card.locator('button:has-text("Active")')).toBeVisible();
     await expect(card.getByText("Installed")).toBeVisible();
 

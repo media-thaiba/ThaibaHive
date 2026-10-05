@@ -118,7 +118,8 @@ test.describe("End-to-End User Journey Certification Suite", () => {
         const cycleRes = await adminPage.request.post("/api/performance/cycles", {
           data: {
             title: `Annual Appraisal Cycle ${cycleSuffix}`,
-            period: `2026-Q${cycleSuffix.slice(-1) || "1"}`,
+            cycleType: "quarterly",
+            institutionId: "inst_test_01",
             startDate: "2026-01-01",
             endDate: "2026-12-31",
             selfAssessmentDeadline: "2026-06-30",

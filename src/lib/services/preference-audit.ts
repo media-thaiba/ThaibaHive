@@ -18,6 +18,7 @@ export class PreferenceAuditService {
     ipAddress: string | null
   ): void {
     const id = crypto.randomUUID();
+    const effectiveInstId = institutionId && institutionId !== "global" ? institutionId : null;
 
     db.insert(preferenceAuditLog)
       .values({
@@ -26,7 +27,7 @@ export class PreferenceAuditService {
         preferenceKey,
         oldValue,
         newValue,
-        institutionId,
+        institutionId: effectiveInstId,
         ipAddress,
         timestamp: new Date().toISOString(),
       })

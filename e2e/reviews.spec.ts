@@ -66,7 +66,7 @@ test.describe("Performance Reviews — Staff self-evaluation workflow", () => {
     await row.locator('button:has-text("Self-Evaluate")').click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "Self-Evaluation" })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Self-Evaluation", exact: true })).toBeVisible();
 
     const achievements = dialog.locator(
       'textarea[placeholder="Describe your key accomplishments, completed goals, and contributions..."]'

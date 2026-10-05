@@ -256,6 +256,9 @@ jobs:
           echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Build Next.js Web App (Standalone)
         run: pnpm run build
@@ -272,6 +275,9 @@ jobs:
           TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
           ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
           JWT_SECRET: ${{ env.JWT_SECRET }}
+          CRON_SECRET: ${{ env.CRON_SECRET }}
+          DR_SECRET: ${{ env.DR_SECRET }}
+          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -339,6 +345,9 @@ jobs:
           echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Download standalone build artifact
         uses: actions/download-artifact@v4
@@ -379,6 +388,9 @@ jobs:
           TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
           ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
           JWT_SECRET: ${{ env.JWT_SECRET }}
+          CRON_SECRET: ${{ env.CRON_SECRET }}
+          DR_SECRET: ${{ env.DR_SECRET }}
+          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
@@ -428,6 +440,9 @@ jobs:
           echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Download standalone build artifact
         uses: actions/download-artifact@v4
@@ -496,6 +511,9 @@ jobs:
           TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
           ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
           JWT_SECRET: ${{ env.JWT_SECRET }}
+          CRON_SECRET: ${{ env.CRON_SECRET }}
+          DR_SECRET: ${{ env.DR_SECRET }}
+          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NODE_ENV: production
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 

@@ -46,12 +46,13 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     // Step 3: Finalize
     await expect(wizardModal.locator("text=Setup Summary")).toBeVisible({ timeout: 15000 });
     await wizardModal.locator("button:has-text('Finalize & Create Exam Session')").click();
+    await expect(wizardModal).not.toBeVisible({ timeout: 20000 });
 
     // Dashboard list should refresh, click Mark Entry on E2E Examination Session
     await page.goto("/examinations", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     const examRow = page.locator("tr").filter({ hasText: "E2E Examination Session" }).first();
-    await expect(examRow).toBeVisible({ timeout: 15000 });
+    await expect(examRow).toBeVisible({ timeout: 20000 });
 
     // Click Mark Entry button
     await examRow.locator("button:has-text('Mark Entry')").click();
