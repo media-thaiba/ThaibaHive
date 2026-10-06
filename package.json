@@ -180,7 +180,8 @@
     "@fastify/busboy": ">=3.2.1",
     "browserslist": ">=4.28.7",
     "sharp": ">=0.33.5",
-    "qs": ">=6.16.0"
+    "qs": ">=6.16.0",
+    "source-map-js": ">=1.2.2"
   },
   "pnpm": {
     "overrides": {
@@ -193,7 +194,8 @@
       "@fastify/busboy": ">=3.2.1",
       "browserslist": ">=4.28.7",
       "sharp": ">=0.33.5",
-      "qs": ">=6.16.0"
+      "qs": ">=6.16.0",
+      "source-map-js": ">=1.2.2"
     }
   }
 }
