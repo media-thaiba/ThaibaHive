@@ -52,7 +52,7 @@ export function UserAvatarDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild inset>
           <Link
-            href="/settings"
+            href="/my-work/settings"
             className="flex items-center gap-2 w-full"
           >
             <Settings className="h-4 w-4" />

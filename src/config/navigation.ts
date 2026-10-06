@@ -3,10 +3,13 @@ import {
   CalendarCheck, Briefcase, Settings, Truck, Coffee,
   ShoppingCart,
   Award, LayoutDashboard,
-  ClipboardCheck,
   GraduationCap, Users as UsersIcon, Layers, CalendarDays,
   Smartphone, Bot, Landmark, Percent, Wallet, Scale,
   Shield, Wrench, Database, Key,
+  Megaphone, PartyPopper, ScrollText, Vote, MessageSquare,
+  Receipt, CalendarClock, AlertTriangle, Banknote, FileSearch,
+  Inbox, UserCheck, Image as ImageIcon, CalendarRange,
+  Store, Boxes, BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -79,7 +82,7 @@ export const workspaces: WorkspaceConfig[] = [
     icon: Shield,
     color: "text-violet-600",
     bgColor: "bg-violet-100",
-    description: "Agents, hardware, audit ledgers, tenant settings & security",
+    description: "Agents, hardware, audit ledgers, staff directory & security",
     requiredRoles: ["admin", "super_admin", "regional_admin", "regional_auditor"],
     order: 4,
   },
@@ -101,6 +104,16 @@ const myWorkItems: NavItem[] = [
   { href: "/my-work/approvals", label: "Approvals", desc: "Review and approve pending requests from your team", icon: ThumbsUp, permission: "approvals:approve", workspace: "my-work", roles: ["hod", "principal", "admin", "super_admin"] },
   { href: "/my-work/canteen", label: "Canteen", desc: "Pre-order meals, view menu & manage meal preferences", icon: Coffee, workspace: "my-work" },
   { href: "/my-work/timeline", label: "Timeline", desc: "See recent activity across your department", icon: Activity, workspace: "my-work" },
+  { href: "/my-work/announcements", label: "Announcements", desc: "Institution-wide news and official updates", icon: Megaphone, workspace: "my-work" },
+  { href: "/my-work/events", label: "Events", desc: "Upcoming events, calendars & RSVPs", icon: PartyPopper, workspace: "my-work" },
+  { href: "/my-work/circulars", label: "Circulars", desc: "Official circulars and policy notices", icon: ScrollText, workspace: "my-work" },
+  { href: "/my-work/polls", label: "Polls", desc: "Vote in active polls and view results", icon: Vote, workspace: "my-work" },
+  { href: "/my-work/chat", label: "Chat", desc: "Team conversations and direct messages", icon: MessageSquare, workspace: "my-work" },
+  { href: "/my-work/expenses", label: "Expenses", desc: "Submit expense claims and track reimbursements", icon: Receipt, workspace: "my-work" },
+  { href: "/my-work/availability", label: "Availability", desc: "Set your working-hours availability & time off", icon: CalendarClock, workspace: "my-work" },
+  { href: "/my-work/recognition", label: "Recognition", desc: "Give kudos and celebrate peer achievements", icon: Award, workspace: "my-work" },
+  { href: "/my-work/grievances", label: "Grievances", desc: "Raise and track workplace grievances", icon: AlertTriangle, workspace: "my-work" },
+  { href: "/my-work/settings", label: "Settings", desc: "Your profile, password, avatar & notification preferences", icon: Settings, workspace: "my-work" },
 ];
 
 // --- School ---
@@ -111,7 +124,6 @@ const schoolItems: NavItem[] = [
   { href: "/school/examinations", label: "Examinations", desc: "Manage exam sessions, hall tickets, grading & tabulation registers", icon: GraduationCap, workspace: "school", roles: ["teacher", "hod", "principal", "admin", "super_admin", "exam_coordinator"] },
   { href: "/school/academic-years", label: "Academic Years", desc: "Configure academic year periods, terms & holidays", icon: CalendarDays, workspace: "school", roles: ["principal", "admin", "super_admin", "coordinator"] },
   { href: "/school/timetable", label: "Timetable", desc: "View and manage class timetables & teacher assignments", icon: CalendarCheck, workspace: "school", roles: ["teacher", "hod", "principal", "admin", "super_admin"] },
-  { href: "/school/attendance", label: "Student Attendance", desc: "Mark and view student daily attendance", icon: ClipboardCheck, workspace: "school", roles: ["teacher", "hod", "principal", "admin", "super_admin"] },
   { href: "/school/grades", label: "Grades & Report Cards", desc: "Enter marks, compute ranks & generate report cards", icon: Award, workspace: "school", roles: ["teacher", "hod", "principal", "admin", "super_admin", "exam_coordinator"] },
 ];
 
@@ -125,8 +137,14 @@ const operationsItems: NavItem[] = [
   { href: "/operations/finance/reconciliation", label: "3-Way Reconciliation", desc: "Bank reconciliation across fee, expense & bank ledgers", icon: Scale, permission: "finance:reconciliation:view", workspace: "operations", roles: ["accounts", "admin", "super_admin"] },
   { href: "/operations/fleet", label: "Fleet Management", desc: "Vehicles, maintenance schedules, fuel tracking & transport routes", icon: Truck, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod"] },
   { href: "/operations/assets", label: "Asset Tracking", desc: "Institutional assets, equipment assignments & lifecycle", icon: Briefcase, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff", "purchase"] },
-  { href: "/operations/procurement", label: "Procurement", desc: "Purchase requests, vendor management & approval workflows", icon: ShoppingCart, workspace: "operations", roles: ["purchase", "accounts", "admin", "super_admin", "principal"] },
+  { href: "/operations/procurement", label: "Procurement", desc: "Purchase requests, vendor management & approval workflows", icon: Boxes, workspace: "operations", roles: ["purchase", "accounts", "admin", "super_admin", "principal"] },
   { href: "/operations/facilities", label: "Facilities", desc: "Help desk, room bookings, maintenance & vendor contracts", icon: Wrench, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff", "accounts", "purchase"] },
+  { href: "/operations/bookings", label: "Bookings", desc: "Book rooms, halls & shared resources across the institution", icon: CalendarRange, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff", "accounts", "purchase"] },
+  { href: "/operations/accounts", label: "Accounts", desc: "Financial records, expense tracking & budget management", icon: Banknote, workspace: "operations", roles: ["accounts", "admin", "super_admin", "principal"] },
+  { href: "/operations/finance-audit", label: "Finance Audit", desc: "Immutable finance audit trails & compliance forensics", icon: FileSearch, workspace: "operations", roles: ["accounts", "admin", "super_admin"] },
+  { href: "/operations/finance-requests", label: "Finance Requests", desc: "Reimbursement & fund requests pending finance review", icon: Inbox, workspace: "operations", roles: ["accounts", "admin", "super_admin", "principal"] },
+  { href: "/operations/visitors", label: "Visitors", desc: "Visitor pre-registration, passes & gate logs", icon: UserCheck, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod"] },
+  { href: "/operations/media-library", label: "Media Library", desc: "Shared institutional photos, videos & documents", icon: ImageIcon, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff"] },
 ];
 
 // --- Administration ---
@@ -135,9 +153,12 @@ const adminItems: NavItem[] = [
   { href: "/admin/agents", label: "Agent Cockpit", desc: "Autonomous multi-agent workflows, guardrails, kill-switch & telemetry", icon: Bot, permission: "agent:workflows:view", workspace: "admin", roles: ["admin", "super_admin", "regional_admin", "regional_auditor"] },
   { href: "/admin/hardware", label: "Hardware Management", desc: "NFC cards, biometric terminals, beacons & QR locations", icon: Smartphone, workspace: "admin", roles: ["admin", "super_admin"] },
   { href: "/admin/audit", label: "Audit Ledgers", desc: "Merkle audit trails, tamper-proof logs & compliance forensics", icon: Database, permission: "admin:audit", workspace: "admin", roles: ["admin", "super_admin", "regional_auditor"] },
-  { href: "/admin/tenant", label: "Tenant Settings", desc: "Institution config, branding, feature flags & integrations", icon: Settings, permission: "admin:all", workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
+  { href: "/admin/institutions", label: "Institutions & Tenant Settings", desc: "Institutions registry, cross-tenant config & integrations", icon: Settings, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
   { href: "/admin/security", label: "Security Center", desc: "Zero-trust policies, certificates, devices & threat intel", icon: Shield, permission: "system:security:view", workspace: "admin", roles: ["admin", "super_admin", "regional_admin", "regional_auditor"] },
   { href: "/admin/keys", label: "Key Management", desc: "Encryption keys, rotation policies & HSM integration", icon: Key, permission: "system:admin", workspace: "admin", roles: ["super_admin"] },
+  { href: "/admin/staff", label: "Staff Directory", desc: "Employee records, profiles, roles & department assignments", icon: UsersIcon, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
+  { href: "/admin/marketplace", label: "Marketplace", desc: "App marketplace: instant utilities & department portals", icon: Store, workspace: "admin", roles: ["admin", "super_admin"] },
+  { href: "/admin/docs", label: "Documentation", desc: "Platform documentation, API references & runbooks", icon: BookOpen, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
 ];
 
 export const workspaceNavMap: Record<WorkspaceId, NavItem[]> = {
@@ -159,36 +180,6 @@ export const primaryNav = myWorkItems.slice(0, 4);
 
 export const allNavItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
-const ENABLED_PATHS = new Set([
-  ...allNavItems.map((item) => item.href),
-  "/",
-  "/my-work",
-  "/school",
-  "/operations",
-  "/admin",
-  "/reports",
-  "/expenses",
-  "/purchases",
-  "/accounts",
-  "/vehicles",
-  "/visitors",
-  "/grievances",
-  "/recognition",
-  "/availability",
-  "/timeline",
-  "/examinations",
-  "/academic/timetable",
-  "/academic/academic-years",
-  "/admin",
-  "/media-library",
-  "/api/media",
-]);
-
-export function isPhaseOnePath(href: string): boolean {
-  if (href.startsWith("/api/media")) return true;
-  return ENABLED_PATHS.has(href) || allNavItems.some((item) => item.href === href);
-}
-
 export function searchNav(query: string): NavItem[] {
   const q = query.toLowerCase();
   return allNavItems.filter(
@@ -201,17 +192,4 @@ export function searchNav(query: string): NavItem[] {
 
 export function getItemsForWorkspace(workspaceId: WorkspaceId): NavItem[] {
   return workspaceNavMap[workspaceId] ?? [];
-}
-
-export function getWorkspaceForPath(path: string): WorkspaceId | null {
-  if (path.startsWith("/my-work")) return "my-work";
-  if (path.startsWith("/school")) return "school";
-  if (path.startsWith("/operations")) return "operations";
-  if (path.startsWith("/admin")) return "admin";
-  // Default fallback based on common paths
-  if (path.startsWith("/attendance") || path.startsWith("/tasks") || path.startsWith("/leaves") || path.startsWith("/reports") || path.startsWith("/approvals") || path.startsWith("/canteen")) return "my-work";
-  if (path.startsWith("/examinations") || path.startsWith("/academic") || path.startsWith("/students") || path.startsWith("/classes") || path.startsWith("/timetable")) return "school";
-  if (path.startsWith("/finance") || path.startsWith("/fleet") || path.startsWith("/assets") || path.startsWith("/procurement") || path.startsWith("/facilities")) return "operations";
-  if (path.startsWith("/admin")) return "admin";
-  return "my-work";
 }

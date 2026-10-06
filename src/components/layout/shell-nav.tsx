@@ -226,7 +226,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
                   )}
                 </div>
                 <Link
-                  href="/settings"
+                  href="/my-work/settings"
                   onClick={() => setNotifOpen(false)}
                   className="block border-t px-4 py-2.5 text-center text-xs text-primary font-medium hover:bg-muted/50 transition-colors rounded-b-xl"
                 >
@@ -255,7 +255,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
 
         {/* Settings - hidden on mobile, bottom nav has it */}
         <Link
-          href="/settings"
+          href="/my-work/settings"
           aria-label="Settings"
           className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center"
         >
