@@ -2,6 +2,7 @@ import path from "path";
 import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { securityHeaderPairs } from "./src/lib/security/security-headers";
+import { LEGACY_REDIRECTS } from "./src/lib/navigation/legacy-redirects";
 
 const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -62,6 +63,18 @@ const nextConfig: NextConfig = {
       "@dnd-kit/sortable",
       "sonner",
     ],
+  },
+
+  async redirects() {
+    // Phase 1.5: legacy → workspace permanent (308) redirects.
+    // Array order = evaluation order; LEGACY_REDIRECTS is pre-sorted
+    // (specific rules before folder wildcards). Runs before the filesystem
+    // and before the auth proxy.
+    return LEGACY_REDIRECTS.map(({ source, destination }) => ({
+      source,
+      destination,
+      permanent: true,
+    }));
   },
 
   async headers() {

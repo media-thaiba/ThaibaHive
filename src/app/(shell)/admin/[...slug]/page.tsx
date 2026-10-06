@@ -1,13 +1,12 @@
-import { redirect, notFound } from "next/navigation";
-import { WORKSPACE_REDIRECTS } from "@/lib/navigation/workspace-redirects";
+import { notFound } from "next/navigation";
 
-export default async function AdminRedirectPage({
-  params,
-}: {
-  params: Promise<{ slug: string[] }>;
-}) {
-  const { slug } = await params;
-  const target = WORKSPACE_REDIRECTS[`/admin/${slug.join("/")}`];
-  if (!target) notFound();
-  redirect(target);
+/**
+ * Administration safety-net catch-all (Phase 1.5).
+ *
+ * All real routes live physically under admin/. Legacy URLs are handled by
+ * next.config.ts redirects (LEGACY_REDIRECTS), which run before routing.
+ * Anything else that lands here does not exist.
+ */
+export default function AdminCatchAll() {
+  notFound();
 }

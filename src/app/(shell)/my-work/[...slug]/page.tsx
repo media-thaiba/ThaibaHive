@@ -1,13 +1,12 @@
-import { redirect, notFound } from "next/navigation";
-import { WORKSPACE_REDIRECTS } from "@/lib/navigation/workspace-redirects";
+import { notFound } from "next/navigation";
 
-export default async function MyWorkRedirectPage({
-  params,
-}: {
-  params: Promise<{ slug: string[] }>;
-}) {
-  const { slug } = await params;
-  const target = WORKSPACE_REDIRECTS[`/my-work/${slug.join("/")}`];
-  if (!target) notFound();
-  redirect(target);
+/**
+ * My Work safety-net catch-all (Phase 1.5).
+ *
+ * All real routes live physically under my-work/. Legacy URLs are handled by
+ * next.config.ts redirects (LEGACY_REDIRECTS), which run before routing.
+ * Anything else that lands here does not exist.
+ */
+export default function MyWorkCatchAll() {
+  notFound();
 }
