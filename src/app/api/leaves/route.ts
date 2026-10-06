@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, leaveBalances } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { leaveCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -19,7 +19,7 @@ export const GET = requireAuth(async (request, session) => {
   const { page, limit } = pagination;
   const offset = (page - 1) * limit;
 
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const conditions = [eq(leaveRequests.staffId, session.staffId)];
   if (scopedInstitutionId && scopedInstitutionId !== "global") {
     conditions.push(eq(leaveRequests.institutionId, scopedInstitutionId));

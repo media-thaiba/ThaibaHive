@@ -28,7 +28,7 @@ export const POST = requireAuth(async (request: Request, _session, context) => {
   return NextResponse.json({ item }, { status: 201 });
 }, "org:manage");
 
-export const PATCH = requireAuth(async (request: Request) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { id, title, description, order } = body;
 
@@ -55,7 +55,7 @@ export const PATCH = requireAuth(async (request: Request) => {
   return NextResponse.json({ item });
 }, "org:manage");
 
-export const DELETE = requireAuth(async (request: Request) => {
+export const DELETE = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { id } = body;
 

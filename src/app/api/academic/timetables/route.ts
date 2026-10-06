@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { timetableSlots, timetableEntries, classes, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and, asc } from "drizzle-orm";
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get("institutionId");
+  const requestedInst = url.searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, requestedInst);
   const classId = url.searchParams.get("classId");
   const teacherId = url.searchParams.get("teacherId");
   const academicYearId = url.searchParams.get("academicYearId");
 
   // Fetch slots
   const slotConditions = [];
-  if (institutionId) {
+  if (institutionId && institutionId !== "global") {
     slotConditions.push(eq(timetableSlots.institutionId, institutionId));
   }
   const slots = await db
@@ -26,7 +27,7 @@ export const GET = requireAuth(async (request) => {
 
   // Fetch entries
   const entryConditions = [];
-  if (institutionId) {
+  if (institutionId && institutionId !== "global") {
     entryConditions.push(eq(timetableEntries.institutionId, institutionId));
   }
   if (classId) {

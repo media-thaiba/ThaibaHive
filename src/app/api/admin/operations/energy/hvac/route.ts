@@ -4,16 +4,20 @@ import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { HvacOptimizer } from '@/lib/operations/energy/hvac-optimizer';
 import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 import { hvacOptimizationSchema } from '@/lib/validation/aims-schemas';
+import { resolveRequestInstitution } from '@thaiba/auth/institution-scope';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
-    const campusId = searchParams.get('campusId') || undefined;
+    const rawCampusId = searchParams.get('campusId') || undefined;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
+    const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
+    const targetCampusId = resolvedCampusId === "global" ? undefined : resolvedCampusId;
+
     const store = AimsDbStore.getInstance();
-    const allOptimizations = store.getEnergyOptimizations(campusId);
+    const allOptimizations = store.getEnergyOptimizations(targetCampusId);
     const offset = (page - 1) * limit;
     const paginated = allOptimizations.slice(offset, offset + limit);
 
@@ -35,7 +39,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = hvacOptimizationSchema.safeParse(body);
 
@@ -43,10 +47,12 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
+    const resolvedCampusId = await resolveRequestInstitution(session, parsed.data.campusId);
+
     const optimizer = new HvacOptimizer();
     const reading = {
       sensorId: `sensor_${parsed.data.zoneId}`,
-      campusId: parsed.data.campusId,
+      campusId: resolvedCampusId,
       buildingId: parsed.data.buildingId,
       zoneId: parsed.data.zoneId,
       temperatureCelsius: parsed.data.currentTempCelsius,
@@ -55,11 +61,11 @@ export const POST = withDPoP(
       luxLevel: 300,
       powerKw: 18.0,
       timestamp: new Date().toISOString(),
-      institutionId: 'inst_default',
+      institutionId: resolvedCampusId,
     };
 
     const forecast = {
-      campusId: parsed.data.campusId,
+      campusId: resolvedCampusId,
       buildingId: parsed.data.buildingId,
       zoneId: parsed.data.zoneId,
       forecastTimestamp: new Date().toISOString(),

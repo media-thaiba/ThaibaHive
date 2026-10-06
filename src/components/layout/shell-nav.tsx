@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Search, Bell, Settings, Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatarDropdown } from "@/components/layout/user-avatar-dropdown";
@@ -26,6 +27,7 @@ type ShellNavProps = {
 export function ShellNav({ onSearchOpen }: ShellNavProps) {
   const { staff } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { currentWorkspace, allWorkspaces, setWorkspace } = useWorkspace();
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
@@ -103,6 +105,27 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         />
       </Link>
 
+      {/* Workspace Tabs - Desktop (icon-only on small screens) */}
+      <div className="flex items-center gap-1 ml-2 sm:ml-4 mr-2 sm:mr-6">
+        {allWorkspaces.map((w) => (
+          <button
+            key={w.id}
+            onClick={() => setWorkspace(w.id)}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 whitespace-nowrap shrink-0",
+              w.id === currentWorkspace.id
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+            aria-label={`Switch to ${w.label} workspace`}
+            title={w.label}
+          >
+            <w.icon className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">{w.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Right side */}
       <div className="flex items-center gap-1 ml-auto">
         {/* Search - visible on mobile only (desktop has sidebar search) */}
@@ -161,10 +184,10 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
                   ) : (
                     notifications.slice(0, 10).map((n) => {
                       const hrefMap: Record<string, string> = {
-                        announcement: "/announcements",
-                        event: "/events",
-                        circular: "/circulars",
-                        poll: "/polls",
+                        announcement: "/my-work/announcements",
+                        event: "/school/events",
+                        circular: "/school/circulars",
+                        poll: "/school/polls",
                       };
                       const href = n.referenceType ? (hrefMap[n.referenceType] || "#") : "#";
                       return (
@@ -203,7 +226,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
                   )}
                 </div>
                 <Link
-                  href="/settings"
+                  href="/my-work/settings"
                   onClick={() => setNotifOpen(false)}
                   className="block border-t px-4 py-2.5 text-center text-xs text-primary font-medium hover:bg-muted/50 transition-colors rounded-b-xl"
                 >
@@ -232,7 +255,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
 
         {/* Settings - hidden on mobile, bottom nav has it */}
         <Link
-          href="/settings"
+          href="/my-work/settings"
           aria-label="Settings"
           className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center"
         >

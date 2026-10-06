@@ -15,7 +15,7 @@ const bulkAttendanceSchema = z.object({
   })).min(1),
 });
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const parsed = bulkAttendanceSchema.safeParse(body);
 
@@ -69,8 +69,7 @@ export const POST = requireAuth(async (request: Request) => {
     .from(studentAttendanceLogs)
     .where(and(
       eq(studentAttendanceLogs.classId, classId),
-      eq(studentAttendanceLogs.date, date),
-    ))
+      eq(studentAttendanceLogs.date, date)))
     .groupBy(studentAttendanceLogs.status)
     .all();
 

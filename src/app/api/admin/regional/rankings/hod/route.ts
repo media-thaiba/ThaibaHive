@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { RegionalHodRankingService } from "@/lib/regional/regional-hod-ranking-service";
 import { regionalHodRankingQuerySchema } from "@/lib/validation/schemas";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const regionalGroupId = url.searchParams.get("regionalGroupId") || "rg_default";
   const discipline = url.searchParams.get("discipline") || undefined;

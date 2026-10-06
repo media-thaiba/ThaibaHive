@@ -6,7 +6,7 @@ import { verifySession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-// NOTE: Avatar files are designed to be organization-wide readable by any authenticated user.
+// NOTE: Avatar files are designed to be organization-wide readable by any authenticated session.
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ filename: string }> }

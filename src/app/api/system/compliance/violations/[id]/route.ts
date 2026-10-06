@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { complianceViolations } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { z } from "zod";
 
 const updateViolationSchema = z.object({
@@ -10,9 +12,10 @@ const updateViolationSchema = z.object({
   resolutionNotes: z.string().optional(),
 });
 
-async function patchHandler(req: Request, session: any, context?: any) {
+async function patchHandler(req: Request, session: SessionPayload, context?: { params: Promise<Record<string, string>> }) {
   try {
-    const id = context?.params?.id || new URL(req.url).pathname.split("/").pop();
+    const rawParams = context?.params ? await context.params : undefined;
+    const id = rawParams?.id || new URL(req.url).pathname.split("/").pop();
     if (!id) {
       return NextResponse.json({ error: "Missing violation ID" }, { status: 400 });
     }
@@ -24,7 +27,7 @@ async function patchHandler(req: Request, session: any, context?: any) {
     }
 
     const { status, resolutionNotes } = parsed.data;
-    const resolvedBy = session?.userId || session?.sub || "admin";
+    const resolvedBy = session?.staffId || "admin";
     const resolvedAt = new Date().toISOString();
 
     const existing = await db
@@ -53,8 +56,9 @@ async function patchHandler(req: Request, session: any, context?: any) {
       message: `Violation ${id} updated to ${status}`,
     });
   } catch (error: any) {
-    console.error("[@thaiba/compliance] Patch violation error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Patch violation error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

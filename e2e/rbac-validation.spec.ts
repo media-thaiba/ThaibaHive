@@ -33,7 +33,7 @@ test.describe("Role-Based Access Control (RBAC) Gating", () => {
       await expect(restrictionMessage).toBeVisible({ timeout: 15000 });
 
       // 2. Check view permissions on attendance team overview tab
-      await page.goto("/attendance");
+      await page.goto("/my-work/attendance");
       const teamTab = page.locator("button:has-text('Team Overview')");
       await expect(teamTab).toBeVisible({ timeout: 15000 });
     });

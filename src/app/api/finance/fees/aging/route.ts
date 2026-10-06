@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
@@ -5,9 +6,9 @@ import { AgingAnalyticsEngine } from '@/lib/operations/finance/aging/aging-analy
 import { DefaulterOutreachEngine } from '@/lib/operations/finance/aging/defaulter-outreach-engine';
 import { dispatchReminderSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const type = url.searchParams.get('type') || 'summary'; // 'summary' | 'logs'
 
   const store = FeeDbStore.getInstance();
@@ -22,10 +23,13 @@ export const GET = requireAuth(async (request) => {
   return NextResponse.json({ success: true, summary });
 }, 'finance:fees:view');
 
-export const POST = requireAuth(async (request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = dispatchReminderSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
     }
@@ -41,7 +45,8 @@ export const POST = requireAuth(async (request) => {
     );
 
     return NextResponse.json({ success: true, result }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to dispatch reminder' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Aging Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to dispatch reminder" }, { status: 500 });
   }
 }, 'finance:fees:manage');

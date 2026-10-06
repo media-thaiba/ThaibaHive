@@ -11,7 +11,7 @@ jobs:
     name: Staging Canary Verification & Auto-Merge
     # Trigger on Dependabot PRs or PRs with 'dependencies' label
     if: github.actor == 'dependabot[bot]' || contains(github.event.pull_request.labels.*.name, 'dependencies')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:

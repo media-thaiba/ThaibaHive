@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLog } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { pick } from "@/lib/api/pick";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { autoAssignOffboardingChecklists } from "@/lib/onboarding/auto-assign";
@@ -122,6 +122,11 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   }
 
   if (institutionIds) {
+    if (session.role !== "super_admin") {
+      for (const instId of institutionIds) {
+        await resolveRequestInstitution(session, instId);
+      }
+    }
     await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, id)).run();
     if (institutionIds.length) {
       await db.insert(staffInstitutions).values(

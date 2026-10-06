@@ -38,7 +38,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const orchestrator = new SpotInstanceOrchestrator();
 

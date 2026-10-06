@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { sql } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get("institutionId");
+  const requestedInst = url.searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, requestedInst);
   const from = url.searchParams.get("from") || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
   const to = url.searchParams.get("to") || new Date().toISOString().split("T")[0];
 
@@ -17,7 +18,7 @@ export const GET = requireAuth(async (request: Request) => {
     FROM financial_transactions
     WHERE transaction_date >= ${from}
       AND transaction_date <= ${to}
-      ${institutionId ? sql`AND institution_id = ${institutionId}` : sql``}
+      ${institutionId && institutionId !== "global" ? sql`AND institution_id = ${institutionId}` : sql``}
     GROUP BY type
   `);
 

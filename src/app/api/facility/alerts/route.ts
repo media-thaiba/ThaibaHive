@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { facilityStore } from '@/lib/db/facility-store';
@@ -5,16 +6,16 @@ import { anomalyAlertTriageSchema } from '@/lib/validation/facility-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const status = (searchParams.get('status') as any) || undefined;
 
   const alerts = await facilityStore.listAnomalyAlerts(tenantId, status);
   return NextResponse.json({ alerts });
 }, 'facility:alerts:view');
 
-export const PATCH = requireAuth(async (req: Request, user: any) => {
+export const PATCH = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = anomalyAlertTriageSchema.safeParse(body);
@@ -22,12 +23,12 @@ export const PATCH = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid alert triage payload' }, { status: 400 });
     }
 
-    const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const updated = await facilityStore.updateAlertStatus(
       parsed.data.alertId,
       parsed.data.status,
       parsed.data.notes,
-      user?.staffId,
+      session?.staffId,
       tenantId
     );
 

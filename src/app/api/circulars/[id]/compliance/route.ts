@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { circularCampusCompliance, institutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, context) => {
@@ -61,11 +61,12 @@ export const GET = requireAuth(async (request, context) => {
   });
 }, "circulars:read");
 
-export const PATCH = requireAuth(async (request: Request, context) => {
+export const PATCH = requireAuth(async (request: Request, session, context) => {
   const params = await (context as unknown as { params: Promise<{ id: string }> }).params;
   const circularId = params.id;
   const body = await request.json();
-  const { institutionId, status, coordinatorRemarks, completionEvidenceUrl, verifiedById } = body;
+  const { status, coordinatorRemarks, completionEvidenceUrl, verifiedById } = body;
+    const institutionId = await resolveRequestInstitution(session, body.institutionId);
 
   if (!circularId || !institutionId || !status) {
     return NextResponse.json(

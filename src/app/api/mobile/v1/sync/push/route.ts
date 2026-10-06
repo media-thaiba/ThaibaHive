@@ -45,7 +45,7 @@ function decompressProgressively(buffer: Buffer): Promise<Buffer> {
   });
 }
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const contentEncoding = request.headers.get("content-encoding") || "";
   const isGzip = contentEncoding.includes("gzip");
 

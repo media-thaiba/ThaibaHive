@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { sensorIngestionGateway } from '@/lib/operations/facility/ingestion/sensor-ingestion-gateway';
@@ -9,13 +10,13 @@ import { telemetryBatchSchema, telemetryPacketSchema } from '@/lib/validation/fa
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   const startTime = Date.now();
   try {
     const body = await req.json();
 
     let packets: any[] = [];
-    let institutionId = user?.institutionId || 'global';
+    let institutionId: string | undefined;
 
     if (body.packets && Array.isArray(body.packets)) {
       const parsedBatch = telemetryBatchSchema.safeParse(body);
@@ -23,13 +24,16 @@ export const POST = requireAuth(async (req: Request, user: any) => {
         return NextResponse.json({ error: parsedBatch.error.issues[0]?.message || 'Invalid batch payload' }, { status: 400 });
       }
       packets = parsedBatch.data.packets;
-      if (parsedBatch.data.institutionId) institutionId = parsedBatch.data.institutionId;
+      const rawInst = parsedBatch.data.institutionId || undefined;
+      institutionId = await resolveRequestInstitution(session, rawInst);
     } else {
       const parsedSingle = telemetryPacketSchema.safeParse(body);
       if (!parsedSingle.success) {
         return NextResponse.json({ error: parsedSingle.error.issues[0]?.message || 'Invalid packet payload' }, { status: 400 });
       }
       packets = [parsedSingle.data];
+      const rawInst = (parsedSingle.data as any).institutionId || undefined;
+      institutionId = await resolveRequestInstitution(session, rawInst);
     }
 
     const results = [];

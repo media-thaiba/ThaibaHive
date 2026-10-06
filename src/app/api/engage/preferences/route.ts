@@ -7,7 +7,7 @@ import { ComplianceAuditLogger } from '@/lib/operations/engage/privacy/complianc
 const store = EngageDbStore.getInstance();
 const auditLogger = ComplianceAuditLogger.getInstance();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const url = new URL(request.url);
     const recipientId = url.searchParams.get('recipientId');
@@ -22,7 +22,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, 'engage:preferences:manage');
 
-export const PATCH = requireAuth(async (request: Request) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = engagePreferenceUpdateSchema.safeParse(body);

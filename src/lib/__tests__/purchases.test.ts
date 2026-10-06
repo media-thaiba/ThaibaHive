@@ -70,6 +70,10 @@ jest.mock("@thaiba/auth", () => {
     ...actual,
     verifySession: jest.fn(),
     hasPermission: jest.fn(() => true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_1"),
+    getUserInstitutionScope: jest.fn().mockResolvedValue("inst_1"),
+    resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_1"),
+    getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_1"]),
   };
 });
 
@@ -88,7 +92,7 @@ describe("Purchase Requests API & 3-Tier Approval Flow", () => {
 
   describe("POST /api/purchases", () => {
     it("should create new purchase request in pending_hod status", async () => {
-      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com" };
+      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockGet.mockResolvedValue({
@@ -120,7 +124,7 @@ describe("Purchase Requests API & 3-Tier Approval Flow", () => {
 
   describe("PATCH /api/purchases/[id]", () => {
     it("Tier 1: HOD approves pending_hod -> pending_accounts", async () => {
-      const session = { staffId: "hod_1", role: "hod", email: "hod@example.com" };
+      const session = { staffId: "hod_1", role: "hod", email: "hod@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockGet.mockResolvedValueOnce({
@@ -150,7 +154,7 @@ describe("Purchase Requests API & 3-Tier Approval Flow", () => {
     });
 
     it("Tier 2: Accounts approves pending_accounts -> pending_purchase", async () => {
-      const session = { staffId: "acc_1", role: "accounts", email: "accounts@example.com" };
+      const session = { staffId: "acc_1", role: "accounts", email: "accounts@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockGet.mockResolvedValueOnce({
@@ -180,7 +184,7 @@ describe("Purchase Requests API & 3-Tier Approval Flow", () => {
     });
 
     it("Tier 3: Purchase Manager approves pending_purchase -> approved", async () => {
-      const session = { staffId: "pm_1", role: "purchase", email: "pm@example.com" };
+      const session = { staffId: "pm_1", role: "purchase", email: "pm@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockGet.mockResolvedValueOnce({
@@ -212,7 +216,7 @@ describe("Purchase Requests API & 3-Tier Approval Flow", () => {
 
   describe("GET /api/purchases/budget", () => {
     it("should return calculated institution budget summary", async () => {
-      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com" };
+      const session = { staffId: "staff_1", role: "staff", email: "staff@example.com", institutionId: "inst_1" };
       (verifySession as jest.Mock).mockResolvedValue(session);
 
       mockAll.mockResolvedValueOnce([{ institutionId: "inst_1" }]); // callerInstitution

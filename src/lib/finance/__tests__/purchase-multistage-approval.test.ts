@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { purchaseRequests, staff, staffDepartments, departments, auditLog } from "@/db/schema";
+import { purchaseRequests, staff, staffDepartments, departments, auditLog, staffInstitutions, institutions } from "@/db/schema";
 import { PATCH } from "@/app/api/purchases/[id]/route";
 import { verifySession, hasPermission } from "@thaiba/auth";
 import { eq } from "drizzle-orm";
@@ -21,9 +21,18 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
   const purchaseOfficerId = `purchase-officer-${timestamp}`;
   const deptId = `dept-purch-${timestamp}`;
   const purchaseId = `purch-req-${timestamp}`;
+  const instId = `inst-purch-${timestamp}`;
 
   beforeAll(async () => {
-    // 1. Insert staff records first
+    // 0. Insert institution record
+    await db.insert(institutions).values({
+      id: instId,
+      name: `Purch Test Inst ${timestamp}`,
+      code: `PTI_${timestamp.toString().slice(-4)}`,
+      type: "campus",
+    }).run();
+
+    // 1. Insert staff records
     await db.insert(staff).values({
       id: requesterId,
       email: `requester-${timestamp}@thaibahive.local`,
@@ -79,18 +88,47 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: hodId,
       departmentId: deptId,
     }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-rq-${timestamp}`,
+      staffId: requesterId,
+      institutionId: instId,
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-hp-${timestamp}`,
+      staffId: hodId,
+      institutionId: instId,
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-ap-${timestamp}`,
+      staffId: accountsId,
+      institutionId: instId,
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-po-${timestamp}`,
+      staffId: purchaseOfficerId,
+      institutionId: instId,
+    }).run();
   });
 
   afterAll(async () => {
     try {
       await db.delete(auditLog).where(eq(auditLog.entityId, purchaseId)).run();
       await db.delete(purchaseRequests).where(eq(purchaseRequests.id, purchaseId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, requesterId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, hodId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, accountsId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, purchaseOfficerId)).run();
       await db.delete(staffDepartments).where(eq(staffDepartments.departmentId, deptId)).run();
       await db.delete(staff).where(eq(staff.id, requesterId)).run();
       await db.delete(staff).where(eq(staff.id, hodId)).run();
       await db.delete(staff).where(eq(staff.id, accountsId)).run();
       await db.delete(staff).where(eq(staff.id, purchaseOfficerId)).run();
       await db.delete(departments).where(eq(departments.id, deptId)).run();
+      await db.delete(institutions).where(eq(institutions.id, instId)).run();
     } catch {
       // Ignore cleanup locks
     }
@@ -117,6 +155,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: requesterId,
       role: "hod", // Even if holding hod role
       email: `requester-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {
@@ -138,6 +177,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: hodId,
       role: "hod",
       email: `hodp-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {
@@ -160,6 +200,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: accountsId,
       role: "accounts",
       email: `accp-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {
@@ -182,6 +223,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
       staffId: purchaseOfficerId,
       role: "purchase",
       email: `purchofficer-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/purchases/${purchaseId}`, {

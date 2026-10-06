@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Tab } from "@/app/(shell)/vehicles/_components/types";
+import type { Tab } from "@/app/(shell)/operations/fleet/_components/types";
 
 interface VehicleState {
   tab: Tab;

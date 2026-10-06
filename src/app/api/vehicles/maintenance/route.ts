@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { eq, desc } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
   const logs = await db

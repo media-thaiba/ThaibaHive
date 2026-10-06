@@ -1,0 +1,8 @@
+{
+  "latestVersion": "3.20.0+15",
+  "downloadUrl": "/downloads/ThaibaHive_latest.apk",
+  "releaseNotes": "Production release 3.20.0+15: hardened mobile release signing, SHA-256 binary integrity verification, and runtime security patches.",
+  "forceUpdate": false,
+  "sha256": "5b8710a85fb02a95d2e809c9c5ad2ec0d632d5d689448c067196a764969aaf12",
+  "fileSize": 89291695
+}

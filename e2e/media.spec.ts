@@ -4,6 +4,9 @@ import { mediaFolders, mediaAssets } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("MediaHive Core", () => {
+  // beforeEach re-creates the same folder/asset rows for every test, so tests
+  // must not run concurrently (fullyParallel is on globally).
+  test.describe.configure({ mode: "serial" });
   test.use({ storageState: ".auth/admin.json" });
 
   test.beforeEach(async () => {
@@ -14,8 +17,8 @@ test.describe("MediaHive Core", () => {
   });
 
   test("should load the dashboard at /media", async ({ page }) => {
-    await page.goto("/media");
-    await expect(page).toHaveURL("/media");
+    await page.goto("/operations/media-library");
+    await expect(page).toHaveURL("/operations/media-library");
 
     // Verify main components are present (e.g. Folders list header)
     const foldersTitle = page.locator("text=Folders").first();
@@ -23,8 +26,8 @@ test.describe("MediaHive Core", () => {
   });
 
   test("should allow folder creation and navigation", async ({ page }) => {
-    await page.goto("/media");
-    await expect(page).toHaveURL("/media");
+    await page.goto("/operations/media-library");
+    await expect(page).toHaveURL("/operations/media-library");
 
     // Click icon-only Create Folder button in sidebar
     const newFolderBtn = page.locator("button[title='Create Folder']").first();
@@ -90,7 +93,7 @@ test.describe("MediaHive Core", () => {
     });
 
     // Go to media dashboard
-    await page.goto("/media");
+    await page.goto("/operations/media-library");
 
     // Click Upload Media button to open modal
     const uploadBtn = page.locator("button:has-text('Upload Media')").first();

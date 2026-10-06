@@ -21,7 +21,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, _session) => {
     try {
       const body = await req.json();
       const validation = PlaybookValidator.validate(body);

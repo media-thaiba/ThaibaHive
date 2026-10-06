@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { sensorCreateSchema } from '@/lib/validation/twin-schemas';
@@ -5,10 +6,10 @@ import { TwinDbStore } from '@/lib/db/twin-store';
 
 const store = TwinDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request, user: any) => {
+export const GET = requireAuth(async (request: Request, session: any) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
     const facilityId = searchParams.get('facilityId') || undefined;
 
     const sensors = await store.listSensors(tenantId, facilityId);

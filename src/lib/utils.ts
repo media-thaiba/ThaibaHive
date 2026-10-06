@@ -34,6 +34,21 @@ export function ensureArray<T>(value: unknown, fallback: T[] = []): T[] {
   return Array.isArray(value) ? value : fallback;
 }
 
+/**
+ * Parses a JSON-encoded string column (e.g. performanceReviews.goals) into a string array.
+ * Returns null for empty/malformed/non-array values instead of throwing.
+ */
+export function parseJsonStringArray(value: string | null | undefined): string[] | null {
+  if (!value) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((item) => String(item));
+  } catch {
+    return null;
+  }
+}
+
 export function timeAgo(date: string | Date): string {
   const now = new Date();
   const then = typeof date === "string" ? new Date(date) : date;
@@ -49,4 +64,14 @@ export function timeAgo(date: string | Date): string {
   const weeks = Math.floor(days / 7);
   if (weeks < 4) return `${weeks}w ago`;
   return formatDate(date);
+}
+
+export function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }

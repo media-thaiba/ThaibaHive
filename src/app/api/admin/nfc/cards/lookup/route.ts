@@ -4,7 +4,7 @@ import { nfcCards, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq, sql } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { tagId } = body;
 

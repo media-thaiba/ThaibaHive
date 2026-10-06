@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { academicYears } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 
-export const GET = requireAuth(async (_request: Request) => {
-  const rows = await db
-    .select()
-    .from(academicYears)
-    .orderBy(academicYears.startDate)
-    .all();
+import { eq } from "drizzle-orm";
+
+export const GET = requireAuth(async (request: Request, session) => {
+  const { searchParams } = new URL(request.url);
+  const requestedInst = searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
+
+  let query = db.select().from(academicYears).$dynamic();
+  if (scopedInstId !== "global") {
+    query = query.where(eq(academicYears.institutionId, scopedInstId));
+  }
+
+  const rows = await query.orderBy(academicYears.startDate).all();
 
   return NextResponse.json({ academicYears: rows });
 }, "academic_years:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { name, startDate, endDate, institutionId } = body;
+  const { name, startDate, endDate, institutionId: reqInst } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
   if (!name || !startDate || !endDate) {
     return NextResponse.json({ error: "name, startDate, and endDate are required" }, { status: 400 });

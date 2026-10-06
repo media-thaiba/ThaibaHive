@@ -31,9 +31,10 @@ export const PATCH = requireAuth(
       });
 
       return NextResponse.json({ item: updated });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error("[Reconciliation Match Error]:", error instanceof Error ? error.stack : error);
       return NextResponse.json(
-        { error: error.message || "Failed to update reconciliation item match" },
+        { error: "Failed to update reconciliation item match" },
         { status: 500 }
       );
     }

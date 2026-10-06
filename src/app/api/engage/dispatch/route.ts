@@ -9,7 +9,7 @@ const dispatchEngine = DispatchEngine.getInstance();
 const consentManager = ConsentManager.getInstance();
 const telemetry = EngageTelemetry.getInstance();
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = engageDispatchSchema.safeParse(body);

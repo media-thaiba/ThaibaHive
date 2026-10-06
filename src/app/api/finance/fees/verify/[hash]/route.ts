@@ -1,47 +1,43 @@
-import { NextResponse } from 'next/server';
-import { withPublicApm } from '@/lib/api/public-apm';
-import { FeeDbStore } from '@/db/fee-store';
-import { ReceiptGenerator } from '@/lib/operations/finance/receipts/receipt-generator';
+import { NextResponse } from "next/server";
+import { withPublicApm } from "@/lib/api/public-apm";
+import { FeeDbStore } from "@/db/fee-store";
 
-export const GET = withPublicApm(async (_req: Request, { params }: { params: Promise<{ hash: string }> }) => {
+export const GET = withPublicApm(async (_req: Request, context: { params: Promise<Record<string, string>> }) => {
   try {
-    const { hash } = await params;
+    const { hash } = await context.params;
     if (!hash || hash.trim().length === 0) {
-      return NextResponse.json({ error: 'Receipt hash is required' }, { status: 400 });
+      return NextResponse.json({ error: "Fee receipt hash is required" }, { status: 400 });
     }
 
-    const store = FeeDbStore.getInstance();
-    const receipt = await store.getReceiptByHash(hash);
-
-    if (!receipt) {
+    const verification = await FeeDbStore.getInstance().getReceiptByHash(hash);
+    if (!verification) {
       return NextResponse.json(
         {
           success: false,
-          status: 'INVALID_OR_NOT_FOUND',
-          message: 'No official receipt matches this cryptographic hash.',
+          status: "INVALID_OR_NOT_FOUND",
+          message: "No verified fee receipt matches this cryptographic hash.",
         },
         { status: 404 }
       );
     }
 
-    const generator = new ReceiptGenerator(store);
-    const isSignatureValid = generator.verifyReceipt(receipt);
-
-    const payment = await store.getPaymentById(receipt.paymentId);
-
     return NextResponse.json({
       success: true,
-      status: isSignatureValid ? 'GENUINE_AND_VERIFIED' : 'SIGNATURE_MISMATCH',
-      receiptNumber: receipt.receiptNumber,
-      institutionId: receipt.institutionId,
-      issuedAt: receipt.issuedAt,
-      amount: payment?.netAmount || 0,
-      currency: payment?.currency || 'INR',
-      paymentMethod: payment?.paymentMethod || 'online',
-      receiptHash: receipt.receiptHash,
-      signatureVerified: isSignatureValid,
+      status: "VERIFIED_FEE_RECEIPT",
+      receiptNumber: verification.receiptNumber,
+      institutionId: verification.institutionId,
+      studentId: verification.studentId,
+      paymentId: verification.paymentId,
+      receiptHash: verification.receiptHash,
+      signature: verification.signature,
+      qrPayload: verification.qrPayload,
+      receiptHtml: verification.receiptHtml,
+      receiptPdfUrl: verification.receiptPdfUrl,
+      downloadCount: verification.downloadCount,
+      issuedAt: verification.issuedAt,
+      createdAt: verification.createdAt,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Verification failed' }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Verification failed" }, { status: 500 });
   }
 });

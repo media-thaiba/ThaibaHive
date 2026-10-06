@@ -3,7 +3,7 @@ import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { budgetSimulationSchema } from "../../../../../lib/validation/schemas";
 import { defaultBudgetSimulator } from "../../../../../lib/simulation/budget-scenario-simulator";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     const text = await request.text();

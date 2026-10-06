@@ -1,6 +1,6 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { requisitionCreateSchema } from '@/lib/validation/supply-schemas';
 import { RequisitionRoutingEngine } from '@/lib/operations/supply/workflow/requisition-routing-engine';
@@ -10,14 +10,14 @@ export const dynamic = 'force-dynamic';
 const store = SupplyDbStore.getInstance();
 const routingEngine = RequisitionRoutingEngine.getInstance();
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const requisitions = await store.listRequisitions(institutionId);
   return NextResponse.json({ requisitions });
 }, 'supply:requisitions:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = requisitionCreateSchema.safeParse(body);
@@ -25,7 +25,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid requisition payload' }, { status: 400 });
     }
 
-    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const reqId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const requisitionNumber = `REQ-${Date.now().toString().slice(-6)}`;
 
@@ -33,7 +33,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       id: reqId,
       requisitionNumber,
       departmentId: parsed.data.departmentId,
-      requesterId: user?.id || 'anonymous-requester',
+      requesterId: session?.staffId || 'anonymous-requester',
       sourceType: parsed.data.sourceType,
       sourceReferenceId: parsed.data.sourceReferenceId,
       title: parsed.data.title,
@@ -46,8 +46,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       notes: parsed.data.notes,
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const routingDecision = routingEngine.evaluateRouting(preliminaryReq);
 
@@ -56,8 +55,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       currentApprovalTier: routingDecision.determinedTier,
       status: (routingDecision.isAutoApproved ? 'approved' : 'pending_approval') as any,
       approvedByUserId: routingDecision.isAutoApproved ? 'SYSTEM_AUTO_POLICY' : undefined,
-      approvedAt: routingDecision.isAutoApproved ? new Date().toISOString() : undefined,
-    };
+      approvedAt: routingDecision.isAutoApproved ? new Date().toISOString() : undefined };
 
     const saved = await store.createRequisition(finalizedReq);
     return NextResponse.json({ requisition: saved, routingDecision }, { status: 201 });

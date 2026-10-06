@@ -17,7 +17,7 @@ export const GET = requireAuth(async () => {
   }
 }, "federated:policies");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     body = await request.json();

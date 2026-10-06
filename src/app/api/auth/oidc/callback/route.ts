@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { OidcService } from '@/lib/auth/oidc-service';
 import { FederatedUserMapper } from '@/lib/auth/federated-user-mapper';
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 export async function GET(request: Request) {
+  const ip = extractIp(request);
+  const rateLimit = await checkDistributedRateLimit(`auth:oidc-callback:${ip}`, "auth");
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetMs);
+  }
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get('code');
@@ -39,7 +45,8 @@ export async function GET(request: Request) {
     const response = NextResponse.redirect(new URL('/dashboard', request.url));
     response.cookies.set('auth_token', `fed_token_${user.userId}`, { httpOnly: true, path: '/' });
     return response;
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'OIDC callback processing failed' }, { status: 400 });
+  } catch (err: unknown) {
+    console.error("[OIDC Callback Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "OIDC callback processing failed" }, { status: 400 });
   }
 }

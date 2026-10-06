@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { defaultTriggerEngine, TriggerRuleDefinition } from "../../../../../lib/triggers/trigger-evaluation-engine";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     const text = await request.text();

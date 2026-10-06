@@ -1,12 +1,13 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeTelemetryManager } from '@/lib/operations/finance/telemetry/fee-metrics';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = searchParams.get('institutionId') || user?.institutionId || 'global';
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
   const telemetryManager = FeeTelemetryManager.getInstance();
   const responseStream = new TransformStream();

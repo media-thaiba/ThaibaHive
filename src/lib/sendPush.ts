@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { db } from "@/db";
 import { staffDeviceTokens } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
@@ -22,7 +23,7 @@ function maskToken(token: string): string {
  */
 export async function pruneDeadDeviceToken(token: string): Promise<void> {
   try {
-    console.log(`[PushDispatcher] Pruning dead FCM token: ${maskToken(token)}`);
+    logger.info(`[PushDispatcher] Pruning dead FCM token: ${maskToken(token)}`);
     await db.delete(staffDeviceTokens).where(eq(staffDeviceTokens.token, token));
   } catch (error) {
     console.error(`[PushDispatcher] Error pruning dead token ${maskToken(token)}:`, error);
@@ -54,7 +55,7 @@ export async function sendPushNotificationToStaff(
     for (const device of devices) {
       try {
         // FCM HTTP v1 / legacy relay placeholder logic
-        console.log(`[PushDispatcher] Sending push to ${device.platform} token ${maskToken(device.token)}:`, payload.title);
+        logger.info(`[PushDispatcher] Sending push to ${device.platform} token ${maskToken(device.token)}:`, payload.title);
         successCount++;
       } catch (err: unknown) {
         failureCount++;

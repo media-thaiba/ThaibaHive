@@ -24,7 +24,7 @@ edgeEngine.loadModel({
   biases: [-2.5],
 });
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = afedInferencePredictSchema.safeParse(body);

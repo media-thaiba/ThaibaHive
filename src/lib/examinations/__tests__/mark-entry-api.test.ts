@@ -10,6 +10,10 @@ jest.mock("@thaiba/auth", () => {
       role: "staff",
       institutionId: "inst_campus_main",
     }),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_campus_main"),
+    getUserInstitutionScope: jest.fn().mockResolvedValue("inst_campus_main"),
+    resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_campus_main"),
+    getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_campus_main"]),
     hasPermission: jest.fn(() => true),
   };
 });

@@ -5,7 +5,7 @@ import { HumanApprovalController } from '@/lib/operations/marl/human-approval-co
 import { marlOverrideSchema } from '@/lib/validation/aims-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const parsed = marlOverrideSchema.safeParse(body);
 

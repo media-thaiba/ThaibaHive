@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { federatedPolicySchema } from "@/lib/validation/schemas";
 import { PolicySyncEngine } from "@/lib/federated/policy-sync-engine";
 
 const defaultPolicySyncEngine = new PolicySyncEngine();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const resolved = await resolveRequestInstitution(session, searchParams.get("tenantId") || searchParams.get("institutionId"));
+  const tenantId = resolved === "global" ? undefined : resolved;
 
     const policies = defaultPolicySyncEngine.getAllPolicies(tenantId);
     return NextResponse.json({ policies }, { status: 200 });
@@ -20,7 +21,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "federated:policies");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     body = await request.json();

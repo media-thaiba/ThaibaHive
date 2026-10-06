@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { DLQRetryHandler, DLQJobStatus } from "@/lib/resilience/dlq-retry-handler";
 
 const globalDLQHandler = new DLQRetryHandler();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const resolved = await resolveRequestInstitution(session, searchParams.get("tenantId"));
+    const tenantId = resolved === "global" ? undefined : resolved;
     const status = (searchParams.get("status") as DLQJobStatus) || undefined;
 
     const jobs = globalDLQHandler.getJobs(tenantId, status);
@@ -20,7 +21,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "resilience:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: any = {};
   try {
     body = await request.json();

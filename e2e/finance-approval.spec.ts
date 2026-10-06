@@ -5,14 +5,14 @@ test.describe("Finance Multi-Stage Approval Lifecycle E2E", () => {
   test.use({ storageState: ".auth/admin.json" });
 
   test("renders finance dashboard and approval queues", async ({ page }) => {
-    await page.goto("/finance");
+    await page.goto("/operations/finance");
     await expect(page.locator("h1, h2, [data-testid='page-header'], .animate-slide-up h1").first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("Finance Approvals Engine").first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("Pending Requests").first()).toBeVisible({ timeout: 15000 });
   });
 
   test("allows switching between queue status tabs", async ({ page }) => {
-    await page.goto("/finance");
+    await page.goto("/operations/finance");
     await expect(page.locator("h1, h2, [data-testid='page-header'], .animate-slide-up h1").first()).toBeVisible({ timeout: 15000 });
     const approvedTab = page.getByRole("button", { name: "Approved History" });
     if (await approvedTab.isVisible()) {

@@ -168,7 +168,7 @@ async function runFinanceSimulation() {
     receiptNumber: 'RCPT-SIM-001',
     customerName: 'Ahmad Tariq',
   });
-  console.log(`   ✅ UPI Intent Generated: ${upiOrder.clientPayload.upiUri.substring(0, 48)}...`);
+  console.log(`   ✅ UPI Intent Generated: ${(typeof upiOrder.clientPayload.upiUri === "string" ? upiOrder.clientPayload.upiUri : "").substring(0, 48)}...`);
 
   const paymentRecord = await store.recordPayment({
     id: 'pay_sim_001',

@@ -1,4 +1,4 @@
-import { proxy as middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 jest.mock("next/server", () => {
   class MockNextResponse {
@@ -92,9 +92,10 @@ jest.mock("next/server", () => {
 });
 
 import { SignJWT } from "jose";
+import { getJwtSecretBytes } from "@thaiba/auth";
 
 async function createMediaTestToken() {
-  const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_for_thaibahive_auth");
+  const secret = getJwtSecretBytes("session");
   return new SignJWT({ staffId: "test-staff", role: "admin", email: "test@example.com" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -109,20 +110,20 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
       "http://localhost:3000/api/media/assets",
       { cookies: { thaibahive_session: token } }
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
     expect(res.headers.get("X-XSS-Protection")).toBe("1; mode=block");
     expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
-    expect(res.headers.get("Cache-Control")).toBe("no-store, no-cache, must-revalidate");
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store, no-cache, must-revalidate");
   });
 
   it("should redirect unauthenticated requests to login for shell media routes", async () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/media-library"
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/login");
@@ -132,7 +133,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/assets"
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).toBe(401);
   });
@@ -141,7 +142,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
     const req = new (require("next/server").NextRequest)(
       "http://localhost:3000/api/media/share-links/public-token-123"
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(307);
@@ -157,7 +158,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
         headers: { "content-length": String(60 * 1024 * 1024), "content-type": "application/json" }, // 60MB
       }
     );
-    const res = await middleware(req as any);
+    const res = await proxy(req as any);
 
     expect(res.status).toBe(413);
   });

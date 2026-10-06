@@ -6,6 +6,10 @@ jest.mock("@thaiba/auth", () => ({
   ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
   hasPermission: jest.fn().mockReturnValue(true),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_alpha"),
+  getUserInstitutionScope: jest.fn().mockResolvedValue("inst_alpha"),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_alpha"),
+  getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_alpha"]),
 }));
 
 function createMockRequest(url: string, method: string = "GET", body?: any): Request {

@@ -1,1 +1,1 @@
-ALTER TABLE "app_default_roles" ALTER COLUMN "permissions" SET DATA TYPE jsonb;
+ALTER TABLE "app_default_roles" ALTER COLUMN "permissions" SET DATA TYPE jsonb USING CASE WHEN "permissions" IS NULL OR "permissions" = '' THEN '[]'::jsonb ELSE "permissions"::jsonb END;

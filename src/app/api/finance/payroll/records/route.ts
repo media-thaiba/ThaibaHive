@@ -25,9 +25,11 @@ export const GET = requireAuth(async (request: Request, session: any) => {
       .orderBy(desc(payrollRecords.createdAt));
 
     return NextResponse.json({ records });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to fetch payroll records" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Payroll Records Fetch Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to fetch payroll records" }, { status });
   }
 }, "finance:payroll:view");
 
@@ -54,7 +56,8 @@ export const PATCH = requireAuth(async (request: Request, session: any) => {
     );
 
     return NextResponse.json({ record: updated });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to update payroll status" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Payroll Records Update Error]:", error instanceof Error ? error.stack : error);
+    return NextResponse.json({ error: "Failed to update payroll status" }, { status: 500 });
   }
 }, "finance:payroll:manage");

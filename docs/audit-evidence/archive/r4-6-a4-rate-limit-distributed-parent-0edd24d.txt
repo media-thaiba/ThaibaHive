@@ -1,0 +1,163 @@
+﻿pnpm.exe : FAIL src/lib/__tests__/rate-limit-distributed.test.ts
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL src/lib/__...ributed.test.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5)
+    Production Environment Enforcement
+      ├ù should strictly enforce rate limiting in production even when PLAYWRIGHT_TEST=true (5 ms)
+      ├ù should strictly enforce rate limiting in production even when CI=true (1 ms)
+    Trusted Proxy IP Extraction
+      ├ù should prioritize Cloudflare CF-Connecting-IP when TRUST_CF_CONNECTING_IP is enabled (2 ms)
+      ├ù should ignore untrusted CF-Connecting-IP and fall back to X-Real-IP when TRUST_CF_CONNECTING_IP is not 
+enabled (1 ms)
+      ├ù should prioritize Vercel Edge header x-vercel-forwarded-for over client-supplied headers (1 ms)
+      ├ù should extract authentic rightmost client IP from X-Forwarded-For when attacker prepends spoofed IP (1 ms)
+      ΓêÜ should extract single IP from X-Forwarded-For (1 ms)
+      ΓêÜ should fallback to unknown when no IP headers exist (1 ms)
+    Redis Fallback Security Alert
+      ├ù logs a HIGH severity warning when Redis client is disconnected and fallback activates (4 ms)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Production Environment Enforcement ΓÇ║ 
+should strictly enforce rate limiting in production even when PLAYWRIGHT_TEST=true
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+    [0m [90m 28 |[39m
+     [90m 29 |[39m       [36mconst[39m r3 [33m=[39m [36mawait[39m checkDistributedRateLimit(key[33m,[39m 
+config)[33m;[39m
+    [31m[1m>[22m[39m[90m 30 |[39m       expect(r3[33m.[39mallowed)[33m.[39mtoBe([36mfalse[39m)[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 31 |[39m       expect(r3[33m.[39mremaining)[33m.[39mtoBe([35m0[39m)[33m;[39m
+     [90m 32 |[39m     })[33m;[39m
+     [90m 33 |[39m[0m
+
+      at Object.toBe (src/lib/__tests__/rate-limit-distributed.test.ts:30:26)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Production Environment Enforcement ΓÇ║ 
+should strictly enforce rate limiting in production even when CI=true
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+    [0m [90m 43 |[39m
+     [90m 44 |[39m       [36mconst[39m r2 [33m=[39m checkRateLimit(key[33m,[39m config)[33m;[39m
+    [31m[1m>[22m[39m[90m 45 |[39m       expect(r2[33m.[39mallowed)[33m.[39mtoBe([36mfalse[39m)[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 46 |[39m     })[33m;[39m
+     [90m 47 |[39m   })[33m;[39m
+     [90m 48 |[39m[0m
+
+      at Object.toBe (src/lib/__tests__/rate-limit-distributed.test.ts:45:26)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Trusted Proxy IP Extraction ΓÇ║ should 
+prioritize Cloudflare CF-Connecting-IP when TRUST_CF_CONNECTING_IP is enabled
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "203.0.113.195"
+    Received: "192.0.2.1"
+
+    [0m [90m 58 |[39m       })[33m;[39m
+     [90m 59 |[39m
+    [31m[1m>[22m[39m[90m 60 |[39m       
+expect(extractIp(req))[33m.[39mtoBe([32m"203.0.113.195"[39m)[33m;[39m
+     [90m    |[39m                              [31m[1m^[22m[39m
+     [90m 61 |[39m     })[33m;[39m
+     [90m 62 |[39m
+     [90m 63 |[39m     it([32m"should ignore untrusted CF-Connecting-IP and fall back to X-Real-IP when 
+TRUST_CF_CONNECTING_IP is not enabled"[39m[33m,[39m () [33m=>[39m {[0m
+
+      at Object.toBe (src/lib/__tests__/rate-limit-distributed.test.ts:60:30)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Trusted Proxy IP Extraction ΓÇ║ should 
+ignore untrusted CF-Connecting-IP and fall back to X-Real-IP when TRUST_CF_CONNECTING_IP is not enabled
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198.51.100.22"
+    Received: "192.0.2.1"
+
+    [0m [90m 71 |[39m       })[33m;[39m
+     [90m 72 |[39m
+    [31m[1m>[22m[39m[90m 73 |[39m       
+expect(extractIp(req))[33m.[39mtoBe([32m"198.51.100.22"[39m)[33m;[39m
+     [90m    |[39m                              [31m[1m^[22m[39m
+     [90m 74 |[39m     })[33m;[39m
+     [90m 75 |[39m
+     [90m 76 |[39m     it([32m"should prioritize Vercel Edge header x-vercel-forwarded-for over client-supplied 
+headers"[39m[33m,[39m () [33m=>[39m {[0m
+
+      at Object.toBe (src/lib/__tests__/rate-limit-distributed.test.ts:73:30)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Trusted Proxy IP Extraction ΓÇ║ should 
+prioritize Vercel Edge header x-vercel-forwarded-for over client-supplied headers
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "203.0.113.50"
+    Received: "attacker-ip-2"
+
+    [0m [90m 83 |[39m       })[33m;[39m
+     [90m 84 |[39m
+    [31m[1m>[22m[39m[90m 85 |[39m       
+expect(extractIp(req))[33m.[39mtoBe([32m"203.0.113.50"[39m)[33m;[39m
+     [90m    |[39m                              [31m[1m^[22m[39m
+     [90m 86 |[39m     })[33m;[39m
+     [90m 87 |[39m
+     [90m 88 |[39m     it([32m"should extract authentic rightmost client IP from X-Forwarded-For when attacker 
+prepends spoofed IP"[39m[33m,[39m () [33m=>[39m {[0m
+
+      at Object.toBe (src/lib/__tests__/rate-limit-distributed.test.ts:85:30)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Trusted Proxy IP Extraction ΓÇ║ should 
+extract authentic rightmost client IP from X-Forwarded-For when attacker prepends spoofed IP
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "203.0.113.55"
+    Received: "198.51.100.99"
+
+    [0m [90m 94 |[39m       })[33m;[39m
+     [90m 95 |[39m
+    [31m[1m>[22m[39m[90m 96 |[39m       
+expect(extractIp(req))[33m.[39mtoBe([32m"203.0.113.55"[39m)[33m;[39m
+     [90m    |[39m                              [31m[1m^[22m[39m
+     [90m 97 |[39m     })[33m;[39m
+     [90m 98 |[39m
+     [90m 99 |[39m     it([32m"should extract single IP from X-Forwarded-For"[39m[33m,[39m () [33m=>[39m {[0m
+
+      at Object.toBe (src/lib/__tests__/rate-limit-distributed.test.ts:96:30)
+
+  ΓùÅ Distributed Rate Limiting & Proxy IP Hardening (Task A4 / Blocker B5) ΓÇ║ Redis Fallback Security Alert ΓÇ║ logs 
+a HIGH severity warning when Redis client is disconnected and fallback activates
+
+    expect(jest.fn()).toHaveBeenCalled()
+
+    Expected number of calls: >= 1
+    Received number of calls:    0
+
+    [0m [90m 123 |[39m       expect(limiter[33m.[39misUsingFallback())[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m 124 |[39m
+    [31m[1m>[22m[39m[90m 125 |[39m       expect(warnSpy)[33m.[39mtoHaveBeenCalled()[33m;[39m
+     [90m     |[39m                       [31m[1m^[22m[39m
+     [90m 126 |[39m       [36mconst[39m logged [33m=[39m 
+[33mJSON[39m[33m.[39mparse(warnSpy[33m.[39mmock[33m.[39mcalls[[35m0[39m][[35m0[39m])[33m;[39m
+     [90m 127 |[39m       
+expect(logged[33m.[39mevent)[33m.[39mtoBe([32m"rate_limit_redis_fallback_activated"[39m)[33m;[39m
+     [90m 128 |[39m       expect(logged[33m.[39mseverity)[33m.[39mtoBe([32m"HIGH"[39m)[33m;[39m[0m
+
+      at Object.toHaveBeenCalled (src/lib/__tests__/rate-limit-distributed.test.ts:125:23)
+
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 2 passed, 9 total
+Snapshots:   0 total
+Time:        1.068 s
+Ran all test suites matching src/lib/__tests__/rate-limit-distributed.test.ts.

@@ -1,0 +1,35 @@
+﻿  console.log
+    [@thaiba/db] Initializing database in SQLite/LibSQL mode
+
+      at Object.log (packages/db/index.ts:62:11)
+
+pnpm.exe : FAIL src/lib/__tests__/authz-matrix/route-authz-matrix.test.ts
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL src/lib/__...-matrix.test.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  ΓùÅ Test suite failed to run
+
+    Cannot find module '../../test-helpers/route-matrix' from 
+'src/lib/__tests__/authz-matrix/route-authz-matrix.test.ts'
+
+    [0m [90m 29 |[39m [36mimport[39m { [33mVALID_STAFF_ROLES[39m } [36mfrom[39m 
+[32m"@thaiba/auth/roles"[39m[33m;[39m
+     [90m 30 |[39m [36mimport[39m {
+    [31m[1m>[22m[39m[90m 31 |[39m   buildManifest[33m,[39m
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 32 |[39m   entryKey[33m,[39m
+     [90m 33 |[39m   loadRouteModule[33m,[39m
+     [90m 34 |[39m   type [33mRouteHandlerEntry[39m[33m,[39m[0m
+
+      at Resolver._throwModNotFoundError 
+(node_modules/.pnpm/jest-resolve@30.4.1/node_modules/jest-resolve/build/index.js:895:11)
+      at Object.<anonymous> (src/lib/__tests__/authz-matrix/route-authz-matrix.test.ts:31:22)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        1.709 s
+Ran all test suites matching src/lib/__tests__/authz-matrix/route-authz-matrix.test.ts.

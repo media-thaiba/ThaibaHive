@@ -3,27 +3,9 @@ import { jwtVerify } from "jose";
 import { db } from "@/db";
 import { staff, usedNonces } from "@/db/schema";
 import { createSession } from "@/lib/auth";
-import { authConfig } from "@/lib/auth/config";
+import { getJwtSecretBytes } from "@thaiba/auth";
+import { checkDistributedRateLimit, extractIp } from "@/lib/api/rate-limit";
 import { eq } from "drizzle-orm";
-
-const secret = new TextEncoder().encode(authConfig.jwtSecret);
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 5;
-
-function checkRateLimit(ip: string): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
 
 function redirectWithError(code: string, message: string) {
   const url = `/auth/error?code=${encodeURIComponent(code)}&message=${encodeURIComponent(message)}`;
@@ -32,11 +14,9 @@ function redirectWithError(code: string, message: string) {
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      || request.headers.get("x-real-ip")
-      || "unknown";
-
-    if (!checkRateLimit(ip)) {
+    const ip = extractIp(request);
+    const rl = await checkDistributedRateLimit(ip, "auth");
+    if (!rl.allowed) {
       return redirectWithError("rate_limited", "Too many requests. Please try again later.");
     }
 
@@ -49,7 +29,7 @@ export async function POST(request: Request) {
 
     let payload;
     try {
-      const result = await jwtVerify(nonce, secret, {
+      const result = await jwtVerify(nonce, getJwtSecretBytes("session"), {
         algorithms: ["HS256"],
       });
       payload = result.payload as Record<string, unknown>;

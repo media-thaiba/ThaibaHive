@@ -24,7 +24,7 @@ test.describe("Multi-Stage Approval Flows", () => {
 
     test("staff can apply for leave, HOD can approve, admin can final approve", async ({ page, browser }) => {
       // 1. Staff applies for leave
-      await page.goto("/leaves");
+      await page.goto("/my-work/leaves");
       const applyBtn = page.locator("button:has-text('Apply Leave')").first();
       await applyBtn.click();
 
@@ -44,7 +44,7 @@ test.describe("Multi-Stage Approval Flows", () => {
       const hodContext = await browser.newContext({ storageState: ".auth/hod.json" });
       const hodPage = await hodContext.newPage();
       try {
-        await hodPage.goto("/approvals");
+        await hodPage.goto("/my-work/approvals");
         
         // Find the leave request and approve
         const leaveApproval = hodPage.locator("text=E2E Leave Approval Test").first();
@@ -68,7 +68,7 @@ test.describe("Multi-Stage Approval Flows", () => {
       const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
       const adminPage = await adminContext.newPage();
       try {
-        await adminPage.goto("/approvals");
+        await adminPage.goto("/my-work/approvals");
         
         // Find the leave request and final approve
         const adminApproval = adminPage.locator("text=E2E Leave Approval Test").first();
@@ -100,7 +100,7 @@ test.describe("Multi-Stage Approval Flows", () => {
 
     test("staff can submit expense claim, admin can approve", async ({ page, browser }) => {
       // 1. Staff submits expense claim
-      await page.goto("/expenses");
+      await page.goto("/my-work/expenses");
       
       // Click Submit Claim button
       const addExpenseBtn = page.locator("button:has-text('Submit Claim')").first();
@@ -124,7 +124,7 @@ test.describe("Multi-Stage Approval Flows", () => {
       const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
       const adminPage = await adminContext.newPage();
       try {
-        await adminPage.goto("/approvals");
+        await adminPage.goto("/my-work/approvals");
         
         // Find the expense claim and approve
         const expenseApproval = adminPage.locator("text=E2E Expense Approval Test").first();
@@ -158,7 +158,7 @@ test.describe("Multi-Stage Approval Flows", () => {
       // Extend timeout for multi-stage approval (HOD + Accounts + Purchase = 3 DB writes)
       test.setTimeout(120000);
       // 1. Staff submits purchase request
-      await page.goto("/purchases");
+      await page.goto("/operations/procurement");
       
       // Click New Request button
       const newPurchaseBtn = page.locator("button:has-text('New Request')").first();
@@ -183,7 +183,7 @@ test.describe("Multi-Stage Approval Flows", () => {
       const hodContext = await browser.newContext({ storageState: ".auth/hod.json" });
       const hodPage = await hodContext.newPage();
       try {
-        await hodPage.goto("/approvals", { waitUntil: "domcontentloaded" });
+        await hodPage.goto("/my-work/approvals", { waitUntil: "domcontentloaded" });
 
         // Find the purchase request and approve
         const hodApproval = hodPage.locator("text=E2E Purchase Approval Test").first();
@@ -208,7 +208,7 @@ test.describe("Multi-Stage Approval Flows", () => {
       const adminContext = await browser.newContext({ storageState: ".auth/admin.json" });
       const adminPage = await adminContext.newPage();
       try {
-        await adminPage.goto("/approvals", { waitUntil: "domcontentloaded" });
+        await adminPage.goto("/my-work/approvals", { waitUntil: "domcontentloaded" });
 
         // Find the purchase request (now in accounts-approval stage)
         const accountsApproval = adminPage.locator("text=E2E Purchase Approval Test").first();
@@ -226,7 +226,7 @@ test.describe("Multi-Stage Approval Flows", () => {
         // Wait for dialog to close — confirms the accounts approval DB write committed
         await expect(accountsDialogBtn).not.toBeAttached({ timeout: 10000 });
         // Navigate to final approval stage
-        await adminPage.goto("/approvals", { waitUntil: "domcontentloaded" });
+        await adminPage.goto("/my-work/approvals", { waitUntil: "domcontentloaded" });
 
         // 4. Final approval (purchase-approved stage)
         const purchaseApproval = adminPage.locator("text=E2E Purchase Approval Test").first();

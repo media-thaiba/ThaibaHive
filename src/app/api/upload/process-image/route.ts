@@ -21,9 +21,8 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB input limit
 
 async function getSharp() {
   try {
-     
-    // @ts-expect-error sharp is optional — install with: pnpm add sharp
-    const sharp = await import("sharp");
+    const sharpModule = "sharp";
+    const sharp = await import(sharpModule);
     return sharp.default as (input: Buffer) => {
       resize: (w: number, h: number, opts?: object) => ReturnType<typeof _getSharpInstance>;
       webp: (opts?: object) => ReturnType<typeof _getSharpInstance>;
@@ -37,7 +36,7 @@ async function getSharp() {
 
 function _getSharpInstance(): any { return null; }
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("multipart/form-data")) {
     return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });

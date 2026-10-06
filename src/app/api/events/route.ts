@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { events, eventRsvps, staff, staffDepartments, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eventCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, inArray, sql } from "drizzle-orm";
@@ -128,6 +128,9 @@ export const GET = requireAuth(async (request, session) => {
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const parsed = eventCreateSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }

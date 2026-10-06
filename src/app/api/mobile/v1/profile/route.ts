@@ -16,7 +16,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     });
 
     const response = NextResponse.json({ success: true, profile });
-    response.headers.set("Cache-Control", "private, max-age=60");
+    response.headers.set("Cache-Control", "private, no-store");
     return response;
   } catch (error) {
     console.error("Mobile profile API error:", error);

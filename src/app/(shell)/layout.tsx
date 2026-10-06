@@ -2,6 +2,7 @@
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/query-provider";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { ShellNav } from "@/components/layout/shell-nav";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -33,40 +34,42 @@ export default function ShellLayout({
   return (
     <QueryProvider>
       <AuthProvider>
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
-        <div className="flex min-h-screen flex-col" data-hydrated={isHydrated}>
-          <header role="banner" className="sticky top-0 z-[var(--z-sticky)] border-b bg-card/80 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
-            <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
-              <ErrorBoundary>
-                <ShellNav onSearchOpen={() => setCmdOpen(true)} />
-              </ErrorBoundary>
+        <WorkspaceProvider>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
+          <div className="flex min-h-screen flex-col" data-hydrated={isHydrated}>
+            <header role="banner" className="sticky top-0 z-[var(--z-sticky)] border-b bg-card/80 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
+              <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
+                <ErrorBoundary>
+                  <ShellNav onSearchOpen={() => setCmdOpen(true)} />
+                </ErrorBoundary>
+              </div>
+            </header>
+            <div className="flex flex-1">
+              <nav role="navigation" aria-label="Main navigation" className="hidden lg:block">
+                <ErrorBoundary>
+                  <SidebarNav onSearchOpen={() => setCmdOpen(true)} />
+                </ErrorBoundary>
+              </nav>
+              <main id="main-content" role="main" className="flex-1 pb-20 lg:pb-0" tabIndex={-1}>
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
+              </main>
             </div>
-          </header>
-          <div className="flex flex-1">
-            <nav role="navigation" aria-label="Main navigation" className="hidden lg:block">
+            <nav role="navigation" aria-label="Mobile navigation" className="lg:hidden">
               <ErrorBoundary>
-                <SidebarNav onSearchOpen={() => setCmdOpen(true)} />
+                <BottomNav />
               </ErrorBoundary>
             </nav>
-            <main id="main-content" role="main" className="flex-1 pb-20 lg:pb-0" tabIndex={-1}>
-              <ErrorBoundary>
-                {children}
-              </ErrorBoundary>
-            </main>
+            <DiagnosticsButton />
+            <Toaster position="top-right" richColors />
+            <Suspense fallback={<CommandPaletteFallback />}>
+              <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+            </Suspense>
           </div>
-          <nav role="navigation" aria-label="Mobile navigation" className="lg:hidden">
-            <ErrorBoundary>
-              <BottomNav />
-            </ErrorBoundary>
-          </nav>
-          <DiagnosticsButton />
-          <Toaster position="top-right" richColors />
-          <Suspense fallback={<CommandPaletteFallback />}>
-            <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
-          </Suspense>
-        </div>
+        </WorkspaceProvider>
       </AuthProvider>
     </QueryProvider>
   );

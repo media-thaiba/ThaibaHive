@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { expenseClaims, staff, staffDepartments, departments, financialTransactions } from "@/db/schema";
+import { expenseClaims, staff, staffDepartments, departments, financialTransactions, staffInstitutions, institutions } from "@/db/schema";
 import { PATCH } from "@/app/api/expense-claims/[id]/route";
 import { POST } from "@/app/api/expense-claims/route";
 import { verifySession, hasPermission } from "@thaiba/auth";
@@ -21,9 +21,17 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
   const financeId = `finance-approver-${timestamp}`;
   const deptId = `dept-expense-${timestamp}`;
   const claimId = `claim-exp-${timestamp}`;
+  const instId = `inst_campus_main_${timestamp}`;
 
   beforeAll(async () => {
-    // 1. Insert staff records first
+    // 1. Insert institution first
+    await db.insert(institutions).values({
+      id: instId,
+      name: `Campus Main ${timestamp}`,
+      code: `CAMPUS_${timestamp.toString().slice(-4)}`,
+    }).run();
+
+    // 2. Insert staff records first
     await db.insert(staff).values({
       id: staffId,
       email: `claimant-${timestamp}@thaibahive.local`,
@@ -70,17 +78,39 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: hodId,
       departmentId: deptId,
     }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-c-${timestamp}`,
+      staffId: staffId,
+      institutionId: instId,
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-h-${timestamp}`,
+      staffId: hodId,
+      institutionId: instId,
+    }).run();
+
+    await db.insert(staffInstitutions).values({
+      id: `si-f-${timestamp}`,
+      staffId: financeId,
+      institutionId: instId,
+    }).run();
   });
 
   afterAll(async () => {
     try {
       await db.delete(financialTransactions).where(eq(financialTransactions.notes, `Ref: EXP-${claimId.substring(0, 8)}`)).run();
       await db.delete(expenseClaims).where(eq(expenseClaims.id, claimId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, staffId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, hodId)).run();
+      await db.delete(staffInstitutions).where(eq(staffInstitutions.staffId, financeId)).run();
       await db.delete(staffDepartments).where(eq(staffDepartments.departmentId, deptId)).run();
       await db.delete(staff).where(eq(staff.id, staffId)).run();
       await db.delete(staff).where(eq(staff.id, hodId)).run();
       await db.delete(staff).where(eq(staff.id, financeId)).run();
       await db.delete(departments).where(eq(departments.id, deptId)).run();
+      await db.delete(institutions).where(eq(institutions.id, instId)).run();
     } catch {
       // Ignore cleanup locks
     }
@@ -91,6 +121,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId,
       role: "staff",
       email: `claimant-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     await db.insert(expenseClaims).values({
@@ -111,8 +142,9 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
   it("should prevent claimant from self-approving their own claim", async () => {
     (verifySession as jest.Mock).mockResolvedValue({
       staffId,
-      role: "hod", // Even if claimant has hod role
+      role: "hod",
       email: `claimant-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {
@@ -134,6 +166,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: hodId,
       role: "hod",
       email: `hod-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {
@@ -156,6 +189,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: financeId,
       role: "accounts",
       email: `finance-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {
@@ -178,6 +212,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
       staffId: financeId,
       role: "accounts",
       email: `finance-${timestamp}@thaibahive.local`,
+      institutionId: instId,
     });
 
     const request = new Request(`http://localhost:3000/api/expense-claims/${claimId}`, {

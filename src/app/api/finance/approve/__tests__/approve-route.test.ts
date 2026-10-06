@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { expenseClaims, purchaseRequests, staff, departments, staffDepartments } from "@/db/schema";
+import { expenseClaims, purchaseRequests, staff, departments, staffDepartments, staffInstitutions, institutions } from "@/db/schema";
 import { POST } from "../route";
 import { eq } from "drizzle-orm";
 
@@ -22,6 +22,16 @@ describe("POST /api/finance/approve Route Integration", () => {
   const purchaseReqId = `pr-test-${timestamp}`;
 
   beforeAll(async () => {
+    // Ensure test institution exists
+    const existingInst = await db.select().from(institutions).where(eq(institutions.id, "inst_alpha")).get();
+    if (!existingInst) {
+      await db.insert(institutions).values({
+        id: "inst_alpha",
+        name: "Alpha Institute",
+        code: `INST_ALPHA_${timestamp}`,
+      }).run();
+    }
+
     // Seed staff records
     await db.insert(staff).values([
       {
@@ -58,6 +68,14 @@ describe("POST /api/finance/approve Route Integration", () => {
       },
     ]).run();
 
+    // Map staff to default institution
+    await db.insert(staffInstitutions).values([
+      { id: `si_${timestamp}_1`, staffId: requesterId, institutionId: "inst_alpha" },
+      { id: `si_${timestamp}_2`, staffId: hodId, institutionId: "inst_alpha" },
+      { id: `si_${timestamp}_3`, staffId: accountsId, institutionId: "inst_alpha" },
+      { id: `si_${timestamp}_4`, staffId: purchaseId, institutionId: "inst_alpha" },
+    ]).run();
+
     // Seed test expense claim in pending_accounts
     await db.insert(expenseClaims).values({
       id: expenseId,
@@ -83,6 +101,7 @@ describe("POST /api/finance/approve Route Integration", () => {
   afterAll(async () => {
     await db.delete(expenseClaims).where(eq(expenseClaims.id, expenseId)).run();
     await db.delete(purchaseRequests).where(eq(purchaseRequests.id, purchaseReqId)).run();
+    await db.delete(staffInstitutions).where(eq(staffInstitutions.institutionId, "inst_alpha")).run();
     await db.delete(staff).where(eq(staff.id, requesterId)).run();
     await db.delete(staff).where(eq(staff.id, hodId)).run();
     await db.delete(staff).where(eq(staff.id, accountsId)).run();

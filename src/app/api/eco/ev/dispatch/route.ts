@@ -5,7 +5,7 @@ import { evFleetDispatchSchema } from '@/lib/validation/eco-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = evFleetDispatchSchema.safeParse(body);

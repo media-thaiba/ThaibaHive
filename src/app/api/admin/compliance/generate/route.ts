@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/require-auth';
+import { requireAuth, resolveRequestInstitution } from '@/lib/api/auth-guard';
 import { z } from 'zod';
 import { ComplianceRuleEngine } from '@/lib/compliance/compliance-rule-engine';
 import { ComplianceReportGenerator } from '@/lib/compliance/compliance-report-generator';
@@ -13,7 +13,7 @@ const schema = z.object({
   format: z.enum(['json', 'markdown']).default('json'),
 });
 
-async function handler(req: Request, _session: SessionPayload) {
+async function handler(req: Request, session: SessionPayload) {
   try {
     const body = await req.json().catch(() => null);
     if (!body) {
@@ -25,7 +25,8 @@ async function handler(req: Request, _session: SessionPayload) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { institutionId, frameworks, format } = parsed.data;
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
+    const { frameworks, format } = parsed.data;
 
     const engine = new ComplianceRuleEngine();
     const result = await engine.evaluateInstitution(institutionId, frameworks);
@@ -39,7 +40,8 @@ async function handler(req: Request, _session: SessionPayload) {
       frameworksEvaluated: result.frameworksEvaluated,
       ...report,
     });
-  } catch {
+  } catch (error: any) {
+    if (error?.name === "TenantMismatchError") throw error;
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

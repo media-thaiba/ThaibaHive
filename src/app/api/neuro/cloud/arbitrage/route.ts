@@ -6,7 +6,7 @@ import { arbitrageEvaluateSchema } from '@/lib/validation/neuro-schemas';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request) => {
+export const GET = requireAuth(async (req: Request, _session) => {
   const { searchParams } = new URL(req.url);
   const gpuModel = searchParams.get('gpuModel') || 'NVIDIA-H100';
 

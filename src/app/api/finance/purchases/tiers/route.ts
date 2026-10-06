@@ -4,20 +4,22 @@ import { purchaseApprovalTierCreateSchema } from "@/lib/validation/schemas";
 import { purchaseApprovalEngine } from "@/lib/finance/purchases/purchase-approval-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const { searchParams } = new URL(request.url);
     const institutionId = await resolveScopedInstitutionId(searchParams.get("institutionId"));
 
     const tiers = await purchaseApprovalEngine.getTiers(institutionId);
     return NextResponse.json({ tiers });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to fetch purchase tiers" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Purchase Tiers Fetch Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to fetch purchase tiers" }, { status });
   }
 }, "finance:purchases:create");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parsed = purchaseApprovalTierCreateSchema.safeParse(body);
@@ -28,8 +30,10 @@ export const POST = requireAuth(async (request: Request) => {
     const institutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
     const tier = await purchaseApprovalEngine.createTier({ ...parsed.data, institutionId });
     return NextResponse.json({ tier }, { status: 201 });
-  } catch (error: any) {
-    const status = error.message?.includes("scope mismatch") ? 403 : 500;
-    return NextResponse.json({ error: error.message || "Failed to create purchase tier" }, { status });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Purchase Tiers Create Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to create purchase tier" }, { status });
   }
 }, "finance:purchases:approve:final");

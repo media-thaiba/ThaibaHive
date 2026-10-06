@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { hallTickets } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const { qrPayload } = body;

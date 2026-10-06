@@ -5,6 +5,15 @@ import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
 import { EventBus } from "../observability/event-bus";
 import { LegacyTokenDeprecationEngine } from "../identity/legacy-token-deprecation";
+import crypto from "crypto";
+
+function timingSafeSecretMatch(provided: string | null, expected: string | undefined): boolean {
+  if (!provided || !expected) return false;
+  const bufA = Buffer.from(provided, "utf-8");
+  const bufB = Buffer.from(expected, "utf-8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 type HandlerWithSession = (
   request: Request,
@@ -16,7 +25,11 @@ export function requireAuth(
   handler: HandlerWithSession,
   requiredPermission?: string
 ) {
-  return async (request: Request, context?: any) => {
+  return async (
+    request: Request,
+    ...rest: unknown[]
+  ) => {
+    const context = rest[0] as { params: Promise<Record<string, string>> } | undefined;
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const urlObj = new URL(request.url);
     const normalizedPath = normalizeRoutePath(urlObj.pathname);
@@ -58,11 +71,19 @@ export function requireAuth(
       const isCachePathAllowed = normalizedPath.startsWith("/api/system/cache") || normalizedPath.startsWith("/api/cache");
 
       if (
-        (process.env.DR_DRILL_SECRET && drSecret === process.env.DR_DRILL_SECRET && isDrPathAllowed) ||
-        (process.env.CACHE_SYNC_SECRET && cacheSecret === process.env.CACHE_SYNC_SECRET && isCachePathAllowed) ||
-        (process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET && isCronPathAllowed)
+        (timingSafeSecretMatch(drSecret, process.env.DR_DRILL_SECRET) && isDrPathAllowed) ||
+        (timingSafeSecretMatch(cacheSecret, process.env.CACHE_SYNC_SECRET) && isCachePathAllowed) ||
+        (timingSafeSecretMatch(cronSecret, process.env.CRON_SECRET) && isCronPathAllowed)
       ) {
-        session = { staffId: "system", role: "system", email: "system@internal", institutionId: "global" } as any;
+        session = {
+          staffId: "system",
+          role: "system",
+          email: "system@internal",
+          employeeId: "system",
+          name: "System",
+          tokenVersion: 1,
+          institutionId: "global",
+        };
       }
     }
 
@@ -91,24 +112,35 @@ export function requireAuth(
       }
     }
 
-    // Server-side tenant scope resolution: never derived from JWT claims,
-    // request params, or client body. Admins resolve to "global" (the
-    // sanctioned unscoped bypass); mapped staff resolve to their institution.
-    if (typeof session.institutionId !== "string" && typeof resolveInstitutionScopeForSession === "function") {
+    // Server-side tenant scope resolution: always verified in real-time from DB
+    // memberships, never trusted blindly from JWT claims, request params, or client body.
+    // Admins resolve to "global" (the sanctioned unscoped bypass); mapped staff resolve
+    // to their verified active institution membership.
+    if (typeof resolveInstitutionScopeForSession === "function") {
       try {
-        const scope = await resolveInstitutionScopeForSession(session);
-        session.institutionId = scope ?? "global";
-        if (!scope && session.role !== "super_admin" && session.role !== "admin") {
-          console.warn(
-            JSON.stringify({
-              event: "unmapped_institution_scope",
-              severity: "warning",
-              staffId: session.staffId,
-              role: session.role,
-              url: request.url,
-              timestamp: new Date().toISOString(),
-            })
-          );
+        const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+        const scope = await resolveInstitutionScopeForSession(session, host);
+        if (!scope) {
+          if (session.role !== "super_admin" && session.role !== "admin" && session.role !== "system") {
+            console.warn(
+              JSON.stringify({
+                event: "unmapped_institution_scope_blocked",
+                severity: "error",
+                staffId: session.staffId,
+                role: session.role,
+                url: request.url,
+                timestamp: new Date().toISOString(),
+              })
+            );
+            recordApm(403);
+            return NextResponse.json(
+              { error: "Forbidden: No institution assigned or access denied to tenant" },
+              { status: 403 }
+            );
+          }
+          session.institutionId = "global";
+        } else {
+          session.institutionId = scope;
         }
       } catch (error) {
         console.error(
@@ -148,7 +180,11 @@ export function requireAuth(
     }
 
     try {
-      const response = await handler(request, session, context);
+      const response = await handler(
+        request,
+        session,
+        context as { params: Promise<Record<string, string>> } | undefined
+      );
       recordApm(response.status || 200);
 
       // Inject RFC 8594 headers safely
@@ -160,6 +196,25 @@ export function requireAuth(
 
       return response;
     } catch (error) {
+      if (
+        (typeof error === "object" && error !== null && "name" in error && (error as { name: string }).name === "TenantMismatchError") ||
+        (error instanceof Error && (error.name === "TenantMismatchError" || error.message.startsWith("Forbidden:")))
+      ) {
+        const forbiddenMsg = error instanceof Error ? error.message : "Forbidden";
+        console.warn(
+          JSON.stringify({
+            event: "tenant_mismatch_blocked",
+            staffId: session.staffId,
+            role: session.role,
+            url: request.url,
+            error: forbiddenMsg,
+            timestamp: new Date().toISOString(),
+          })
+        );
+        recordApm(403);
+        return NextResponse.json({ error: forbiddenMsg }, { status: 403 });
+      }
+
       recordApm(500);
       const errorMsg = error instanceof Error ? error.message : String(error);
       const stack = error instanceof Error ? error.stack : undefined;
@@ -177,3 +232,6 @@ export function requireAuth(
     }
   };
 }
+
+export { resolveRequestInstitution, resolveScopedInstitutions, resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";
+

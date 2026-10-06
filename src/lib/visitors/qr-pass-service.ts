@@ -1,6 +1,15 @@
 import crypto from "crypto";
 
-const HMAC_SECRET = process.env.VISITOR_HMAC_SECRET || "thaibahive_visitor_secret_key_2026";
+function getVisitorHmacSecret(): string {
+  const secret = process.env.VISITOR_HMAC_SECRET || process.env.AUTH_JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('VISITOR_HMAC_SECRET or AUTH_JWT_SECRET must be configured in environment');
+    }
+    return 'test_visitor_hmac_secret_32_chars';
+  }
+  return secret;
+}
 
 export type VisitorQrPayload = {
   institutionId: string;
@@ -14,7 +23,7 @@ export type VisitorQrPayload = {
 
 export class VisitorQrPassService {
   static generateSignature(payloadStr: string): string {
-    return crypto.createHmac("sha256", HMAC_SECRET).update(payloadStr).digest("hex");
+    return crypto.createHmac("sha256", getVisitorHmacSecret()).update(payloadStr).digest("hex");
   }
 
   static issuePassPayload(params: {

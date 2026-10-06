@@ -5,7 +5,7 @@ test.describe("Expense Claims E2E Approval & Workflow Suite", () => {
   test.use({ storageState: ".auth/staff.json" });
 
   test("should render Expense Claims page smoke test", async ({ page }) => {
-    await page.goto("/expenses");
+    await page.goto("/my-work/expenses");
     await expect(page.locator("h1, h2, [data-testid='page-header'], .animate-slide-up h1").first()).toBeVisible({ timeout: 15000 });
     await page.screenshot({ path: "e2e/screenshots/expenses_page_smoke.png" });
   });

@@ -18,7 +18,7 @@ const trainRoundSchema = z.object({
   ),
 });
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = trainRoundSchema.safeParse(body);

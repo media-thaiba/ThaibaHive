@@ -207,7 +207,7 @@ export default function AttendanceLocationsPage() {
     const dataUrl = canvasRef.current.toDataURL("image/png");
     const w = window.open("");
     if (w) {
-      w.document.write(`<img src="${dataUrl}" style="max-width:100%" />`);
+      w.document.write(`<img src="${dataUrl}" alt="Attendance location QR code" style="max-width:100%" />`);
       w.document.close();
       w.print();
     }

@@ -63,13 +63,17 @@ android {
         }
 
         release {
-            // Fall back to debug signing when key.properties is absent.
-            // This allows `flutter run` (assembleDebug) to work without a keystore.
-            // The task below enforces key.properties for actual release assemblies.
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
             } else {
-                signingConfigs.getByName("debug")
+                val isReleaseTask = gradle.startParameter.taskNames.any {
+                    it.contains("Release", ignoreCase = true) ||
+                    it.contains("bundle", ignoreCase = true) ||
+                    it.contains("assemble", ignoreCase = true) && !it.contains("assembleDebug", ignoreCase = true)
+                }
+                if (isReleaseTask) {
+                    throw GradleException("Release build failed: key.properties is missing. Android release builds must be signed with a production release keystore.")
+                }
             }
             isMinifyEnabled = true
             isShrinkResources = true

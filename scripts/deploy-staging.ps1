@@ -43,8 +43,13 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "`n[4/4] Probing Container Health Endpoint..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
+if (-not $env:HEALTH_SECRET) {
+    Write-Error "[!] HEALTH_SECRET environment variable is required."
+    exit 1
+}
+
 try {
-    $healthSecret = if ($env:HEALTH_SECRET) { $env:HEALTH_SECRET } else { "thaibahive_health_secret_token" }
+    $healthSecret = $env:HEALTH_SECRET
     $headers = @{ "x-health-secret" = $healthSecret }
     $response = Invoke-RestMethod -Uri "http://localhost:3000/api/system/health" -Method Get -Headers $headers
     Write-Host "[+] Staging Health Probe Response: $($response | ConvertTo-Json -Compress)" -ForegroundColor Green

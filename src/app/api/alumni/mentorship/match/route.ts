@@ -1,11 +1,13 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { mentorshipMatchingEngine } from '@/lib/operations/alumni/mentorship/mentorship-matching-engine';
 
-export const POST = requireAuth(async (request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
-    const { studentId, institutionId, department, degreeProgram, targetRole, targetIndustry, desiredSkills, limit } = body;
+    const { studentId, department, degreeProgram, targetRole, targetIndustry, desiredSkills, limit } = body;
+  const institutionId = await resolveRequestInstitution(session, body.institutionId);
 
     if (!studentId || !institutionId || !department || !targetRole || !targetIndustry) {
       return NextResponse.json({ error: 'Missing required matching parameters' }, { status: 400 });

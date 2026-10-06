@@ -4,13 +4,16 @@ import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { VehicleRoutingEngine } from '@/lib/operations/fleet/vehicle-routing-engine';
 import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 import { fleetDispatchSchema } from '@/lib/validation/aims-schemas';
+import { resolveRequestInstitution } from '@thaiba/auth/institution-scope';
 
 export const GET = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const { searchParams } = new URL(req.url);
-    const campusId = searchParams.get('campusId') || undefined;
+    const rawCampusId = searchParams.get('campusId') || undefined;
+    const resolvedCampusId = await resolveRequestInstitution(session, rawCampusId);
+    const targetCampusId = resolvedCampusId === "global" ? undefined : resolvedCampusId;
     const store = AimsDbStore.getInstance();
-    const dispatches = store.getDispatches(campusId);
+    const dispatches = store.getDispatches(targetCampusId);
 
     return NextResponse.json({
       dispatches,
@@ -21,7 +24,7 @@ export const GET = withDPoP(
 );
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = fleetDispatchSchema.safeParse(body);
 
@@ -29,10 +32,12 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
+    const resolvedCampusId = await resolveRequestInstitution(session, parsed.data.campusId);
+
     const router = new VehicleRoutingEngine();
     const vehicle = {
       vehicleId: parsed.data.vehicleId,
-      campusId: parsed.data.campusId,
+      campusId: resolvedCampusId,
       vehicleType: 'SHUTTLE_BUS' as const,
       latitude: 12.971,
       longitude: 77.594,
@@ -46,7 +51,7 @@ export const POST = withDPoP(
       maxCapacity: 25,
       status: 'IDLE' as const,
       timestamp: new Date().toISOString(),
-      institutionId: 'inst_default',
+      institutionId: resolvedCampusId,
     };
 
     const stops = parsed.data.stops.map((s) => ({

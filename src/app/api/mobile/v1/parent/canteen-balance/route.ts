@@ -35,7 +35,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   });
 }, "canteen:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { studentId, dietaryFlags } = body;
 

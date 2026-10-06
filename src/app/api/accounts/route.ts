@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { financialTransactions, institutions, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { financialTransactionCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import crypto from "crypto";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const type = url.searchParams.get("type");
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
@@ -20,7 +21,7 @@ export const GET = requireAuth(async (request: Request) => {
   const offset = (page - 1) * limit;
 
   const conditions = [];
-  if (institutionId) conditions.push(eq(financialTransactions.institutionId, institutionId));
+  if (institutionId !== "global") conditions.push(eq(financialTransactions.institutionId, institutionId));
   if (type) conditions.push(eq(financialTransactions.type, type));
   if (from) conditions.push(gte(financialTransactions.transactionDate, from));
   if (to) conditions.push(lte(financialTransactions.transactionDate, to));
@@ -75,7 +76,12 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  const { institutionId, type, category, amount, description, transactionDate, notes } = parsed.data;
+  const { institutionId: bodyInst, type, category, amount, description, transactionDate, notes } = parsed.data;
+  const institutionId = await resolveRequestInstitution(session, bodyInst);
+
+  if (institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required for transaction creation" }, { status: 400 });
+  }
 
   const transaction = await db
     .insert(financialTransactions)

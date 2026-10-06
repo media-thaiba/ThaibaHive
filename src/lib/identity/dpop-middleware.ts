@@ -13,16 +13,17 @@ export interface WithDPoPOptions {
   required?: boolean;
 }
 
-type AnyHandler = (request: Request, ...args: any[]) => Promise<Response>;
-
 function injectHeadersSafely(response: Response, headersToInject: Record<string, string>): Response {
   if (!response || !response.headers) return response;
   try {
     for (const [k, v] of Object.entries(headersToInject)) {
       if (typeof response.headers.set === 'function') {
         response.headers.set(k, v);
-      } else if ((response.headers as any)[k] !== undefined) {
-        (response.headers as any)[k] = v;
+      } else {
+        const plainHeaders = response.headers as unknown as Record<string, unknown>;
+        if (plainHeaders[k] !== undefined) {
+          plainHeaders[k] = v;
+        }
       }
     }
   } catch {
@@ -31,11 +32,14 @@ function injectHeadersSafely(response: Response, headersToInject: Record<string,
   return response;
 }
 
-export function withDPoP(
-  handler: AnyHandler,
+export function withDPoP<T extends (request: Request, ...args: never[]) => Promise<Response>>(
+  handler: T,
   options: WithDPoPOptions = { required: true }
 ) {
-  return async (request: Request, ...args: any[]) => {
+  return async (
+    request: Request,
+    ...args: Parameters<T> extends [Request, ...infer R] ? R : never[]
+  ) => {
     const dpopHeader = request.headers.get('dpop');
     const authHeader = request.headers.get('authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : '';
@@ -87,7 +91,7 @@ export function withDPoP(
       if (options.required || tokenIsDPoP) {
         return NextResponse.json({ error: 'DPoP proof required' }, { status: 401 });
       }
-      const response = await handler(request, ...args);
+      const response: Response = await handler(request, ...(args as never[]));
       return injectHeadersSafely(response, deprecationHeaders);
     }
 
@@ -110,7 +114,7 @@ export function withDPoP(
       body: ['GET', 'HEAD'].includes(request.method) ? null : request.body,
     } as RequestInit & { duplex?: string });
 
-    const response = await handler(newRequest, ...args);
+    const response: Response = await handler(newRequest, ...(args as never[]));
     return injectHeadersSafely(response, deprecationHeaders);
   };
 }

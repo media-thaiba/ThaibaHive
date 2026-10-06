@@ -13,7 +13,8 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     const store = FeeDbStore.getInstance();
-    const allocation = await store.getAllocationById(parsed.data.allocationId, session.institutionId || undefined);
+    const instFilter = session.institutionId && session.institutionId !== 'global' ? session.institutionId : undefined;
+    const allocation = await store.getAllocationById(parsed.data.allocationId, instFilter);
     if (!allocation) {
       return NextResponse.json({ error: 'Fee allocation not found' }, { status: 404 });
     }
@@ -66,7 +67,8 @@ export const POST = requireAuth(async (request, session) => {
       payment,
       order,
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to initiate checkout order' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Checkout Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to initiate checkout order" }, { status: 500 });
   }
 }, 'finance:fees:view');

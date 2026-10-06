@@ -1,11 +1,12 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { alumniStore } from '@/db/alumni-store';
 import { createAlumniProfileSchema, updateAlumniProfileSchema } from '@/lib/validation/alumni-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const profileId = url.searchParams.get('id');
 
   if (profileId) {
@@ -27,6 +28,7 @@ export const POST = requireAuth(async (request, session) => {
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
     }
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
 
     const id = `alum_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const now = new Date().toISOString();
@@ -34,6 +36,7 @@ export const POST = requireAuth(async (request, session) => {
     const created = await alumniStore.createAlumniProfile({
       id,
       ...parsed.data,
+      institutionId,
       isVerified: session.role === 'super_admin' || session.role === 'admin',
       verifiedAt: session.role === 'super_admin' || session.role === 'admin' ? now : undefined,
       verifiedById: session.role === 'super_admin' || session.role === 'admin' ? session.staffId : undefined,
@@ -48,7 +51,7 @@ export const POST = requireAuth(async (request, session) => {
   }
 }, 'alumni:profile:manage');
 
-export const PATCH = requireAuth(async (request) => {
+export const PATCH = requireAuth(async (request: Request, _session) => {
   try {
     const url = new URL(request.url);
     const profileId = url.searchParams.get('id');

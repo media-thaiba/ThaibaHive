@@ -1,16 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { LatencySummaryCards } from "./_components/latency-summary-cards";
 import { EdgeCacheCard } from "./_components/edge-cache-card";
 import { CacheSyncCard } from "./_components/cache-sync-card";
 import { RouteLatencyTable } from "./_components/route-latency-table";
-import { LatencyTrendChart } from "./_components/latency-trend-chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { RefreshCw, Play, Pause, Radio } from "lucide-react";
 import type { ClusterMetricsSnapshot, WindowPeriod } from "@/lib/observability/sliding-window-aggregator";
+
+const LatencyTrendChart = dynamic(
+  () => import("./_components/latency-trend-chart").then((m) => m.LatencyTrendChart),
+  {
+    loading: () => <Skeleton className="h-80 w-full rounded-xl" />,
+    ssr: false,
+  }
+);
 
 export default function AdminObservabilityPage() {
   const [windowPeriod, setWindowPeriod] = useState<WindowPeriod>("5m");

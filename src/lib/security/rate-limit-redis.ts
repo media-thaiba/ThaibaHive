@@ -86,6 +86,15 @@ export class RedisRateLimiterAdapter {
     nowMs: number = Date.now()
   ): Promise<RateLimitResult> {
     if (!this.redisClient || !this.isConnected) {
+      console.warn(
+        JSON.stringify({
+          event: "rate_limit_redis_fallback_activated",
+          severity: "HIGH",
+          reason: "Redis unavailable or not connected, utilizing in-memory sliding log fallback",
+          key,
+          timestamp: new Date().toISOString(),
+        })
+      );
       this.fallbackStore.activateFallback("Redis unavailable");
       return this.fallbackStore.evaluate(key, rule, dimension, nowMs);
     }
@@ -119,6 +128,15 @@ export class RedisRateLimiterAdapter {
     } catch (err: unknown) {
       this.isConnected = false;
       const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(
+        JSON.stringify({
+          event: "rate_limit_redis_fallback_activated",
+          severity: "HIGH",
+          error: errorMsg,
+          key,
+          timestamp: new Date().toISOString(),
+        })
+      );
       this.fallbackStore.activateFallback(`Redis eval failed: ${errorMsg}`);
       return this.fallbackStore.evaluate(key, rule, dimension, nowMs);
     }

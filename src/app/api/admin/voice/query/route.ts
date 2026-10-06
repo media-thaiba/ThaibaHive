@@ -7,7 +7,7 @@ import { VoiceQueryParser } from "@/lib/voice/voice-query-parser";
 const sttAdapter = new SpeechToTextAdapter();
 const voiceParser = new VoiceQueryParser();
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: any = {};
   try {
     body = await request.json();

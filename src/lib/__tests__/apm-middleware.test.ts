@@ -88,14 +88,18 @@ jest.mock("next/server", () => {
 });
 
 import { NextRequest, NextResponse } from "next/server";
+import { proxy } from "@/proxy";
 import { startApmTracking, completeApmTracking } from "../middleware/apm-telemetry";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
-import { proxy } from "../../middleware";
 import { requireAuth } from "../api/auth-guard";
 
-jest.mock("../../../packages/auth", () => ({
+jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn().mockResolvedValue({ staffId: "usr_123", role: "admin", institutionId: "inst_1" }),
   hasPermission: jest.fn().mockReturnValue(true),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_1"),
+  getUserInstitutionScope: jest.fn().mockResolvedValue("inst_1"),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_1"),
+  getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_1"]),
 }));
 
 describe("APM Middleware & Telemetry Tests", () => {
@@ -145,7 +149,7 @@ describe("APM Middleware & Telemetry Tests", () => {
   });
 
   test("records 401 unauthorized in Node runtime when session is missing", async () => {
-    const { verifySession } = require("../../../packages/auth");
+    const { verifySession } = require("@thaiba/auth");
     (verifySession as jest.Mock).mockResolvedValueOnce(null);
 
     const handler = jest.fn();
@@ -160,10 +164,11 @@ describe("APM Middleware & Telemetry Tests", () => {
     expect(snapshot.routes[0].status4xx).toBe(1);
   });
 
-  test("handles middleware proxy end-to-end for public route", async () => {
+  test("handles middleware APM telemetry and security headers end-to-end via proxy(req) (R4-5)", async () => {
     const req = new NextRequest("http://localhost:3000/api/system/health");
     const res = await proxy(req);
 
+    expect(res.status).toBe(200);
     expect(res.headers.get("x-response-time")).toBeDefined();
     expect(res.headers.get("x-request-id")).toBeDefined();
   });

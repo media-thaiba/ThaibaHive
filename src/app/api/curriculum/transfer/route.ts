@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { curriculumStore } from '@/lib/db/curriculum-store';
@@ -8,10 +9,10 @@ import { advisingMetrics } from '@/lib/operations/curriculum/telemetry/advising-
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
-  const studentId = searchParams.get('studentId') || user?.id;
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
+  const studentId = searchParams.get('studentId') || session?.staffId;
 
   if (!studentId) {
     return NextResponse.json({ error: 'Missing studentId parameter' }, { status: 400 });
@@ -21,10 +22,10 @@ export const GET = requireAuth(async (req: Request, user: any) => {
   return NextResponse.json({ articulations });
 }, 'curriculum:plans:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
-    const tenantId = user?.institutionId || 'global';
+    const tenantId = session?.institutionId || 'global';
 
     // If raw OCR transcript text is supplied: parse and match
     if (body.rawTranscriptText) {

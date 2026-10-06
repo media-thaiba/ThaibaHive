@@ -6,7 +6,7 @@ import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
 import { RegionalBenchmarkingService } from "@/lib/regional/regional-benchmarking-service";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const regionalGroupId = url.searchParams.get("regionalGroupId") || "rg_default";
   const metricDomain = (url.searchParams.get("metricDomain") || "all") as any;

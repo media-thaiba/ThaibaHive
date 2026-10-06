@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { telemetryIngestSchema, telemetryBatchIngestSchema } from '@/lib/validation/twin-schemas';
@@ -9,7 +10,7 @@ const ingester = TelemetryIngester.getInstance();
 const streamManager = SpatialStreamManager.getInstance();
 const metrics = TwinMetrics.getInstance();
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
 
@@ -18,7 +19,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
       if (!parse.success) {
         return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
       }
-      const tenantId = parse.data.institutionId || user?.institutionId || 'global';
+      const tenantId = await resolveRequestInstitution(session, parse.data.institutionId);
       const results = await ingester.ingestBatch(parse.data.frames, { tenantId });
       metrics.incrementIotIngestion(tenantId, results.length);
 
@@ -35,7 +36,7 @@ export const POST = requireAuth(async (request: Request, user: any) => {
       if (!parse.success) {
         return NextResponse.json({ error: 'Validation failed', details: parse.error.format() }, { status: 400 });
       }
-      const tenantId = parse.data.institutionId || user?.institutionId || 'global';
+      const tenantId = await resolveRequestInstitution(session, parse.data.institutionId);
       const result = await ingester.ingestFrame(parse.data, { tenantId });
       metrics.incrementIotIngestion(tenantId, 1);
       streamManager.broadcastTelemetry(result, tenantId);

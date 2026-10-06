@@ -2,8 +2,7 @@ import { db } from "@/db";
 import { financialTransactions } from "@thaiba/db/schema";
 import { eq, sql } from "drizzle-orm";
 import crypto from "crypto";
-
-const SECRET_KEY = process.env.JWT_SECRET || "thaibahive-exam-secret-key-2026";
+import { getJwtSecret } from "@thaiba/auth";
 
 export interface FeeClearanceResult {
   feeCleared: boolean;
@@ -37,7 +36,8 @@ export async function checkStudentFeeClearance(studentId: string): Promise<FeeCl
 export function generateQRPayload(ticketNumber: string, studentId: string, examId: string): string {
   const timestamp = new Date().toISOString();
   const dataString = `${ticketNumber}:${studentId}:${examId}:${timestamp}`;
-  const hmac = crypto.createHmac("sha256", SECRET_KEY).update(dataString).digest("hex");
+  const secretKey = getJwtSecret("hall-ticket");
+  const hmac = crypto.createHmac("sha256", secretKey).update(dataString).digest("hex");
 
   const payload = {
     ticketNumber,
@@ -63,7 +63,8 @@ export function verifyQRPayload(qrPayloadBase64: string): { valid: boolean; payl
     }
 
     const dataString = `${parsed.ticketNumber}:${parsed.studentId}:${parsed.examId}:${parsed.timestamp}`;
-    const expectedHmac = crypto.createHmac("sha256", SECRET_KEY).update(dataString).digest("hex").substring(0, 16);
+    const secretKey = getJwtSecret("hall-ticket");
+    const expectedHmac = crypto.createHmac("sha256", secretKey).update(dataString).digest("hex").substring(0, 16);
 
     if (parsed.signature !== expectedHmac) {
       return { valid: false, error: "Signature verification failed (tampered QR code)" };

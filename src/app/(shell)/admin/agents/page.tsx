@@ -27,6 +27,7 @@ import {
   History,
   Lock,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AgentsCockpitPage() {
   const {
@@ -51,10 +52,22 @@ export default function AgentsCockpitPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    fetchAgents().catch(() => {});
-    fetchRuns().catch(() => {});
-    fetchApprovalGates().catch(() => {});
-    fetchKillSwitchStatus().catch(() => {});
+    fetchAgents().catch((err) => {
+      console.error("Failed to fetch agents:", err);
+      toast.error("Failed to fetch agents list");
+    });
+    fetchRuns().catch((err) => {
+      console.error("Failed to fetch runs:", err);
+      toast.error("Failed to fetch agent runs");
+    });
+    fetchApprovalGates().catch((err) => {
+      console.error("Failed to fetch approval gates:", err);
+      toast.error("Failed to fetch approval gates");
+    });
+    fetchKillSwitchStatus().catch((err) => {
+      console.error("Failed to fetch kill-switch status:", err);
+      toast.error("Failed to check kill-switch status");
+    });
     const closeStream = initStream();
     return () => closeStream();
   }, [fetchAgents, fetchRuns, fetchApprovalGates, fetchKillSwitchStatus, initStream]);
@@ -67,9 +80,12 @@ export default function AgentsCockpitPage() {
     setActionLoading(true);
     try {
       await toggleKillSwitch(action, killswitchConfirmInput, "Administrator manual command via cockpit");
+      toast.success(action === "engage" ? "Kill-switch engaged successfully" : "Kill-switch disengaged");
       setShowKillswitchModal(false);
       setKillswitchConfirmInput("");
-    } catch {
+    } catch (err: any) {
+      console.error("Failed to toggle kill-switch:", err);
+      toast.error(err?.message || "Failed to toggle kill-switch");
     } finally {
       setActionLoading(false);
     }

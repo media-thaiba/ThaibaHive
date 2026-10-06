@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { staff, passwordResetTokens } from "@thaiba/db/schema";
 import { resetPasswordSchema } from "@/lib/validation/schemas";
 import { hashPassword } from "@thaiba/auth";
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import crypto from "crypto";
 
 function hashToken(token: string): string {
@@ -14,6 +15,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const ip = extractIp(request);
+  const rl = await checkDistributedRateLimit(ip, "auth");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { token } = await params;
 
   const body = await request.json();

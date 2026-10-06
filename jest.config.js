@@ -7,6 +7,10 @@ const customJestConfig = {
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@thaiba/auth/(.*)$": "<rootDir>/packages/auth/$1",
+    "^@thaiba/auth$": "<rootDir>/packages/auth/index.ts",
+    "^@thaiba/db/(.*)$": "<rootDir>/packages/db/$1",
+    "^@thaiba/db$": "<rootDir>/packages/db/index.ts",
   },
   testPathIgnorePatterns: ["/node_modules/", "<rootDir>/e2e/"],
   modulePathIgnorePatterns: ["<rootDir>/.next/"],

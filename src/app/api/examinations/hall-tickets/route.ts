@@ -6,7 +6,7 @@ import { hallTicketIssueSchema } from "@/lib/validation/schemas";
 import { checkStudentFeeClearance, generateQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");

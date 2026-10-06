@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { mobileSyncTelemetryBatchSchema } from "@/lib/validation/schemas";
 import { MobileSyncTelemetryAggregator } from "@/lib/observability/mobile-sync-telemetry-aggregator";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   if (process.env.MOBILE_TELEMETRY_ENABLED === "false") {
     return NextResponse.json({
       success: true,

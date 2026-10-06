@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/api/auth-guard';
 import { kmGraphQuerySchema } from '@/lib/validation/km-schemas';
 import { campusGraph } from '@/lib/operations/km/graph/knowledge-graph-engine';
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = kmGraphQuerySchema.safeParse(body);

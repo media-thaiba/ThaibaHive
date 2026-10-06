@@ -1,11 +1,12 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
 import { createFeeStructureSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const academicYear = url.searchParams.get('academicYear') || undefined;
 
   const store = FeeDbStore.getInstance();
@@ -17,6 +18,9 @@ export const POST = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
     const parsed = createFeeStructureSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
     }
@@ -61,7 +65,8 @@ export const POST = requireAuth(async (request, session) => {
     });
 
     return NextResponse.json({ success: true, structure: created }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to create fee structure' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Structures Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to create fee structure" }, { status: 500 });
   }
 }, 'finance:fees:manage');

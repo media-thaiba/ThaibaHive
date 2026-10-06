@@ -1,0 +1,46 @@
+name: Automated Supabase Storage Backup
+
+on:
+  schedule:
+    # Runs weekly on Sundays at 04:00 UTC
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Skip S3 upload (dry run)"
+        required: false
+        default: "false"
+
+jobs:
+  storage-backup:
+    name: Backup Supabase Storage Bucket
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate required storage backup secrets
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          missing=()
+          [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}" ] && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ] && missing+=("SUPABASE_SERVICE_ROLE_KEY")
+          [ -z "${{ secrets.BACKUP_S3_BUCKET }}" ] && missing+=("BACKUP_S3_BUCKET")
+          [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing+=("AWS_ACCESS_KEY_ID")
+          [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing+=("AWS_SECRET_ACCESS_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required storage backup secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Run Supabase Storage backup
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_PREFIX: storage-backups
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'ap-south-1' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: chmod +x scripts/storage-backup.sh && bash scripts/storage-backup.sh

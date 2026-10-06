@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { db } from "@/db";
 import { workspaceAnalyticsCache } from "@thaiba/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -66,13 +67,13 @@ export class AnalyticsService {
       if (cached) {
         const ageMs = Date.now() - new Date(cached.calculatedAt).getTime();
         if (ageMs < ttlSeconds * 1000) {
-          console.log(`[AnalyticsService] Cache HIT for ${cacheKey}`);
+          logger.debug(`[AnalyticsService] Cache HIT for ${cacheKey}`);
           return JSON.parse(cached.metricValue) as T;
         }
       }
 
       // 2. Cache MISS: Run calculation
-      console.log(`[AnalyticsService] Cache MISS for ${cacheKey}. Calculating...`);
+      logger.debug(`[AnalyticsService] Cache MISS for ${cacheKey}. Calculating...`);
       const value = await calculator();
 
       // Save to materialized DB cache
@@ -114,7 +115,7 @@ export class AnalyticsService {
   static async invalidateCache(institutionId: string): Promise<void> {
     try {
       await db.delete(workspaceAnalyticsCache).where(eq(workspaceAnalyticsCache.institutionId, institutionId)).run();
-      console.log(`[AnalyticsService] Invalidated cache for institution: ${institutionId}`);
+      logger.info(`[AnalyticsService] Invalidated cache for institution: ${institutionId}`);
     } catch (e) {
       console.error("[AnalyticsService] Invalidation failed", e);
     }

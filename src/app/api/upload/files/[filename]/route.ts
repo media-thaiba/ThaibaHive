@@ -46,7 +46,7 @@ function nodeStreamToWeb(nodeStream: NodeJS.ReadableStream): ReadableStream {
   });
 }
 
-// NOTE: All uploaded files are designed to be organization-wide readable by any authenticated user.
+// NOTE: All uploaded files are designed to be organization-wide readable by any authenticated session.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ filename: string }> }

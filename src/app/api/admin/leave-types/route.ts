@@ -8,7 +8,7 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ leaveTypes: all });
 }, "leave:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { name, code, description, daysAllowed, requiresApproval } = body;
 

@@ -2,20 +2,24 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { complianceViolations } from "@thaiba/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/auth/require-auth";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { auditAnomalyDetector } from "@/lib/compliance/anomaly-detector";
 import { complianceMetrics } from "@/lib/observability/compliance-metrics";
 import { ViolationSeverity, TelemetrySummary } from "@/lib/compliance/types";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 
-async function handler(req: Request, _session: any) {
+async function handler(req: Request, session: SessionPayload) {
   try {
     const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get("tenantId") || undefined;
+    const rawInst = searchParams.get("tenantId") || searchParams.get("institutionId") || undefined;
+    const resolved = await resolveRequestInstitution(session, rawInst);
+    const tenantId = resolved === "global" ? undefined : resolved;
 
     const violations = await db
       .select()
       .from(complianceViolations)
-      .where(tenantId && tenantId !== "all" ? eq(complianceViolations.tenantId, tenantId) : undefined)
+      .where(tenantId ? eq(complianceViolations.tenantId, tenantId) : undefined)
       .orderBy(desc(complianceViolations.createdAt))
       .limit(100);
 
@@ -64,8 +68,10 @@ async function handler(req: Request, _session: any) {
 
     return NextResponse.json(summary);
   } catch (error: any) {
-    console.error("[@thaiba/compliance] Telemetry route error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    if (error?.name === "TenantMismatchError") throw error;
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Telemetry route error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

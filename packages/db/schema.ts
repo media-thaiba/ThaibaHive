@@ -28,7 +28,9 @@ export const departments = sqliteTable("departments", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_departments_institution").on(t.institutionId),
+}));
 
 export const subDepartments = sqliteTable("sub_departments", {
   id: text("id").primaryKey(),
@@ -115,6 +117,7 @@ export const staffInstitutions = sqliteTable("staff_institutions", {
 }, (t) => ({
   staffIdIdx: index("idx_staff_institutions_staff_id").on(t.staffId),
   instIdIdx: index("idx_staff_institutions_inst_id").on(t.institutionId),
+  staffInstUnique: uniqueIndex("idx_staff_institutions_staff_inst_unique").on(t.staffId, t.institutionId),
 }));
 
 export const academicYears = sqliteTable("academic_years", {
@@ -126,7 +129,9 @@ export const academicYears = sqliteTable("academic_years", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_academic_years_institution").on(t.institutionId),
+}));
 
 export const classes = sqliteTable("classes", {
   id: text("id").primaryKey(),
@@ -139,7 +144,10 @@ export const classes = sqliteTable("classes", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_classes_institution").on(t.institutionId),
+  deptIdx: index("idx_classes_department").on(t.departmentId),
+}));
 
 export const students = sqliteTable("students", {
   id: text("id").primaryKey(),
@@ -379,6 +387,7 @@ export const leaveRequests = sqliteTable("leave_requests", {
 }, (t) => ({
   staffCreatedAtIdx: index("idx_leave_requests_staff_created").on(t.staffId, t.createdAt),
   statusIdx: index("idx_leave_requests_status").on(t.status),
+  instIdx: index("idx_leave_requests_institution").on(t.institutionId),
 }));
 
 // ─── Tasks ───
@@ -401,6 +410,7 @@ export const tasks = sqliteTable("tasks", {
 }, (t) => ({
   assignedToStatusIdx: index("idx_tasks_assigned_to_status").on(t.assignedToId, t.status),
   departmentIdx: index("idx_tasks_department").on(t.departmentId),
+  instIdx: index("idx_tasks_institution").on(t.institutionId),
 }));
 
 export const taskComments = sqliteTable("task_comments", {
@@ -624,7 +634,10 @@ export const bookings = sqliteTable("bookings", {
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_bookings_institution").on(t.institutionId),
+  resourceIdx: index("idx_bookings_resource_id").on(t.resourceId),
+}));
 
 // ─── Help Desk ───
 
@@ -643,7 +656,10 @@ export const helpDeskTickets = sqliteTable("help_desk_tickets", {
   resolvedAt: text("resolved_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_help_desk_tickets_institution").on(t.institutionId),
+  statusIdx: index("idx_help_desk_tickets_status").on(t.status),
+}));
 
 export const helpDeskComments = sqliteTable("help_desk_comments", {
   id: text("id").primaryKey(),
@@ -781,7 +797,10 @@ export const visitors = sqliteTable("visitors", {
   notes: text("notes"),
   institutionId: text("institution_id").references(() => institutions.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_visitors_institution").on(t.institutionId),
+  statusIdx: index("idx_visitors_status").on(t.status),
+}));
 
 // ─── Grievances / Suggestions ───
 
@@ -930,7 +949,10 @@ export const mealNotifications = sqliteTable("meal_notifications", {
   notes: text("notes"),
   institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_meal_notifications_institution").on(t.institutionId),
+  dateMealIdx: index("idx_meal_notifications_date_meal").on(t.date, t.mealType),
+}));
 
 // ─── Approval Delegations ───
 
@@ -1228,7 +1250,10 @@ export const mediaFolders = sqliteTable("media_folders", {
   createdById: text("created_by_id").notNull().references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_media_folders_institution").on(t.institutionId),
+  parentIdx: index("idx_media_folders_parent_id").on(t.parentId),
+}));
 
 export const mediaAssets = sqliteTable("media_assets", {
   id: text("id").primaryKey(),
@@ -1251,6 +1276,7 @@ export const mediaAssets = sqliteTable("media_assets", {
   folderIdIdx: index("idx_media_assets_folder_id").on(t.folderId),
   fileTypeIdx: index("idx_media_assets_file_type").on(t.fileType),
   statusIdx: index("idx_media_assets_status").on(t.status),
+  instIdx: index("idx_media_assets_institution").on(t.institutionId),
 }));
 
 export const mediaShareLinks = sqliteTable("media_share_links", {

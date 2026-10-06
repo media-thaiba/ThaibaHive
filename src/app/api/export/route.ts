@@ -18,7 +18,7 @@ import {
   timetableEntries,
   timetableSlots,
 } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, and, gte, lte, inArray, type SQL } from "drizzle-orm";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
@@ -89,6 +89,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const dateFrom = getDateParam(searchParams, "dateFrom");
   const dateTo = getDateParam(searchParams, "dateTo");
   const requestedInstitutionId = searchParams.get("institutionId") || undefined;
+  const finalInstitutionId = await resolveRequestInstitution(session, requestedInstitutionId);
 
   const VALID_TYPES: ExportType[] = [
     "attendance",
@@ -142,8 +143,9 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
   }
 
-  const finalInstitutionId = requestedInstitutionId;
   let instName: string | undefined = undefined;
+
+
 
   if (finalInstitutionId) {
     const instRecord = await db

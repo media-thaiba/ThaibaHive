@@ -11,12 +11,13 @@ export const GET = requireAuth(async () => {
       .from(taxJurisdictions)
       .orderBy(desc(taxJurisdictions.createdAt));
     return NextResponse.json({ jurisdictions: list });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to fetch tax jurisdictions" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Tax Jurisdictions Fetch Error]:", error instanceof Error ? error.stack : error);
+    return NextResponse.json({ error: "Failed to fetch tax jurisdictions" }, { status: 500 });
   }
 }, "finance:tax:view");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parsed = taxJurisdictionCreateSchema.safeParse(body);
@@ -26,7 +27,8 @@ export const POST = requireAuth(async (request: Request) => {
 
     const created = await taxRateEngine.createJurisdiction(parsed.data);
     return NextResponse.json({ jurisdiction: created }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to create tax jurisdiction" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("[Tax Jurisdiction Create Error]:", error instanceof Error ? error.stack : error);
+    return NextResponse.json({ error: "Failed to create tax jurisdiction" }, { status: 500 });
   }
 }, "finance:tax:manage");

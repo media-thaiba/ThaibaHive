@@ -28,7 +28,7 @@ const ALLOWED_TYPES = new Set([
   "text/plain",
 ]);
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;

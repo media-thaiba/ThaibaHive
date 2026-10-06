@@ -20,7 +20,7 @@ test.describe("Leaves Page", () => {
   });
 
   test("should allow applying for leaves and verify request in history", async ({ page }) => {
-    await page.goto("/leaves");
+    await page.goto("/my-work/leaves");
 
     // Click the first Apply Leave button to reveal form (resolves strict mode violation with EmptyState action)
     const applyBtn = page.locator("button:has-text('Apply Leave')").first();

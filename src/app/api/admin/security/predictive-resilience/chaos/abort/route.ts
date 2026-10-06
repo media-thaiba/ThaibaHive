@@ -11,7 +11,7 @@ import { AresAuditLogger } from '@/lib/security/ares/ares-audit-events';
 import { chaosKillSwitchTriggerSchema } from '@/lib/validation/ares-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, _session) => {
     const body = await req.json();
     const parsed = chaosKillSwitchTriggerSchema.safeParse(body);
 

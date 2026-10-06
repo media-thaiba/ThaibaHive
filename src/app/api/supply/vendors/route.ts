@@ -1,6 +1,6 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { vendorCreateSchema } from '@/lib/validation/supply-schemas';
 import { VendorRiskScreeningEngine } from '@/lib/operations/supply/risk/vendor-risk-screening-engine';
@@ -12,14 +12,14 @@ const store = SupplyDbStore.getInstance();
 const riskEngine = VendorRiskScreeningEngine.getInstance();
 const esgEngine = EsgScoringEngine.getInstance();
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const vendors = await store.listVendors(institutionId);
   return NextResponse.json({ vendors });
 }, 'supply:vendors:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = vendorCreateSchema.safeParse(body);
@@ -27,7 +27,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid vendor payload' }, { status: 400 });
     }
 
-    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const vendorId = `ven-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     // Initial Risk Screening
@@ -41,8 +41,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
         creditScore: 750,
         priorDiscrepancyRate: 0.0,
         activeLawsuitsCount: 0,
-        certificationsCount: 1,
-      },
+        certificationsCount: 1 },
       institutionId
     );
     await store.createRiskAssessment(riskAssessment);
@@ -58,8 +57,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
         diversityOwnershipCertified: false,
         hasAntiBriberyPolicy: true,
         hasTransparentAuditedFinances: true,
-        scope3CarbonIntensityKgPerUsd: 0.12,
-      },
+        scope3CarbonIntensityKgPerUsd: 0.12 },
       institutionId
     );
     await store.createEsgScore(esgScore);
@@ -86,8 +84,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       isSanctionsClean: !riskAssessment.sanctionsMatched,
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const created = await store.createVendor(vendor);
     return NextResponse.json({ vendor: created, riskAssessment, esgScore }, { status: 201 });

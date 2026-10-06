@@ -19,7 +19,7 @@ export const INSTITUTIONAL_KB: KnowledgeArticle[] = [
     topic: 'Tuition Payment Methods & Installments',
     keywords: ['fee', 'tuition', 'pay tuition', 'installment', 'bank transfer', 'payment gateway'],
     content: 'Tuition fees can be paid via credit/debit card, UPI/NetBanking, or direct NEFT transfer. 3-month split installment plans are available under the Finance tab.',
-    actionLink: '/finance/payments',
+    actionLink: '/operations/finance/payments',
   },
   {
     id: 'kb_exam_regulations',

@@ -24,9 +24,10 @@ export const GET = requireAuth(
       }
 
       return NextResponse.json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error("[Reconciliation Session Fetch Error]:", error instanceof Error ? error.stack : error);
       return NextResponse.json(
-        { error: error.message || "Failed to fetch reconciliation session" },
+        { error: "Failed to fetch reconciliation session" },
         { status: 500 }
       );
     }

@@ -7,8 +7,25 @@ import * as fs from "fs";
 import * as path from "path";
 import { SignJWT } from "jose";
 import { copyStandaloneAssets } from "../scripts/copy-standalone-assets";
+import { getJwtSecretBytes } from "../packages/auth/config";
 
 async function globalSetup() {
+  if (fs.existsSync(".env")) {
+    const envContent = fs.readFileSync(".env", "utf8");
+    for (const line of envContent.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#")) {
+        const idx = trimmed.indexOf("=");
+        if (idx !== -1) {
+          const key = trimmed.slice(0, idx).trim();
+          const value = trimmed.slice(idx + 1).trim();
+          if (key && !process.env[key]) {
+            process.env[key] = value;
+          }
+        }
+      }
+    }
+  }
   copyStandaloneAssets();
   console.log("Seeding test users and leave types for Playwright E2E tests...");
   const passwordHash = await hashPassword("Password123");
@@ -313,8 +330,7 @@ async function globalSetup() {
 
   // Generate deterministic storageState files for each user role
   console.log("Generating deterministic E2E storageStates for all test roles...");
-  const jwtSecret = process.env.AUTH_JWT_SECRET || "a8f93c01948d374f638104829375b4f028471049281740192847192847192847";
-  const secretKey = new TextEncoder().encode(jwtSecret);
+  const secretKey = getJwtSecretBytes("session");
 
   const testUsers = [
     { staffId: _superAdminId, email: "test-superadmin@thaibahive.local", employeeId: "TEST-SUPERADMIN-99", name: "Test Super", role: "super_admin" },

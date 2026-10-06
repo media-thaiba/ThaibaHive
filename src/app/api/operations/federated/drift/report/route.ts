@@ -9,7 +9,7 @@ import { AfedAuditLogger } from '@/lib/operations/persistence/afed-audit-events'
 const dbStore = AfedDbStore.getInstance();
 const metricsTracker = AfedMetricsTracker.getInstance();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const { searchParams } = new URL(request.url);
     const modelId = searchParams.get('modelId') || undefined;
@@ -24,7 +24,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, 'federated:read');
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = afedDriftEvaluateSchema.safeParse(body);

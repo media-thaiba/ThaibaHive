@@ -86,20 +86,32 @@ describe("Institution ID Backfill Engine Unit & Idempotency Tests", () => {
     await db.delete(institutions).where(eq(institutions.id, inst2)).run();
   });
 
-  it("populates missing institutionId from staff actor and reports ambiguity", async () => {
-    const report1 = await runInstitutionBackfill();
-    expect(report1.totalUpdated).toBeGreaterThanOrEqual(2);
+  it("dry run does not mutate database records", async () => {
+    const dryReport = await runInstitutionBackfill({ apply: false });
+    expect(dryReport.dryRun).toBe(true);
+    expect(dryReport.totalAmbiguous).toBeGreaterThanOrEqual(1);
 
-    // Verify row 1 got assigned inst1
+    // Verify row 1 still has null institutionId
+    const row1 = await db.select().from(leaveRequests).where(eq(leaveRequests.id, leaveId1)).get();
+    expect(row1?.institutionId).toBeNull();
+  });
+
+  it("apply mode populates unambiguous staff actor and skips ambiguous multi-institution actors", async () => {
+    const report1 = await runInstitutionBackfill({ apply: true });
+    expect(report1.dryRun).toBe(false);
+    expect(report1.totalUpdated).toBeGreaterThanOrEqual(1);
+    expect(report1.totalAmbiguous).toBeGreaterThanOrEqual(1);
+
+    // Verify row 1 (single institution) got assigned inst1
     const row1 = await db.select().from(leaveRequests).where(eq(leaveRequests.id, leaveId1)).get();
     expect(row1?.institutionId).toBe(inst1);
 
-    // Verify row 2 got assigned one of the actor's institutions
+    // Verify row 2 (ambiguous multi-institution) was SKIPPED to avoid arbitrary guessing
     const row2 = await db.select().from(leaveRequests).where(eq(leaveRequests.id, leaveId2)).get();
-    expect([inst1, inst2]).toContain(row2?.institutionId);
+    expect(row2?.institutionId).toBeNull();
 
     // Verify second run is fully idempotent (0 updates)
-    const report2 = await runInstitutionBackfill();
+    const report2 = await runInstitutionBackfill({ apply: true });
     expect(report2.totalUpdated).toBe(0);
   });
 });

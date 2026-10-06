@@ -7,7 +7,7 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ subDepartments: all });
 }, "org:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { name, code, departmentId, description } = body;
 

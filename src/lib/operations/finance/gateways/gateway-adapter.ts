@@ -16,7 +16,7 @@ export interface CreateOrderResponse {
   amount: number;
   currency: string;
   gatewayKeyId: string;
-  clientPayload: Record<string, any>;
+  clientPayload: Record<string, unknown>;
 }
 
 export interface VerifySignatureRequest {
@@ -33,7 +33,7 @@ export interface FetchPaymentResponse {
   paymentMethod: PaymentMethod;
   feeAmount?: number;
   taxAmount?: number;
-  rawResponse?: Record<string, any>;
+  rawResponse?: Record<string, unknown>;
 }
 
 export interface RefundRequest {
@@ -58,7 +58,7 @@ export interface WebhookEventPayload {
   currency: string;
   status: PaymentStatus;
   signatureVerified: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PaymentGatewayAdapter {

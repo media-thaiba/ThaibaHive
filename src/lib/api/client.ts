@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
 export type RequestOptions = {
@@ -62,7 +63,7 @@ async function request<T = unknown>(
   }
 
   if (process.env.NODE_ENV === "development") {
-    console.log(`[API ${method}] ${fullUrl}`);
+    logger.debug(`[API ${method}] ${fullUrl}`);
   }
 
   onLoading?.(true);

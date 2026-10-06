@@ -1,6 +1,6 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { purchaseOrderCreateSchema } from '@/lib/validation/supply-schemas';
 import { BudgetEncumbranceEngine } from '@/lib/operations/supply/finance/budget-encumbrance-engine';
@@ -12,14 +12,14 @@ const store = SupplyDbStore.getInstance();
 const encumbranceEngine = BudgetEncumbranceEngine.getInstance();
 const merkleAnchor = new SupplyMerkleAnchor(store);
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const orders = await store.listPurchaseOrders(institutionId);
   return NextResponse.json({ orders });
 }, 'supply:orders:view');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = purchaseOrderCreateSchema.safeParse(body);
@@ -27,7 +27,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid purchase order payload' }, { status: 400 });
     }
 
-    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const poId = `po-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const poNumber = `PO-${Date.now().toString().slice(-6)}`;
 
@@ -64,8 +64,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       merkleLeafHash: SupplyMerkleAnchor.computeSha256({ poId, poNumber, total: parsed.data.totalAmountUsd }),
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const createdPo = await store.createPurchaseOrder(po);
 
@@ -88,15 +87,14 @@ export const POST = requireAuth(async (req: Request, user: any) => {
           lineTotalUsd: item.unitPriceUsd * item.quantityOrdered,
           status: 'pending',
           institutionId,
-          createdAt: new Date().toISOString(),
-        });
+          createdAt: new Date().toISOString() });
       }
     }
 
     // 4. Merkle Audit Anchor
     await merkleAnchor.anchorEvent(
-      user?.id || 'system-buyer',
-      user?.role || 'admin',
+      session?.staffId || 'system-buyer',
+      session?.role || 'admin',
       'po_issued',
       'purchase_order',
       poId,

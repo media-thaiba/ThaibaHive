@@ -23,11 +23,22 @@ export interface GenerateReceiptParams {
 
 export class ReceiptGenerator {
   private store: FeeDbStore;
-  private secretKey: string;
+  private customSecretKey?: string;
 
   constructor(store?: FeeDbStore, secretKey?: string) {
     this.store = store || FeeDbStore.getInstance();
-    this.secretKey = secretKey || process.env.RECEIPT_SIGNING_SECRET || 'thaiba_receipt_signing_key_2026';
+    this.customSecretKey = secretKey;
+  }
+
+  private getSecretKey(): string {
+    const resolvedSecret = this.customSecretKey || process.env.RECEIPT_SIGNING_SECRET || process.env.RECEIPT_SIGNING_KEY || process.env.AUTH_JWT_SECRET;
+    if (!resolvedSecret) {
+      if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+        throw new Error('RECEIPT_SIGNING_SECRET or AUTH_JWT_SECRET must be configured in environment');
+      }
+      return process.env.NODE_ENV === 'test' ? 'test-receipt-signing-secret-key-32' : 'dev-receipt-signing-secret-key-32';
+    }
+    return resolvedSecret;
   }
 
   /**
@@ -83,7 +94,7 @@ export class ReceiptGenerator {
     });
 
     const receiptHash = crypto.createHash('sha256').update(rawCanonical).digest('hex');
-    const signature = crypto.createHmac('sha256', this.secretKey).update(receiptHash).digest('hex');
+    const signature = crypto.createHmac('sha256', this.getSecretKey()).update(receiptHash).digest('hex');
 
     const verifyUrl = `/verify/receipt/${receiptHash}`;
     const qrSvg = this.generateQrSvg(verifyUrl);
@@ -143,7 +154,7 @@ export class ReceiptGenerator {
    */
   public verifyReceipt(receipt: FeeReceiptItem): boolean {
     const expectedSignature = crypto
-      .createHmac('sha256', this.secretKey)
+      .createHmac('sha256', this.getSecretKey())
       .update(receipt.receiptHash)
       .digest('hex');
     return expectedSignature === receipt.signature;

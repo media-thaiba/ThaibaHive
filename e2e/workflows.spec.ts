@@ -6,14 +6,14 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Leave Management Workflow", () => {
   test("leave page is accessible", async ({ page }) => {
-    await page.goto("/leaves");
+    await page.goto("/my-work/leaves");
     const url = page.url();
     // Either redirects to login (unauthenticated) or shows the leave page
-    expect(url.includes("/auth/login") || url.includes("/leaves")).toBe(true);
+    expect(url.includes("/auth/login") || url.includes("/my-work/leaves")).toBe(true);
   });
 
   test("leave page renders without errors", async ({ page }) => {
-    await page.goto("/leaves");
+    await page.goto("/my-work/leaves");
     // No uncaught errors should be visible
     const errorBoundary = page.locator("text=Something went wrong");
     await expect(errorBoundary).toHaveCount(0);
@@ -22,23 +22,23 @@ test.describe("Leave Management Workflow", () => {
 
 test.describe("Task Management Workflow", () => {
   test("tasks page is accessible", async ({ page }) => {
-    await page.goto("/tasks");
+    await page.goto("/my-work/tasks");
     const url = page.url();
-    expect(url.includes("/auth/login") || url.includes("/tasks")).toBe(true);
+    expect(url.includes("/auth/login") || url.includes("/my-work/tasks")).toBe(true);
   });
 
   test("new task page is accessible", async ({ page }) => {
-    await page.goto("/tasks/new");
+    await page.goto("/my-work/tasks/new");
     const url = page.url();
-    expect(url.includes("/auth/login") || url.includes("/tasks")).toBe(true);
+    expect(url.includes("/auth/login") || url.includes("/my-work/tasks")).toBe(true);
   });
 });
 
 test.describe("Staff Management Workflow", () => {
   test("staff page is accessible", async ({ page }) => {
-    await page.goto("/staff");
+    await page.goto("/admin/staff");
     const url = page.url();
-    expect(url.includes("/auth/login") || url.includes("/staff")).toBe(true);
+    expect(url.includes("/auth/login") || url.includes("/admin/staff")).toBe(true);
   });
 
   test("health endpoint returns 200", async ({ request }) => {

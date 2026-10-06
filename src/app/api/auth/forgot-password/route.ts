@@ -4,7 +4,7 @@ import { waitUntil } from "@vercel/functions";
 import { db } from "@/db";
 import { staff, passwordResetTokens } from "@thaiba/db/schema";
 import { forgotPasswordSchema } from "@/lib/validation/schemas";
-import { checkRateLimit } from "@/lib/api/rate-limit";
+import { checkDistributedRateLimit } from "@/lib/api/rate-limit";
 import { sendPasswordResetEmail } from "@/lib/email";
 import crypto from "crypto";
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
   const { email } = parsed.data;
 
-  const rateLimit = checkRateLimit(email, "authForgotPassword");
+  const rateLimit = await checkDistributedRateLimit(email, "authForgotPassword");
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },

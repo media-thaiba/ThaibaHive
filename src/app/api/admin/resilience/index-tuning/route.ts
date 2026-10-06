@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { DatabaseIndexTuner } from "@/lib/resilience/database-index-tuner";
 import { QueryMetricsCollector } from "@/lib/resilience/query-metrics-collector";
 
 const globalMetricsCollector = new QueryMetricsCollector();
 const globalIndexTuner = new DatabaseIndexTuner(globalMetricsCollector);
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get("tenantId") || "tenant-main";
+    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
     const recommendations = globalIndexTuner.getRecommendations(tenantId);
     const metrics = globalMetricsCollector.getAggregatedMetrics(tenantId);
@@ -23,7 +23,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, "resilience:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: any = {};
   try {
     body = await request.json();
@@ -36,7 +36,8 @@ export const POST = requireAuth(async (request: Request) => {
     }
   }
 
-  const { action, recommendationId, tenantId = "tenant-main" } = body;
+  const { action, recommendationId } = body;
+    const tenantId = await resolveRequestInstitution(session, body.tenantId);
 
   if (action === "analyze") {
     const recs = globalIndexTuner.analyzeAndRecommend(tenantId);

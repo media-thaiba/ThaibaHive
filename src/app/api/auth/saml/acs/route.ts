@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { SamlService } from '@/lib/auth/saml-service';
 import { FederatedUserMapper } from '@/lib/auth/federated-user-mapper';
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 
 export async function POST(request: Request) {
+  const ip = extractIp(request);
+  const rateLimit = await checkDistributedRateLimit(`auth:saml-acs:${ip}`, "auth");
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetMs);
+  }
   try {
     const formData = await request.formData();
     const samlResponse = formData.get('SAMLResponse') as string;
@@ -34,7 +40,8 @@ export async function POST(request: Request) {
     const response = NextResponse.redirect(new URL('/dashboard', request.url));
     response.cookies.set('auth_token', `fed_token_${user.userId}`, { httpOnly: true, path: '/' });
     return response;
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'SAML authentication failed' }, { status: 400 });
+  } catch (err: unknown) {
+    console.error("[SAML ACS Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "SAML authentication failed" }, { status: 400 });
   }
 }

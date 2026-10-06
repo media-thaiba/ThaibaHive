@@ -144,7 +144,7 @@ describe('Fee Management REST API Routes (Sprint-057 - FEE-016)', () => {
       customerEmail: 'ahmad@thaiba.edu',
     });
 
-    const checkoutRes = await (createCheckout as any)(checkoutReq, { userId: 'u-1', role: 'student' });
+    const checkoutRes = await (createCheckout as any)(checkoutReq, { userId: 'u-1', role: 'student', institutionId: 'inst-001' });
     const checkoutData = await checkoutRes.json();
 
     expect(checkoutRes.status).toBe(200);

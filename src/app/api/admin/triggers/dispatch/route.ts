@@ -1,9 +1,10 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from "next/server";
 import { requireAuth } from "../../../../../lib/api/auth-guard";
 import { defaultNotificationRouter } from "../../../../../lib/notifications/automated-notification-router";
 import { TriggerEvaluationResult } from "../../../../../lib/triggers/trigger-evaluation-engine";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   let body: unknown = {};
   try {
     const text = await request.text();
@@ -12,7 +13,9 @@ export const POST = requireAuth(async (request: Request) => {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { tenantId = "tenant-main", triggerResult } = body as { tenantId?: string; triggerResult?: TriggerEvaluationResult };
+  const bodyObj = body as { tenantId?: string; triggerResult?: TriggerEvaluationResult };
+    const tenantId = await resolveRequestInstitution(session, bodyObj?.tenantId);
+    const triggerResult = bodyObj?.triggerResult;
 
   if (!triggerResult) {
     return NextResponse.json({ error: "Missing triggerResult payload" }, { status: 400 });
@@ -35,9 +38,9 @@ export const POST = requireAuth(async (request: Request) => {
   }
 }, "triggers:manage");
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get("tenantId") || "tenant-main";
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
   try {
     const logs = defaultNotificationRouter.getDispatchLogs(tenantId);

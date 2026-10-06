@@ -1,16 +1,16 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 
 export const dynamic = 'force-dynamic';
 
 const store = SupplyDbStore.getInstance();
 
-export const GET = requireAuth(async (req: Request, user: any, context) => {
+export const GET = requireAuth(async (req: Request, session: any, context) => {
   const { id } = await context!.params;
   const { searchParams } = new URL(req.url);
-  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
   const order = await store.getPurchaseOrderById(id, institutionId);
   if (!order) {
@@ -25,6 +25,5 @@ export const GET = requireAuth(async (req: Request, user: any, context) => {
     order,
     lineItems,
     goodsReceipts,
-    encumbrance,
-  });
+    encumbrance });
 }, 'supply:orders:view');

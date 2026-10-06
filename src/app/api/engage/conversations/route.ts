@@ -7,7 +7,7 @@ import { EngageDbStore } from '@/lib/db/engage-store';
 const gateway = ChatGateway.getInstance();
 const store = EngageDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   try {
     const url = new URL(request.url);
     const sessionId = url.searchParams.get('sessionId');
@@ -24,7 +24,7 @@ export const GET = requireAuth(async (request: Request) => {
   }
 }, 'engage:chat:interact');
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   try {
     const body = await request.json();
     const parse = engageChatMessageSchema.safeParse(body);

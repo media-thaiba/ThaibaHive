@@ -25,7 +25,7 @@ export function getEdgeCacheHeaders(
 ): Record<string, string> {
   if (!isEdgeCachingEnabled() || policy === "PRIVATE_DYNAMIC") {
     return {
-      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Cache-Control": "private, no-store, no-cache, must-revalidate",
       "Pragma": "no-cache",
       "CDN-Cache-Control": "no-store",
     };

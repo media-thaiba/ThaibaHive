@@ -1,0 +1,16 @@
+﻿pnpm.exe : PASS src/lib/__tests__/api-cache-headers-guard.test.ts
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS src/lib/__...s-guard.test.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  API Cache-Control Security Guard
+    ΓêÜ ensures no requireAuth route receives public, s-maxage, or stale-while-revalidate cache headers (56 ms)
+    ΓêÜ ensures default Cache-Control for /api/:path* in next.config.ts is private, no-store (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        1.105 s, estimated 7 s
+Ran all test suites matching src/lib/__tests__/api-cache-headers-guard.test.ts.

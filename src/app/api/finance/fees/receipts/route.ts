@@ -50,7 +50,8 @@ export const POST = requireAuth(async (request, session) => {
     });
 
     return NextResponse.json({ success: true, receipt }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to generate receipt' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Receipts Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Failed to generate receipt" }, { status: 500 });
   }
 }, 'finance:fees:collect');

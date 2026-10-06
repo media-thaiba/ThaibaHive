@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { RegionalHierarchyService } from "@/lib/regional/regional-hierarchy-service";
 import { regionalClusterAssignSchema } from "@/lib/validation/schemas";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: unknown = {};
   try {
     body = await request.json();

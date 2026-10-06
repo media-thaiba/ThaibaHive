@@ -28,7 +28,7 @@ on:
 jobs:
   dr-chaos-drill:
     name: Execute Disaster Recovery Drill & Verify Failover
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:

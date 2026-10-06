@@ -29,7 +29,7 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ assignments: all });
 }, "attendance:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const { staffId, shiftId, effectiveFrom, effectiveTo } = body;
 
@@ -65,7 +65,7 @@ export const POST = requireAuth(async (request: Request) => {
   }
 }, "attendance:manage");
 
-export const DELETE = requireAuth(async (request: Request) => {
+export const DELETE = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 

@@ -43,6 +43,6 @@ describe('DPoP Session', () => {
     const { payload: decoded } = await jwtVerify(token, secret);
 
     expect(decoded.dpopEnabled).toBe(true);
-    expect((decoded as any).cnf.jkt).toBe('thumbprint123');
+    expect((decoded as { cnf?: { jkt?: string } }).cnf?.jkt).toBe('thumbprint123');
   });
 });

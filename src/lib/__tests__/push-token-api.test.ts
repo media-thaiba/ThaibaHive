@@ -5,6 +5,10 @@ import { verifySession } from "@thaiba/auth";
 jest.mock("@thaiba/auth", () => ({
   ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_001"),
+  getUserInstitutionScope: jest.fn().mockResolvedValue("inst_001"),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_001"),
+  getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_001"]),
 }));
 
 describe("Push Token Registration API (/api/mobile/push/register)", () => {
@@ -25,7 +29,7 @@ describe("Push Token Registration API (/api/mobile/push/register)", () => {
   });
 
   it("validates token payload schema and rejects missing token", async () => {
-    (verifySession as jest.Mock).mockResolvedValue({ staffId: "usr_001", role: "staff" });
+    (verifySession as jest.Mock).mockResolvedValue({ staffId: "usr_001", role: "staff", institutionId: "inst_001" });
 
     const req = mockNextRequest("http://localhost:3000/api/mobile/push/register", {
       method: "POST",

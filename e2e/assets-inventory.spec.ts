@@ -4,7 +4,7 @@ test.describe("Assets Inventory Flow", () => {
   test.use({ storageState: ".auth/admin.json" });
 
   test("navigates to assets page and renders title and export action", async ({ page }) => {
-    await page.goto("/assets");
+    await page.goto("/operations/assets");
     await expect(page.locator("h1")).toContainText("Assets");
 
     const exportBtn = page.getByRole("button", { name: /Export/i }).first();

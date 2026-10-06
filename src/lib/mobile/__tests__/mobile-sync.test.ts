@@ -5,6 +5,10 @@ jest.mock("@thaiba/auth", () => ({
   ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
   hasPermission: jest.fn().mockReturnValue(true),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_001"),
+  getUserInstitutionScope: jest.fn().mockResolvedValue("inst_001"),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_001"),
+  getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_001"]),
 }));
 
 jest.mock("@/lib/mobile/sync-appliers", () => ({
@@ -35,6 +39,7 @@ describe("Mobile Sync Reconciliation API", () => {
       staffId: "usr_mock",
       email: "mock@thaibahive.edu",
       role: "staff",
+      institutionId: "inst_001",
     });
   });
 

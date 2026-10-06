@@ -18,9 +18,9 @@ export class RazorpayAdapter implements PaymentGatewayAdapter {
   private webhookSecret: string;
 
   constructor(
-    keyId: string = process.env.RAZORPAY_KEY_ID || 'rzp_test_thaiba_mock_key',
-    keySecret: string = process.env.RAZORPAY_KEY_SECRET || 'rzp_test_mock_secret',
-    webhookSecret: string = process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_webhook_secret_mock'
+    keyId: string = process.env.RAZORPAY_KEY_ID || '',
+    keySecret: string = process.env.RAZORPAY_KEY_SECRET || '',
+    webhookSecret: string = process.env.RAZORPAY_WEBHOOK_SECRET || ''
   ) {
     this.keyId = keyId;
     this.keySecret = keySecret;
@@ -57,6 +57,9 @@ export class RazorpayAdapter implements PaymentGatewayAdapter {
   }
 
   public verifyPaymentSignature(params: VerifySignatureRequest): boolean {
+    if (!this.keySecret) {
+      return false;
+    }
     const body = `${params.orderId}|${params.paymentId}`;
     const expectedSignature = crypto
       .createHmac('sha256', this.keySecret)
@@ -91,6 +94,22 @@ export class RazorpayAdapter implements PaymentGatewayAdapter {
     rawBody: string,
     signature: string
   ): Promise<WebhookEventPayload> {
+    if (!this.webhookSecret || !signature) {
+      const parsed = JSON.parse(rawBody || '{}');
+      const paymentEntity = parsed?.payload?.payment?.entity || {};
+      return {
+        eventId: parsed?.event_id || `evt_${Date.now()}`,
+        eventType: parsed?.event || 'payment.captured',
+        gatewayPaymentId: paymentEntity?.id || 'mock_pay_id',
+        gatewayOrderId: paymentEntity?.order_id,
+        amount: (paymentEntity?.amount || 0) / 100,
+        currency: paymentEntity?.currency || 'INR',
+        status: 'failed',
+        signatureVerified: false,
+        metadata: parsed?.payload,
+      };
+    }
+
     const expectedSignature = crypto
       .createHmac('sha256', this.webhookSecret)
       .update(rawBody)

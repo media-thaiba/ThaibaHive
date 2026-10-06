@@ -6,6 +6,7 @@ import { serverLogger } from "@/lib/server-logger";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { checkDistributedRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export async function POST(request: Request) {
   let body: any = {};
@@ -19,6 +20,9 @@ export async function POST(request: Request) {
   if (!identity) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const rl = await checkDistributedRateLimit(`otp:${identity.staffId}`, { windowMs: 60_000, max: 3, keyPrefix: "auth-otp" });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const code = generateOTPCode(identity.staffId);
 

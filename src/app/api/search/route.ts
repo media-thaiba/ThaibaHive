@@ -68,7 +68,7 @@ export const OPTIONS = requireAuth(async () => {
 });
 
 // Global search distribution route for specific entity types
-export const _tasks = requireAuth(async (request: Request, _session) => {
+const _tasks = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -86,7 +86,7 @@ export const _tasks = requireAuth(async (request: Request, _session) => {
   });
 });
 
-export const _staff = requireAuth(async (request: Request, _session) => {
+const _staff = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -104,7 +104,7 @@ export const _staff = requireAuth(async (request: Request, _session) => {
   });
 });
 
-export const _students = requireAuth(async (request: Request, _session) => {
+const _students = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -122,7 +122,7 @@ export const _students = requireAuth(async (request: Request, _session) => {
   });
 });
 
-export const _events = requireAuth(async (request: Request, _session) => {
+const _events = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 
@@ -140,7 +140,7 @@ export const _events = requireAuth(async (request: Request, _session) => {
   });
 });
 
-export const _announcements = requireAuth(async (request: Request, _session) => {
+const _announcements = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q") || "";
 

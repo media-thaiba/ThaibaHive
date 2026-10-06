@@ -19,7 +19,7 @@ jest.mock("jose", () => ({
   })),
 }));
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key-123456");
+const secret = new TextEncoder().encode(process.env.JWT_SECRET || "test-secret-key-for-sprint018-32-chars");
 
 describe("Sprint-018 Security Invariants & Multi-Tenant Audit Tests", () => {
   beforeEach(() => {

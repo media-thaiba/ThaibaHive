@@ -1,11 +1,12 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { requireAuth } from '@/lib/api/auth-guard';
 import { facilityStreamManager } from '@/lib/operations/facility/streaming/facility-stream-manager';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

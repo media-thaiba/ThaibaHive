@@ -1,4 +1,4 @@
-﻿import { verifySession, verifyStepUpToken } from "@thaiba/auth";
+﻿import { verifySession, verifyStepUpToken, type SessionPayload } from "@thaiba/auth";
 
 /**
  * Resolves identity for step-up authentication endpoints.
@@ -8,8 +8,8 @@
  */
 export async function resolveStepUpIdentity(
   request: Request,
-  body?: any,
-): Promise<{ staffId: string; challengeId?: string; user?: any } | null> {
+  body?: { stepUpToken?: string },
+): Promise<{ staffId: string; challengeId?: string; user?: SessionPayload } | null> {
   // 1. Check existing session cookie
   try {
     const session = await verifySession();

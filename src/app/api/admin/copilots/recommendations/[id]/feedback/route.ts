@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { copilotFeedbackSchema } from "@/lib/validation/schemas";
 import { agentReasoningEngine } from "@/lib/services/agent-reasoning-engine";
 import type { SessionPayload } from "@/lib/auth";
@@ -7,7 +7,7 @@ import type { SessionPayload } from "@/lib/auth";
 export const POST = requireAuth(
   async (
     request: Request,
-    _session: SessionPayload,
+    session: SessionPayload,
     context?: { params: Promise<Record<string, string>> }
   ) => {
     const params = context ? await context.params : {};
@@ -34,7 +34,8 @@ export const POST = requireAuth(
       );
     }
 
-    const tenantId = (body.tenantId as string) || "inst_101";
+    const rawInst = typeof body.tenantId === "string" ? body.tenantId : typeof body.institutionId === "string" ? body.institutionId : undefined;
+    const tenantId = await resolveRequestInstitution(session, rawInst);
 
     try {
       const res = await agentReasoningEngine.recordHumanFeedback(

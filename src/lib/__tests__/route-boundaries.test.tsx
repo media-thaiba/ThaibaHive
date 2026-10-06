@@ -1,0 +1,215 @@
+/**
+ * O2 — Route boundary coverage and contracts.
+ *
+ * Guarantees every route segment inherits a loading, error and not-found
+ * boundary (nearest-ancestor rule), that error boundaries satisfy the
+ * Next.js client-component contract, and that each boundary renders.
+ */
+import fs from "fs";
+import path from "path";
+import { render, screen, fireEvent } from "@testing-library/react";
+import RootLoading from "@/app/loading";
+import ShellLoading from "@/app/(shell)/loading";
+import RootError from "@/app/error";
+import ShellError from "@/app/(shell)/error";
+import RootNotFound from "@/app/not-found";
+import GlobalError from "@/app/global-error";
+import TasksLoading from "@/app/(shell)/my-work/tasks/loading";
+import TasksError from "@/app/(shell)/my-work/tasks/error";
+import WorkspaceLoading from "@/app/(shell)/workspace/loading";
+import WorkspaceError from "@/app/(shell)/workspace/error";
+import AttendanceLoading from "@/app/(shell)/my-work/attendance/loading";
+import AttendanceError from "@/app/(shell)/my-work/attendance/error";
+import FinanceLoading from "@/app/(shell)/operations/finance/loading";
+import FinanceError from "@/app/(shell)/operations/finance/error";
+import AdminLoading from "@/app/(shell)/admin/loading";
+import AdminError from "@/app/(shell)/admin/error";
+import MediaLoading from "@/app/(shell)/operations/media-library/loading";
+import MediaError from "@/app/(shell)/operations/media-library/error";
+import PortalLoading from "@/app/(shell)/portal/loading";
+import PortalError from "@/app/(shell)/portal/error";
+import ParentLoading from "@/app/(shell)/parent/loading";
+import ParentError from "@/app/(shell)/parent/error";
+import NfcLoading from "@/app/(shell)/admin/hardware/loading";
+import NfcError from "@/app/(shell)/admin/hardware/error";
+
+const APP_DIR = path.join(__dirname, "..", "..", "app");
+
+const REQUIRED_BOUNDARIES: { file: string; mustBeClient: boolean }[] = [
+  { file: "loading.tsx", mustBeClient: false },
+  { file: "error.tsx", mustBeClient: true },
+  { file: "global-error.tsx", mustBeClient: true },
+  { file: "not-found.tsx", mustBeClient: false },
+  { file: "(shell)/loading.tsx", mustBeClient: false },
+  { file: "(shell)/error.tsx", mustBeClient: true },
+  { file: "(shell)/my-work/tasks/loading.tsx", mustBeClient: false },
+  { file: "(shell)/my-work/tasks/error.tsx", mustBeClient: true },
+  { file: "(shell)/workspace/loading.tsx", mustBeClient: false },
+  { file: "(shell)/workspace/error.tsx", mustBeClient: true },
+  { file: "(shell)/my-work/attendance/loading.tsx", mustBeClient: false },
+  { file: "(shell)/my-work/attendance/error.tsx", mustBeClient: true },
+  { file: "(shell)/operations/finance/loading.tsx", mustBeClient: false },
+  { file: "(shell)/operations/finance/error.tsx", mustBeClient: true },
+  { file: "(shell)/admin/loading.tsx", mustBeClient: false },
+  { file: "(shell)/admin/error.tsx", mustBeClient: true },
+  { file: "(shell)/operations/media-library/loading.tsx", mustBeClient: false },
+  { file: "(shell)/operations/media-library/error.tsx", mustBeClient: true },
+  { file: "(shell)/portal/loading.tsx", mustBeClient: false },
+  { file: "(shell)/portal/error.tsx", mustBeClient: true },
+  { file: "(shell)/parent/loading.tsx", mustBeClient: false },
+  { file: "(shell)/parent/error.tsx", mustBeClient: true },
+  { file: "(shell)/admin/hardware/loading.tsx", mustBeClient: false },
+  { file: "(shell)/admin/hardware/error.tsx", mustBeClient: true },
+];
+
+const SEGMENT_BOUNDARIES = [
+  { name: "my-work/tasks", label: "tasks", Loading: TasksLoading, Error: TasksError, heading: "Couldn't load tasks" },
+  { name: "workspace", label: "workspace", Loading: WorkspaceLoading, Error: WorkspaceError, heading: "Couldn't load workspace" },
+  { name: "my-work/attendance", label: "attendance", Loading: AttendanceLoading, Error: AttendanceError, heading: "Couldn't load attendance" },
+  { name: "operations/finance", label: "finance", Loading: FinanceLoading, Error: FinanceError, heading: "Couldn't load finance" },
+  { name: "admin", label: "administration", Loading: AdminLoading, Error: AdminError, heading: "Couldn't load administration" },
+  { name: "operations/media-library", label: "media library", Loading: MediaLoading, Error: MediaError, heading: "Couldn't load media library" },
+  { name: "portal", label: "portal", Loading: PortalLoading, Error: PortalError, heading: "Couldn't load portal" },
+  { name: "parent", label: "parent portal", Loading: ParentLoading, Error: ParentError, heading: "Couldn't load parent portal" },
+  { name: "admin/hardware", label: "NFC cards", Loading: NfcLoading, Error: NfcError, heading: "Couldn't load NFC cards" },
+];
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(APP_DIR, rel), "utf8");
+}
+
+function listSegmentDirs(dir: string, out: string[] = []): string[] {
+  for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!item.isDirectory()) continue;
+    const full = path.join(dir, item.name);
+    const hasRouteFile = ["page.tsx", "route.ts", "layout.tsx"].some((f) =>
+      fs.existsSync(path.join(full, f))
+    );
+    if (hasRouteFile) out.push(full);
+    listSegmentDirs(full, out);
+  }
+  return out;
+}
+
+function hasAncestorBoundary(dir: string, boundary: string): boolean {
+  let current = dir;
+  for (;;) {
+    if (fs.existsSync(path.join(current, boundary))) return true;
+    if (current === APP_DIR) return false;
+    current = path.dirname(current);
+  }
+}
+
+describe("required route boundaries exist with Next contracts", () => {
+  for (const boundary of REQUIRED_BOUNDARIES) {
+    it(`${boundary.file} exists with a default-exported component`, () => {
+      const source = read(boundary.file);
+      expect(source).toMatch(/export default function \w+/);
+      if (boundary.mustBeClient) {
+        expect(source).toContain('"use client"');
+      }
+    });
+  }
+});
+
+describe("every route segment inherits loading/error/not-found boundaries", () => {
+  const segments = listSegmentDirs(APP_DIR);
+  const boundaries = ["loading.tsx", "error.tsx", "not-found.tsx"];
+
+  it("discovers route segments under src/app", () => {
+    expect(segments.length).toBeGreaterThan(50);
+  });
+
+  for (const boundary of boundaries) {
+    it(`every segment resolves ${boundary} via nearest ancestor`, () => {
+      const uncovered = segments
+        .filter((dir) => !hasAncestorBoundary(dir, boundary))
+        .map((dir) => path.relative(APP_DIR, dir));
+      expect(uncovered).toEqual([]);
+    });
+  }
+});
+
+describe("boundary render smoke", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("root error boundary shows message and calls reset on retry", () => {
+    const reset = jest.fn();
+    render(<RootError error={new Error("boom")} reset={reset} />);
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+
+  it("shell error boundary shows message and calls reset on retry", () => {
+    const reset = jest.fn();
+    render(<ShellError error={new Error("boom")} reset={reset} />);
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+
+  it("global error boundary shows message and calls reset on retry", () => {
+    const reset = jest.fn();
+    render(<GlobalError error={new Error("boom")} reset={reset} />);
+    expect(screen.getByText("Application Error")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+
+  it("not-found boundary renders the 404 copy", () => {
+    render(<RootNotFound />);
+    expect(screen.getByText("Page Not Found")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /return to dashboard/i })).toBeInTheDocument();
+  });
+
+  it("root loading boundary renders skeletons", () => {
+    const { container } = render(<RootLoading />);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+
+  it("shell loading boundary renders skeletons", () => {
+    const { container } = render(<ShellLoading />);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+});
+
+describe("segment boundary render smoke", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each(SEGMENT_BOUNDARIES)(
+    "$name loading renders skeletons in an accessible status region",
+    (boundary) => {
+      const { container } = render(<boundary.Loading />);
+      const status = screen.getByRole("status");
+      expect(status).toHaveAttribute("aria-label", `Loading ${boundary.label}`);
+      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    }
+  );
+
+  it.each(SEGMENT_BOUNDARIES)(
+    "$name error shows heading, alert copy and calls reset on retry",
+    (boundary) => {
+      const reset = jest.fn();
+      render(<boundary.Error error={new Error("boom")} reset={reset} />);
+      expect(screen.getByText(boundary.heading)).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+      expect(reset).toHaveBeenCalledTimes(1);
+    }
+  );
+});

@@ -3,7 +3,7 @@ export interface FinancialTelemetryEvent {
   type: 'payment_received' | 'shift_opened' | 'shift_closed' | 'concession_approved' | 'webhook_alert';
   timestamp: string;
   institutionId: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export class FeeTelemetryManager {
@@ -39,7 +39,7 @@ export class FeeTelemetryManager {
   public broadcastEvent(
     type: FinancialTelemetryEvent['type'],
     institutionId: string,
-    data: Record<string, any>
+    data: Record<string, unknown>
   ): void {
     const event: FinancialTelemetryEvent = {
       id: `evt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -50,12 +50,13 @@ export class FeeTelemetryManager {
     };
 
     // Update internal counters
-    if (type === 'payment_received' && data.amount) {
+    const amount = typeof data.amount === 'number' ? data.amount : 0;
+    if (type === 'payment_received' && amount) {
       this.metrics.collectionsTotal++;
-      this.metrics.amountCollectedCents += Math.round(data.amount * 100);
+      this.metrics.amountCollectedCents += Math.round(amount * 100);
     }
-    if (type === 'concession_approved' && data.amount) {
-      this.metrics.scholarshipDisbursedCents += Math.round(data.amount * 100);
+    if (type === 'concession_approved' && amount) {
+      this.metrics.scholarshipDisbursedCents += Math.round(amount * 100);
     }
 
     for (const listener of this.listeners) {

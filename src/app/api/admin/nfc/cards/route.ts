@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { nfcCards, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { getActorInstitutionIds } from "@/lib/api/tenant-scope";
 import { eq, like, or, desc, count, and, sql } from "drizzle-orm";
 import crypto from "crypto";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10)));
@@ -68,7 +68,8 @@ export const GET = requireAuth(async (request: Request) => {
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { tagId, notes, institutionId: requestedInstId, serialNumber } = body;
+  const { tagId, notes, institutionId: reqInst, serialNumber } = body;
+    const requestedInstId = await resolveRequestInstitution(session, reqInst);
 
   if (!tagId || typeof tagId !== "string" || !tagId.trim()) {
     return NextResponse.json({ error: "tagId is required" }, { status: 400 });

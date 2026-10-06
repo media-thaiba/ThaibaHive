@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
  */
 import { VisitorQrPassService } from "@/lib/visitors/qr-pass-service";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const passToken = searchParams.get("passToken") || searchParams.get("id") || searchParams.get("qrPayload");
 

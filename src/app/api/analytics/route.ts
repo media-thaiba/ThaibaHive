@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { AnalyticsService } from "@/lib/services/analytics";
 import { getActorInstitutionIds } from "@/lib/api/tenant-scope";
 
@@ -13,10 +13,9 @@ export const GET = requireAuth(async (request, session) => {
   
   const actorInstIds = await getActorInstitutionIds(staffId);
   const queryInstId = url.searchParams.get("institutionId");
-
-  let institutionId = queryInstId;
-  if (!institutionId) {
-    institutionId = Array.from(actorInstIds)[0];
+  const institutionId = await resolveRequestInstitution(session, queryInstId);
+  if (institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
   }
 
   // Verify access unless super_admin or admin

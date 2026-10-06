@@ -159,9 +159,10 @@ export const POST = requireAuth(async (request: Request, session) => {
         updatedAt: now,
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error("[Finance Approval Error]:", err instanceof Error ? err.stack : err);
     return NextResponse.json(
-      { error: err.message || "An unexpected error occurred during approval processing" },
+      { error: "An unexpected error occurred during approval processing" },
       { status: 500 }
     );
   }

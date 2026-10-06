@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 /**
  * Multi-Region Edge Cache Invalidation Service & HMAC Authenticator
  * Part of Sprint-034: Enterprise Multi-Region Infrastructure & Automated Dependency Security
@@ -90,7 +91,7 @@ export class EdgeCachePurger {
     const urls = options.urls || [];
     const isGlobal = Boolean(options.purgeAll);
 
-    console.log(`[EdgeCachePurger] Dispatching edge purge request (Tags: ${tags.length}, URLs: ${urls.length}, Global: ${isGlobal})...`);
+    logger.info(`[EdgeCachePurger] Dispatching edge purge request (Tags: ${tags.length}, URLs: ${urls.length}, Global: ${isGlobal})...`);
 
     const providerResponses: { provider: string; success: boolean; message?: string; attempts: number }[] = [];
 

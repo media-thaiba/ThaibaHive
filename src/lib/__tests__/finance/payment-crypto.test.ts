@@ -35,12 +35,13 @@ describe('PaymentCrypto & PCI-DSS Security (Sprint-057 - FEE-007)', () => {
     };
 
     const sanitized = PaymentCrypto.sanitizePayload(rawPayload);
+    const customer = sanitized.customer as Record<string, unknown>;
 
     expect(sanitized.orderId).toBe('ord_123');
     expect(sanitized.amount).toBe(5000);
-    expect(sanitized.customer.name).toBe('Ahmad Khan');
-    expect(sanitized.customer.card_number).toBe('[REDACTED]');
-    expect(sanitized.customer.cvv).toBe('[REDACTED]');
-    expect(sanitized.customer.secret_token).toBe('[REDACTED]');
+    expect(customer.name).toBe('Ahmad Khan');
+    expect(customer.card_number).toBe('[REDACTED]');
+    expect(customer.cvv).toBe('[REDACTED]');
+    expect(customer.secret_token).toBe('[REDACTED]');
   });
 });

@@ -6,7 +6,7 @@ import { generateStudentReportCardPDF } from "@/lib/examinations/report-card-gen
 import { calculateStudentTabulation,  } from "@/lib/examinations/grade-calculator";
 import { eq, inArray } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");

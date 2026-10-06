@@ -18,7 +18,7 @@ export const GET = requireAuth(async () => {
   }
 }, 'operations:read');
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = evaluateDriftSchema.safeParse(body);

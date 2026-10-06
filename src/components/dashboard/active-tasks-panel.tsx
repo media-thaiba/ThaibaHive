@@ -17,7 +17,7 @@ export function ActiveTasksPanel({ tasks, onToggleTask }: ActiveTasksPanelProps)
           <CardTitle className="text-base font-semibold">My Active Tasks</CardTitle>
           <p className="text-xs text-muted-foreground">Things you need to focus on today</p>
         </div>
-        <Link href="/tasks" aria-label="View all tasks" className="text-xs font-medium text-primary hover:underline flex items-center gap-0.5">
+        <Link href="/my-work/tasks" aria-label="View all tasks" className="text-xs font-medium text-primary hover:underline flex items-center gap-0.5">
           View all tasks <ChevronRight className="h-3 w-3" />
         </Link>
       </CardHeader>
@@ -49,7 +49,7 @@ export function ActiveTasksPanel({ tasks, onToggleTask }: ActiveTasksPanelProps)
                     </div>
                   </div>
                 </div>
-                <Link href={`/tasks/${task.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
+                <Link href={`/my-work/tasks/${task.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
                   <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
                 </Link>
               </div>

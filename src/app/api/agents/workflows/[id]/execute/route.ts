@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 // In-memory idempotency cache for execution requests
 const idempotencyCache = new Map<string, { result: any; timestamp: number }>();
 
-export const POST = requireAuth(async (req: Request, user: any, context?: any) => {
+export const POST = requireAuth(async (req: Request, session: any, context?: any) => {
   const params = await context?.params;
   const workflowId = params?.id;
-  const tenantId = user?.institutionId || "global";
+  const tenantId = session?.institutionId || "global";
 
   if (!isAgenticWorkflowsEnabled(tenantId)) {
     return NextResponse.json({ error: "Agentic workflows feature is disabled" }, { status: 403 });
@@ -60,9 +60,9 @@ export const POST = requireAuth(async (req: Request, user: any, context?: any) =
 
   const tenant: TenantContext = {
     institutionId: tenantId,
-    userId: user?.staffId || user?.userId || "user_sys",
-    userRole: user?.role || "staff",
-    permissions: user?.permissions || ["*"],
+    userId: session?.staffId || session?.userId || "user_sys",
+    userRole: session?.role || "staff",
+    permissions: session?.permissions || ["*"],
     traceId: req.headers.get("x-trace-id") || `trace_${Date.now()}`,
   };
 

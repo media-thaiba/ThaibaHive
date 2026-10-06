@@ -1,6 +1,6 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
-import { resolveTenantInstitutionId } from '@/lib/api/tenant-scope';
 import { SupplyDbStore } from '@/lib/db/supply-store';
 import { invoiceCreateSchema } from '@/lib/validation/supply-schemas';
 
@@ -8,14 +8,14 @@ export const dynamic = 'force-dynamic';
 
 const store = SupplyDbStore.getInstance();
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const institutionId = resolveTenantInstitutionId(user?.institutionId, searchParams.get('institutionId'));
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const invoices = await store.listInvoices(institutionId);
   return NextResponse.json({ invoices });
 }, 'supply:invoices:match');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = invoiceCreateSchema.safeParse(body);
@@ -23,7 +23,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid invoice payload' }, { status: 400 });
     }
 
-    const institutionId = resolveTenantInstitutionId(user?.institutionId, parsed.data.institutionId);
+    const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const invoiceId = `inv-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     const inv = {
@@ -41,8 +41,7 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       status: 'submitted' as const,
       institutionId,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString() };
 
     const saved = await store.createInvoice(inv);
     return NextResponse.json({ invoice: saved }, { status: 201 });

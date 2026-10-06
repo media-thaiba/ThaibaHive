@@ -1,3 +1,4 @@
+import { logger } from "./logger";
 /**
  * Sentry Error Monitoring Integration
  * Safe initialization and error capture for web (client/server).
@@ -10,7 +11,7 @@ export function initSentry() {
   if (!dsn || sentryInitialized) return;
 
   sentryInitialized = true;
-  console.log(`[Sentry] Initialized error monitoring (${process.env.NODE_ENV ?? "development"})`);
+  logger.info(`[Sentry] Initialized error monitoring (${process.env.NODE_ENV ?? "development"})`);
 }
 
 export function captureException(error: unknown, context?: Record<string, unknown>) {

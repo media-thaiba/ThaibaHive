@@ -1,0 +1,777 @@
+﻿  console.log
+    [@thaiba/db] Initializing database in SQLite/LibSQL mode
+
+      at Object.log (packages/db/index.ts:62:11)
+
+pnpm.exe : FAIL packages/auth/__tests__/tenant-scope-fail-closed.test.ts
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL packages/a...-closed.test.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3)
+    resolveInstitutionScopeForSession
+      ├ù should return null (fail closed) for non-admin staff with NO institution mapping (1 ms)
+      ├ù should return 'global' for super_admin and admin users
+      ├ù should resolve single institution mapping correctly
+      ├ù should resolve active institution matching subdomain if staff is a member
+      ├ù should reject (return null) if staff accesses subdomain of institution they are NOT a member of
+    resolveScopedInstitutionId
+      ├ù should throw TenantMismatchError if unmapped staff attempts to resolve scope
+      ├ù should throw TenantMismatchError if staff of institution A requests institution B
+      ├ù should return requested institution ID if staff is an active member
+      ├ù should permit super_admin / admin to target any requested institution or default to global
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveInstitutionScopeForSession 
+ΓÇ║ should return null (fail closed) for non-admin staff with NO institution mapping
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveInstitutionScopeForSession 
+ΓÇ║ should return 'global' for super_admin and admin users
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveInstitutionScopeForSession 
+ΓÇ║ should resolve single institution mapping correctly
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveInstitutionScopeForSession 
+ΓÇ║ should resolve active institution matching subdomain if staff is a member
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveInstitutionScopeForSession 
+ΓÇ║ should reject (return null) if staff accesses subdomain of institution they are NOT a member of
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveScopedInstitutionId ΓÇ║ 
+should throw TenantMismatchError if unmapped staff attempts to resolve scope
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveScopedInstitutionId ΓÇ║ 
+should throw TenantMismatchError if staff of institution A requests institution B
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveScopedInstitutionId ΓÇ║ 
+should return requested institution ID if staff is an active member
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+  ΓùÅ Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker B3) ΓÇ║ resolveScopedInstitutionId ΓÇ║ 
+should permit super_admin / admin to target any requested institution or default to global
+
+    Failed query: insert into "institutions" ("id", "name", "code", "type", "address", "phone", "email", "is_active", 
+"allocated_budget", "fiscal_year", "created_at", "updated_at") values (?, ?, ?, ?, null, null, null, ?, ?, null, 
+(current_timestamp), (current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), 
+(current_timestamp)), (?, ?, ?, ?, null, null, null, ?, ?, null, (current_timestamp), (current_timestamp))
+    params: inst_alpha_1791045141743,Campus Alpha,alpha_1791045141743,campus,1,0,inst_beta_1791045141743,Campus 
+Beta,beta_1791045141743,campus,1,0,inst_gamma_1791045141743,Campus Gamma,gamma_1791045141743,campus,1,0
+
+    [0m [90m 20 |[39m   beforeAll([36masync[39m () [33m=>[39m {
+     [90m 21 |[39m     [90m// Insert test institutions[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     [36mawait[39m db[33m.[39minsert(institutions)[33m.[39mvalues([
+     [90m    |[39m     [31m[1m^[22m[39m
+     [90m 23 |[39m       { id[33m:[39m instAlpha[33m,[39m name[33m:[39m [32m"Campus Alpha"[39m[33m,[39m 
+code[33m:[39m [32m`alpha_${ts}`[39m }[33m,[39m
+     [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m[0m
+
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:80:11)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:10)
+      at Object.<anonymous> (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:22:5)
+
+    Cause:
+    LibsqlError: SQLITE_ERROR: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at mapSqliteError 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:459:16)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:362:15)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+    Cause:
+    SqliteError: no such table: institutions
+
+    [0m [90m 24 |[39m       { id[33m:[39m instBeta[33m,[39m name[33m:[39m [32m"Campus Beta"[39m[33m,[39m 
+code[33m:[39m [32m`beta_${ts}`[39m }[33m,[39m
+     [90m 25 |[39m       { id[33m:[39m instGamma[33m,[39m name[33m:[39m [32m"Campus Gamma"[39m[33m,[39m 
+code[33m:[39m [32m`gamma_${ts}`[39m }[33m,[39m
+    [31m[1m>[22m[39m[90m 26 |[39m     ])[33m.[39mrun()[33m;[39m
+     [90m    |[39m        [31m[1m^[22m[39m
+     [90m 27 |[39m
+     [90m 28 |[39m     [90m// Insert test staff[39m
+     [90m 29 |[39m     [36mawait[39m db[33m.[39minsert(staff)[33m.[39mvalues([[0m
+
+      at convertError (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/.pnpm/libsql@0.5.29/node_modules/libsql/index.js:131:13)
+      at executeStmt (node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:333:28)
+      at Sqlite3Client.execute 
+(node_modules/.pnpm/@libsql+client@0.17.4/node_modules/@libsql/client/lib-cjs/sqlite3.js:105:16)
+      at node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules/src/libsql/sessio
+n.ts:199:57
+      at LibSQLPreparedQuery.queryWithCache (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c2
+48d2d/node_modules/src/sqlite-core/session.ts:78:18)
+      at LibSQLPreparedQuery.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_
+modules/src/libsql/session.ts:197:21)
+      at QueryPromise.run (node_modules/.pnpm/drizzle-orm@0.45.2_@libsql+_95999a574f549198b60bbdad5c248d2d/node_modules
+/src/sqlite-core/query-builders/insert.ts:398:26)
+      at Object.run (packages/auth/__tests__/tenant-scope-fail-closed.test.ts:26:8)
+
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 9 total
+Snapshots:   0 total
+Time:        1.886 s
+Ran all test suites matching packages/auth/__tests__/tenant-scope-fail-closed.test.ts.

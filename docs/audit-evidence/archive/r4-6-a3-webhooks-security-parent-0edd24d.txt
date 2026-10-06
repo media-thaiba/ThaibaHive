@@ -1,0 +1,93 @@
+﻿  console.log
+    [@thaiba/db] Initializing database in SQLite/LibSQL mode
+
+      at Object.log (packages/db/index.ts:62:11)
+
+pnpm.exe : FAIL src/lib/__tests__/webhooks-security.test.ts
+At C:\Users\Shukoor Rahman\AppData\Roaming\npm\pnpm.ps1:14 char:3
++   & "$basedir/node_modules/pnpm/pnpm.exe"   $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (FAIL src/lib/__...ecurity.test.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Webhooks Security & Ingestion Hardening (Task A3 / Blocker B4)
+    Twilio Voice Webhook
+      ΓêÜ should accept validly signed Twilio request (5 ms)
+      ├ù should reject forged or unsigned Twilio request with 401 (3 ms)
+      ├ù should XML-escape dynamic responses to prevent TwiML injection (1 ms)
+    Finance Fees Webhook
+      ├ù should return sanitized 401 when signature is invalid (4 ms)
+    Twilio Public URL Resolution
+      ΓêÜ should correctly validate Twilio signature against configured NEXT_PUBLIC_APP_URL (2 ms)
+
+  ΓùÅ Webhooks Security & Ingestion Hardening (Task A3 / Blocker B4) ΓÇ║ Twilio Voice Webhook ΓÇ║ should reject forged 
+or unsigned Twilio request with 401
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 401
+    Received: 200
+
+    [0m [90m 77 |[39m
+     [90m 78 |[39m       [36mconst[39m res [33m=[39m [36mawait[39m voiceHandler(req)[33m;[39m
+    [31m[1m>[22m[39m[90m 79 |[39m       expect(res[33m.[39mstatus)[33m.[39mtoBe([35m401[39m)[33m;[39m
+     [90m    |[39m                          [31m[1m^[22m[39m
+     [90m 80 |[39m       [36mconst[39m json [33m=[39m [36mawait[39m res[33m.[39mjson()[33m;[39m
+     [90m 81 |[39m       expect(json[33m.[39merror)[33m.[39mtoContain([32m"Invalid or missing Twilio 
+signature"[39m)[33m;[39m
+     [90m 82 |[39m     })[33m;[39m[0m
+
+      at Object.toBe (src/lib/__tests__/webhooks-security.test.ts:79:26)
+
+  ΓùÅ Webhooks Security & Ingestion Hardening (Task A3 / Blocker B4) ΓÇ║ Twilio Voice Webhook ΓÇ║ should XML-escape 
+dynamic responses to prevent TwiML injection
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "&lt;Say"
+    Received string:    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+    <Response>
+      <Say>Thank you for calling. Our lines are currently busy. Please visit our online portal.</Say>
+    </Response>"
+
+    [0m [90m 115 |[39m       
+expect(text)[33m.[39mnot[33m.[39mtoContain([32m'<Redirect>/malicious</Redirect>'[39m)[33m;[39m
+     [90m 116 |[39m       [90m// Verify escaped characters[39m
+    [31m[1m>[22m[39m[90m 117 |[39m       expect(text)[33m.[39mtoContain([32m'&lt;Say'[39m)[33m;[39m
+     [90m     |[39m                    [31m[1m^[22m[39m
+     [90m 118 |[39m       
+expect(text)[33m.[39mtoContain([32m'&lt;Redirect&gt;/malicious&lt;/Redirect&gt;'[39m)[33m;[39m
+     [90m 119 |[39m     })[33m;[39m
+     [90m 120 |[39m   })[33m;[39m[0m
+
+      at Object.toContain (src/lib/__tests__/webhooks-security.test.ts:117:20)
+
+  ΓùÅ Webhooks Security & Ingestion Hardening (Task A3 / Blocker B4) ΓÇ║ Finance Fees Webhook ΓÇ║ should return 
+sanitized 401 when signature is invalid
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "error": "Invalid webhook signature",
+    +   "error": "Webhook signature verification failed",
+      }
+
+    [0m [90m 133 |[39m       expect(res[33m.[39mstatus)[33m.[39mtoBe([35m401[39m)[33m;[39m
+     [90m 134 |[39m       [36mconst[39m json [33m=[39m [36mawait[39m res[33m.[39mjson()[33m;[39m
+    [31m[1m>[22m[39m[90m 135 |[39m       expect(json)[33m.[39mtoEqual({ error[33m:[39m [32m"Invalid webhook 
+signature"[39m })[33m;[39m
+     [90m     |[39m                    [31m[1m^[22m[39m
+     [90m 136 |[39m     })[33m;[39m
+     [90m 137 |[39m   })[33m;[39m
+     [90m 138 |[39m[0m
+
+      at Object.toEqual (src/lib/__tests__/webhooks-security.test.ts:135:20)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 2 passed, 5 total
+Snapshots:   0 total
+Time:        1.595 s
+Ran all test suites matching src/lib/__tests__/webhooks-security.test.ts.

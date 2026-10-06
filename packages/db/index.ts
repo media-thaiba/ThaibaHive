@@ -24,33 +24,67 @@ export function logSlowQuery(op: string, durationMs: number) {
 }
 
 let dbInstance: any;
+export let rawPgDb: any = null;
 const replicaInstances: any[] = [];
 const replicaUrls: string[] = [];
+
+export interface PgPoolOptions {
+  connectionString?: string;
+  max?: number;
+  idleTimeoutMillis?: number;
+  connectionTimeoutMillis?: number;
+  ssl?: boolean | { rejectUnauthorized: boolean };
+}
+
+export function getPgPoolConfig(connStr: string = databaseUrl): PgPoolOptions {
+  let max = 3;
+  if (process.env.DB_POOL_MAX) {
+    max = parseInt(process.env.DB_POOL_MAX, 10);
+  } else if (process.env.VERCEL) {
+    // Serverless lambdas: pool size = 3 to prevent exhausting pooler connections
+    max = 3;
+  } else if (process.env.NODE_ENV === "production") {
+    max = 10;
+  } else {
+    max = 3;
+  }
+
+  let ssl: boolean | { rejectUnauthorized: boolean } | undefined;
+  if (process.env.DB_SSL === "false") {
+    ssl = false;
+  } else if (
+    process.env.DB_SSL === "true" ||
+    process.env.NODE_ENV === "production" ||
+    connStr.includes("supabase.co") ||
+    connStr.includes("pooler.supabase.com")
+  ) {
+    ssl = { rejectUnauthorized: false };
+  }
+
+  return {
+    connectionString: connStr,
+    max,
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || "30000", 10),
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS || "5000", 10),
+    ...(ssl !== undefined ? { ssl } : {}),
+  };
+}
 
 if (isPostgres) {
   console.log("[@thaiba/db] Initializing database in PostgreSQL mode");
   
   // Primary connection pool
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    max: process.env.NODE_ENV === "production" ? 10 : 3,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
+  const pool = new Pool(getPgPoolConfig(databaseUrl));
 
   const pgDb = pgDrizzle(pool, { schema: pgSchema });
+  rawPgDb = pgDb;
   dbInstance = wrapPgDb(pgDb);
 
   // Parse replica URLs if configured (e.g. DB_REPLICA_URLS="postgres://...,postgres://...")
   const envReplicaUrls = (process.env.DB_REPLICA_URLS || "").split(",").map(u => u.trim()).filter(Boolean);
   for (const rUrl of envReplicaUrls) {
     try {
-      const replicaPool = new Pool({
-        connectionString: rUrl,
-        max: process.env.NODE_ENV === "production" ? 10 : 3,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
-      });
+      const replicaPool = new Pool(getPgPoolConfig(rUrl));
       const repPg = pgDrizzle(replicaPool, { schema: pgSchema });
       replicaInstances.push(wrapPgDb(repPg));
       replicaUrls.push(rUrl);
@@ -118,6 +152,28 @@ export const db = dbInstance as ReturnType<typeof sqliteDrizzle>;
 export function wrapPgDb(pgDb: any): any {
   return new Proxy(pgDb, {
     get(target: any, prop: string | symbol, receiver: any): any {
+      if (prop === "all") {
+        return async function(query: any) {
+          const res = await target.execute(query);
+          return Array.isArray(res) ? res : (res?.rows ? res.rows : []);
+        };
+      }
+
+      if (prop === "get") {
+        return async function(query: any) {
+          const res = await target.execute(query);
+          const rows = Array.isArray(res) ? res : (res?.rows ? res.rows : []);
+          return rows[0];
+        };
+      }
+
+      if (prop === "run") {
+        return async function(query: any) {
+          const res = await target.execute(query);
+          return { changes: res?.rowCount ?? 0 };
+        };
+      }
+
       const val = Reflect.get(target, prop, receiver);
 
       if (typeof val === "function" && ["select", "insert", "update", "delete"].includes(prop as string)) {

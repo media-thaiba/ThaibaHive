@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { helpDeskTickets, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { helpDeskTicketCreateSchema } from "@/lib/validation/schemas";
 import { eq, and, desc } from "drizzle-orm";
@@ -31,8 +31,10 @@ export const GET = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
+  const url = new URL(request.url);
+  const requestedInst = url.searchParams.get("institutionId");
+  const scopedInstitutionId = await resolveRequestInstitution(session, requestedInst);
   const conditions = [];
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   if (scopedInstitutionId && scopedInstitutionId !== "global") {
     conditions.push(eq(helpDeskTickets.institutionId, scopedInstitutionId));
   }

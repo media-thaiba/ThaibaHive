@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import { authConfig } from "./config";
+import { authConfig, getJwtSecretBytes } from "./config";
 import { db, staff } from "@thaiba/db";
 import { eq } from "drizzle-orm";
 
@@ -15,8 +15,6 @@ const sessionPayloadSchema = z.object({
   dpopEnabled: z.boolean().optional().default(false),
   institutionId: z.string().nullable().optional(),
 });
-
-const secret = new TextEncoder().encode(authConfig.jwtSecret);
 
 export type SessionPayload = {
   staffId: string;
@@ -38,26 +36,30 @@ export async function createSession(payload: SessionPayload, extendSession = fal
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime(authConfig.sessionExpiry)
     .setIssuedAt()
-    .sign(secret);
+    .sign(getJwtSecretBytes("session"));
 
-  const cookieStore = await cookies();
-  const maxAge = extendSession
-    ? 60 * 60 * 24 * 7  // 7 days with "Remember Me"
-    : 60 * 60 * 24;     // 24 hours default
+  try {
+    const cookieStore = await cookies();
+    const maxAge = extendSession
+      ? 60 * 60 * 24 * 7  // 7 days with "Remember Me"
+      : 60 * 60 * 24;     // 24 hours default
 
-  const cookieOptions: Record<string, unknown> = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge,
-  };
+    const cookieOptions: Record<string, unknown> = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge,
+    };
 
-  if (process.env.COOKIE_DOMAIN) {
-    cookieOptions.domain = process.env.COOKIE_DOMAIN;
+    if (process.env.COOKIE_DOMAIN) {
+      cookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+
+    cookieStore.set(authConfig.cookieName, token, cookieOptions);
+  } catch {
+    // Non-request context (e.g. tests or background jobs)
   }
-
-  cookieStore.set(authConfig.cookieName, token, cookieOptions);
 
   return token;
 }
@@ -72,7 +74,7 @@ export async function createDPoPSession(payload: SessionPayload, dpopThumbprint:
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("10m") // Access token TTL: 10 minutes for DPoP sessions
     .setIssuedAt()
-    .sign(secret);
+    .sign(getJwtSecretBytes("session"));
 
   const cookieStore = await cookies();
   const maxAge = 10 * 60; // 10 minutes
@@ -121,7 +123,7 @@ export async function verifySession(): Promise<SessionPayload | null> {
   }
 
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getJwtSecretBytes("session"));
     const result = sessionPayloadSchema.safeParse(payload);
     if (!result.success) return null;
     const session = result.data;
@@ -162,12 +164,12 @@ export async function createStepUpToken(staffId: string, challengeId: string): P
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("5m")
-    .sign(secret);
+    .sign(getJwtSecretBytes("step-up"));
 }
 
 export async function verifyStepUpToken(token: string): Promise<{ staffId: string; challengeId?: string } | null> {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getJwtSecretBytes("step-up"));
     if (payload.staffId && typeof payload.staffId === "string" && payload.stepUpPending === true) {
       return {
         staffId: payload.staffId,

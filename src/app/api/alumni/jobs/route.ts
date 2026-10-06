@@ -1,11 +1,12 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { jobBoardEngine } from '@/lib/operations/alumni/jobs/job-board-engine';
 import { createJobPostingSchema } from '@/lib/validation/alumni-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const department = url.searchParams.get('department') || undefined;
   const roleType = url.searchParams.get('roleType') || undefined;
   const workplaceType = url.searchParams.get('workplaceType') || undefined;
@@ -44,7 +45,8 @@ export const POST = requireAuth(async (request, session) => {
 export const PATCH = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
-    const { jobId, institutionId, action, moderationNotes } = body;
+    const { jobId, action, moderationNotes } = body;
+    const institutionId = await resolveRequestInstitution(session, body.institutionId);
 
     if (!jobId || !institutionId || !action) {
       return NextResponse.json({ error: 'jobId, institutionId and action required' }, { status: 400 });

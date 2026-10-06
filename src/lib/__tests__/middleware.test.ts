@@ -98,11 +98,13 @@ jest.mock("next/server", () => {
   };
 });
 
-import { proxy, config } from "@/middleware";
+import { proxy, config } from "@/proxy";
 import { SignJWT } from "jose";
+import { getJwtSecretBytes } from "@thaiba/auth";
+import { PERMISSIONS_POLICY_VALUE } from "../security/security-headers";
 
 async function createValidTestToken(payload: Record<string, any> = { role: "admin", staffId: "stf-1", email: "test@example.com" }) {
-  const secret = new TextEncoder().encode(process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || "default_jwt_secret_key_for_testing");
+  const secret = getJwtSecretBytes("session");
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -207,6 +209,41 @@ describe("proxy", () => {
       expect(res.status).toBe(307);
       expect(res.get("location")).toBe("http://localhost/auth/login");
     });
+
+    it("should allow unauthenticated webhook endpoints through proxy without 401 (Task A3 / Blocker B4)", async () => {
+      const webhookEndpoints = [
+        "/api/finance/fees/webhooks",
+        "/api/webhooks/edge-security",
+        "/api/engage/voice",
+      ];
+
+      for (const endpoint of webhookEndpoints) {
+        const req = makeRequest(endpoint, {
+          method: "POST",
+          contentType: "application/x-www-form-urlencoded",
+        });
+        const res = await proxy(req as any);
+        expect(res.status).toBe(200);
+      }
+    });
+
+    it("should require authentication for webhook subpaths (/api/finance/fees/webhooks/anything must NOT be public) (R4-2)", async () => {
+      const subpathEndpoints = [
+        "/api/finance/fees/webhooks/anything",
+        "/api/finance/fees/webhooks/subpath",
+        "/api/webhooks/edge-security/nested",
+        "/api/engage/voice/unauthorized",
+      ];
+
+      for (const endpoint of subpathEndpoints) {
+        const req = makeRequest(endpoint, {
+          method: "POST",
+          contentType: "application/json",
+        });
+        const res = (await proxy(req as any)) as any;
+        expect(res.status).toBe(401);
+      }
+    });
   });
 
   describe("cookie authentication", () => {
@@ -310,13 +347,13 @@ describe("proxy", () => {
       expect(res.get("x-frame-options")).toBe("DENY");
       expect(res.get("x-xss-protection")).toBe("1; mode=block");
       expect(res.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
-      expect(res.get("permissions-policy")).toBe("camera=(self), microphone=(), geolocation=(self)");
+      expect(res.get("permissions-policy")).toBe(PERMISSIONS_POLICY_VALUE);
     });
 
     it("should add no-store cache headers for API routes", async () => {
       const req = makeRequest("/api/auth/login");
       const res = (await proxy(req as any)) as any;
-      expect(res.get("cache-control")).toBe("no-store, no-cache, must-revalidate");
+      expect(res.get("cache-control")).toBe("private, no-store, no-cache, must-revalidate");
     });
   });
 
@@ -336,6 +373,7 @@ describe("proxy", () => {
       });
       const res = (await proxy(req as any)) as any;
       expect(res.get("access-control-allow-origin")).toBe("https://dept.campus.thaibahive.com");
+      expect(res.get("access-control-allow-credentials")).toBe("true");
     });
 
     it("should reject malicious origin (evil-thaibahive.com)", async () => {
@@ -380,7 +418,9 @@ describe("proxy", () => {
     });
 
     it("should exclude .svg files from matcher", () => {
-      expect(config.matcher[0]).toContain("\\.svg$");
+      // The matcher pattern uses regex: .*\.svg$ to match any .svg file
+      // Use toMatch with regex to handle potential escaping differences
+      expect(config.matcher[0]).toMatch(/\.svg\$/);
     });
   });
 });

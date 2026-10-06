@@ -31,7 +31,7 @@ const defaultCurriculum = {
   ],
 };
 
-export const POST = requireAuth(async (request: Request, user: any) => {
+export const POST = requireAuth(async (request: Request, session: any) => {
   try {
     const body = await request.json();
     const parse = kmDegreeAuditSchema.safeParse(body);
@@ -42,14 +42,14 @@ export const POST = requireAuth(async (request: Request, user: any) => {
     const { studentId, transcript } = parse.data;
 
     // FERPA Check
-    const hasAccess = academicPrivacyShield.verifyFerpaAccess(user?.id || studentId, user?.role || 'student', studentId);
+    const hasAccess = academicPrivacyShield.verifyFerpaAccess(session?.staffId || studentId, session?.role || 'student', studentId);
     if (!hasAccess) {
       return NextResponse.json({ error: 'FERPA Access Denied: Unauthorized to view this student record' }, { status: 403 });
     }
 
     const auditResult = degreeAuditor.auditStudentDegree(studentId, transcript as any, defaultCurriculum);
     kmTelemetry.trackDegreeAudit(auditResult.programCode, auditResult.isGraduationEligible);
-    kmAuditLogger.logEvent('degree_audit', user?.id || studentId, { studentId, eligible: auditResult.isGraduationEligible });
+    kmAuditLogger.logEvent('degree_audit', session?.staffId || studentId, { studentId, eligible: auditResult.isGraduationEligible });
 
     return NextResponse.json({ success: true, audit: auditResult }, { status: 200 });
   } catch (error: any) {

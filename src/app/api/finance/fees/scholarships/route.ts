@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { FeeDbStore } from '@/db/fee-store';
@@ -5,9 +6,9 @@ import { ScholarshipEngine } from '@/lib/operations/finance/scholarships/scholar
 import { ScholarshipApprovalWorkflow } from '@/lib/operations/finance/scholarships/scholarship-approval-workflow';
 import { applyConcessionSchema } from '@/lib/validation/fee-schemas';
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const institutionId = url.searchParams.get('institutionId') || 'global';
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const type = url.searchParams.get('type') || 'scholarships'; // 'scholarships' | 'concessions'
 
   const store = FeeDbStore.getInstance();
@@ -28,6 +29,9 @@ export const POST = requireAuth(async (request, session) => {
 
     if (action === 'apply') {
       const parsed = applyConcessionSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }
@@ -75,7 +79,8 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     return NextResponse.json({ error: 'Invalid scholarship action' }, { status: 400 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Scholarship operation failed' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error("[Fees Scholarships Error]:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: "Scholarship operation failed" }, { status: 500 });
   }
 }, 'finance:scholarships:approve');

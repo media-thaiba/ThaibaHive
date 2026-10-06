@@ -6,7 +6,13 @@ export class PaymentCrypto {
   private static readonly TAG_LENGTH = 16;
 
   private static getMasterKey(): Buffer {
-    const rawKey = process.env.PAYMENT_ENCRYPTION_KEY || 'thaiba-hive-secure-master-key-32bytes!';
+    const rawKey = process.env.PAYMENT_ENCRYPTION_KEY;
+    if (!rawKey) {
+      if (process.env.NODE_ENV === 'test') {
+        return crypto.createHash('sha256').update('test-mock-encryption-key-for-payment-32').digest();
+      }
+      throw new Error('PAYMENT_ENCRYPTION_KEY must be configured in environment');
+    }
     return crypto.createHash('sha256').update(rawKey).digest();
   }
 
@@ -72,7 +78,7 @@ export class PaymentCrypto {
   /**
    * Sanitizes request/response payloads before logging to prevent PII leakage
    */
-  public static sanitizePayload(obj: Record<string, any>): Record<string, any> {
+  public static sanitizePayload(obj: Record<string, unknown>): Record<string, unknown> {
     if (!obj || typeof obj !== 'object') return obj;
 
     const sensitiveKeys = [
@@ -89,7 +95,7 @@ export class PaymentCrypto {
       'token',
     ];
 
-    const sanitized: Record<string, any> = Array.isArray(obj) ? [] : {};
+    const sanitized: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(obj)) {
       const lowerKey = key.toLowerCase();
@@ -98,7 +104,7 @@ export class PaymentCrypto {
       if (isSensitive) {
         sanitized[key] = '[REDACTED]';
       } else if (value && typeof value === 'object') {
-        sanitized[key] = this.sanitizePayload(value);
+        sanitized[key] = this.sanitizePayload(value as Record<string, unknown>);
       } else {
         sanitized[key] = value;
       }

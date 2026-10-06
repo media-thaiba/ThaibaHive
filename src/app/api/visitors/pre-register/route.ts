@@ -6,7 +6,7 @@ import { resolveScopedInstitutionId } from "@thaiba/auth";
 import { visitorPreRegisterSchema } from "@/lib/validation/schemas";
 import { desc, eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
   const requests = await db
@@ -19,7 +19,7 @@ export const GET = requireAuth(async (request: Request) => {
   return NextResponse.json({ requests });
 }, "visitor:read");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   const body = await request.json();
   const parsed = visitorPreRegisterSchema.safeParse(body);
   if (!parsed.success) {

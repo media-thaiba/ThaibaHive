@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { batchGenerateDocSchema } from '@/lib/validation/docgen-schemas';
@@ -8,6 +9,9 @@ export const POST = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
     const parsed = batchGenerateDocSchema.safeParse(body);
+  if (parsed.success && (parsed.data as any).institutionId) {
+    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
+  }
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
     }

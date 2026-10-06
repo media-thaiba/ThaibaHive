@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mediaFolders } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { mediaFolderCreateSchema } from "@/lib/validation/schemas";
 import { eq, asc, and } from "drizzle-orm";
@@ -11,7 +11,7 @@ export const GET = requireAuth(async (req, session) => {
   try {
     const { searchParams } = new URL(req.url);
     const parentId = searchParams.get("parentId");
-    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    const scopedInstitutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
 
     let query = db.select().from(mediaFolders).$dynamic();
     const conditions = [];
@@ -28,6 +28,9 @@ export const GET = requireAuth(async (req, session) => {
     const allFolders = await query.orderBy(asc(mediaFolders.name)).all();
     return NextResponse.json({ folders: allFolders });
   } catch (err: unknown) {
+    if (err instanceof Error && err.name === "TenantMismatchError") {
+      throw err;
+    }
     const message = err instanceof Error ? err.message : "Failed to fetch folders";
     return NextResponse.json({ error: message }, { status: 500 });
   }

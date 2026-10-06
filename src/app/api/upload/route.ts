@@ -10,7 +10,7 @@ import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-lim
 export const runtime = "nodejs";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB Vercel serverless request body limit
 const MIME_TO_EXTENSIONS: Record<string, string[]> = {
   "image/jpeg": ["jpg", "jpeg"],
   "image/png": ["png"],
@@ -41,8 +41,10 @@ export const POST = requireAuth(async (request: Request, _session) => {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `File size exceeds limit of ${MAX_FILE_SIZE / (1024 * 1024)} MB` },
-        { status: 400 }
+        {
+          error: "File size exceeds 4.5 MB serverless proxy limit. For larger assets, generate a direct Supabase signed upload URL via /api/media/upload/sign.",
+        },
+        { status: 413 }
       );
     }
 

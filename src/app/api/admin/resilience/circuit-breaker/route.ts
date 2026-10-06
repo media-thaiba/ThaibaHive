@@ -21,7 +21,7 @@ export const GET = requireAuth(async () => {
   }
 }, "resilience:manage");
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, _session) => {
   let body: any = {};
   try {
     body = await request.json();

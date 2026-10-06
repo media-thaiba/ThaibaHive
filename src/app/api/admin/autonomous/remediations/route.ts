@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { SelfHealingHealthService } from "@/lib/services/self-healing-health-service";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
-  const institutionId = searchParams.get("institutionId") ?? undefined;
+  const rawInst = searchParams.get("institutionId") || searchParams.get("tenantId") || undefined;
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const institutionId = resolvedInst === "global" ? undefined : resolvedInst;
 
   try {
     const health = await SelfHealingHealthService.getSystemHealth(institutionId);

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { db } from "@/db";
 import { preferenceAuditLog } from "@thaiba/db/schema";
 import { eq, sql, lt } from "drizzle-orm";
@@ -17,6 +18,7 @@ export class PreferenceAuditService {
     ipAddress: string | null
   ): void {
     const id = crypto.randomUUID();
+    const effectiveInstId = institutionId && institutionId !== "global" ? institutionId : null;
 
     db.insert(preferenceAuditLog)
       .values({
@@ -25,13 +27,13 @@ export class PreferenceAuditService {
         preferenceKey,
         oldValue,
         newValue,
-        institutionId,
+        institutionId: effectiveInstId,
         ipAddress,
         timestamp: new Date().toISOString(),
       })
       .run()
       .then(() => {
-        console.log(`[PreferenceAuditService] Preference logged successfully: id=${id}, user=${userId}, key=${preferenceKey}`);
+        logger.info(`[PreferenceAuditService] Preference logged successfully: id=${id}, user=${userId}, key=${preferenceKey}`);
       })
       .catch((err) => {
         console.error("[PreferenceAuditService] Failed to log preference change asynchronously:", err);
@@ -50,7 +52,7 @@ export class PreferenceAuditService {
         .run();
 
       const affected = (deleteResult as any).rowsAffected ?? (deleteResult as any).changes ?? 0;
-      console.log(`[PreferenceAuditService] Pruned ${affected} audit logs older than ${thresholdTime}`);
+      logger.info(`[PreferenceAuditService] Pruned ${affected} audit logs older than ${thresholdTime}`);
       return affected;
     } catch (err) {
       console.error("[PreferenceAuditService] Failed to prune old audit logs:", err);

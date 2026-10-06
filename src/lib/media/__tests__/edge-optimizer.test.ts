@@ -21,7 +21,7 @@ describe("MediaEdgeOptimizer", () => {
       isPublic: false,
     });
 
-    expect(headers["Cache-Control"]).toBe("no-store, no-cache, must-revalidate");
+    expect(headers["Cache-Control"]).toBe("private, no-store, no-cache, must-revalidate");
     expect(headers["CDN-Cache-Control"]).toBe("no-store");
   });
 });

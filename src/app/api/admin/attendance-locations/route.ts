@@ -1,17 +1,23 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations, institutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, isNull } from "drizzle-orm";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { eq, isNull, and } from "drizzle-orm";
 import { logActivity } from "@/lib/api/activity-log";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
+  const requestedInst = url.searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
   const showDeleted = url.searchParams.get("showDeleted") === "true";
 
-  const conditions = showDeleted
-    ? undefined
-    : isNull(attendanceLocations.deletedAt);
+  const conditions = [];
+  if (!showDeleted) {
+    conditions.push(isNull(attendanceLocations.deletedAt));
+  }
+  if (scopedInstId !== "global") {
+    conditions.push(eq(attendanceLocations.institutionId, scopedInstId));
+  }
 
   const all = await db
     .select({
@@ -33,14 +39,16 @@ export const GET = requireAuth(async (request: Request) => {
     })
     .from(attendanceLocations)
     .leftJoin(institutions, eq(attendanceLocations.institutionId, institutions.id))
-    .where(conditions)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(attendanceLocations.name);
   return NextResponse.json({ locations: all });
 }, "attendance:manage");
 
 export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const { name, institutionId, nfcTagId, qrSecret, latitude, longitude, radius, accuracy, wifiSsids } = body;
+  const { name, institutionId: reqInst, nfcTagId, qrSecret, latitude, longitude, radius, accuracy, wifiSsids } = body;
+  const institutionId = await resolveRequestInstitution(session, reqInst);
+  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });

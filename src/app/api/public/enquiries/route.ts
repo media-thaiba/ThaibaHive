@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { studentEnquiries, institutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, desc, and } from "drizzle-orm";
 
 const ALLOWED_ENQUIRY_STATUSES = new Set(["pending", "under_review", "admitted", "rejected"]);
@@ -67,7 +67,9 @@ export async function POST(request: Request) {
 // Protected management view for Coordinators / Principals
 export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
-  const requestedInstitutionId = url.searchParams.get("institutionId");
+  const rawInst = url.searchParams.get("institutionId");
+  const resolvedInst = await resolveRequestInstitution(session, rawInst);
+  const requestedInstitutionId = resolvedInst === "global" ? null : resolvedInst;
   const status = url.searchParams.get("status");
   const scope = session.institutionId;
 

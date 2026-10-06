@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { regulatoryExportEngine } from "@/lib/compliance/regulatory-export-engine";
+import { resolveRequestInstitution } from "@thaiba/auth/institution-scope";
+import type { SessionPayload } from "@thaiba/auth";
+import crypto from "crypto";
 import { z } from "zod";
 
 const exportSchema = z.object({
   standard: z.enum(["SOC2", "ISO27001", "GDPR", "HIPAA"]).default("SOC2"),
-  tenantId: z.string().optional().default("default"),
+  tenantId: z.string().optional(),
   format: z.enum(["json", "pdf"]).optional().default("json"),
 });
 
-async function handler(req: Request, _session: any) {
+async function handler(req: Request, session: SessionPayload) {
   try {
     let body = {};
     try {
@@ -24,10 +27,11 @@ async function handler(req: Request, _session: any) {
     }
 
     const { standard, tenantId, format } = parsed.data;
+    const resolvedTenant = await resolveRequestInstitution(session, tenantId);
 
     const exportPack = await regulatoryExportEngine.generateExportPack({
       standard,
-      tenantId,
+      tenantId: resolvedTenant,
     });
 
     if (format === "json") {
@@ -45,8 +49,12 @@ async function handler(req: Request, _session: any) {
       downloadUrl: `/api/system/compliance/export?id=${exportPack.exportId}&format=json`,
     });
   } catch (error: any) {
-    console.error("[@thaiba/compliance] Regulatory export error:", error);
-    return NextResponse.json({ error: error?.message || "Internal server error" }, { status: 500 });
+    if (error?.name === "TenantMismatchError") {
+      throw error;
+    }
+    const requestId = crypto.randomUUID();
+    console.error(`[@thaiba/compliance][requestId:${requestId}] Regulatory export error:`, error);
+    return NextResponse.json({ error: "Internal server error", requestId }, { status: 500 });
   }
 }
 

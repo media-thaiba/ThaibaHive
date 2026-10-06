@@ -4,7 +4,7 @@ import { staff } from "@/db/schema";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth/schemas";
 import { logActivity } from "@/lib/api/activity-log";
-import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
+import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { serverLogger } from "@/lib/server-logger";
 import { eq } from "drizzle-orm";
 import { withPublicApm } from "@/lib/api/public-apm";
@@ -12,7 +12,7 @@ import { withPublicApm } from "@/lib/api/public-apm";
 export const POST = withPublicApm(async function POST(request: Request) {
   try {
     const ip = extractIp(request);
-    const rl = checkRateLimit(ip, "auth");
+    const rl = await checkDistributedRateLimit(ip, "auth");
     if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
     const body = await request.json();
@@ -25,7 +25,7 @@ export const POST = withPublicApm(async function POST(request: Request) {
     }
     const { email, password, rememberMe } = parsed.data;
 
-    const emailRl = checkRateLimit(`login-email:${email.toLowerCase()}`, "auth");
+    const emailRl = await checkDistributedRateLimit(`login-email:${email.toLowerCase()}`, "auth");
     if (!emailRl.allowed) return rateLimitResponse(emailRl.resetMs);
 
     const staffMember = await db

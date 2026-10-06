@@ -15,6 +15,10 @@ jest.mock("@thaiba/auth", () => {
       institutionId: "inst_alpha",
       permissions: ["marketplace:install", "marketplace:read"],
     }),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_alpha"),
+    getUserInstitutionScope: jest.fn().mockResolvedValue("inst_alpha"),
+    resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_alpha"),
+    getStaffInstitutionMemberships: jest.fn().mockResolvedValue(["inst_alpha"]),
     hasPermission: jest.fn((role: string, permission: string) => {
       // Return true for marketplace permissions, false for attendance:read if testing mismatch
       if (permission.startsWith("marketplace:")) return true;

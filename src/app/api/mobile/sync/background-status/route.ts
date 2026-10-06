@@ -14,7 +14,7 @@ const backgroundSyncStatusSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  return requireAuth(async (req, user) => {
+  return requireAuth(async (req: Request, session) => {
     try {
       const body = await req.json();
       const parseResult = backgroundSyncStatusSchema.safeParse(body);
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       try {
         await db.insert(backgroundSyncLogs).values({
           id: logId,
-          userId: user.staffId,
+          userId: session.staffId,
           deviceId,
           recordsProcessed,
           recordsFailed,

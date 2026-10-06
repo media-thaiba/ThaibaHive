@@ -8,7 +8,7 @@ const predictSchema = z.object({
   inputVector: z.array(z.number()),
 });
 
-export const POST = requireAuth(async (req: Request) => {
+export const POST = requireAuth(async (req: Request, _session) => {
   try {
     const body = await req.json();
     const parsed = predictSchema.safeParse(body);

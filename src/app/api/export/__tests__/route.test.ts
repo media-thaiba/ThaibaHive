@@ -1,5 +1,7 @@
 jest.mock("@/lib/api/auth-guard", () => ({
   requireAuth: (handler: any) => (req: any, session: any) => handler(req, session),
+  resolveRequestInstitution: jest.fn((_session: any, inst?: string) => Promise.resolve(inst || "global")),
+  resolveScopedInstitutions: jest.fn((_session: any, inst?: string) => Promise.resolve([inst || "global"])),
 }));
 
 jest.mock("@/db/index", () => ({

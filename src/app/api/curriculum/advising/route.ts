@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { curriculumStore } from '@/lib/db/curriculum-store';
@@ -9,23 +10,23 @@ import { advisingMetrics } from '@/lib/operations/curriculum/telemetry/advising-
 
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (req: Request, user: any) => {
+export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get('tenantId') || user?.institutionId || 'global';
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const sessionId = searchParams.get('sessionId');
 
   if (sessionId) {
-    const session = await curriculumStore.getAdvisingSession(sessionId, tenantId);
+    const advisingSession = await curriculumStore.getAdvisingSession(sessionId, tenantId);
     const messages = await curriculumStore.getAdvisingMessages(sessionId, tenantId);
-    return NextResponse.json({ session, messages });
+    return NextResponse.json({ session: advisingSession, messages });
   }
 
-  const studentId = searchParams.get('studentId') || user?.id;
+  const studentId = searchParams.get('studentId') || session?.staffId;
   const sessions = await curriculumStore.listAdvisingSessions(tenantId, studentId);
   return NextResponse.json({ sessions });
 }, 'curriculum:advising:chat');
 
-export const POST = requireAuth(async (req: Request, user: any) => {
+export const POST = requireAuth(async (req: Request, session: any) => {
   try {
     const body = await req.json();
     const parsed = advisingMessageSchema.safeParse(body);
@@ -33,13 +34,13 @@ export const POST = requireAuth(async (req: Request, user: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
     }
 
-    const tenantId = (parsed.data.institutionId !== 'global' ? parsed.data.institutionId : undefined) || user?.institutionId || 'global';
+    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
     const { sessionId, studentId, prompt, forcedDomain } = parsed.data;
 
     // Ensure session exists or create it
-    let session = await curriculumStore.getAdvisingSession(sessionId, tenantId);
-    if (!session) {
-      session = await curriculumStore.createAdvisingSession({
+    let advisingSession = await curriculumStore.getAdvisingSession(sessionId, tenantId);
+    if (!advisingSession) {
+      advisingSession = await curriculumStore.createAdvisingSession({
         sessionId,
         studentId,
         activeDomain: forcedDomain || 'degree_planner',

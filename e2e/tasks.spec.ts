@@ -7,18 +7,29 @@ test.describe("Tasks Kanban Board", () => {
   test.use({ storageState: ".auth/admin.json" });
 
   test.beforeEach(async () => {
-    // 1. Clean up tasks from the database to prevent pagination overflow on the Kanban board
-    await db.delete(tasks).run();
+    // 1. Clean up tasks from the database to prevent pagination overflow on the Kanban board.
+    // Whole-table DELETE can collide with concurrent writers from other workers
+    // (SQLITE_BUSY despite busy_timeout), so retry transient lock errors.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await db.delete(tasks).run();
+        break;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt >= 5 || !/SQLITE_BUSY|database is locked/i.test(msg)) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
+    }
     console.log("Cleared all tasks from database for E2E clean slate");
   });
 
   test("should allow creating a new task, showing it on Kanban, and viewing details", async ({ page }) => {
-    await page.goto("/tasks");
+    await page.goto("/my-work/tasks");
 
     // Click New Task button
     const newBtn = page.locator("a:has-text('New Task')");
     await newBtn.click();
-    await expect(page).toHaveURL("/tasks/new");
+    await expect(page).toHaveURL("/my-work/tasks/new");
 
     // Fill form elements
     await page.fill("#title", "E2E Tasks Board Test");

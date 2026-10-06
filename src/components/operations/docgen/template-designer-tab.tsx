@@ -14,7 +14,6 @@ import { ensureArray } from '@/lib/utils';
 export function TemplateDesignerTab() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
 
@@ -171,9 +170,6 @@ export function TemplateDesignerTab() {
                   className="w-full"
                   onClick={() => {
                     setSelectedTemplate(tpl);
-                    setPreviewHtml(
-                      `<div style="padding: 20px; font-family: sans-serif;"><h2>${tpl.name}</h2><p>Live preview compiled from ${tpl.templateCode}</p><hr/><p>Student Name: Sample Candidate</p><p>Status: VERIFIED AUTHENTIC</p></div>`
-                    );
                   }}
                 >
                   Inspect Template
@@ -184,22 +180,48 @@ export function TemplateDesignerTab() {
         </div>
       )}
 
-      {selectedTemplate && previewHtml && (
+      {selectedTemplate && (
         <Card className="mt-6 border-2 border-primary/20">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-md">Template Inspector: {selectedTemplate.name}</CardTitle>
               <CardDescription>{selectedTemplate.templateCode}</CardDescription>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setPreviewHtml(null)}>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>
               Close Inspector
             </Button>
           </CardHeader>
           <CardContent>
-            <div
-              className="border rounded-md p-4 bg-white text-slate-900 shadow-inner min-h-[200px]"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+            <div className="border rounded-md p-6 bg-card text-card-foreground shadow-inner min-h-[200px] space-y-4">
+              <div className="border-b pb-3">
+                <h2 className="text-xl font-bold">{selectedTemplate.name}</h2>
+                <p className="text-xs text-muted-foreground font-mono">
+                  Live preview compiled from {selectedTemplate.templateCode}
+                </p>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground font-medium">Sample Candidate:</span>
+                  <span className="font-semibold">Sample Candidate</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground font-medium">Status:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">VERIFIED AUTHENTIC</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-border/50">
+                  <span className="text-muted-foreground font-medium">Category:</span>
+                  <span className="uppercase font-semibold">{selectedTemplate.category}</span>
+                </div>
+                {selectedTemplate.contentTemplate && (
+                  <div className="pt-2">
+                    <span className="text-xs text-muted-foreground font-mono block mb-1">Source Markup:</span>
+                    <pre className="p-3 rounded bg-muted text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                      {selectedTemplate.contentTemplate}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

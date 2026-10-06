@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitors, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { visitorCreateSchema } from "@/lib/validation/schemas";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -12,7 +12,7 @@ export const GET = requireAuth(async (request: Request, session) => {
   const date = searchParams.get("date");
   const conditions = [];
 
-  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   if (institutionId && institutionId !== "global") {
     conditions.push(eq(visitors.institutionId, institutionId));
   }

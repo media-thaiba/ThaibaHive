@@ -7,7 +7,7 @@ import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
 
-export const GET = requireAuth(async (request: Request) => {
+export const GET = requireAuth(async (request: Request, _session) => {
   const url = new URL(request.url);
   const format = (url.searchParams.get("format") || "csv").toLowerCase();
 

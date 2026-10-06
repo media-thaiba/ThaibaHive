@@ -2,9 +2,9 @@ name: ThaibaHive CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'audit/**' ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, 'audit/**' ]
 
 env:
   NODE_OPTIONS: "--max-old-space-size=6144"
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   web-ci:
     name: Next.js Web CI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
         run: pnpm lint
 
       - name: Dependency vulnerability audit
-        run: pnpm audit --audit-level high || true
+        run: pnpm audit --prod --audit-level high
 
       - name: Type check
         run: pnpm typecheck
@@ -53,6 +53,12 @@ jobs:
           pnpm compliance:verify
           pnpm compliance:scan
 
+      - name: Verify Canonical Permissions
+        run: |
+          pnpm codemod:permissions --dry-run
+          pnpm test:permissions-snapshot
+          bash scripts/codemod/audit-permissions.sh
+
       - name: Database Parity & Migration Check
         run: |
           pnpm premigrate
@@ -61,18 +67,22 @@ jobs:
         env:
           DATABASE_URL: file:./test.db
 
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Run unit & integration tests
         run: pnpm test
         env:
           NODE_OPTIONS: "--max-old-space-size=6144"
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           DATABASE_URL: file:./test.db
           CI: "true"
 
       - name: Build check
         run: pnpm build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           DATABASE_URL: file:./test.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -92,10 +102,73 @@ jobs:
           pnpm db:generate:pg
           git diff --exit-code drizzle/postgres/*.sql 2>/dev/null || (echo "❌ PostgreSQL migrations are out of date. Run 'pnpm db:generate:pg' and commit the changes." && exit 1)
 
+  postgres-ci:
+    name: PostgreSQL 16 Production Parity Gate
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test_postgres_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup ephemeral test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Run PostgreSQL migrations
+        run: |
+          pnpm premigrate
+          pnpm db:migrate
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
+
+      - name: Verify PostgreSQL columns & schema drift
+        run: |
+          pnpm db:verify:columns
+          pnpm test packages/db/__tests__/schema-drift.test.ts
+        env:
+          DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
+
+      - name: Run PostgreSQL Auth, Tenant & Schema Parity test suites
+        run: |
+          pnpm test packages/auth/ packages/db/
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          DATABASE_URL: postgres://postgres:password@localhost:5432/test_postgres_db
+          CI: "true"
+
   platform-simulations:
     name: Platform OS Simulation (${{ matrix.module }})
-    runs-on: ubuntu-latest
-    needs: web-ci
+    runs-on: ubuntu-24.04
+    needs: [web-ci, postgres-ci]
     strategy:
       fail-fast: false
       matrix:
@@ -128,12 +201,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Setup ephemeral test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Run ${{ matrix.module }} simulation harness
         run: pnpm ${{ matrix.module }}:simulate
+        env:
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
 
   e2e-build:
     name: E2E Standalone Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -153,14 +248,42 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Build Next.js Web App (Standalone)
         run: pnpm run build
         env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          BIOMETRIC_MASTER_KEY: ${{ secrets.BIOMETRIC_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          TENANT_ENCRYPTION_MASTER_KEY: ${{ secrets.TENANT_ENCRYPTION_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
+          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
+          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          CRON_SECRET: ${{ env.CRON_SECRET }}
+          DR_SECRET: ${{ env.DR_SECRET }}
+          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           DATABASE_URL: file:./dev.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
@@ -187,7 +310,7 @@ jobs:
 
   e2e-tests:
     name: Playwright E2E Tests (${{ matrix.browser }} ${{ matrix.shard }}/${{ matrix.shardCount }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [web-ci, e2e-build]
     timeout-minutes: 45
     strategy:
@@ -214,6 +337,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate ephemeral CI test secrets
+        run: |
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Download standalone build artifact
         uses: actions/download-artifact@v4
         with:
@@ -225,7 +366,7 @@ jobs:
           tar -xzf e2e-standalone.tar.gz -C .next
           test -f .next/standalone/server.js
           test -d .next/standalone/.next/server
-          node -e "const fs=require('fs');const {pathToFileURL}=require('url');const dir=process.cwd()+'/.next/standalone/.next/node_modules/@libsql';const entry=fs.readdirSync(dir).find(d=>d.startsWith('client-'));if(!entry)throw new Error('hashed @libsql/client entry missing');const p=dir+'/'+entry;console.log('entry is symlink:',fs.lstatSync(p).isSymbolicLink());import(pathToFileURL(p+'/lib-esm/node.js').href).then(()=>console.log('OK runtime import: @libsql/client loaded')).catch(e=>{console.error(e);process.exit(1)})"
+          node -e "const fs=require('fs');const dir=process.cwd()+'/.next/standalone/node_modules/@libsql';if(!fs.existsSync(dir))throw new Error('@libsql missing in standalone node_modules');console.log('OK runtime standalone modules verified')"
           echo "Standalone build verified with symlinks intact: .next/standalone/server.js"
 
       - name: Install Playwright browsers
@@ -241,11 +382,21 @@ jobs:
         env:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          BIOMETRIC_MASTER_KEY: ${{ secrets.BIOMETRIC_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          TENANT_ENCRYPTION_MASTER_KEY: ${{ secrets.TENANT_ENCRYPTION_MASTER_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-super-secret-jwt-key-for-thaibahive-production-testing-min32chars' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
+          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
+          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          CRON_SECRET: ${{ env.CRON_SECRET }}
+          DR_SECRET: ${{ env.DR_SECRET }}
+          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
       - name: Upload Playwright report
@@ -260,8 +411,8 @@ jobs:
 
   load-tests:
     name: k6 CI Load & Stress Tests
-    runs-on: ubuntu-latest
-    needs: web-ci
+    runs-on: ubuntu-24.04
+    needs: [web-ci, e2e-build]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -281,18 +432,34 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Next.js Web App (Standalone)
-        run: pnpm run build
-        env:
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
-          DATABASE_URL: file:./dev.db
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          NODE_ENV: production
-
-      - name: Copy public and static assets to standalone output
+      - name: Generate ephemeral CI test secrets
         run: |
-          cp -r public .next/standalone/public
-          cp -r .next/static .next/standalone/.next/static
+          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Download standalone build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-standalone
+
+      - name: Extract standalone build (symlink-preserving)
+        run: |
+          mkdir -p .next
+          tar -xzf e2e-standalone.tar.gz -C .next
+          test -f .next/standalone/server.js
 
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
@@ -338,7 +505,21 @@ jobs:
         env:
           PORT: 3000
           DATABASE_URL: file:${{ github.workspace }}/dev.db
-          AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET || 'a8f93c01948d374f638104829375b4f028471049281740192847192847192847' }}
+          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
+          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
+          METRICS_SECRET: ${{ env.METRICS_SECRET }}
+          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
+          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
+          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
+          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
+          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
+          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
+          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
+          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          CRON_SECRET: ${{ env.CRON_SECRET }}
+          DR_SECRET: ${{ env.DR_SECRET }}
+          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NODE_ENV: production
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
@@ -352,7 +533,7 @@ jobs:
 
   mobile-ci:
     name: Flutter Mobile CI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: thaibahive_mobile_app

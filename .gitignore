@@ -73,6 +73,18 @@ staging-reports/
 reports/*/
 .ai/execution/*/
 
+# transient test artifacts, run logs, and binaries
+k6.exe
+migrate_stdout.txt
+migrate_stderr.txt
+load-tests-attendance.log
+test-results/
+sprint20-gen.js
+sprint20-phase1.js
+sprint20-phase2.js
+sprint20-phase3.js
+build_history.json
+
 
 
 

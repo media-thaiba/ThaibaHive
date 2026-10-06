@@ -1,3 +1,4 @@
+import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 /**
  * Admin ZKP Proof Generation Route
  * Sprint-042 (ARES) — ARES-020
@@ -12,7 +13,7 @@ import { AresAuditLogger } from '@/lib/security/ares/ares-audit-events';
 import { zkpGenerateProofSchema } from '@/lib/validation/ares-schemas';
 
 export const POST = withDPoP(
-  requireAuth(async (req: Request) => {
+  requireAuth(async (req: Request, session) => {
     const body = await req.json();
     const parsed = zkpGenerateProofSchema.safeParse(body);
 
@@ -20,7 +21,8 @@ export const POST = withDPoP(
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { merkleRoot, auditRecordPreimage, tenantId } = parsed.data;
+    const { merkleRoot, auditRecordPreimage } = parsed.data;
+    const tenantId = await resolveRequestInstitution(session, parsed.data.tenantId);
     const attestationService = ZkAttestationService.getInstance();
     const store = AresDbStore.getInstance();
 

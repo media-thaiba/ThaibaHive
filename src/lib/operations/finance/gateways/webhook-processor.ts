@@ -120,14 +120,15 @@ export class WebhookProcessor {
         status: webhookEvent.status,
         message: 'Webhook processed successfully',
       };
-    } catch (err: any) {
-      await this.dlq.enqueue(gatewayName, rawBody, signatureHeader, err?.message || 'Processing exception', headers);
+    } catch (err) {
+      const errMessage = err instanceof Error ? err.message : 'Processing exception';
+      await this.dlq.enqueue(gatewayName, rawBody, signatureHeader, errMessage, headers);
       return {
         success: false,
         isDuplicate: false,
         idempotencyKey: '',
         message: 'Internal error processing webhook',
-        error: err?.message,
+        error: errMessage,
       };
     }
   }
