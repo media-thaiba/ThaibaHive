@@ -2,7 +2,7 @@
 
 **Milestone**: ThaibaHive Two-Tier Platform
 **Phase**: 1.5 of 5
-**Status**: Draft v2 (post-review — both reviewer subagents' findings incorporated)
+**Status**: ✅ Complete (2026-10-06) — implementation, verification, and full e2e matrix green
 **Estimated Duration**: 1-2 days
 **Dependencies**: Phase 1.4 (Web Workspaces, bridge-redirect variant — `PLAN.md` Deviation #1 defers exactly this work)
 
@@ -294,6 +294,20 @@ Suggested commits: (1) moves + import-path fixes, (2) redirects + bridge removal
 (3) nav IA + guard test, (4) refs + e2e. Commits 1-3 are only jointly green — acceptable on a
 feature branch, CI runs at head.
 
+### Completion Record (2026-10-06)
+
+| Commit | Steps | Contents |
+|---|---|---|
+| `a2e39e6e` | 2-6 | Physical moves (33 folders), deletions/renames, import-path fixes |
+| `e786f345` | 7-8 | `legacy-redirects.ts` + `next.config.ts` `redirects()` (legacy → workspace 308); bridge removed, catch-alls → `notFound()` |
+| `5cddba62` | 9 | Nav IA: +19 items, dead helpers deleted, guard test flipped (179/179) |
+| `42248db9` | 10 | Reference sweep — 23 files / 58 refs (incl. AASA 8 paths, seed `routePrefix`, template literals, `router.push`) |
+| `a9277119` | 11 | E2E D4 — 26 spec files to canonical URLs, `role-gating-page.ts` matrix re-derivation, new `legacy-redirects.spec.ts` (46 assertions) |
+| `7bac87d5` | 13 | E2E stabilization — attendance cross-worker state lock, serial marketplace/media, tasks SQLITE_BUSY retry, presence-sync LOGIN row, `build-analyze.js` route string |
+
+Step 12 (docs): done for `scripts/build-analyze.js`; `docs/` + README route tables left as
+Known Gap #8 (redirects keep old refs valid).
+
 ---
 
 ## File Changes Summary
@@ -341,6 +355,31 @@ feature branch, CI runs at head.
 7. `pnpm test:e2e` → updated specs green (incl. re-derived RBAC matrix) + new redirect spec
 8. Flutter: untouched (only `/share/:token` handoff, custom-scheme deep links unaffected) —
    skip `flutter analyze` unless a Dart file was accidentally touched
+
+### Verification Results (2026-10-06, all executed)
+
+1. ✅ `pnpm typecheck` → 0 errors
+2. ✅ `pnpm lint` → 0 errors (11 pre-existing warnings, `global-error.tsx`)
+3. ✅ `pnpm test` → 776/776 suites green (4748 passed / 8 skipped)
+4. ✅ `pnpm security:rbac` → 100% route permission mapping (0 unmapped);
+   `pnpm test:permissions-snapshot` → 12/12
+5. ✅ `pnpm build` → success (`next build --webpack`, standalone); route strings in
+   `scripts/build-analyze.js` canonicalized
+6. ✅ Redirect smoke (standalone server) → 31 legacy paths → 308 with correct
+   `location`; auth allowlist → 307
+7. ✅ `pnpm test:e2e` per project (mirrors CI matrix jobs, run sequentially):
+   - **chromium 247/247 · firefox 247/247 · webkit 246 passed + 1 skipped**
+     (presence-sync excluded on webkit by design)
+   - Stabilization required for full parallel suite: cross-worker attendance-state
+     lock, serial mode for `marketplace`/`media` (per-test re-seed of shared rows),
+     `tasks` cleanup busy-retry, direct LOGIN activity row in `presence-sync`
+     (see commit `7bac87d5`)
+8. ✅ Flutter untouched
+
+**CI note**: baseline `audit/final` unit job is red on a pre-existing flaky perf test
+(`sprint-016-performance.test.ts`), which skips the downstream Playwright job — no CI e2e
+baseline exists; local per-project runs above substitute for it. CI Playwright runs
+`db:migrate` only (no `db:seed`) — local verification mirrored that state.
 
 ---
 
@@ -393,5 +432,5 @@ Both subagent reviewers (substituting unavailable Qwen/OpenCode/Claude MCP tools
 - [x] Plan review (AGENTS.md rule — MCP tools unavailable; 2 reviewer subagents used, findings above)
 - [ ] Tech Lead: move table + redirect table reviewed
 - [x] Security: no permission-key changes (roles-only nav additions; `security:rbac` re-run required)
-- [ ] QA: verification checklist executed (typecheck/lint/test/build/e2e/smoke)
+- [x] QA: verification checklist executed (typecheck/lint/test/rbac/build/e2e/smoke — results above)
 - [ ] UX: restored orphan nav items approved
