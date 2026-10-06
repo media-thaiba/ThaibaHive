@@ -14,24 +14,24 @@ import RootError from "@/app/error";
 import ShellError from "@/app/(shell)/error";
 import RootNotFound from "@/app/not-found";
 import GlobalError from "@/app/global-error";
-import TasksLoading from "@/app/(shell)/tasks/loading";
-import TasksError from "@/app/(shell)/tasks/error";
+import TasksLoading from "@/app/(shell)/my-work/tasks/loading";
+import TasksError from "@/app/(shell)/my-work/tasks/error";
 import WorkspaceLoading from "@/app/(shell)/workspace/loading";
 import WorkspaceError from "@/app/(shell)/workspace/error";
-import AttendanceLoading from "@/app/(shell)/attendance/loading";
-import AttendanceError from "@/app/(shell)/attendance/error";
-import FinanceLoading from "@/app/(shell)/finance/loading";
-import FinanceError from "@/app/(shell)/finance/error";
+import AttendanceLoading from "@/app/(shell)/my-work/attendance/loading";
+import AttendanceError from "@/app/(shell)/my-work/attendance/error";
+import FinanceLoading from "@/app/(shell)/operations/finance/loading";
+import FinanceError from "@/app/(shell)/operations/finance/error";
 import AdminLoading from "@/app/(shell)/admin/loading";
 import AdminError from "@/app/(shell)/admin/error";
-import MediaLoading from "@/app/(shell)/media/loading";
-import MediaError from "@/app/(shell)/media/error";
+import MediaLoading from "@/app/(shell)/operations/media-library/loading";
+import MediaError from "@/app/(shell)/operations/media-library/error";
 import PortalLoading from "@/app/(shell)/portal/loading";
 import PortalError from "@/app/(shell)/portal/error";
 import ParentLoading from "@/app/(shell)/parent/loading";
 import ParentError from "@/app/(shell)/parent/error";
-import NfcLoading from "@/app/(shell)/admin/nfc/loading";
-import NfcError from "@/app/(shell)/admin/nfc/error";
+import NfcLoading from "@/app/(shell)/admin/hardware/loading";
+import NfcError from "@/app/(shell)/admin/hardware/error";
 
 const APP_DIR = path.join(__dirname, "..", "..", "app");
 
@@ -42,36 +42,36 @@ const REQUIRED_BOUNDARIES: { file: string; mustBeClient: boolean }[] = [
   { file: "not-found.tsx", mustBeClient: false },
   { file: "(shell)/loading.tsx", mustBeClient: false },
   { file: "(shell)/error.tsx", mustBeClient: true },
-  { file: "(shell)/tasks/loading.tsx", mustBeClient: false },
-  { file: "(shell)/tasks/error.tsx", mustBeClient: true },
+  { file: "(shell)/my-work/tasks/loading.tsx", mustBeClient: false },
+  { file: "(shell)/my-work/tasks/error.tsx", mustBeClient: true },
   { file: "(shell)/workspace/loading.tsx", mustBeClient: false },
   { file: "(shell)/workspace/error.tsx", mustBeClient: true },
-  { file: "(shell)/attendance/loading.tsx", mustBeClient: false },
-  { file: "(shell)/attendance/error.tsx", mustBeClient: true },
-  { file: "(shell)/finance/loading.tsx", mustBeClient: false },
-  { file: "(shell)/finance/error.tsx", mustBeClient: true },
+  { file: "(shell)/my-work/attendance/loading.tsx", mustBeClient: false },
+  { file: "(shell)/my-work/attendance/error.tsx", mustBeClient: true },
+  { file: "(shell)/operations/finance/loading.tsx", mustBeClient: false },
+  { file: "(shell)/operations/finance/error.tsx", mustBeClient: true },
   { file: "(shell)/admin/loading.tsx", mustBeClient: false },
   { file: "(shell)/admin/error.tsx", mustBeClient: true },
-  { file: "(shell)/media/loading.tsx", mustBeClient: false },
-  { file: "(shell)/media/error.tsx", mustBeClient: true },
+  { file: "(shell)/operations/media-library/loading.tsx", mustBeClient: false },
+  { file: "(shell)/operations/media-library/error.tsx", mustBeClient: true },
   { file: "(shell)/portal/loading.tsx", mustBeClient: false },
   { file: "(shell)/portal/error.tsx", mustBeClient: true },
   { file: "(shell)/parent/loading.tsx", mustBeClient: false },
   { file: "(shell)/parent/error.tsx", mustBeClient: true },
-  { file: "(shell)/admin/nfc/loading.tsx", mustBeClient: false },
-  { file: "(shell)/admin/nfc/error.tsx", mustBeClient: true },
+  { file: "(shell)/admin/hardware/loading.tsx", mustBeClient: false },
+  { file: "(shell)/admin/hardware/error.tsx", mustBeClient: true },
 ];
 
 const SEGMENT_BOUNDARIES = [
-  { name: "tasks", label: "tasks", Loading: TasksLoading, Error: TasksError, heading: "Couldn't load tasks" },
+  { name: "my-work/tasks", label: "tasks", Loading: TasksLoading, Error: TasksError, heading: "Couldn't load tasks" },
   { name: "workspace", label: "workspace", Loading: WorkspaceLoading, Error: WorkspaceError, heading: "Couldn't load workspace" },
-  { name: "attendance", label: "attendance", Loading: AttendanceLoading, Error: AttendanceError, heading: "Couldn't load attendance" },
-  { name: "finance", label: "finance", Loading: FinanceLoading, Error: FinanceError, heading: "Couldn't load finance" },
+  { name: "my-work/attendance", label: "attendance", Loading: AttendanceLoading, Error: AttendanceError, heading: "Couldn't load attendance" },
+  { name: "operations/finance", label: "finance", Loading: FinanceLoading, Error: FinanceError, heading: "Couldn't load finance" },
   { name: "admin", label: "administration", Loading: AdminLoading, Error: AdminError, heading: "Couldn't load administration" },
-  { name: "media", label: "media library", Loading: MediaLoading, Error: MediaError, heading: "Couldn't load media library" },
+  { name: "operations/media-library", label: "media library", Loading: MediaLoading, Error: MediaError, heading: "Couldn't load media library" },
   { name: "portal", label: "portal", Loading: PortalLoading, Error: PortalError, heading: "Couldn't load portal" },
   { name: "parent", label: "parent portal", Loading: ParentLoading, Error: ParentError, heading: "Couldn't load parent portal" },
-  { name: "admin/nfc", label: "NFC cards", Loading: NfcLoading, Error: NfcError, heading: "Couldn't load NFC cards" },
+  { name: "admin/hardware", label: "NFC cards", Loading: NfcLoading, Error: NfcError, heading: "Couldn't load NFC cards" },
 ];
 
 function read(rel: string): string {

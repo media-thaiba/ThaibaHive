@@ -1,9 +1,14 @@
 "use client";
 
-import { Users, Layers, GraduationCap as ExamIcon, CalendarDays, CalendarCheck, Award } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Users, Layers, GraduationCap as ExamIcon, CalendarDays, CalendarCheck, Award,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 const quickActions = [
   { icon: Users, label: "Students", color: "bg-blue-500", route: "/school/students", permission: "academic.student.directory" },
@@ -15,10 +20,31 @@ const quickActions = [
 ];
 
 export default function SchoolDashboard() {
-  const filteredActions = quickActions.filter((action) => {
-    if (!action.permission) return true;
-    return true;
-  });
+  const [stats, setStats] = useState({ totalStudents: 0, totalClasses: 0, activeYears: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/academic/students?limit=1").then((r) => r.json()).catch(() => ({ total: 0 })),
+      fetch("/api/academic/classes").then((r) => r.json()).catch(() => ({ classes: [] })),
+      fetch("/api/academic/academic-years").then((r) => r.json()).catch(() => ({ academicYears: [] })),
+    ])
+      .then(([studentsRes, classesRes, yearsRes]) => {
+        setStats({
+          totalStudents: (studentsRes as { total?: number }).total ?? 0,
+          totalClasses: ((classesRes as { classes?: unknown[] }).classes ?? []).length,
+          activeYears: ((yearsRes as { academicYears?: unknown[] }).academicYears ?? []).length,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statCards = [
+    { title: "Total Students", value: stats.totalStudents, icon: Users, color: "bg-blue-100", iconColor: "text-blue-500" },
+    { title: "Active Classes", value: stats.totalClasses, icon: Layers, color: "bg-indigo-100", iconColor: "text-indigo-500" },
+    { title: "Active Academic Years", value: stats.activeYears, icon: CalendarDays, color: "bg-emerald-100", iconColor: "text-emerald-500" },
+  ];
 
   return (
     <div className="space-y-6 p-4 lg:p-6">
@@ -29,17 +55,25 @@ export default function SchoolDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Students" value="1,234" subtitle="+12 this month" icon="Users" color="text-blue-500" />
-        <StatCard title="Active Classes" value="48" subtitle="6 new this term" icon="Layers" color="text-indigo-500" />
-        <StatCard title="Active Exams" value="3" subtitle="Grading in progress" icon="Award" color="text-purple-500" />
-        <StatCard title="Attendance Rate" value="94.2%" subtitle="Above target" icon="ClipboardCheck" color="text-green-500" />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+          : statCards.map((card) => (
+              <StatCard
+                key={card.title}
+                title={card.title}
+                value={String(card.value)}
+                icon={card.icon}
+                color={card.color}
+                iconColor={card.iconColor}
+              />
+            ))}
       </div>
 
       <section>
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredActions.map((action) => (
+          {quickActions.map((action) => (
             <QuickActionCard
               key={action.label}
               icon={action.icon}
@@ -79,37 +113,26 @@ export default function SchoolDashboard() {
 function StatCard({
   title,
   value,
-  subtitle,
-  icon: IconName,
+  icon: Icon,
   color,
+  iconColor,
 }: {
   title: string;
   value: string;
-  subtitle: string;
-  icon: string;
+  icon: LucideIcon;
   color: string;
+  iconColor: string;
 }) {
-  const iconElement = (() => {
-    switch (IconName) {
-      case "Users": return <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1h10v-1a6 6 0 00-6-6H3z" /></svg>;
-      case "Layers": return <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5v14M4 8v11M4 11v8M12 5v14m0-11v11m0-8v8m9-15v14M20 5v14m0-11v11m0-8v8" /></svg>;
-      case "Award": return <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
-      case "ClipboardCheck": return <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>;
-      default: return <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
-    }
-  })();
-
   return (
     <div className="bg-card border rounded-xl p-4">
       <div className="flex items-center justify-between">
-        <div className={cn("p-2 rounded-lg", color.replace("text-", "bg-").replace("500", "100"))}>
-          {iconElement}
+        <div className={cn("p-2 rounded-lg", color)}>
+          <Icon className={cn("h-5 w-5", iconColor)} />
         </div>
       </div>
       <div className="mt-4">
         <p className="text-2xl font-bold">{value}</p>
         <p className="text-xs text-muted-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground/70">{subtitle}</p>
       </div>
     </div>
   );
