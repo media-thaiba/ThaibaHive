@@ -30,12 +30,15 @@ class NotificationsRepository {
     return data;
   }
 
+  /// D15*: the real route is `PATCH /api/notifications` — `{id}` marks one
+  /// read; an empty body marks ALL read. (The old PUT /notifications/$id/read
+  /// and PUT /notifications/read-all endpoints do not exist.)
   Future<void> markAsRead(String id) async {
-    await _api.put('/notifications/$id/read');
+    await _api.patch('/notifications', data: <String, dynamic>{'id': id});
   }
 
   Future<void> markAllAsRead() async {
-    await _api.put('/notifications/read-all');
+    await _api.patch('/notifications', data: <String, dynamic>{});
   }
 
   Future<int> getUnreadCount() async {

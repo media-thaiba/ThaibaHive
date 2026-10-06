@@ -12,21 +12,21 @@ class PollsRepository {
 
   PollsRepository(this._apiClient);
 
+  /// GET /api/polls returns `{polls: […]}` (D14* — old parser only handled
+  /// `data`/bare lists and always yielded `[]`).
+  static List<PollModel> parseList(dynamic data) {
+    final list = data is Map ? (data['polls'] ?? data['data']) : data;
+    if (list is! List) return [];
+    return list
+        .whereType<Map>()
+        .map((e) => PollModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
   Future<List<PollModel>> getPolls({int page = 1}) async {
     final response =
         await _apiClient.get('/polls', queryParameters: {'page': page});
-    final data = response;
-    if (data is List) {
-      return data
-          .map((e) => PollModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    if (data is Map && data['data'] is List) {
-      return (data['data'] as List)
-          .map((e) => PollModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    return [];
+    return parseList(response);
   }
 
   Future<PollModel> createPoll(Map<String, dynamic> data) async {

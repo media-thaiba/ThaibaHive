@@ -28,18 +28,26 @@ class CircularModel {
   });
 
   factory CircularModel.fromJson(Map<String, dynamic> json) => CircularModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
+        id: (json['id'] ?? '') as String,
+        title: (json['title'] ?? '') as String,
         description: json['description'] as String?,
-        fileUrl: json['file_url'] as String,
-        fileType: json['file_type'] as String?,
-        fileSize: json['file_size'] as int?,
+        // Server rows are camelCase (`fileUrl`, `uploadedById`, …).
+        fileUrl: (json['fileUrl'] ?? json['file_url'] ?? '') as String,
+        fileType: (json['fileType'] ?? json['file_type']) as String?,
+        fileSize: (json['fileSize'] ?? json['file_size']) as int?,
         category: json['category'] as String?,
-        targetRole: json['target_role'] as String?,
-        targetDepartmentId: json['target_department_id'] as String?,
-        targetInstitutionId: json['target_institution_id'] as String?,
-        uploadedById: json['uploaded_by_id'] as String,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        targetRole: (json['targetRole'] ?? json['target_role']) as String?,
+        targetDepartmentId:
+            (json['targetDepartmentId'] ?? json['target_department_id'])
+                as String?,
+        targetInstitutionId:
+            (json['targetInstitutionId'] ?? json['target_institution_id'])
+                as String?,
+        uploadedById:
+            (json['uploadedById'] ?? json['uploaded_by_id'] ?? '') as String,
+        createdAt: DateTime.tryParse(
+                (json['createdAt'] ?? json['created_at'] ?? '').toString()) ??
+            DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {

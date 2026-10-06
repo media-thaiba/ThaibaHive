@@ -24,7 +24,6 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
@@ -36,15 +35,28 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
-    _opacityAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)),
-    );
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// D13: the card collapses **after check-in** (not only after check-out).
+  /// Drives the shrink animation with `forward()` (expanded → compact) and
+  /// `reverse()` (compact → expanded, e.g. next day reset).
+  void _syncAnimation(bool compact) {
+    final target = compact ? 1.0 : 0.0;
+    if (_controller.value == target || _controller.isAnimating) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (compact) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
   }
 
   @override
@@ -55,9 +67,11 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
     final hasCheckOut = stats?.lastCheckOut != null;
     final isPresent = stats?.todayStatus == 'present';
 
-    // Determine if we should show compact or expanded view
-    final isCompact = hasCheckIn && hasCheckOut;
+    // D13: collapse once checked in; compact pill carries the checkout
+    // affordance until the day completes.
     final isCheckedIn = hasCheckIn && !hasCheckOut;
+    final isCompact = hasCheckIn;
+    _syncAnimation(isCompact);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -67,48 +81,57 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
           curve: Curves.easeInOutCubic,
           transform: Matrix4.identity()..scale(_scaleAnimation.value),
           height: isCompact ? null : 220, // Expanded height
-          child: Opacity(
-            opacity: _opacityAnimation.value,
-            child: _buildCard(
-              context,
-              isCompact,
-              isCheckedIn,
-              isPresent,
-              stats,
-              state,
-              hasCheckIn,
-              hasCheckOut,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.96, end: 1.0).animate(anim),
+                child: child,
+              ),
             ),
+            child: isCompact
+                ? _buildCompactPill(
+                    key: const ValueKey('attendance-compact'),
+                    context: context,
+                    isCheckedIn: isCheckedIn,
+                    isPresent: isPresent,
+                    stats: stats,
+                    state: state,
+                  )
+                : _buildExpandedCard(
+                    key: const ValueKey('attendance-expanded'),
+                    context: context,
+                    isPresent: isPresent,
+                    state: state,
+                  ),
           ),
         );
       },
     );
   }
 
-  Widget _buildCard(
-    BuildContext context,
-    bool isCompact,
-    bool isCheckedIn,
-    bool isPresent,
-    AttendanceStatsModel? stats,
-    AttendanceState state,
-    bool hasCheckIn,
-    bool hasCheckOut,
-  ) {
+  /// Compact pill shown once checked in: full "Attendance Complete" row after
+  /// checkout, or a checked-in row with a compact "Check out" affordance.
+  Widget _buildCompactPill({
+    required Key key,
+    required BuildContext context,
+    required bool isCheckedIn,
+    required bool isPresent,
+    required AttendanceStatsModel? stats,
+    required AttendanceState state,
+  }) {
     final theme = Theme.of(context);
-    final color = isCheckedIn ? Colors.orange : const Color(0xFF1a8a3e);
-    final label = isCheckedIn ? 'CHECK OUT' : 'CHECK IN';
-
-    if (isCompact) {
-      // Compact status pill after both check-in and check-out
+    if (isCheckedIn) {
       return Container(
+        key: key,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant,
-          ),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
@@ -116,12 +139,12 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.15),
+                color: Colors.orange.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.check_circle_rounded,
-                color: Colors.green,
+                Icons.login_rounded,
+                color: Colors.orange,
                 size: 22,
               ),
             ),
@@ -131,13 +154,12 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Attendance Complete',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    'Checked In',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   Text(
-                    'In: ${stats?.lastCheckIn ?? '--:--'} • Out: ${stats?.lastCheckOut ?? '--:--'}',
+                    'In: ${stats?.lastCheckIn ?? '--:--'}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -145,16 +167,99 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
                 ],
               ),
             ),
-            StatusBadge(
-              label: isPresent ? 'Present' : 'Completed',
-              variant: isPresent ? StatusBadgeVariant.success : StatusBadgeVariant.info,
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: state.isLoading
+                  ? null
+                  : () async {
+                      try {
+                        await ref.read(attendanceProvider.notifier).checkOut();
+                        widget.onPunchComplete?.call();
+                      } catch (_) {
+                        // Error surfaced via provider state.
+                      }
+                    },
+              icon: state.isLoading
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.logout_rounded, size: 16),
+              label: const Text('Check out'),
             ),
           ],
         ),
       );
     }
 
-    // Expanded punch card (before punch or after check-in only)
+    // Attendance complete (checked in AND out).
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.green,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Attendance Complete',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  'In: ${stats?.lastCheckIn ?? '--:--'} • Out: ${stats?.lastCheckOut ?? '--:--'}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          StatusBadge(
+            label: isPresent ? 'Present' : 'Completed',
+            variant:
+                isPresent ? StatusBadgeVariant.success : StatusBadgeVariant.info,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpandedCard({
+    required Key key,
+    required BuildContext context,
+    required bool isPresent,
+    required AttendanceState state,
+  }) {
+    final theme = Theme.of(context);
+    const color = Color(0xFF1a8a3e);
+    const label = 'CHECK IN';
+
+    // Expanded punch card — only shown before the first check-in (D13:
+    // once checked in the card collapses into the compact pill above).
     // Build children list imperatively to avoid collection-if parsing issues
     final List<Widget> cardChildren = <Widget>[];
 
@@ -189,7 +294,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
                   ),
                 ),
                 Text(
-                  isCheckedIn ? 'Tap to check out' : 'Tap to check in',
+                  'Tap to check in',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -198,12 +303,10 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
             ),
           ),
           StatusBadge(
-            label: isPresent ? 'Present' : isCheckedIn ? 'Checked In' : 'Not checked in',
+            label: isPresent ? 'Present' : 'Not checked in',
             variant: isPresent
                 ? StatusBadgeVariant.success
-                : isCheckedIn
-                    ? StatusBadgeVariant.warning
-                    : StatusBadgeVariant.info,
+                : StatusBadgeVariant.info,
           ),
         ],
       ),
@@ -219,17 +322,8 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
         child: InkWell(
           onTap: state.isLoading
               ? null
-              : () async {
-                  if (isCheckedIn) {
-                    try {
-                      await ref.read(attendanceProvider.notifier).checkOut();
-                      widget.onPunchComplete?.call();
-                    } catch (_) {
-                      // Error handled by provider
-                    }
-                  } else {
-                    _showScanMethodBottomSheet(context);
-                  }
+              : () {
+                  _showScanMethodBottomSheet(context);
                 },
           borderRadius: BorderRadius.circular(12),
           child: AnimatedContainer(
@@ -263,7 +357,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          isCheckedIn ? Icons.logout_rounded : Icons.login_rounded,
+                          Icons.login_rounded,
                           color: Colors.white,
                           size: 22,
                         ),
@@ -284,57 +378,31 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
       ),
     );
 
-    // Scan method buttons (only when not checked in)
-    if (!isCheckedIn) {
-      cardChildren.add(const SizedBox(height: 12));
-      cardChildren.add(
-        Row(
-          children: [
-            Expanded(
-              child: _ScanMethodChip(
-                icon: Icons.nfc_rounded,
-                label: 'NFC',
-                color: const Color(0xFF2196F3),
-                onTap: () => _openNFCScreen(context),
-              ),
+    // Scan method buttons (expanded card only renders before first check-in)
+    cardChildren.add(const SizedBox(height: 12));
+    cardChildren.add(
+      Row(
+        children: [
+          Expanded(
+            child: _ScanMethodChip(
+              icon: Icons.nfc_rounded,
+              label: 'NFC',
+              color: const Color(0xFF2196F3),
+              onTap: () => _openNFCScreen(context),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ScanMethodChip(
-                icon: Icons.qr_code_scanner_rounded,
-                label: 'QR Code',
-                color: const Color(0xFF9C27B0),
-                onTap: () => _openQRScreen(context),
-              ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _ScanMethodChip(
+              icon: Icons.qr_code_scanner_rounded,
+              label: 'QR Code',
+              color: const Color(0xFF9C27B0),
+              onTap: () => _openQRScreen(context),
             ),
-          ],
-        ),
-      );
-    }
-
-    // Today status times (compact)
-    if (hasCheckIn || hasCheckOut) {
-      cardChildren.add(const SizedBox(height: 16));
-      cardChildren.add(
-        Row(
-          children: [
-            _TimeTile(
-              label: 'Check In',
-              time: stats?.lastCheckIn ?? '--:--',
-              icon: Icons.login_rounded,
-              color: const Color(0xFF1a8a3e),
-            ),
-            Container(height: 40, width: 1, color: theme.colorScheme.outlineVariant),
-            _TimeTile(
-              label: 'Check Out',
-              time: stats?.lastCheckOut ?? '--:--',
-              icon: Icons.logout_rounded,
-              color: Colors.red,
-            ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -539,49 +607,6 @@ class _BottomSheetOption extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TimeTile extends StatelessWidget {
-  final String label;
-  final String time;
-  final IconData icon;
-  final Color color;
-
-  const _TimeTile({
-    required this.label,
-    required this.time,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDash = time.contains('--');
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: isDash ? theme.colorScheme.onSurfaceVariant : color, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            time,
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: isDash ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onSurface,
-            ),
-          ),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
       ),
     );
   }
