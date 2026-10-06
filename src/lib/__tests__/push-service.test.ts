@@ -1,7 +1,15 @@
 import { db } from "@/db";
 import { staffDeviceTokens, notifications, staff, institutions } from "@/db/schema";
 import { sendPushNotification, sendBulkPushNotifications } from "@/lib/notifications/push-service";
+import * as realtime from "@/lib/api/realtime";
 import { eq, inArray, sql } from "drizzle-orm";
+
+jest.mock("@/lib/api/realtime", () => {
+  const actual = jest.requireActual("@/lib/api/realtime");
+  return { ...actual, sendToConnection: jest.fn() };
+});
+
+const sendToConnectionMock = realtime.sendToConnection as jest.Mock;
 
 describe("FCM PushService & Device Tokens", () => {
   let testStaffA: string;
@@ -89,6 +97,45 @@ describe("FCM PushService & Device Tokens", () => {
     expect(created?.title).toBe("Test In-App Push");
     expect(created?.staffId).toBe(testStaffA);
     expect(created?.isRead).toBe(false);
+  });
+
+  test("sendPushNotification emits the canonical SSE {type:'new', notification:{…}} frame", async () => {
+    sendToConnectionMock.mockClear();
+
+    try {
+      const result = await sendPushNotification({
+        staffId: testStaffA,
+        title: "SSE Frame Push",
+        message: "frame shape assertion",
+        type: "task",
+        referenceType: "task",
+        referenceId: "task_9",
+      });
+
+      expect(sendToConnectionMock).toHaveBeenCalledTimes(1);
+      const [channel, event, rawData] = sendToConnectionMock.mock.calls[0];
+      const payload = rawData as {
+        type: string;
+        notification: Record<string, unknown>;
+      };
+      expect(channel).toBe(`notification-${testStaffA}`);
+      expect(event).toBe("notification");
+      expect(payload).toMatchObject({
+        type: "new",
+        notification: {
+          id: result.notificationId,
+          type: "task",
+          referenceType: "task",
+          referenceId: "task_9",
+          title: "SSE Frame Push",
+          message: "frame shape assertion",
+          isRead: false,
+        },
+      });
+      expect(typeof payload.notification.createdAt).toBe("string");
+    } finally {
+      sendToConnectionMock.mockClear();
+    }
   });
 
   test("sendBulkPushNotifications respects institution multi-tenancy isolation", async () => {
