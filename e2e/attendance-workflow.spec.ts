@@ -2,9 +2,20 @@ import { test, expect } from "@playwright/test";
 import { db } from "../packages/db";
 import { attendanceLogs, staff } from "../packages/db/schema";
 import { eq, and } from "drizzle-orm";
+import { acquireAttendanceStateLock, releaseAttendanceStateLock } from "./helpers/attendance-state-lock";
 
 test.describe("Attendance Check-In & Verification Workflow", () => {
   test.describe.configure({ mode: "serial" });
+
+  // Share today's test-staff attendance record with attendance/scanners
+  // across parallel workers; see helpers/attendance-state-lock.ts
+  test.beforeAll(async ({}, testInfo) => {
+    testInfo.setTimeout(180_000);
+    await acquireAttendanceStateLock();
+  });
+  test.afterAll(() => {
+    releaseAttendanceStateLock();
+  });
 
   test("staff check-in is logged and verified by principal in team overview", async ({ page, browser }) => {
     // 1. Clean up today's logs for test-staff

@@ -4,6 +4,9 @@ import { mediaFolders, mediaAssets } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("MediaHive Core", () => {
+  // beforeEach re-creates the same folder/asset rows for every test, so tests
+  // must not run concurrently (fullyParallel is on globally).
+  test.describe.configure({ mode: "serial" });
   test.use({ storageState: ".auth/admin.json" });
 
   test.beforeEach(async () => {

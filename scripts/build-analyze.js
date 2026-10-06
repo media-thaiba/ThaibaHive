@@ -90,7 +90,7 @@ Heavy third-party visualization and computation libraries are strictly split wit
 All critical shell routes comply with the First-Load JS budget thresholds:
 - \`/(shell)/admin/executive/analytics\` (< 196.2 KB budget) -> ✅ Compliant
 - \`/(shell)/admin/swarm-intelligence\` (< 203.8 KB budget) -> ✅ Compliant
-- \`/(shell)/examinations/tabulation\` (< 179.2 KB budget) -> ✅ Compliant
+- \`/(shell)/school/examinations/tabulation\` (< 179.2 KB budget) -> ✅ Compliant
 - \`/(shell)/workspace/[role]/analytics\` (< 189.0 KB budget) -> ✅ Compliant
 `;
 

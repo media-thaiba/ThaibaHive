@@ -35,6 +35,9 @@ function appCard(page: Page, name: string) {
 }
 
 test.describe("Marketplace — install & access-request workflows", () => {
+  // beforeEach re-seeds the same app rows for every test, so tests must not
+  // run concurrently (fullyParallel is on globally).
+  test.describe.configure({ mode: "serial" });
   test.use({ storageState: ".auth/staff.json" });
 
   test.beforeEach(async () => {

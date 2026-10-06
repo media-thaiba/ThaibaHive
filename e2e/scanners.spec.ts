@@ -2,10 +2,21 @@ import { test, expect } from "@playwright/test";
 import { db } from "../packages/db";
 import { attendanceLogs, staff } from "../packages/db/schema";
 import { eq, and } from "drizzle-orm";
+import { acquireAttendanceStateLock, releaseAttendanceStateLock } from "./helpers/attendance-state-lock";
 
 test.describe("Attendance Scanner Workflows", () => {
   // Run tests in serial mode to prevent database conflicts on the same test user
   test.describe.configure({ mode: "serial" });
+
+  // Share today's test-staff attendance record with attendance/attendance-workflow
+  // across parallel workers; see helpers/attendance-state-lock.ts
+  test.beforeAll(async ({}, testInfo) => {
+    testInfo.setTimeout(180_000);
+    await acquireAttendanceStateLock();
+  });
+  test.afterAll(() => {
+    releaseAttendanceStateLock();
+  });
 
   // Use the cached staff state directly
   test.use({ storageState: ".auth/staff.json" });

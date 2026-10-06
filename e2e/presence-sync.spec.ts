@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../packages/db";
-import { presence, staff } from "../packages/db/schema";
+import { presence, staff, activityLogs } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test("Verify real-time status synchronization and timeline logging", async ({ browser, browserName }) => {
@@ -27,7 +27,20 @@ test("Verify real-time status synchronization and timeline logging", async ({ br
     await staffPage.goto("/my-work/availability");
     await expect(staffPage).not.toHaveURL(/\/auth\/login/);
 
-    // 2. Admin B navigates directly to availability (already logged in)
+    // 2. Record a LOGIN activity event directly in the DB - minted JWT storage states
+    // never write LOGIN rows, and the shared auth rate limit (5/min/IP) makes a real
+    // form login unreliable under parallel test load
+    console.log("Recording admin LOGIN activity for timeline verification...");
+    const adminMember = await db.select().from(staff).where(eq(staff.email, "test-admin@thaibahive.local")).get();
+    if (adminMember) {
+      await db.insert(activityLogs).values({
+        staffId: adminMember.id,
+        action: "LOGIN",
+        resourceType: "auth",
+      }).run();
+    }
+
+    // 3. Admin B navigates directly to availability (already logged in)
     console.log("Admin B opening availability...");
     await adminPage.goto("/my-work/availability");
     await expect(adminPage).not.toHaveURL(/\/auth\/login/);
