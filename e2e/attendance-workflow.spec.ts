@@ -29,7 +29,7 @@ test.describe("Attendance Check-In & Verification Workflow", () => {
     // 2. Log in as staff and check-in via NFC manual entry
     const staffContext = await browser.newContext({ storageState: ".auth/staff.json" });
     const staffPage = await staffContext.newPage();
-    await staffPage.goto("/attendance");
+    await staffPage.goto("/my-work/attendance");
 
     await staffPage.locator("button:has-text('NFC Card')").first().click();
     const modal = staffPage.locator("[data-slot='dialog-content']");
@@ -46,7 +46,7 @@ test.describe("Attendance Check-In & Verification Workflow", () => {
     // 3. Log in as principal and verify in Team Overview tab
     const principalContext = await browser.newContext({ storageState: ".auth/principal.json" });
     const principalPage = await principalContext.newPage();
-    await principalPage.goto("/attendance");
+    await principalPage.goto("/my-work/attendance");
 
     // Click Team Overview tab
     const teamTab = principalPage.locator("button:has-text('Team Overview')");

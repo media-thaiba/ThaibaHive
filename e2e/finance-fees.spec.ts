@@ -6,7 +6,7 @@ test.describe("Finance Fee Invoices & Payment Receipts E2E", () => {
 
   test("allows recording tuition fee income transaction and exporting receipt ledger", async ({ page }) => {
     // 1. Navigate to Accounts Ledger page
-    await page.goto("/accounts");
+    await page.goto("/operations/accounts");
     await expect(page.locator("h1, h2, [data-testid='page-header']").first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("Institutional Financials").first()).toBeVisible({ timeout: 15000 });
 

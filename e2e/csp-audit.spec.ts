@@ -5,14 +5,14 @@ import * as fs from 'fs';
 const pagesToTest = [
   { name: 'login', path: '/auth/login', auth: null },
   { name: 'portal home', path: '/portal/tgcis', auth: null },
-  { name: 'staff list', path: '/staff', auth: 'admin' },
-  { name: 'tasks', path: '/tasks', auth: 'admin' },
-  { name: 'attendance', path: '/attendance', auth: 'admin' },
-  { name: 'leaves', path: '/leaves', auth: 'admin' },
-  { name: 'finance', path: '/finance', auth: 'admin' },
-  { name: 'media', path: '/media', auth: 'admin' },
+  { name: 'staff list', path: '/admin/staff', auth: 'admin' },
+  { name: 'tasks', path: '/my-work/tasks', auth: 'admin' },
+  { name: 'attendance', path: '/my-work/attendance', auth: 'admin' },
+  { name: 'leaves', path: '/my-work/leaves', auth: 'admin' },
+  { name: 'finance', path: '/operations/finance', auth: 'admin' },
+  { name: 'media', path: '/operations/media-library', auth: 'admin' },
   { name: 'admin', path: '/admin', auth: 'admin' },
-  { name: 'settings', path: '/settings', auth: 'admin' },
+  { name: 'settings', path: '/my-work/settings', auth: 'admin' },
 ];
 
 test.describe('U2: Content Security Policy Audit on 10 Critical Pages', () => {

@@ -45,7 +45,7 @@ test.describe("Admin Scheduled Jobs & Operations E2E", () => {
     await expect(topologySvg).toBeVisible({ timeout: 15000 });
 
     // 4. Verify audit-list entry assertion
-    await page.goto("/admin/audit-logs", { waitUntil: "domcontentloaded" });
+    await page.goto("/admin/audit", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     await expect(page.locator("h1, h2, [data-testid='page-header']").first()).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("Preference Audit Logs").first()).toBeVisible();

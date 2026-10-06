@@ -16,7 +16,7 @@ test.describe('U3: Route Boundaries (loading.tsx skeletons and error recovery)',
       await route.continue();
     });
 
-    await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
+    await page.goto('/my-work/tasks', { waitUntil: 'domcontentloaded' });
 
     const tasksHeading = page.locator('h1, h2, div:has-text("Task")');
     await expect(tasksHeading.first()).toBeVisible({ timeout: 15000 });
@@ -35,7 +35,7 @@ test.describe('U3: Route Boundaries (loading.tsx skeletons and error recovery)',
       await route.continue();
     });
 
-    await page.goto('/attendance', { waitUntil: 'domcontentloaded' });
+    await page.goto('/my-work/attendance', { waitUntil: 'domcontentloaded' });
 
     const attendanceHeading = page.locator('h1, h2, div:has-text("Attendance")');
     await expect(attendanceHeading.first()).toBeVisible({ timeout: 15000 });
@@ -54,7 +54,7 @@ test.describe('U3: Route Boundaries (loading.tsx skeletons and error recovery)',
       await route.continue();
     });
 
-    await page.goto('/leaves', { waitUntil: 'domcontentloaded' });
+    await page.goto('/my-work/leaves', { waitUntil: 'domcontentloaded' });
 
     const leavesHeading = page.locator('h1, h2, div:has-text("Leave")');
     await expect(leavesHeading.first()).toBeVisible({ timeout: 15000 });
@@ -81,7 +81,7 @@ test.describe('U3: Route Boundaries (loading.tsx skeletons and error recovery)',
       }
     });
 
-    await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
+    await page.goto('/my-work/tasks', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
 
     // Unroute 500 and verify retry or reload
@@ -118,7 +118,7 @@ test.describe('U3: Route Boundaries (loading.tsx skeletons and error recovery)',
       }
     });
 
-    await page.goto('/attendance', { waitUntil: 'domcontentloaded' });
+    await page.goto('/my-work/attendance', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
 
     shouldFail = false;
@@ -154,7 +154,7 @@ test.describe('U3: Route Boundaries (loading.tsx skeletons and error recovery)',
       }
     });
 
-    await page.goto('/leaves', { waitUntil: 'domcontentloaded' });
+    await page.goto('/my-work/leaves', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
 
     shouldFail = false;

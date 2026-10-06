@@ -19,7 +19,7 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     });
 
     // 1. Navigate to Examinations Dashboard
-    await page.goto("/examinations", { waitUntil: "domcontentloaded" });
+    await page.goto("/school/examinations", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     await expect(page.locator("h1, h2, [data-testid='page-header']").first()).toBeVisible({ timeout: 15000 });
 
@@ -49,7 +49,7 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     await expect(wizardModal).not.toBeVisible({ timeout: 20000 });
 
     // Dashboard list should refresh, click Mark Entry on E2E Examination Session
-    await page.goto("/examinations", { waitUntil: "domcontentloaded" });
+    await page.goto("/school/examinations", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     const examRow = page.locator("tr").filter({ hasText: "E2E Examination Session" }).first();
     await expect(examRow).toBeVisible({ timeout: 20000 });
@@ -80,7 +80,7 @@ test.describe("Examination Management System Lifecycle E2E", () => {
     await portalDialog.locator("button:has-text('Close')").first().click();
 
     // 4. Tabulation Register Export Flow
-    await page.goto("/examinations/tabulation", { waitUntil: "domcontentloaded" });
+    await page.goto("/school/examinations/tabulation", { waitUntil: "domcontentloaded" });
     await page.waitForSelector("[data-hydrated='true']", { timeout: 45000 });
     await expect(page.locator("text=Tabulation Register").first()).toBeVisible({ timeout: 15000 });
 

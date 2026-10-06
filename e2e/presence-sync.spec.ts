@@ -24,12 +24,12 @@ test("Verify real-time status synchronization and timeline logging", async ({ br
   try {
     // 1. Staff A navigates directly to availability (already logged in)
     console.log("Staff A opening availability...");
-    await staffPage.goto("/availability");
+    await staffPage.goto("/my-work/availability");
     await expect(staffPage).not.toHaveURL(/\/auth\/login/);
 
     // 2. Admin B navigates directly to availability (already logged in)
     console.log("Admin B opening availability...");
-    await adminPage.goto("/availability");
+    await adminPage.goto("/my-work/availability");
     await expect(adminPage).not.toHaveURL(/\/auth\/login/);
     
     // Filter to Test Staff
@@ -44,7 +44,7 @@ test("Verify real-time status synchronization and timeline logging", async ({ br
 
     // 4. Staff A goes to availability and sets status to Busy with custom text
     console.log("Staff A navigates to availability page and updates status...");
-    await staffPage.goto("/availability");
+    await staffPage.goto("/my-work/availability");
     
     // Select "busy" from status dropdown
     const statusSelect = staffPage.locator("select").first();
@@ -106,7 +106,7 @@ test("Verify real-time status synchronization and timeline logging", async ({ br
 
     // 8. Admin B checks Timeline page
     console.log("Admin B checking Timeline page...");
-    await adminPage.goto("/timeline");
+    await adminPage.goto("/my-work/timeline");
     
     // Verify login, logout, and status change activity log events
     console.log("Verifying timeline events...");

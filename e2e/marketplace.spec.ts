@@ -80,7 +80,7 @@ test.describe("Marketplace — install & access-request workflows", () => {
   });
 
   test("installs an instant app end-to-end", async ({ page }) => {
-    await page.goto("/marketplace");
+    await page.goto("/admin/marketplace");
     await expect(page.getByRole("heading", { name: "App Marketplace" })).toBeVisible();
 
     const card = appCard(page, INSTANT_NAME);
@@ -101,7 +101,7 @@ test.describe("Marketplace — install & access-request workflows", () => {
   });
 
   test("requests access to a restricted app via the dialog", async ({ page }) => {
-    await page.goto("/marketplace");
+    await page.goto("/admin/marketplace");
 
     const card = appCard(page, RESTRICTED_NAME);
     await expect(card).toBeVisible();
@@ -130,7 +130,7 @@ test.describe("Marketplace — install & access-request workflows", () => {
   });
 
   test("filters apps by category tabs", async ({ page }) => {
-    await page.goto("/marketplace");
+    await page.goto("/admin/marketplace");
     await expect(appCard(page, INSTANT_NAME)).toBeVisible();
     await expect(appCard(page, RESTRICTED_NAME)).toBeVisible();
 

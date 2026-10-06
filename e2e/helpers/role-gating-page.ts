@@ -10,7 +10,7 @@ export class RoleGatingPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.sidebarNav = page.locator('nav[aria-label="Sidebar navigation"]');
+    this.sidebarNav = page.locator('aside nav[aria-label$=" navigation"]');
     this.bottomNav = page.locator('nav[aria-label="Bottom navigation"], nav[aria-label="Mobile navigation"]');
   }
 
@@ -23,57 +23,79 @@ export class RoleGatingPage {
     return this.sidebarNav.locator(`a:has-text("${label}")`).first();
   }
 
+  /**
+   * Switch active workspace via the always-visible shell-nav switcher.
+   * Returns false when the role cannot access the workspace (setWorkspace
+   * is a no-op then, so the sidebar label never changes).
+   */
+  async switchWorkspace(label: string): Promise<boolean> {
+    const button = this.page.locator(`button[aria-label="Switch to ${label} workspace"]`);
+    await button.click();
+    const nav = this.page.locator(`nav[aria-label="${label} navigation"]`);
+    try {
+      await expect(nav).toBeVisible({ timeout: 3000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The sidebar renders a single collapsible group for the active workspace. */
+  async ensureSidebarGroupExpanded() {
+    const toggle = this.sidebarNav.locator("button[aria-expanded]").first();
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 3000 });
+    }
+  }
+
   // ========== Bottom Navigation ==========
   bottomNavLink(href: string): Locator {
     return this.bottomNav.locator(`a[href="${href}"]`).first();
   }
 
   // ========== Navigation Groups ==========
-  // Daily Work
-  readonly attendanceLink = () => this.sidebarLink("/attendance");
-  readonly tasksLink = () => this.sidebarLink("/tasks");
-  readonly reportsLink = () => this.sidebarLink("/reports");
-  readonly leavesLink = () => this.sidebarLink("/leaves");
-  readonly approvalsLink = () => this.sidebarLink("/approvals");
-  readonly timelineLink = () => this.sidebarLink("/timeline");
+  // Daily Work (My Work workspace)
+  readonly attendanceLink = () => this.sidebarLink("/my-work/attendance");
+  readonly tasksLink = () => this.sidebarLink("/my-work/tasks");
+  readonly reportsLink = () => this.sidebarLink("/my-work/reports");
+  readonly leavesLink = () => this.sidebarLink("/my-work/leaves");
+  readonly approvalsLink = () => this.sidebarLink("/my-work/approvals");
+  readonly timelineLink = () => this.sidebarLink("/my-work/timeline");
 
-  // Communication
-  readonly announcementsLink = () => this.sidebarLink("/announcements");
-  readonly eventsLink = () => this.sidebarLink("/events");
-  readonly circularsLink = () => this.sidebarLink("/circulars");
-  readonly pollsLink = () => this.sidebarLink("/polls");
+  // Communication (My Work workspace)
+  readonly announcementsLink = () => this.sidebarLink("/my-work/announcements");
+  readonly eventsLink = () => this.sidebarLink("/my-work/events");
+  readonly circularsLink = () => this.sidebarLink("/my-work/circulars");
+  readonly pollsLink = () => this.sidebarLink("/my-work/polls");
 
-  // Administration
-  readonly staffLink = () => this.sidebarLink("/staff");
-  readonly expensesLink = () => this.sidebarLink("/expenses");
-  readonly purchasesLink = () => this.sidebarLink("/purchases");
-  readonly accountsLink = () => this.sidebarLink("/accounts");
-  readonly bookingsLink = () => this.sidebarLink("/bookings");
-  readonly assetsLink = () => this.sidebarLink("/assets");
-  readonly reviewsLink = () => this.sidebarLink("/reviews");
-  readonly settingsLink = () => this.sidebarLink("/settings");
-  readonly nfcCardsLink = () => this.sidebarLink("/admin/nfc");
-  readonly executiveAnalyticsLink = () => this.sidebarLink("/admin/executive/analytics");
+  // Administration workspace
+  readonly staffLink = () => this.sidebarLink("/admin/staff");
+  readonly expensesLink = () => this.sidebarLink("/my-work/expenses");
+  readonly purchasesLink = () => this.sidebarLink("/operations/procurement");
+  readonly accountsLink = () => this.sidebarLink("/operations/accounts");
+  readonly bookingsLink = () => this.sidebarLink("/operations/bookings");
+  readonly assetsLink = () => this.sidebarLink("/operations/assets");
+  readonly settingsLink = () => this.sidebarLink("/my-work/settings");
+  readonly nfcCardsLink = () => this.sidebarLink("/admin/hardware");
+  readonly marketplaceLink = () => this.sidebarLink("/admin/marketplace");
 
-  // Academics
-  readonly academicDashboardLink = () => this.sidebarLink("/academic");
-  readonly examinationsLink = () => this.sidebarLink("/examinations");
-  readonly studentsLink = () => this.sidebarLink("/academic/students");
-  readonly classesLink = () => this.sidebarLink("/academic/classes");
-  readonly academicYearsLink = () => this.sidebarLink("/academic/academic-years");
+  // School workspace
+  readonly academicDashboardLink = () => this.sidebarLink("/school");
+  readonly examinationsLink = () => this.sidebarLink("/school/examinations");
+  readonly studentsLink = () => this.sidebarLink("/school/students");
+  readonly classesLink = () => this.sidebarLink("/school/classes");
+  readonly academicYearsLink = () => this.sidebarLink("/school/academic-years");
 
-  // Services
-  readonly helpDeskLink = () => this.sidebarLink("/help-desk");
-  readonly vehiclesLink = () => this.sidebarLink("/vehicles");
-  readonly canteenLink = () => this.sidebarLink("/canteen");
-  readonly visitorsLink = () => this.sidebarLink("/visitors");
-  readonly grievancesLink = () => this.sidebarLink("/grievances");
-  readonly recognitionLink = () => this.sidebarLink("/recognition");
-  readonly availabilityLink = () => this.sidebarLink("/availability");
-  readonly mediaLink = () => this.sidebarLink("/media");
-
-  // Marketplace
-  readonly marketplaceLink = () => this.sidebarLink("/marketplace");
+  // Operations & My Work services
+  readonly helpDeskLink = () => this.sidebarLink("/operations/facilities");
+  readonly vehiclesLink = () => this.sidebarLink("/operations/fleet");
+  readonly canteenLink = () => this.sidebarLink("/my-work/canteen");
+  readonly visitorsLink = () => this.sidebarLink("/operations/visitors");
+  readonly grievancesLink = () => this.sidebarLink("/my-work/grievances");
+  readonly recognitionLink = () => this.sidebarLink("/my-work/recognition");
+  readonly availabilityLink = () => this.sidebarLink("/my-work/availability");
+  readonly mediaLink = () => this.sidebarLink("/operations/media-library");
 
   // ========== Dashboard Action Elements ==========
   
@@ -307,54 +329,69 @@ export class RoleGatingPage {
 }
 
 // ========== Navigation Visibility Matrix ==========
+//
+// Phase 1.5: keys are canonical workspace URLs. Visibility = workspace
+// availability for the role (requiredRoles in config/navigation.ts) AND the
+// item's PermissionGate (roles/permission) in navigation.ts.
 
 export const NAV_VISIBILITY_MATRIX: Record<string, Record<string, boolean>> = {
-  // Daily Work
-  "/attendance": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/tasks": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/reports": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/leaves": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/approvals": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "/timeline": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  // My Work (workspace available to every role)
+  "/my-work/attendance": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/tasks": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/reports": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/leaves": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/approvals": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "/my-work/timeline": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/announcements": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/events": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/circulars": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/polls": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/expenses": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/canteen": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/grievances": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/recognition": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/availability": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/settings": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
 
-  // Communication
-  "/announcements": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/events": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/circulars": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/polls": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  // School (workspace: super_admin, admin, principal, hod)
+  "/school": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "/school/students": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "/school/classes": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "/school/examinations": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
+  "/school/academic-years": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
 
-  // Administration
-  "/staff": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "/expenses": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/purchases": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: true },
-  "/accounts": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: true, purchase: false },
-  "/bookings": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/assets": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: true },
-  "/reviews": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: false, purchase: false },
-  "/settings": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/admin/nfc": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: false, purchase: false },
-  "/admin/executive/analytics": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: false, purchase: false },
+  // Operations (workspace: super_admin, admin, principal, accounts, purchase — no hod/staff)
+  "/operations/finance": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: false },
+  "/operations/fleet": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
+  "/operations/assets": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: true },
+  "/operations/procurement": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: true },
+  "/operations/facilities": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: true },
+  "/operations/bookings": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: true },
+  "/operations/accounts": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: false },
+  "/operations/finance-audit": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: true, purchase: false },
+  "/operations/finance-requests": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: true, purchase: false },
+  "/operations/visitors": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
+  "/operations/media-library": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
 
-  // Academics
-  "/academic": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "/examinations": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "/academic/students": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "/academic/classes": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },
-  "/academic/academic-years": { super_admin: true, admin: true, principal: true, hod: false, staff: false, accounts: false, purchase: false },
-
-  // Services
-  "/help-desk": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/vehicles": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/canteen": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/visitors": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/grievances": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/recognition": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/availability": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/media": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-
-  // Marketplace
-  "/marketplace": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  // Administration (workspace: super_admin, admin only)
+  "/admin/staff": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: false, purchase: false },
+  "/admin/marketplace": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: false, purchase: false },
+  "/admin/hardware": { super_admin: true, admin: true, principal: false, hod: false, staff: false, accounts: false, purchase: false },
 };
+
+/** Workspace label that owns each matrix key (used to drive the switcher). */
+export const NAV_WORKSPACE: Record<string, string> = Object.fromEntries(
+  Object.keys(NAV_VISIBILITY_MATRIX).map((href) => [
+    href,
+    href.startsWith("/school")
+      ? "School"
+      : href.startsWith("/operations")
+        ? "Operations"
+        : href.startsWith("/admin")
+          ? "Administration"
+          : "My Work",
+  ])
+);
 
 // Dashboard action visibility matrix
 export const DASHBOARD_ACTION_VISIBILITY: Record<string, Record<string, boolean>> = {

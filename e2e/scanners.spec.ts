@@ -31,7 +31,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should show check-in panel when not checked in", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     const checkInPanel = page.locator("text=Check In").first();
     await expect(checkInPanel).toBeVisible({ timeout: 15000 });
@@ -41,7 +41,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should open QR scanner modal when QR Code button is clicked", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await page.locator("button:has-text('QR Code')").first().click();
 
@@ -52,7 +52,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should open NFC scanner modal when NFC Card button is clicked", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await page.locator("button:has-text('NFC Card')").first().click();
 
@@ -63,7 +63,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should show NFC manual entry options", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await page.locator("button:has-text('NFC Card')").first().click();
 
@@ -73,7 +73,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should check in via NFC manual submission", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await page.locator("button:has-text('NFC Card')").first().click();
 
@@ -89,7 +89,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should show QR scanner manual input in dev mode", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await page.locator("button:has-text('QR Code')").first().click();
 
@@ -103,7 +103,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should close scanner modals with close button", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await page.locator("button:has-text('QR Code')").first().click();
     const qrModal = page.locator("[data-slot='dialog-content']");
@@ -121,7 +121,7 @@ test.describe("Attendance Scanner Workflows", () => {
   });
 
   test("should hide check-in panel after successful check-in", async ({ page }) => {
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     await expect(page.locator("text=Not checked in")).toBeVisible();
 

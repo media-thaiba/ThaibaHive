@@ -22,7 +22,7 @@ test.describe("Security headers & nonce CSP (O4-R)", () => {
   test.use({ storageState: ".auth/staff.json" });
 
   test("HTML document ships nonce CSP plus the static hardening headers", async ({ page }) => {
-    const response = await page.goto("/marketplace", { waitUntil: "load" });
+    const response = await page.goto("/admin/marketplace", { waitUntil: "load" });
     expect(response, "marketplace document response").toBeTruthy();
     const headers = response!.headers();
 
@@ -77,7 +77,7 @@ test.describe("Security headers & nonce CSP (O4-R)", () => {
       });
     });
 
-    await page.goto("/marketplace", { waitUntil: "load" });
+    await page.goto("/admin/marketplace", { waitUntil: "load" });
     // allow lazy hydration + PWA registrar + image loads to fire
     await page.waitForTimeout(2500);
 

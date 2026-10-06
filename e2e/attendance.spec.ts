@@ -34,7 +34,7 @@ test.describe("Attendance Page", () => {
     expect(checkInRes.status()).toBe(201);
 
     // 2. Go to attendance page
-    await page.goto("/attendance");
+    await page.goto("/my-work/attendance");
 
     // 3. Click Check Out and verify checkout toast
     const checkOutBtn = page.locator("button:has-text('Check Out')");

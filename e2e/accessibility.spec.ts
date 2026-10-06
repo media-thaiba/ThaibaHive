@@ -61,7 +61,7 @@ test.describe('Phase 7.2: WCAG 2.1 AA accessibility audits', () => {
 test.describe('Phase 7.2: WCAG 2.1 AA audits (authenticated — staff)', () => {
   test.use({ storageState: '.auth/staff.json' });
 
-  for (const path of ['/', '/attendance', '/tasks', '/circulars']) {
+  for (const path of ['/', '/my-work/attendance', '/my-work/tasks', '/my-work/circulars']) {
     test(`${path} has no serious a11y violations`, async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState('domcontentloaded');
@@ -73,7 +73,7 @@ test.describe('Phase 7.2: WCAG 2.1 AA audits (authenticated — staff)', () => {
 test.describe('Phase 7.2: WCAG 2.1 AA audits (authenticated — admin)', () => {
   test.use({ storageState: '.auth/admin.json' });
 
-  for (const path of ['/staff', '/admin/departments', '/admin/institutions']) {
+  for (const path of ['/admin/staff', '/admin/departments', '/admin/institutions']) {
     test(`${path} has no serious a11y violations`, async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState('domcontentloaded');

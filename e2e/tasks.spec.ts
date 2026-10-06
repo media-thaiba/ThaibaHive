@@ -13,12 +13,12 @@ test.describe("Tasks Kanban Board", () => {
   });
 
   test("should allow creating a new task, showing it on Kanban, and viewing details", async ({ page }) => {
-    await page.goto("/tasks");
+    await page.goto("/my-work/tasks");
 
     // Click New Task button
     const newBtn = page.locator("a:has-text('New Task')");
     await newBtn.click();
-    await expect(page).toHaveURL("/tasks/new");
+    await expect(page).toHaveURL("/my-work/tasks/new");
 
     // Fill form elements
     await page.fill("#title", "E2E Tasks Board Test");

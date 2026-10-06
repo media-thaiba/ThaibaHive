@@ -35,7 +35,7 @@ test.describe('U4: Keyboard-Only Accessibility & Focus-Visible Verification', ()
       storageState: fs.existsSync(staffAuthPath) ? staffAuthPath : undefined,
     });
     const page = await context.newPage();
-    await page.goto('/attendance');
+    await page.goto('/my-work/attendance');
     await page.waitForLoadState('domcontentloaded');
 
     // Tab through interactive elements on attendance dashboard
@@ -55,7 +55,7 @@ test.describe('U4: Keyboard-Only Accessibility & Focus-Visible Verification', ()
       storageState: fs.existsSync(staffAuthPath) ? staffAuthPath : undefined,
     });
     const page = await context.newPage();
-    await page.goto('/leaves');
+    await page.goto('/my-work/leaves');
     await page.waitForLoadState('domcontentloaded');
 
     // Tab into page actions
@@ -75,7 +75,7 @@ test.describe('U4: Keyboard-Only Accessibility & Focus-Visible Verification', ()
       storageState: fs.existsSync(adminAuthPath) ? adminAuthPath : undefined,
     });
     const page = await context.newPage();
-    await page.goto('/admin/nfc');
+    await page.goto('/admin/hardware');
     await page.waitForLoadState('domcontentloaded');
 
     // Tab into controls
@@ -96,7 +96,7 @@ test.describe('U4: Keyboard-Only Accessibility & Focus-Visible Verification', ()
     });
     const page = await context.newPage();
 
-    const screens = ['/auth/login', '/staff', '/tasks', '/attendance', '/leaves'];
+    const screens = ['/auth/login', '/admin/staff', '/my-work/tasks', '/my-work/attendance', '/my-work/leaves'];
 
     for (const screen of screens) {
       await page.goto(screen);

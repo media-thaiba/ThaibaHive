@@ -7,7 +7,7 @@ test.describe("API Documentation Interactive Explorer (C7)", () => {
 
   test("renders custom zero-CDN API docs explorer, exercises 3 endpoints, and captures screenshot", async ({ page }) => {
     // 1. Navigate to /docs
-    await page.goto("/docs");
+    await page.goto("/admin/docs");
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the spec to load and render cards

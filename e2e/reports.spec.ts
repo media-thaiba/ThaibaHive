@@ -4,7 +4,7 @@ test.describe("Daily Work Reports Flow", () => {
   test.use({ storageState: ".auth/admin.json" });
 
   test("navigates to reports page and renders header and action buttons", async ({ page }) => {
-    await page.goto("/reports");
+    await page.goto("/my-work/reports");
     await expect(page.locator("h1")).toContainText("Daily Activity Logs");
 
     // Verify Export Logs and New Report buttons exist
@@ -16,7 +16,7 @@ test.describe("Daily Work Reports Flow", () => {
   });
 
   test("opens new report modal form when New Report button is clicked", async ({ page }) => {
-    await page.goto("/reports");
+    await page.goto("/my-work/reports");
     await page.getByRole("button", { name: /New Report/i }).first().click();
 
     // Verify modal elements

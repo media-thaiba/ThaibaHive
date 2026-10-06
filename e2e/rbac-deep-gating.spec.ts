@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { RoleGatingPage, NAV_VISIBILITY_MATRIX, DASHBOARD_ACTION_VISIBILITY, E2E_ROLES } from "./helpers/role-gating-page";
+import { RoleGatingPage, NAV_VISIBILITY_MATRIX, NAV_WORKSPACE, DASHBOARD_ACTION_VISIBILITY, E2E_ROLES } from "./helpers/role-gating-page";
 import { getAuthStatePath, getAvailableRoles, ADMIN_ROLES as AUTH_ADMIN_ROLES, PRINCIPAL_AND_ABOVE as AUTH_PRINCIPAL_AND_ABOVE, HOD_AND_ABOVE as AUTH_HOD_AND_ABOVE, FINANCE_ROLES as AUTH_FINANCE_ROLES, PURCHASE_ROLES as AUTH_PURCHASE_ROLES, ALL_STAFF_ROLES as AUTH_ALL_STAFF_ROLES } from "./helpers/auth-helper";
 import * as fs from "fs";
 import * as path from "path";
@@ -35,9 +35,22 @@ test.describe("Sidebar Navigation Visibility by Role", () => {
         await page.goto("/");
         await gating.expectDashboardLoaded();
 
-        for (const [href, visibility] of Object.entries(NAV_VISIBILITY_MATRIX)) {
-          const shouldBeVisible = visibility[role] === true;
-          await gating.expectSidebarLinkVisible(href, shouldBeVisible);
+        // Sidebar only renders the active workspace's items, so group matrix
+        // keys by owning workspace, switch to it, expand the group, assert.
+        const byWorkspace = new Map<string, Array<[string, Record<string, boolean>]>>();
+        for (const entry of Object.entries(NAV_VISIBILITY_MATRIX)) {
+          const ws = NAV_WORKSPACE[entry[0]];
+          if (!byWorkspace.has(ws)) byWorkspace.set(ws, []);
+          byWorkspace.get(ws)!.push(entry);
+        }
+
+        for (const [ws, entries] of byWorkspace) {
+          await gating.switchWorkspace(ws);
+          await gating.ensureSidebarGroupExpanded();
+          for (const [href, visibility] of entries) {
+            const shouldBeVisible = visibility[role] === true;
+            await gating.expectSidebarLinkVisible(href, shouldBeVisible);
+          }
         }
       });
     });
@@ -57,11 +70,11 @@ test.describe("Bottom Navigation Visibility by Role", () => {
         const gating = new RoleGatingPage(page);
         await page.goto("/");
 
-        // Primary nav items: Home, Attendance, Tasks, Leaves
-        await gating.expectBottomNavLinkVisible("/", NAV_VISIBILITY_MATRIX["/attendance"][role]);
-        await gating.expectBottomNavLinkVisible("/attendance", NAV_VISIBILITY_MATRIX["/attendance"][role]);
-        await gating.expectBottomNavLinkVisible("/tasks", NAV_VISIBILITY_MATRIX["/tasks"][role]);
-        await gating.expectBottomNavLinkVisible("/leaves", NAV_VISIBILITY_MATRIX["/leaves"][role]);
+        // Primary nav items: My Work, Attendance, Tasks, Leaves
+        await gating.expectBottomNavLinkVisible("/my-work", NAV_VISIBILITY_MATRIX["/my-work/attendance"][role]);
+        await gating.expectBottomNavLinkVisible("/my-work/attendance", NAV_VISIBILITY_MATRIX["/my-work/attendance"][role]);
+        await gating.expectBottomNavLinkVisible("/my-work/tasks", NAV_VISIBILITY_MATRIX["/my-work/tasks"][role]);
+        await gating.expectBottomNavLinkVisible("/my-work/leaves", NAV_VISIBILITY_MATRIX["/my-work/leaves"][role]);
       });
     });
   }
@@ -84,7 +97,7 @@ test.describe("Dashboard Action Button Gating by Role", () => {
           const canExport = DASHBOARD_ACTION_VISIBILITY["finance:export"][role];
 
           const gating = new RoleGatingPage(page);
-          await page.goto("/finance");
+          await page.goto("/operations/finance");
           await gating.expectFinanceDashboardLoaded();
           await gating.expectFinanceNewRequestVisible(canCreate);
           await gating.expectFinanceExportVisible(canExport);
@@ -397,7 +410,7 @@ test.describe("Unauthenticated Access (401/Redirect)", () => {
   test("unauthenticated user redirected to login or landing portal for protected routes", async ({ page }) => {
     const protectedRoutes = [
       { path: "/", expectedUrl: /\/(portal\/tgcis|auth\/login)/ },
-      { path: "/finance", expectedUrl: /\/auth\/login/ },
+      { path: "/operations/finance", expectedUrl: /\/auth\/login/ },
       { path: "/portal/alumni", expectedUrl: /\/auth\/login/ },
       { path: "/operations/supply", expectedUrl: /\/auth\/login/ },
       { path: "/admin/operations/vision-shield", expectedUrl: /\/auth\/login/ },
@@ -452,7 +465,7 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
     test("hod cannot access /admin/nfc", async ({ page }) => {
       const gating = new RoleGatingPage(page);
 
-      await page.goto("/admin/nfc");
+      await page.goto("/admin/hardware");
       await expect(page.locator("text=Access Restricted")).toBeVisible({ timeout: 15000 });
     });
   });
@@ -462,10 +475,10 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
     test("principal can access /academic but not /admin/nfc", async ({ page }) => {
       const gating = new RoleGatingPage(page);
 
-      await page.goto("/academic");
+      await page.goto("/school");
       await expect(page.locator('h1:has-text("Academic Dashboard")').first()).toBeVisible({ timeout: 10000 });
 
-      await page.goto("/admin/nfc");
+      await page.goto("/admin/hardware");
       await expect(page.locator("text=Access Restricted").first()).toBeVisible({ timeout: 15000 });
     });
   });
@@ -475,10 +488,10 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
     test("accounts can access /accounts but not /admin/nfc", async ({ page }) => {
       const gating = new RoleGatingPage(page);
 
-      await page.goto("/accounts");
+      await page.goto("/operations/accounts");
       await expect(page.locator('h1:has-text("Institutional Financials"), h1:has-text("Accounts")').first()).toBeVisible({ timeout: 10000 });
 
-      await page.goto("/admin/nfc");
+      await page.goto("/admin/hardware");
       await expect(page.locator("text=Access Restricted").first()).toBeVisible({ timeout: 15000 });
     });
   });
@@ -488,10 +501,10 @@ test.describe("Cross-Role Navigation Edge Cases", () => {
     test("purchase can access /purchases but not /accounts", async ({ page }) => {
       const gating = new RoleGatingPage(page);
 
-      await page.goto("/purchases");
+      await page.goto("/operations/procurement");
       await expect(page.locator('h1:has-text("Purchases"), h1:has-text("Purchase")').first()).toBeVisible({ timeout: 10000 });
 
-      await page.goto("/accounts");
+      await page.goto("/operations/accounts");
       await expect(page.locator("text=Access Restricted").first()).toBeVisible({ timeout: 15000 });
     });
   });

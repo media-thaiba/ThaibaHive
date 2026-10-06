@@ -4,7 +4,7 @@ test.describe('Admin Identity Radar', () => {
   test.use({ storageState: '.auth/super_admin.json' });
 
   test('should display radar dashboard', async ({ page }) => {
-    await page.goto('/admin/security/identity');
+    await page.goto('/admin/keys');
     
     // Check loading state or final state
     await expect(page.locator('text=Identity Security Radar')).toBeVisible();
