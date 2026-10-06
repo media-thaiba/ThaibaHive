@@ -125,7 +125,7 @@ export default function NewStaffPage() {
         return;
       }
 
-      router.push("/staff");
+      router.push("/admin/staff");
     } catch {
       setError("Network error. Please try again.");
     } finally {

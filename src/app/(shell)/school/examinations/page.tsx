@@ -21,7 +21,7 @@ export default function ExaminationsPage() {
         onSelectAction={(exam, action) => {
           setSelectedExam(exam);
           if (action === "tabulation") {
-            window.location.href = `/examinations/tabulation?examId=${exam.id}`;
+            window.location.href = `/school/examinations/tabulation?examId=${exam.id}`;
           } else if (action === "mark_entry") {
             setIsMarkEntryOpen(true);
           } else {

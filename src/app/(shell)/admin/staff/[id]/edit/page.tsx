@@ -166,7 +166,7 @@ export default function EditStaffPage() {
     }
 
     toast.success("Profile updated successfully");
-    router.push(`/staff/${id}`);
+    router.push(`/admin/staff/${id}`);
   }
 
   if (loading) return <div className="p-6"><Skeleton className="h-6 w-48" /></div>;

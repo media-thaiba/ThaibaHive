@@ -152,7 +152,7 @@ export default function ApprovalsPage() {
           )}
         </div>
         <Link
-          href="/approvals/delegations"
+          href="/my-work/approvals/delegations"
           className="text-sm text-primary font-medium hover:underline"
         >
           Manage Delegations

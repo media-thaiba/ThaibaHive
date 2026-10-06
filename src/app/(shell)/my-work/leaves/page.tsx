@@ -211,7 +211,7 @@ export default function LeavesPage() {
               icon={<Calendar className="h-12 w-12" />}
               title="No leave applications yet"
               description="Apply for leave to get started."
-              action={{ label: "Apply Leave", href: "/leaves" }}
+              action={{ label: "Apply Leave", href: "/my-work/leaves" }}
             />
           ) : (
             <div className="space-y-2">

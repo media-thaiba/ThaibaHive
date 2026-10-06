@@ -52,7 +52,7 @@ export default function StaffDirectoryPage() {
         actions={
           <div className="flex items-center gap-3">
             <ExportButton type="staff" />
-            <Link href="/staff/new">
+            <Link href="/admin/staff/new">
               <Button aria-label="Add new staff member">Add Staff</Button>
             </Link>
           </div>
@@ -85,14 +85,14 @@ export default function StaffDirectoryPage() {
               icon={<Users className="h-12 w-12" aria-hidden="true" />}
               title="No staff found"
               description="Try adjusting your search or add a new staff member."
-              action={{ label: "Add Staff", href: "/staff/new" }}
+              action={{ label: "Add Staff", href: "/admin/staff/new" }}
             />
           ) : (
             <ul role="list" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 list-none p-0 m-0">
               {filtered.map((s: StaffMember) => (
                 <li key={s.id}>
                   <Link
-                    href={`/staff/${s.id}`}
+                    href={`/admin/staff/${s.id}`}
                     aria-label={`View staff profile for ${s.firstName} ${s.lastName}, ${s.designation || s.role}, ${s.isActive ? "Active" : "Inactive"}`}
                     className="block rounded-lg border p-4 space-y-2 hover:bg-muted/30 transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
                   >

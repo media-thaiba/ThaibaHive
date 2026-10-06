@@ -91,15 +91,15 @@ export class DialogManager {
       botReplyText =
         'Your current overall attendance is 87.4% across all enrolled subjects (Semester 4). You have met the minimum eligibility threshold for all upcoming exams.';
       suggestedActions = [
-        { label: 'View Subject Breakdown', url: '/attendance/details' },
+        { label: 'View Subject Breakdown', url: '/my-work/attendance/details' },
         { label: 'Apply for Leave', payload: 'apply_leave' },
       ];
     } else if (intentResult.intent === 'fee_balance') {
       botReplyText =
         'Your tuition fee statement shows an outstanding balance of $350.00 due on September 15, 2026.';
       suggestedActions = [
-        { label: 'Pay Now Online', url: '/finance/payments' },
-        { label: 'Download Fee Receipt', url: '/finance/receipts' },
+        { label: 'Pay Now Online', url: '/operations/finance/payments' },
+        { label: 'Download Fee Receipt', url: '/operations/finance/receipts' },
       ];
     } else if (intentResult.intent === 'exam_timetable') {
       botReplyText =

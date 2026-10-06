@@ -124,8 +124,8 @@ export default function StaffProfilePage() {
           <Badge variant={staff.isActive ? "default" : "secondary"}>{staff.isActive ? "Active" : "Inactive"}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/staff/${id}/timeline`}><Button variant="outline">Full Timeline</Button></Link>
-          <Link href={`/staff/${id}/edit`}><Button>Edit Profile</Button></Link>
+          <Link href={`/admin/staff/${id}/timeline`}><Button variant="outline">Full Timeline</Button></Link>
+          <Link href={`/admin/staff/${id}/edit`}><Button>Edit Profile</Button></Link>
         </div>
       </div>
 

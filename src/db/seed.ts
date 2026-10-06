@@ -195,25 +195,25 @@ async function seedMarketplace() {
   const uuid = () => crypto.randomUUID();
 
   // Instant Utility Extensions — auto-activated on first login
+  // routePrefix values are canonical Phase-1.5 workspace URLs.
   const instantApps = [
-    { id: uuid(), name: "Digital Profile",    slug: "profile",       category: "instant", routePrefix: "/staff",        icon: "User",        sortOrder: 0, description: "Your personal staff profile" },
-    { id: uuid(), name: "Attendance",          slug: "attendance",    category: "instant", routePrefix: "/attendance",   icon: "Clock",       sortOrder: 1, description: "Daily check-in and check-out" },
-    { id: uuid(), name: "Leave Management",    slug: "leaves",        category: "instant", routePrefix: "/leaves",       icon: "Calendar",    sortOrder: 2, description: "Apply for leaves and track status" },
-    { id: uuid(), name: "Task Management",     slug: "tasks",         category: "instant", routePrefix: "/tasks",        icon: "CheckSquare", sortOrder: 3, description: "View and manage assigned tasks" },
-    { id: uuid(), name: "Daily Reports",       slug: "reports",       category: "instant", routePrefix: "/reports",      icon: "FileText",    sortOrder: 4, description: "Submit daily work reports" },
-    { id: uuid(), name: "Approvals",           slug: "approvals",     category: "instant", routePrefix: "/approvals",    icon: "ThumbsUp",    sortOrder: 5, description: "Review and approve requests" },
-    { id: uuid(), name: "Notifications",       slug: "notifications", category: "instant", routePrefix: "/notifications",icon: "Bell",        sortOrder: 6, description: "View notifications and alerts" },
-    { id: uuid(), name: "Staff Directory",     slug: "staff-directory",category: "instant", routePrefix: "/staff",       icon: "Users",       sortOrder: 7, description: "Browse employee profiles" },
-    { id: uuid(), name: "Help Desk",           slug: "help-desk",     category: "instant", routePrefix: "/help-desk",    icon: "HelpCircle",  sortOrder: 8, description: "IT support tickets" },
-    { id: uuid(), name: "Canteen",             slug: "canteen",       category: "instant", routePrefix: "/canteen",      icon: "Coffee",      sortOrder: 9, description: "Daily menu and meal preferences" },
+    { id: uuid(), name: "Digital Profile",    slug: "profile",       category: "instant", routePrefix: "/admin/staff",          icon: "User",        sortOrder: 0, description: "Your personal staff profile" },
+    { id: uuid(), name: "Attendance",          slug: "attendance",    category: "instant", routePrefix: "/my-work/attendance",    icon: "Clock",       sortOrder: 1, description: "Daily check-in and check-out" },
+    { id: uuid(), name: "Leave Management",    slug: "leaves",        category: "instant", routePrefix: "/my-work/leaves",        icon: "Calendar",    sortOrder: 2, description: "Apply for leaves and track status" },
+    { id: uuid(), name: "Task Management",     slug: "tasks",         category: "instant", routePrefix: "/my-work/tasks",         icon: "CheckSquare", sortOrder: 3, description: "View and manage assigned tasks" },
+    { id: uuid(), name: "Daily Reports",       slug: "reports",       category: "instant", routePrefix: "/my-work/reports",       icon: "FileText",    sortOrder: 4, description: "Submit daily work reports" },
+    { id: uuid(), name: "Approvals",           slug: "approvals",     category: "instant", routePrefix: "/my-work/approvals",     icon: "ThumbsUp",    sortOrder: 5, description: "Review and approve requests" },
+    { id: uuid(), name: "Staff Directory",     slug: "staff-directory",category: "instant", routePrefix: "/admin/staff",          icon: "Users",       sortOrder: 7, description: "Browse employee profiles" },
+    { id: uuid(), name: "Help Desk",           slug: "help-desk",     category: "instant", routePrefix: "/operations/facilities", icon: "HelpCircle",  sortOrder: 8, description: "IT support tickets" },
+    { id: uuid(), name: "Canteen",             slug: "canteen",       category: "instant", routePrefix: "/my-work/canteen",       icon: "Coffee",      sortOrder: 9, description: "Daily menu and meal preferences" },
   ];
 
   // Restricted Department Portals — require approval
   const restrictedApps = [
-    { id: uuid(), name: "Accounts",      slug: "accounts",   category: "restricted", routePrefix: "/accounts",   icon: "DollarSign", sortOrder: 10, description: "Financial records, expense tracking, and budget management" },
-    { id: uuid(), name: "Vehicles",      slug: "vehicles",   category: "restricted", routePrefix: "/vehicles",   icon: "Truck",      sortOrder: 11, description: "Vehicle fleet management, bookings, and fuel logs" },
-    { id: uuid(), name: "Assets",        slug: "assets",     category: "restricted", routePrefix: "/assets",     icon: "Briefcase",  sortOrder: 12, description: "Institutional asset tracking and assignment" },
-    { id: uuid(), name: "Purchases",     slug: "purchases",  category: "restricted", routePrefix: "/purchases",  icon: "ShoppingCart",sortOrder: 13, description: "Purchase requests and procurement tracking" },
+    { id: uuid(), name: "Accounts",      slug: "accounts",   category: "restricted", routePrefix: "/operations/accounts",   icon: "DollarSign", sortOrder: 10, description: "Financial records, expense tracking, and budget management" },
+    { id: uuid(), name: "Vehicles",      slug: "vehicles",   category: "restricted", routePrefix: "/operations/fleet",      icon: "Truck",      sortOrder: 11, description: "Vehicle fleet management, bookings, and fuel logs" },
+    { id: uuid(), name: "Assets",        slug: "assets",     category: "restricted", routePrefix: "/operations/assets",     icon: "Briefcase",  sortOrder: 12, description: "Institutional asset tracking and assignment" },
+    { id: uuid(), name: "Purchases",     slug: "purchases",  category: "restricted", routePrefix: "/operations/procurement",icon: "ShoppingCart",sortOrder: 13, description: "Purchase requests and procurement tracking" },
   ];
 
   const allApps = [...instantApps, ...restrictedApps];

@@ -83,7 +83,7 @@ export default function StudentsPage() {
             <Upload className="h-4 w-4" />
             Import CSV
           </Button>
-          <Button onClick={() => router.push("/academic/students/new")}>Add Student</Button>
+          <Button onClick={() => router.push("/school/students/new")}>Add Student</Button>
         </div>
       </div>
 
@@ -136,7 +136,7 @@ export default function StudentsPage() {
                     </Badge>
                   </td>
                   <td className="p-3 text-right">
-                    <Button variant="outline" size="sm" onClick={() => router.push(`/academic/students/${s.id}`)}>View</Button>
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/school/students/${s.id}`)}>View</Button>
                   </td>
                 </tr>
               ))}

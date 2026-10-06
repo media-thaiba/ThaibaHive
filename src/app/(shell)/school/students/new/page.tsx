@@ -51,7 +51,7 @@ export default function NewStudentPage() {
         return;
       }
       toast.success("Student created successfully");
-      router.push("/academic/students");
+      router.push("/school/students");
     } catch {
       toast.error("Failed to create student");
     } finally {

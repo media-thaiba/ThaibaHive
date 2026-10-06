@@ -112,7 +112,7 @@ describe("top-level route folders are workspaces or explicitly allowlisted", () 
     .map((e) => e.name);
 
   it("has only workspaces and allowlisted legacy folders at the top level", () => {
-    const workspaceNames = new Set(workspaces.map((w) => w.id));
+    const workspaceNames = new Set<string>(workspaces.map((w) => w.id));
     const allow = new Set<string>(LEGACY_ALLOWLIST);
     const unexpected = topLevel.filter(
       (name) => !workspaceNames.has(name) && !allow.has(name)

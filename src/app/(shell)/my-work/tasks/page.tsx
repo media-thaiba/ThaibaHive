@@ -113,7 +113,7 @@ function SortableTaskCard({ task }: { task: Task }) {
           <GripVertical className="h-4 w-4" aria-hidden="true" />
         </Button>
         <Link
-          href={`/tasks/${task.id}`}
+          href={`/my-work/tasks/${task.id}`}
           aria-label={`View task details: ${task.title}, priority ${task.priority}${task.dueDate ? `, due ${task.dueDate}` : ""}`}
           className="text-sm font-medium hover:underline flex-1 line-clamp-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden rounded-xs"
         >
@@ -331,7 +331,7 @@ export default function TasksPage() {
                 </Button>
               ))}
             </div>
-            <Link href="/tasks/new">
+            <Link href="/my-work/tasks/new">
               <Button aria-label="Create new task">New Task</Button>
             </Link>
           </div>
@@ -344,7 +344,7 @@ export default function TasksPage() {
           icon={<CheckSquare className="h-12 w-12" aria-hidden="true" />}
           title="No tasks yet"
           description="Create your first task to get started. Drag tasks between columns to update their status."
-          action={{ label: "Create Task", href: "/tasks/new" }}
+          action={{ label: "Create Task", href: "/my-work/tasks/new" }}
         />
       ) : (
         <DndContext

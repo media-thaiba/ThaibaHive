@@ -83,7 +83,7 @@ export default function ClassesPage() {
                 <div className="flex items-center gap-2 pt-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <button
-                    onClick={() => router.push(`/academic/students?classId=${c.id}`)}
+                    onClick={() => router.push(`/school/students?classId=${c.id}`)}
                     className="text-sm text-primary hover:underline"
                   >
                     View Roster

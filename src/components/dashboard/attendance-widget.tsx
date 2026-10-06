@@ -41,7 +41,7 @@ export function AttendanceWidget({ checkedIn, onClockOut, clockingOut }: Attenda
             <LogOut className="h-4 w-4" /> {clockingOut ? "Processing..." : "Clock Out"}
           </Button>
         ) : (
-          <Link href="/attendance" className="block w-full">
+          <Link href="/my-work/attendance" className="block w-full">
             <Button className="w-full bg-success text-success-foreground hover:bg-success/90 gap-2 font-medium py-5 rounded-lg">
               <Clock className="h-4 w-4" /> Check In / Punch
             </Button>

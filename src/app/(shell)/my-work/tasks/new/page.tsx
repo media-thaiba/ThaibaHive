@@ -83,7 +83,7 @@ export default function NewTaskPage() {
 
       await queryClient.invalidateQueries({ queryKey: ["tasks"] });
       router.refresh();
-      router.push("/tasks");
+      router.push("/my-work/tasks");
     } catch {
       setError("Network error. Please try again.");
     } finally {

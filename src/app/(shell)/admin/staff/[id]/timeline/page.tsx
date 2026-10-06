@@ -121,7 +121,7 @@ export default function StaffTimelinePage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push(`/staff/${staffId}`)}
+          onClick={() => router.push(`/admin/staff/${staffId}`)}
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />

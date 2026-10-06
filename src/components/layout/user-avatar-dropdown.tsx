@@ -61,7 +61,7 @@ export function UserAvatarDropdown() {
         </DropdownMenuItem>
         <DropdownMenuItem asChild inset>
           <Link
-            href="/staff"
+            href="/admin/staff"
             className="flex items-center gap-2 w-full"
           >
             <User className="h-4 w-4" />
