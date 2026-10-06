@@ -1,9 +1,9 @@
-name: Automated Database Backup
+name: Automated Supabase Storage Backup
 
 on:
   schedule:
-    # Runs daily at 03:00 UTC
-    - cron: "0 3 * * *"
+    # Runs weekly on Sundays at 04:00 UTC
+    - cron: "0 4 * * 0"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -12,39 +12,35 @@ on:
         default: "false"
 
 jobs:
-  db-backup:
-    name: Backup PostgreSQL Database
+  storage-backup:
+    name: Backup Supabase Storage Bucket
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL Client
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y postgresql-client
-
-      - name: Validate required backup secrets
+      - name: Validate required storage backup secrets
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           missing=()
-          [ -z "${{ secrets.DATABASE_URL }}" ] && missing+=("DATABASE_URL")
+          [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}" ] && missing+=("NEXT_PUBLIC_SUPABASE_URL")
+          [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ] && missing+=("SUPABASE_SERVICE_ROLE_KEY")
           [ -z "${{ secrets.BACKUP_S3_BUCKET }}" ] && missing+=("BACKUP_S3_BUCKET")
           [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing+=("AWS_ACCESS_KEY_ID")
           [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing+=("AWS_SECRET_ACCESS_KEY")
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required backup secrets: ${missing[*]}"
+            echo "::error::Missing required storage backup secrets: ${missing[*]}"
             exit 1
           fi
 
-      - name: Run database backup
+      - name: Run Supabase Storage backup
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
-          BACKUP_S3_PREFIX: db-backups
-          BACKUP_RETENTION_DAYS: 30
+          BACKUP_S3_PREFIX: storage-backups
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION || 'ap-south-1' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-        run: chmod +x scripts/db-backup.sh && bash scripts/db-backup.sh
+        run: chmod +x scripts/storage-backup.sh && bash scripts/storage-backup.sh

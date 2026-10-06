@@ -20,7 +20,7 @@ env:
 jobs:
   canary-validation:
     name: Staging Smoke & Canary Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       promotion_allowed: ${{ steps.gate.outputs.promotion_allowed }}

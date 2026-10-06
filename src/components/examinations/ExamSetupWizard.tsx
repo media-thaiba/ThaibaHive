@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GradeScaleSelect } from "./GradeScaleSelect";
 import { SubjectScheduleForm, ScheduleItemForm } from "./SubjectScheduleForm";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ExamSetupWizardProps {
   open: boolean;
@@ -14,10 +15,14 @@ interface ExamSetupWizardProps {
 }
 
 export function ExamSetupWizard({ open, onOpenChange, onSuccess }: ExamSetupWizardProps) {
+  const { staff } = useAuth();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
+  const defaultInst = (staff as any)?.institutionId && (staff as any).institutionId !== "global" ? (staff as any).institutionId : "";
+  const [institutionId, setInstitutionId] = useState(defaultInst);
+  const [institutionsList, setInstitutionsList] = useState<{ id: string; name: string }[]>([]);
   const [title, setTitle] = useState("");
   const [academicYear, setAcademicYear] = useState("2025-2026");
   const [term, setTerm] = useState("Term 1");
@@ -25,6 +30,19 @@ export function ExamSetupWizard({ open, onOpenChange, onSuccess }: ExamSetupWiza
   const [endDate, setEndDate] = useState("");
   const [gradeScaleId, setGradeScaleId] = useState("gs_10point_standard");
   const [schedules, setSchedules] = useState<ScheduleItemForm[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/institutions")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const list = data?.institutions || [];
+        setInstitutionsList(list);
+        if (!institutionId && list.length > 0) {
+          setInstitutionId(list[0].id);
+        }
+      })
+      .catch(() => {});
+  }, [institutionId]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -54,6 +72,7 @@ export function ExamSetupWizard({ open, onOpenChange, onSuccess }: ExamSetupWiza
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          institutionId: institutionId || undefined,
           title,
           academicYear,
           term,
@@ -105,6 +124,23 @@ export function ExamSetupWizard({ open, onOpenChange, onSuccess }: ExamSetupWiza
 
         {step === 1 && (
           <div className="space-y-4 py-2">
+            {institutionsList.length > 1 && (
+              <div>
+                <label className="text-xs font-medium text-foreground">Institution / Campus</label>
+                <select
+                  aria-label="Institution / Campus"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                  value={institutionId}
+                  onChange={(e) => setInstitutionId(e.target.value)}
+                >
+                  {institutionsList.map((inst) => (
+                    <option key={inst.id} value={inst.id}>
+                      {inst.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-foreground">Examination Title</label>
               <Input

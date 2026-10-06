@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { db } from "../packages/db";
-import { staff } from "../packages/db/schema";
+import { staff, institutions } from "../packages/db/schema";
 import { eq } from "drizzle-orm";
 
 test.describe("End-to-End User Journey Certification Suite", () => {
@@ -114,10 +114,15 @@ test.describe("End-to-End User Journey Certification Suite", () => {
       const adminPage = await adminContext.newPage();
 
       try {
+        // 1. Fetch tenant institution
+        const inst = await db.select().from(institutions).limit(1).get();
+        const instId = inst?.id || "inst-default";
+
         // 1. Create active performance cycle
         const cycleRes = await adminPage.request.post("/api/performance/cycles", {
           data: {
             title: `Annual Appraisal Cycle ${cycleSuffix}`,
+            institutionId: instId,
             cycleType: "quarterly",
             startDate: "2026-01-01",
             endDate: "2026-12-31",

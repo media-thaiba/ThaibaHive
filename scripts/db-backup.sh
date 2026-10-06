@@ -24,9 +24,12 @@ if [ "${DRY_RUN:-false}" = "true" ]; then
   exit 0
 fi
 
+# Use DIRECT_DATABASE_URL (session pooler port 5432) if provided, otherwise fallback to DATABASE_URL
+TARGET_DB_URL="${DIRECT_DATABASE_URL:-${DATABASE_URL:-}}"
+
 # Strict validation: Fail fast with non-zero exit code if required secrets are absent
-if [ -z "${DATABASE_URL:-}" ] || [ -z "${BACKUP_S3_BUCKET:-}" ] || [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
-  echo "[backup] ERROR: Required backup environment variables (DATABASE_URL, BACKUP_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are missing." >&2
+if [ -z "${TARGET_DB_URL}" ] || [ -z "${BACKUP_S3_BUCKET:-}" ] || [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+  echo "[backup] ERROR: Required backup environment variables (DATABASE_URL/DIRECT_DATABASE_URL, BACKUP_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are missing." >&2
   exit 1
 fi
 
@@ -40,10 +43,10 @@ S3_CHECKSUM_KEY="${BACKUP_S3_PREFIX}/${CHECKSUM_FILE}"
 
 mkdir -p "$TMPDIR"
 
-echo "[backup] Starting PostgreSQL backup at ${TIMESTAMP}..."
+echo "[backup] Starting PostgreSQL public schema backup at ${TIMESTAMP}..."
 
-# Execute pg_dump directly using DATABASE_URL to avoid fragile regex/sed parsing and preserve SSL parameters
-pg_dump --clean --if-exists --no-owner --no-privileges "$DATABASE_URL" | gzip -c > "${TMPDIR}/${FILENAME}"
+# Execute pg_dump directly targeting public schema to avoid Supabase internal schemas
+pg_dump --schema=public --clean --if-exists --no-owner --no-privileges "$TARGET_DB_URL" | gzip -c > "${TMPDIR}/${FILENAME}"
 
 # Verify the dump file exists and has non-zero size
 if [ ! -s "${TMPDIR}/${FILENAME}" ]; then

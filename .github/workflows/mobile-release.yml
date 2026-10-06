@@ -14,7 +14,7 @@ on:
 jobs:
   build-android-release:
     name: Build Android App Bundle (.aab)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -129,7 +129,7 @@ jobs:
   create-github-release:
     name: Create GitHub Release Draft
     needs: [build-android-release, build-ios-release]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -2,6 +2,20 @@ import { GET as getSystemUpdate } from "@/app/api/system/update/route";
 import { db } from "@/db";
 import { systemConfigs } from "@/db/schema";
 
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn().mockResolvedValue({
+      staffId: "staff_admin",
+      email: "admin@thaiba.edu",
+      role: "super_admin",
+      institutionId: "inst_test",
+    }),
+    hasPermission: jest.fn(() => true),
+  };
+});
+
 describe("Hardening & Security Sanitization (Task A5 / Important I1, I3, I4)", () => {
   const originalEnv = process.env;
 
@@ -85,6 +99,31 @@ describe("Hardening & Security Sanitization (Task A5 / Important I1, I3, I4)", (
 
       // Max allowed: 10 bytes, payload: 20 bytes
       await expect(readBoundedRequestBody(req, 10)).rejects.toThrow(PayloadTooLargeError);
+    });
+
+    it("should return 413 when uploaded file exceeds 4.5MB serverless limit", async () => {
+      const { POST: uploadHandler } = await import("@/app/api/upload/route");
+
+      const req = {
+        url: "http://localhost/api/upload",
+        method: "POST",
+        headers: new Headers(),
+        formData: async () => ({
+          get: (key: string) =>
+            key === "file"
+              ? {
+                  size: 5 * 1024 * 1024,
+                  type: "application/pdf",
+                  name: "large-document.pdf",
+                }
+              : null,
+        }),
+      } as unknown as Request;
+
+      const res = await uploadHandler(req);
+      expect(res.status).toBe(413);
+      const json = await res.json();
+      expect(json.error).toContain("exceeds 4.5 MB serverless proxy limit");
     });
   });
 });

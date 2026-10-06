@@ -70,13 +70,17 @@ export function buildContentSecurityPolicy(isProd: boolean, nonce?: string): str
     : isProd
       ? "script-src 'self' 'unsafe-inline'"
       : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+  const connectSrc = isProd
+    ? "connect-src 'self' https://thaiba-hive.vercel.app https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.upstash.io"
+    : "connect-src 'self' https: ws: wss: http://localhost:* ws://localhost:*";
+
   return [
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https: ws: wss:",
+    connectSrc,
     "worker-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

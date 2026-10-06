@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { exams, institutions } from "@thaiba/db/schema";
+import { exams } from "@thaiba/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { examCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -57,14 +57,9 @@ export const POST = requireAuth(async (request: Request, session) => {
     const body = await request.json();
     const parsed = examCreateSchema.parse(body);
 
-    let institutionId = await resolveRequestInstitution(session, parsed.institutionId);
+    const institutionId = await resolveRequestInstitution(session, parsed.institutionId);
     if (institutionId === "global") {
-      const primaryInst = await db.select({ id: institutions.id }).from(institutions).limit(1).get();
-      if (primaryInst) {
-        institutionId = primaryInst.id;
-      } else {
-        return NextResponse.json({ error: "Explicit institutionId required for exam creation" }, { status: 400 });
-      }
+      return NextResponse.json({ error: "Explicit institutionId required for exam creation" }, { status: 400 });
     }
     const examId = `exam_${Date.now()}`;
 

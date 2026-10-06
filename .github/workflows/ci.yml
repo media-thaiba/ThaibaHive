@@ -16,7 +16,7 @@ concurrency:
 jobs:
   web-ci:
     name: Next.js Web CI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
 
   postgres-ci:
     name: PostgreSQL 16 Production Parity Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16
@@ -161,7 +161,7 @@ jobs:
 
   platform-simulations:
     name: Platform OS Simulation (${{ matrix.module }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [web-ci, postgres-ci]
     strategy:
       fail-fast: false
@@ -222,7 +222,7 @@ jobs:
 
   e2e-build:
     name: E2E Standalone Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -304,7 +304,7 @@ jobs:
 
   e2e-tests:
     name: Playwright E2E Tests (${{ matrix.browser }} ${{ matrix.shard }}/${{ matrix.shardCount }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [web-ci, e2e-build]
     timeout-minutes: 45
     strategy:
@@ -405,7 +405,7 @@ jobs:
 
   load-tests:
     name: k6 CI Load & Stress Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [web-ci, e2e-build]
     timeout-minutes: 15
     steps:
@@ -527,7 +527,7 @@ jobs:
 
   mobile-ci:
     name: Flutter Mobile CI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: thaibahive_mobile_app

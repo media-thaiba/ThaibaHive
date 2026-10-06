@@ -54,7 +54,8 @@ describe("Content-Security-Policy builder", () => {
     expect(prodCsp).toContain("base-uri 'self'");
     expect(prodCsp).toContain("object-src 'none'");
     expect(prodCsp).toContain("img-src 'self' data: https: blob:");
-    expect(prodCsp).toContain("connect-src 'self' https: ws: wss:");
+    expect(prodCsp).toContain("connect-src 'self' https://thaiba-hive.vercel.app https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://*.upstash.io");
+    expect(devCsp).toContain("connect-src 'self' https: ws: wss: http://localhost:* ws://localhost:*");
     expect(prodCsp).toContain("report-uri /api/system/csp-report");
     expect(prodCsp).toContain("report-to csp-endpoint");
   });

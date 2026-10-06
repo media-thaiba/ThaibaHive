@@ -87,6 +87,32 @@ describe("Examination API Routes", () => {
     expect(json.exam.title).toBe("Spring Term Exam");
   });
 
+  it("POST /api/examinations/exams should return 400 when global admin omits institutionId", async () => {
+    const { verifySession } = require("@thaiba/auth");
+    verifySession.mockResolvedValueOnce({
+      staffId: "staff_super_admin",
+      role: "super_admin",
+      institutionId: null,
+    });
+
+    const req = new Request("http://localhost/api/examinations/exams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Spring Term Exam",
+        academicYear: "2025-2026",
+        term: "Term 1",
+        startDate: "2026-03-01",
+        endDate: "2026-03-15",
+      }),
+    });
+
+    const res = await createExam(req);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/Explicit institutionId required/i);
+  });
+
   it("GET /api/examinations/exams/[id] should return target exam details", async () => {
     const req = new Request("http://localhost/api/examinations/exams/exam_test_100");
     const res = await getExamById(req, { params: Promise.resolve({ id: "exam_test_100" }) });
