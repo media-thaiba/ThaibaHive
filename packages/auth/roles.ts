@@ -16,7 +16,16 @@ export type StaffRole =
   | "inspector"
   | "system";
 
-type Permission = string;
+export type Permission = string;
+
+export const DOT_TO_COLON_MAP: Record<string, string> = {
+  "student.create": "students:create",
+  "marks.enter": "exam:enter_marks",
+  "marks.approve": "exam:approve_marks",
+  "academic.grade.create": "classes:create",
+  "teacher.assign": "timetables:manage",
+  "campus.approve": "affiliations:manage",
+};
 
 const basePermissions = {
   system: [
@@ -41,7 +50,7 @@ const basePermissions = {
     "cleanup:execute",
   ],
   coordinator: [
-    "campus.approve", "campus:approve", "teacher.assign", "teacher:assign", "academic.grade.create", "academic:grade:create",
+    "academic.student.admissions", "academic.student.admissions", "academic.classes.manage", "academic.classes.manage", "academic.grade.create", "academic.classes.manage",
     "regional:view", "regional:manage", "warehouse:export", "alerts:push_configure",
     "analytics:predict", "analytics:manage", "analytics:read", "analytics:timeseries", "reports:read", "reports:review", "staff:read",
     "autonomy:view", "autonomy:manage", "compliance:audit", "compliance:forensics", "compliance:read", "compliance:manage", "compliance:export",
@@ -51,8 +60,8 @@ const basePermissions = {
     "operations:read", "observability:read",
   ],
   institutional_head: [
-    "student.create", "students:create", "students:read", "students:update", "students:delete", "students:write",
-    "marks.approve", "marks:approve", "exam:approve_marks", "exam:publish_results", "exam:read",
+    "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
+    "exam.marks.enter", "exam.marks.enter", "exam:approve_marks", "exam:publish_results", "exam:read",
     "staff:read", "staff:create", "staff:update",
     "attendance:read", "attendance:manage", "student_attendance:read", "student_attendance:manage",
     "tasks:read", "tasks:create", "tasks:assign",
@@ -74,7 +83,7 @@ const basePermissions = {
     "km:advising:audit", "km:analytics:view", "km:knowledge:search", "reviews:read", "reviews:create", "reviews:update",
   ],
   academic_coordinator: [
-    "academic.grade.create", "academic:grade:create", "teacher.assign", "teacher:assign",
+    "academic.grade.create", "academic.classes.manage", "academic.classes.manage", "academic.classes.manage",
     "academic_years:manage", "classes:read", "classes:create", "classes:update",
     "timetables:read", "timetables:manage",
     "curriculum:catalog:manage", "curriculum:plans:view", "curriculum:plans:edit", "curriculum:plans:approve",
@@ -83,12 +92,12 @@ const basePermissions = {
   ],
   exam_coordinator: [
     "exam:create", "exam:read", "exam:publish_results", "exam:enter_marks", "exam:approve_marks",
-    "marks.approve", "marks:approve",
+    "exam.marks.enter", "exam.marks.enter",
     "classes:read", "students:read", "academic_years:manage",
     "documents:read", "documents:generate", "exports:read", "exports:create",
   ],
   teacher: [
-    "marks.enter", "marks:enter", "exam:enter_marks", "exam:read",
+    "exam.marks.enter", "exam.marks.enter", "exam:enter_marks", "exam:read",
     "student_attendance:read", "student_attendance:manage", "attendance:read",
     "timetables:read", "classes:read", "students:read",
     "tasks:read", "leaves:read", "leaves:delete", "reports:create", "reports:read",
@@ -104,7 +113,7 @@ const basePermissions = {
   ],
 };
 
-const rolePermissions: Record<StaffRole, Permission[]> = {
+export const rolePermissions: Record<StaffRole, Permission[]> = {
   super_admin: ["*"],
   system: basePermissions.system,
   coordinator: basePermissions.coordinator,
@@ -115,7 +124,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
   inspector: basePermissions.inspector,
 
   regional_admin: [
-    "campus.approve", "campus:approve", "teacher.assign", "teacher:assign", "academic.grade.create", "academic:grade:create",
+    "academic.student.admissions", "academic.student.admissions", "academic.classes.manage", "academic.classes.manage", "academic.grade.create", "academic.classes.manage",
     "regional:view", "regional:manage", "warehouse:export", "alerts:push_configure",
     "analytics:predict", "analytics:manage", "analytics:read", "analytics:timeseries", "reports:read", "reports:review", "staff:read",
     "autonomy:view", "autonomy:manage", "compliance:audit", "compliance:forensics", "compliance:read", "compliance:manage", "compliance:export", "financial:forecast",
@@ -159,8 +168,8 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:audit:view", "agent:telemetry:view",
   ],
   admin: [
-    "student.create", "students:create", "students:read", "students:update", "students:delete", "students:write",
-    "marks.enter", "marks:enter", "marks.approve", "marks:approve", "teacher.assign", "teacher:assign", "campus.approve", "campus:approve", "academic.grade.create", "academic:grade:create",
+    "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
+    "exam.marks.enter", "exam.marks.enter", "exam.marks.enter", "exam.marks.enter", "academic.classes.manage", "academic.classes.manage", "academic.student.admissions", "academic.student.admissions", "academic.grade.create", "academic.classes.manage",
     "staff:read", "staff:create", "staff:update", "staff:delete",
     "attendance:read", "attendance:manage",
     "tasks:read", "tasks:create", "tasks:assign",
@@ -224,9 +233,9 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:memory:view", "agent:memory:manage", "agent:audit:view", "agent:guardrails:manage", "agent:killswitch:engage", "agent:telemetry:view",
   ],
   principal: [
-    "student.create", "students:create", "students:read", "students:update", "students:delete", "students:write",
-    "marks.approve", "marks:approve", "exam:approve_marks", "exam:create", "exam:enter_marks", "exam:publish_results", "exam:read",
-    "teacher.assign", "teacher:assign", "academic.grade.create", "academic:grade:create",
+    "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
+    "exam.marks.enter", "exam.marks.enter", "exam:approve_marks", "exam:create", "exam:enter_marks", "exam:publish_results", "exam:read",
+    "academic.classes.manage", "academic.classes.manage", "academic.grade.create", "academic.classes.manage",
     "staff:read", "staff:create", "staff:update",
     "attendance:read", "attendance:manage",
     "tasks:read", "tasks:create", "tasks:assign",
@@ -288,7 +297,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:audit:view", "agent:telemetry:view",
   ],
   hod: [
-    "marks.enter", "marks:enter", "exam:read", "exam:enter_marks",
+    "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
     "staff:read",
     "attendance:read", "attendance:manage",
     "tasks:read", "tasks:create", "tasks:assign",
@@ -334,7 +343,7 @@ const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:telemetry:view",
   ],
   staff: [
-    "marks.enter", "marks:enter", "exam:read", "exam:enter_marks",
+    "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
     "staff:read",
     "announcements:read",
     "events:read",
@@ -454,15 +463,6 @@ export const VALID_STAFF_ROLES: StaffRole[] = [
   "inspector",
   "system",
 ];
-
-const DOT_TO_COLON_MAP: Record<string, string> = {
-  "student.create": "students:create",
-  "marks.enter": "exam:enter_marks",
-  "marks.approve": "exam:approve_marks",
-  "academic.grade.create": "classes:create",
-  "teacher.assign": "timetables:manage",
-  "campus.approve": "affiliations:manage",
-};
 
 export function isValidRole(role: string): role is StaffRole {
   return VALID_STAFF_ROLES.includes(role as StaffRole);

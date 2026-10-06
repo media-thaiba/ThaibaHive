@@ -3,13 +3,14 @@
 import { ReactNode } from "react";
 import { useUnifiedPermissions } from "@/lib/hooks/use-permissions";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { StaffRole } from "@thaiba/auth/roles";
 
 type PermissionGateProps = {
   permission?: string;
   anyOf?: string[];
   allOf?: string[];
-  role?: "super_admin" | "admin" | "principal" | "hod" | "staff" | "accounts" | "purchase" | "regional_admin" | "regional_auditor";
-  anyRole?: ("super_admin" | "admin" | "principal" | "hod" | "staff" | "accounts" | "purchase" | "regional_admin" | "regional_auditor")[];
+  role?: StaffRole;
+  anyRole?: StaffRole[];
   fallback?: ReactNode;
   children: ReactNode;
   loadingFallback?: ReactNode;

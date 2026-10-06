@@ -9,4 +9,5 @@ export { authConfig, getJwtSecret, getJwtSecretBytes } from "./config";
 export type { JwtSecretPurpose } from "./config";
 export { loginSchema, signupSchema, passwordChangeSchema, profileUpdateSchema, invitationSchema, resetPasswordSchema } from "./schemas";
 export { verifyGoogleToken } from "./google";
-
+export * from "./capability-schema";
+export * from "./capabilities";

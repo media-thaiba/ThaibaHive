@@ -1,44 +1,37 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants.dart';
-import '../features/approvals/presentation/approvals_screen.dart';
-import '../features/announcements/presentation/announcements_screen.dart';
-import '../features/announcements/presentation/announcement_detail_screen.dart';
-import '../features/attendance/presentation/attendance_screen.dart';
+import 'theme.dart';
+import '../features/auth/data/auth_state.dart';
+import '../models/user_model.dart';
+import '../features/action_center/controller.dart';
+import '../features/action_center/tray.dart';
 import '../features/auth/presentation/login_screen.dart';
-import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
-import '../features/dashboard/presentation/more_screen.dart';
-import '../features/events/presentation/events_screen.dart';
-import '../features/events/presentation/event_detail_screen.dart';
+import '../features/today/presentation/today_screen.dart';
+import '../features/services/presentation/services_screen.dart';
+import '../features/me/presentation/me_hub_screen.dart';
+import '../features/media/presentation/media_screen.dart';
+
+import '../features/attendance/presentation/attendance_screen.dart';
+import '../features/leaves/presentation/leaves_screen.dart';
 import '../features/leaves/presentation/leave_apply_screen.dart';
 import '../features/leaves/presentation/leave_balance_screen.dart';
 import '../features/leaves/presentation/leave_detail_screen.dart';
-import '../features/leaves/presentation/leaves_screen.dart';
-import '../features/notifications/presentation/notifications_screen.dart';
-import '../features/recognition/presentation/recognition_screen.dart';
-import '../features/reports/presentation/daily_reports_screen.dart';
-import '../features/reports/presentation/report_create_screen.dart';
-import '../features/settings/presentation/password_change_screen.dart';
-import '../features/settings/presentation/profile_edit_screen.dart';
-import '../features/settings/presentation/settings_screen.dart';
-import '../features/settings/presentation/crash_logs_screen.dart';
-import '../features/staff/presentation/staff_directory_screen.dart';
-import '../features/staff/presentation/staff_profile_screen.dart';
-import '../features/tasks/presentation/task_create_screen.dart';
-import '../features/tasks/presentation/task_detail_screen.dart';
-import '../features/tasks/presentation/tasks_screen.dart';
+import '../features/canteen/presentation/canteen_screen.dart';
+import '../features/visitors/presentation/visitors_screen.dart';
+import '../features/visitors/presentation/visitor_gate_verification_screen.dart';
 import '../features/help_desk/presentation/help_desk_screen.dart';
 import '../features/help_desk/presentation/help_desk_ticket_detail_screen.dart';
-import '../features/polls/presentation/polls_screen.dart';
-import '../features/polls/presentation/poll_detail_screen.dart';
-import '../features/circulars/presentation/circulars_screen.dart';
-import '../features/bookings/presentation/booking_create_screen.dart';
 import '../features/bookings/presentation/bookings_screen.dart';
-import '../features/assets/presentation/assets_screen.dart';
-import '../features/assets/presentation/asset_detail_screen.dart';
+import '../features/bookings/presentation/booking_create_screen.dart';
+import '../features/tasks/presentation/tasks_screen.dart';
+import '../features/tasks/presentation/task_create_screen.dart';
+import '../features/tasks/presentation/task_detail_screen.dart';
 import '../features/expenses/presentation/expenses_screen.dart';
 import '../features/purchases/presentation/purchases_screen.dart';
 import '../features/finance/presentation/finance_screen.dart';
@@ -46,8 +39,22 @@ import '../features/finance/presentation/purchase_approvals_screen.dart';
 import '../features/finance/presentation/purchase_approval_detail_screen.dart';
 import '../features/finance/presentation/reconciliation_screen.dart';
 import '../features/finance/presentation/reconciliation_detail_screen.dart';
-import '../features/visitors/presentation/visitors_screen.dart';
-import '../features/vehicles/presentation/vehicles_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
+import '../features/settings/presentation/profile_edit_screen.dart';
+import '../features/settings/presentation/password_change_screen.dart';
+import '../features/settings/presentation/crash_logs_screen.dart';
+import '../features/recognition/presentation/biometric_enrollment_screen.dart';
+import '../features/recognition/presentation/recognition_screen.dart';
+import '../features/announcements/presentation/announcements_screen.dart';
+import '../features/announcements/presentation/announcement_detail_screen.dart';
+import '../features/circulars/presentation/circulars_screen.dart';
+import '../features/polls/presentation/polls_screen.dart';
+import '../features/polls/presentation/poll_detail_screen.dart';
+import '../features/events/presentation/events_screen.dart';
+import '../features/events/presentation/event_detail_screen.dart';
+import '../features/reports/presentation/daily_reports_screen.dart';
+import '../features/reports/presentation/report_create_screen.dart';
+import '../features/approvals/presentation/approvals_screen.dart';
 import '../features/checklists/presentation/checklists_screen.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/availability/presentation/availability_screen.dart';
@@ -55,73 +62,31 @@ import '../features/accounts/presentation/accounts_screen.dart';
 import '../features/admin/presentation/admin_dashboard_screen.dart';
 import '../features/admin/presentation/nfc_tag_management_screen.dart';
 import '../features/admin/presentation/location_qr_management_screen.dart';
-import '../features/assets/presentation/asset_tagging_screen.dart';
-import '../features/recognition/presentation/biometric_enrollment_screen.dart';
 import '../features/admin/presentation/beacon_management_screen.dart';
-import '../features/visitors/presentation/visitor_gate_verification_screen.dart';
+import '../features/assets/presentation/assets_screen.dart';
+import '../features/assets/presentation/asset_detail_screen.dart';
+import '../features/assets/presentation/asset_tagging_screen.dart';
 import '../features/grievances/presentation/grievances_screen.dart';
 import '../features/grievances/presentation/grievance_submit_screen.dart';
-import '../features/canteen/presentation/canteen_screen.dart';
-import '../features/media/presentation/media_screen.dart';
-import '../features/curriculum/screens/degree_roadmap_screen.dart';
-import '../features/curriculum/screens/mobile_advising_chat_screen.dart';
+import '../features/vehicles/presentation/vehicles_screen.dart';
+import '../features/staff/presentation/staff_directory_screen.dart';
+import '../features/staff/presentation/staff_profile_screen.dart';
 import '../features/facility/screens/technician_workorder_screen.dart';
 import '../features/facility/screens/qr_asset_scanner_screen.dart';
-import '../features/facility/screens/work_order_detail_screen.dart';
 import '../features/agent_hub/presentation/agent_hub_screen.dart';
 import '../shared/screens/webview_handoff_screen.dart';
-import '../shared/widgets/bottom_nav_bar.dart';
-import '../shared/screens/coming_soon_screen.dart';
 import '../shared/transitions/page_transitions.dart';
 
 final _storage = const FlutterSecureStorage();
 
-class _ShellRouteData {
-  final String path;
-  final String name;
-  final WidgetBuilder builder;
-
-  const _ShellRouteData({
-    required this.path,
-    required this.name,
-    required this.builder,
-  });
-}
-
-final List<_ShellRouteData> _shellRoutes = [
-  _ShellRouteData(
-    path: '/dashboard',
-    name: 'dashboard',
-    builder: (_) => const DashboardScreen(),
-  ),
-  _ShellRouteData(
-    path: '/attendance',
-    name: 'attendance',
-    builder: (_) => const AttendanceScreen(),
-  ),
-  _ShellRouteData(
-    path: '/tasks',
-    name: 'tasks',
-    builder: (_) => const TasksScreen(),
-  ),
-  _ShellRouteData(
-    path: '/leaves',
-    name: 'leaves',
-    builder: (_) => const LeavesScreen(),
-  ),
-  _ShellRouteData(
-    path: '/more',
-    name: 'more',
-    builder: (_) => const MoreScreen(),
-  ),
-];
-
+/// Build the router with dynamic tabs based on user capabilities
 GoRouter buildRouter() {
   return GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: true,
     redirect: _authGuard,
     routes: [
+      // Public routes
       GoRoute(
         path: '/',
         name: 'welcome',
@@ -145,30 +110,16 @@ GoRouter buildRouter() {
         name: 'signup',
         redirect: (context, state) => '/auth/login?mode=signup',
       ),
+
+      // Dynamic StatefulShellRoute - tabs based on capabilities
       StatefulShellRoute.indexedStack(
-        builder: (_, __, navigationShell) => BottomNavShell(
+        builder: (context, state, navigationShell) => _DynamicBottomNavShell(
           navigationShell: navigationShell,
         ),
-        branches: _shellRoutes.map((r) {
-          return StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: r.path,
-                name: r.name,
-                builder: (_, __) => r.builder(_),
-              ),
-            ],
-          );
-        }).toList(),
+        branches: _buildShellBranches(),
       ),
-      GoRoute(
-        path: '/media',
-        name: 'media',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const MediaScreen(),
-        ),
-      ),
+
+      // Detail routes
       GoRoute(
         path: '/share/:token',
         name: 'shareLink',
@@ -184,21 +135,51 @@ GoRouter buildRouter() {
         },
       ),
       GoRoute(
-        path: '/tasks/create',
-        name: 'taskCreate',
+        path: '/attendance',
+        name: 'attendance',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const TaskCreateScreen(),
+          child: const AttendanceScreen(),
         ),
       ),
       GoRoute(
-        path: '/tasks/:id',
-        name: 'taskDetail',
+        path: '/me/attendance',
+        name: 'meAttendance',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: TaskDetailScreen(
-            taskId: state.pathParameters['id']!,
-          ),
+          child: const AttendanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/me/leaves/balance',
+        name: 'meLeaveBalance',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LeaveBalanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/me/leaves',
+        name: 'meLeaves',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LeavesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/me/leaves/apply',
+        name: 'meLeaveApply',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LeaveApplyScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/leaves',
+        name: 'leaves',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const LeavesScreen(),
         ),
       ),
       GoRoute(
@@ -228,98 +209,44 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
-        path: '/staff',
-        name: 'staff',
+        path: '/canteen',
+        name: 'canteen',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const StaffDirectoryScreen(),
+          child: const CanteenScreen(),
         ),
       ),
       GoRoute(
-        path: '/staff/:id',
-        name: 'staffProfile',
+        path: '/visitors',
+        name: 'visitors',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: StaffProfileScreen(
-            id: state.pathParameters['id']!,
-          ),
+          child: const VisitorsScreen(),
         ),
       ),
       GoRoute(
-        path: '/curriculum/roadmap',
-        name: 'degreeRoadmap',
+        path: '/visitors/gate-verify',
+        name: 'visitorGateVerify',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const DegreeRoadmapScreen(),
+          child: const VisitorGateVerificationScreen(),
         ),
       ),
       GoRoute(
-        path: '/curriculum/advising',
-        name: 'mobileAdvisingChat',
+        path: '/help-desk',
+        name: 'helpDesk',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const MobileAdvisingChatScreen(),
+          child: const HelpDeskScreen(),
         ),
       ),
       GoRoute(
-        path: '/announcements',
-        name: 'announcements',
+        path: '/help-desk/:id',
+        name: 'helpDeskTicketDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const AnnouncementsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/announcements/:id',
-        name: 'announcementDetail',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: AnnouncementDetailScreen(
-            id: state.pathParameters['id']!,
-          ),
-        ),
-      ),
-      GoRoute(
-        path: '/events',
-        name: 'events',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const EventsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/events/:id',
-        name: 'eventDetail',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: EventDetailScreen(
-            id: state.pathParameters['id']!,
-          ),
-        ),
-      ),
-      GoRoute(
-        path: '/circulars',
-        name: 'circulars',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const CircularsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/polls',
-        name: 'polls',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const PollsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/polls/:id',
-        name: 'pollDetail',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: PollDetailScreen(
-            pollId: state.pathParameters['id']!,
+          child: HelpDeskTicketDetailScreen(
+            ticketId: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -340,54 +267,28 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
-        path: '/help-desk',
-        name: 'helpDesk',
+        path: '/tasks',
+        name: 'tasks',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const HelpDeskScreen(),
+          child: const TasksScreen(),
         ),
       ),
       GoRoute(
-        path: '/help-desk/tickets/:id',
-        name: 'helpDeskTicket',
+        path: '/tasks/create',
+        name: 'taskCreate',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: HelpDeskTicketDetailScreen(
-            ticketId: state.pathParameters['id']!,
-          ),
+          child: const TaskCreateScreen(),
         ),
       ),
       GoRoute(
-        path: '/notifications',
-        name: 'notifications',
+        path: '/tasks/:id',
+        name: 'taskDetail',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const NotificationsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/recognition',
-        name: 'recognition',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const RecognitionScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/assets',
-        name: 'assets',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const AssetsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/assets/:id',
-        name: 'assetDetail',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: AssetDetailScreen(
-            assetId: state.pathParameters['id']!,
+          child: TaskDetailScreen(
+            taskId: state.pathParameters['id']!,
           ),
         ),
       ),
@@ -452,70 +353,6 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
-        path: '/visitors',
-        name: 'visitors',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const VisitorsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/grievances',
-        name: 'grievances',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const GrievancesScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/grievances/submit',
-        name: 'grievanceSubmit',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const GrievanceSubmitScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/reports',
-        name: 'reports',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const DailyReportsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/reports/create',
-        name: 'reportCreate',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const ReportCreateScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/approvals',
-        name: 'approvals',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const ApprovalsScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/vehicles',
-        name: 'vehicles',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const VehiclesScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/canteen',
-        name: 'canteen',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const CanteenScreen(),
-        ),
-      ),
-      GoRoute(
         path: '/settings',
         name: 'settings',
         pageBuilder: (context, state) => AppTransitions.slide(
@@ -547,7 +384,108 @@ GoRouter buildRouter() {
           child: const CrashLogsScreen(),
         ),
       ),
-
+      GoRoute(
+        path: '/biometric/enrollment',
+        name: 'biometricEnrollment',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const BiometricEnrollmentScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/recognition',
+        name: 'recognition',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const RecognitionScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/announcements',
+        name: 'announcements',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const AnnouncementsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/announcements/:id',
+        name: 'announcementDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: AnnouncementDetailScreen(
+            id: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/circulars',
+        name: 'circulars',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const CircularsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/polls',
+        name: 'polls',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const PollsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/polls/:id',
+        name: 'pollDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: PollDetailScreen(
+            pollId: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/events',
+        name: 'events',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const EventsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/events/:id',
+        name: 'eventDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: EventDetailScreen(
+            id: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/reports',
+        name: 'reports',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const DailyReportsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/reports/create',
+        name: 'reportCreate',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ReportCreateScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/approvals',
+        name: 'approvals',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ApprovalsScreen(),
+        ),
+      ),
       GoRoute(
         path: '/checklists',
         name: 'checklists',
@@ -605,22 +543,6 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
-        path: '/assets/tagging',
-        name: 'assetTagging',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const AssetTaggingScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/biometric/enrollment',
-        name: 'biometricEnrollment',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const BiometricEnrollmentScreen(),
-        ),
-      ),
-      GoRoute(
         path: '/admin/beacons',
         name: 'adminBeacons',
         pageBuilder: (context, state) => AppTransitions.slide(
@@ -629,11 +551,71 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
-        path: '/visitors/gate-verify',
-        name: 'visitorGateVerify',
+        path: '/assets',
+        name: 'assets',
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
-          child: const VisitorGateVerificationScreen(),
+          child: const AssetsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/assets/tagging',
+        name: 'assetTagging',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const AssetTaggingScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/assets/:id',
+        name: 'assetDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: AssetDetailScreen(
+            assetId: state.pathParameters['id']!,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/grievances',
+        name: 'grievances',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const GrievancesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/grievances/submit',
+        name: 'grievanceSubmit',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const GrievanceSubmitScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/vehicles',
+        name: 'vehicles',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const VehiclesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/staff',
+        name: 'staff',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const StaffDirectoryScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/staff/:id',
+        name: 'staffProfile',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: StaffProfileScreen(
+            id: state.pathParameters['id']!,
+          ),
         ),
       ),
       GoRoute(
@@ -664,6 +646,55 @@ GoRouter buildRouter() {
       ),
     ],
   );
+}
+
+/// Build shell branches dynamically
+List<StatefulShellBranch> _buildShellBranches() {
+  return [
+    // Branch 0: Today (always visible)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/today',
+          name: 'today',
+          builder: (_, __) => const TodayScreen(),
+        ),
+      ],
+    ),
+    // Branch 1: Services (always visible)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/services',
+          name: 'services',
+          builder: (_, __) => const ServicesScreen(),
+        ),
+      ],
+    ),
+    // Branch 2: My Hub (always visible)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/me',
+          name: 'me',
+          builder: (_, __) => const MeHubScreen(),
+        ),
+      ],
+    ),
+    // Branch 3: Media (conditional)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/media',
+          name: 'media',
+          pageBuilder: (context, state) => AppTransitions.slide(
+            state: state,
+            child: const MediaScreen(),
+          ),
+        ),
+      ],
+    ),
+  ];
 }
 
 String? _cachedToken;
@@ -699,8 +730,171 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   }
 
   if (isLoggedIn && isAuthRoute) {
-    return '/dashboard';
+    return '/today';
   }
 
   return null;
+}
+
+/// Dynamic bottom navigation shell that shows/hides tabs based on capabilities
+class _DynamicBottomNavShell extends ConsumerStatefulWidget {
+  final StatefulNavigationShell navigationShell;
+
+  const _DynamicBottomNavShell({
+    required this.navigationShell,
+  });
+
+  @override
+  ConsumerState<_DynamicBottomNavShell> createState() => _DynamicBottomNavShellState();
+}
+
+class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Get user capabilities from auth state
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    final hasMediaCapability = _hasCapability(user, 'media.asset.create');
+    final pendingActionCount = ref.watch(pendingActionCountProvider);
+
+    // Build dynamic tab list
+    final tabs = [
+      const _TabData(
+        branchIndex: 0,
+        icon: Icons.today_rounded,
+        selectedIcon: Icons.today_rounded,
+        label: 'Today',
+      ),
+      const _TabData(
+        branchIndex: 1,
+        icon: Icons.miscellaneous_services_rounded,
+        selectedIcon: Icons.miscellaneous_services_rounded,
+        label: 'Services',
+      ),
+      const _TabData(
+        branchIndex: 2,
+        icon: Icons.person_rounded,
+        selectedIcon: Icons.person_rounded,
+        label: 'My Hub',
+      ),
+      if (hasMediaCapability)
+        const _TabData(
+          branchIndex: 3,
+          icon: Icons.photo_library_rounded,
+          selectedIcon: Icons.photo_library_rounded,
+          label: 'Media',
+        ),
+    ];
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Main navigation content
+          widget.navigationShell,
+
+          // Action Center Tray overlay (when actions pending)
+          if (pendingActionCount > 0)
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ActionCenterTray(),
+            ),
+        ],
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.section,
+          0,
+          AppSpacing.section,
+          AppSpacing.normal,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF22262b).withValues(alpha: 0.94)
+                    : Colors.white.withValues(alpha: 0.98),
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFd4dbd4).withValues(alpha: 0.6),
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: NavigationBar(
+                selectedIndex: _getSelectedIndex(tabs),
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                elevation: AppElevation.level0,
+                height: 60,
+                onDestinationSelected: (destIndex) {
+                  final targetBranch = tabs[destIndex].branchIndex;
+                  widget.navigationShell.goBranch(
+                    targetBranch,
+                    initialLocation: targetBranch == widget.navigationShell.currentIndex,
+                  );
+                },
+                destinations: tabs.map((tab) {
+                  return NavigationDestination(
+                    icon: Icon(tab.icon),
+                    selectedIcon: Icon(tab.selectedIcon),
+                    label: tab.label,
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  int _getSelectedIndex(List<_TabData> tabs) {
+    final currentBranch = widget.navigationShell.currentIndex;
+    for (int i = 0; i < tabs.length; i++) {
+      if (tabs[i].branchIndex == currentBranch) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  bool _hasCapability(UserModel? user, String capability) {
+    if (user == null) return false;
+    const mediaRoles = ['staff', 'teacher', 'coordinator', 'admin', 'super_admin'];
+    if (capability == 'media.asset.create') {
+      return mediaRoles.contains(user.role);
+    }
+    return false;
+  }
+}
+
+class _TabData {
+  final int branchIndex;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+
+  const _TabData({
+    required this.branchIndex,
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
 }

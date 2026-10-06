@@ -53,6 +53,12 @@ jobs:
           pnpm compliance:verify
           pnpm compliance:scan
 
+      - name: Verify Canonical Permissions
+        run: |
+          pnpm codemod:permissions --dry-run
+          pnpm test:permissions-snapshot
+          bash scripts/codemod/audit-permissions.sh
+
       - name: Database Parity & Migration Check
         run: |
           pnpm premigrate

@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CapabilityRegistrySchema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "label",
+      "description",
+      "tier",
+      "offlineSupported",
+      "domain",
+      "mobileRoute",
+      "webRoute",
+      "requiresHandoff"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$"
+      },
+      "label": {
+        "type": "string",
+        "minLength": 3
+      },
+      "description": {
+        "type": "string",
+        "minLength": 5
+      },
+      "tier": {
+        "type": "integer",
+        "enum": [1, 2, 3]
+      },
+      "offlineSupported": {
+        "type": "boolean"
+      },
+      "domain": {
+        "type": "string",
+        "enum": [
+          "attendance",
+          "leaves",
+          "media",
+          "academic",
+          "finance",
+          "admin",
+          "services",
+          "operations",
+          "tasks",
+          "communication",
+          "system"
+        ]
+      },
+      "mobileRoute": {
+        "type": ["string", "null"]
+      },
+      "webRoute": {
+        "type": "string"
+      },
+      "requiresHandoff": {
+        "type": "boolean"
+      },
+      "impliedRoles": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "quickAction": {
+        "type": "boolean"
+      },
+      "serviceCategory": {
+        "type": "string",
+        "enum": [
+          "canteen",
+          "gate-pass",
+          "helpdesk",
+          "booking",
+          "attendance",
+          "media",
+          "leave",
+          "tasks",
+          "general"
+        ]
+      },
+      "impliedBy": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}
