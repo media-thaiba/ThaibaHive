@@ -36,6 +36,11 @@ class FCMService {
   bool _initialized = false;
   bool _tokenRegistered = false;
 
+  /// Set by the Action Center bootstrap so foreground FCM messages are also
+  /// enqueued into the Action Center (Phase 2 D4), in addition to the banner.
+  static void Function(Map<String, dynamic> data,
+      {String? title, String? body})? onForegroundMessage;
+
   /// Initialize FCM, local notifications, and token registration
   Future<void> initialize({GoRouter? router}) async {
     if (_initialized) return;
@@ -210,6 +215,17 @@ class FCMService {
     final notification = message.notification;
     final data = message.data;
 
+    // Phase 2 D4: enqueue into the Action Center (deduped) alongside the banner.
+    try {
+      onForegroundMessage?.call(
+        data,
+        title: notification?.title,
+        body: notification?.body,
+      );
+    } catch (_) {
+      // Enqueue failures must never break banner display.
+    }
+
     if (notification != null) {
       showForegroundBanner(
         title: notification.title ?? 'ThaibaHive',
@@ -291,6 +307,10 @@ class FCMService {
     '/canteen',
     '/vehicles',
     '/finance',
+    '/circulars',
+    '/today',
+    '/services',
+    '/help-desk',
   ];
 
   /// Validate incoming route path against strict allowlist to prevent open redirects
@@ -351,6 +371,12 @@ class FCMService {
         break;
       case 'purchase':
         rawRoute = '/purchases';
+        break;
+      case 'circular':
+        rawRoute = id != null ? '/circulars' : '/circulars';
+        break;
+      case 'general':
+        rawRoute = '/notifications';
         break;
       default:
         rawRoute = '/';

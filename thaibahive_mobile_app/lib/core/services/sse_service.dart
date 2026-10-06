@@ -57,7 +57,9 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
     try {
       final request = http.Request(
         'GET',
-        Uri.parse('${AppConstants.apiBaseUrl}/api/notifications/subscribe'),
+        // AppConstants.apiBaseUrl already ends with /api — a second literal
+        // segment produced /api/api/... 404s and an infinite reconnect loop.
+        Uri.parse('${AppConstants.apiBaseUrl}/notifications/subscribe'),
       );
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'text/event-stream';

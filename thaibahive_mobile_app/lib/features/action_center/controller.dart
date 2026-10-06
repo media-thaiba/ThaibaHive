@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../core/network/providers.dart';
 import 'action_state_machine.dart';
 
 /// Where an action originated — used for dedupe + pull reconciliation.
@@ -194,6 +195,10 @@ class ActionCenterController extends StateNotifier<List<ActionItem>> {
 
   List<ActionItem> get _all => state;
 
+  /// Read-only snapshot of all items (public accessor — `state` is @protected
+  /// on StateNotifier and unreadable from producers/tests).
+  List<ActionItem> get items => state;
+
   // ---------------------------------------------------------------------------
   // Hydration & reconciliation
   // ---------------------------------------------------------------------------
@@ -338,6 +343,16 @@ class ActionCenterController extends StateNotifier<List<ActionItem>> {
     for (final item in items) {
       enqueue(item);
     }
+  }
+
+  /// Silently removes every item matching [test] — used by pull reconciliation
+  /// to drop items the server no longer reports (not a user transition, so no
+  /// ack bookkeeping and no persistence debounce change).
+  void removeWhere(bool Function(ActionItem item) test) {
+    final next = state.where((item) => !test(item)).toList();
+    if (next.length == state.length) return;
+    state = next;
+    _schedulePersist();
   }
 
   int _indexOfDedupe(String dedupeKey) =>
@@ -556,10 +571,33 @@ class ActionCenterController extends StateNotifier<List<ActionItem>> {
   }
 }
 
-/// Provider for the Action Center controller
+/// Provider for the Action Center controller.
+///
+/// Server acks use the real notifications PATCH semantics: `{id}` marks one
+/// read, an empty body marks all read (Phase 2 step 5).
 final actionCenterProvider =
     StateNotifierProvider<ActionCenterController, List<ActionItem>>(
-  (ref) => ActionCenterController(),
+  (ref) {
+    final api = ref.watch(apiClientProvider);
+    return ActionCenterController(
+      serverAckFn: (id) async {
+        try {
+          await api.dio.patch('/notifications', data: <String, dynamic>{'id': id});
+          return true;
+        } catch (_) {
+          return false;
+        }
+      },
+      serverMarkAllFn: () async {
+        try {
+          await api.dio.patch('/notifications', data: <String, dynamic>{});
+          return true;
+        } catch (_) {
+          return false;
+        }
+      },
+    );
+  },
 );
 
 /// Provider for pending action count (badges: pending + snoozed only)
