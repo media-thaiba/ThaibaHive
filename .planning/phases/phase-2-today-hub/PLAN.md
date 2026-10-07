@@ -2,7 +2,9 @@
 
 **Milestone**: ThaibaHive Two-Tier Platform
 **Phase**: 2 of 5 (post-Freeze roadmap: 1 Capabilities & Nav → **2 Today & Action Center** → 3 Media Queue & Offline → 4 Deep Links & Handoff → 5 Global Search)
-**Status**: Draft v2 (decisions D1-D4 locked; cross-review completed — blocking findings incorporated)
+**Status**: Implemented on `feat/phase-2-today-hub` (7 commits, PR opened) — verification
+  complete 2026-10-07; decisions D1-D4 locked; cross-review completed — blocking findings
+  incorporated
 **Estimated Duration**: 4-5 days
 **Dependencies**: Phase 1.0-1.4 (capability registry, ActionCenterTray shell, mobile nav skeleton) + Phase 1.5 (workspace routes as deep-link targets) — all merged to master via PR #1
 
@@ -380,6 +382,27 @@ step 6, so ordering is flexible on the feature branch (CI runs at head).
 
 ## Verification
 
+**Executed 2026-10-07 on `feat/phase-2-today-hub` (head):**
+
+1. ✅ `pnpm exec tsc --noEmit` → 0 errors; `pnpm lint` → 0 errors (11 pre-existing warnings)
+2. ✅ `pnpm exec jest` → **777/777 suites, 4761 passed** (8 skipped) incl. new
+   `today-hub.test.ts`
+3. ✅ `pnpm security:rbac` (0 unconfigured) + `pnpm security:requireauth` (0 naked handlers) +
+   `pnpm test:permissions-snapshot` → 0 drift
+4. ✅ `pnpm build` → success; `/api/mobile/today-hub` present in the route table
+5. ✅ Flutter: `flutter analyze --no-fatal-infos --no-fatal-warnings` → **No issues found**;
+   `flutter test` → **174/174 green** incl. state-machine (29), mapper/producers (20),
+   manifest/sections/envelopes (16), notices/capability/tray (9)
+6. ✅ Widget/unit tests as smoke proxy for the manual checklist: manifest order + fallback +
+   inline retry; producers dedupe/race/TTL; tray shows acknowledged with chip while badge count
+   excludes it; attendance pill collapse (D13); tab IA + single tray/FAB layer assertions via
+   router structure
+7. ✅ `pnpm test:e2e` → **740 passed, 1 skipped, 0 failed** (earlier parallel runs hit transient
+   `SQLITE_BUSY` db-lock flakes; the affected specs pass in isolation and in the final full run)
+8. CI matrix runs on push at head (Next.js Web CI, Flutter jobs, Playwright shards, deploy gate)
+
+Original checklist:
+
 1. `pnpm typecheck` → 0 errors; `pnpm lint` → 0 errors (pre-existing warnings only)
 2. `pnpm test` → all suites green incl. new `today-hub.test.ts`
 3. `pnpm security:rbac` + **`pnpm security:requireauth`** (deploy gate — new route must carry
@@ -471,7 +494,7 @@ Rollback section added).
 - [ ] Tech Lead: state machine transitions + manifest schema reviewed
 - [x] Security: no new permission keys — `requireAuth(handler, "reports:read")` matches the
       mobile dashboard precedent; `security:requireauth` added to verification (deploy gate)
-- [ ] QA: verification checklist executed
+- [x] QA: verification checklist executed 2026-10-07 (all 8 gates green — see Verification)
 - [ ] UX: tab IA (Notices) + tray placement approved
 
 
