@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { mediaObjectUrl } from "@/lib/media/media-urls";
 
 export type MediaAsset = {
   id: string;
@@ -85,7 +86,7 @@ export function MediaGridView({
               {isImage ? (
                 /* eslint-disable-next-html-element-suppression */
                 <img
-                  src={asset.fileUrl}
+                  src={mediaObjectUrl(asset.fileUrl)}
                   alt={asset.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />

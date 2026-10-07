@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
+import { deleteMediaObject } from "@/lib/media/asset-objects";
 import { eq, and } from "drizzle-orm";
 
 export const DELETE = requireAuth(async (req, session, ctx) => {
@@ -22,8 +23,11 @@ export const DELETE = requireAuth(async (req, session, ctx) => {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
 
-    // In a full implementation, you would also delete the physical file from storage here.
-    
+    // D9*: remove the physical object alongside the row (skips nas:// —
+    // NAS is the source of truth; Drive deletion is a documented gap).
+    await deleteMediaObject(asset.fileUrl);
+    await deleteMediaObject(asset.thumbnailUrl);
+
     await db.delete(mediaAssets).where(whereClause).run();
 
     return NextResponse.json({ success: true });

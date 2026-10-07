@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MetadataPanel, AssetMetadata } from "./metadata-panel";
+import { mediaObjectUrl } from "@/lib/media/media-urls";
 import {
   Download,
   Share2,
@@ -184,7 +185,7 @@ export function FilePreview({
               >
                 {/* eslint-disable-next-html-element-suppression */}
                 <img
-                  src={asset.fileUrl}
+                  src={mediaObjectUrl(asset.fileUrl)}
                   alt={asset.name}
                   className="max-h-[65vh] max-w-full object-contain rounded-lg shadow-lg"
                 />
@@ -193,7 +194,7 @@ export function FilePreview({
 
             {isVideo && (
               <video
-                src={asset.fileUrl}
+                src={mediaObjectUrl(asset.fileUrl)}
                 controls
                 autoPlay
                 className="max-h-[65vh] max-w-full rounded-lg shadow-lg"
@@ -211,7 +212,7 @@ export function FilePreview({
                   <h3 className="font-semibold text-lg">{asset.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">{asset.mimeType}</p>
                 </div>
-                <audio src={asset.fileUrl} controls className="w-full mt-4">
+                <audio src={mediaObjectUrl(asset.fileUrl)} controls className="w-full mt-4">
                   Your browser does not support audio playback.
                 </audio>
               </div>
@@ -219,7 +220,7 @@ export function FilePreview({
 
             {isPdf && (
               <iframe
-                src={asset.fileUrl}
+                src={mediaObjectUrl(asset.fileUrl)}
                 title={asset.name}
                 className="w-full h-full min-h-[60vh] rounded-lg border shadow"
               />

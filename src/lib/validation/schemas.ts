@@ -274,6 +274,16 @@ export const mediaAssetCreateSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
+export const mediaUploadCompleteSchema = z.object({
+  clientEventId: z.string().uuid(),
+  path: z.string().min(1).max(512),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/i, "sha256 must be a 64-char hex digest"),
+  name: z.string().min(1).max(255),
+  mime: z.string().min(1).max(128),
+  size: z.number().int().positive().max(100 * 1024 * 1024, "Files larger than 100 MB are not supported"),
+  folderId: z.string().optional().nullable(),
+});
+
 export const mediaShareLinkCreateSchema = z.object({
   assetId: z.string().optional().nullable(),
   folderId: z.string().optional().nullable(),

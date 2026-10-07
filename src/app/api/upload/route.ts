@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { uploadToDrive } from "@/lib/drive";
 import { isStorageConfigured, uploadToSupabase, checkStorageConfig } from "@/lib/storage";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
+import { db } from "@/db";
+import { mediaAssets } from "@/db/schema";
 
 export const runtime = "nodejs";
 
@@ -26,7 +29,17 @@ const MIME_TO_EXTENSIONS: Record<string, string[]> = {
 
 const ALLOWED_TYPES = new Set(Object.keys(MIME_TO_EXTENSIONS));
 
-export const POST = requireAuth(async (request: Request, _session) => {
+function fileTypeFromMime(mime: string): "image" | "video" | "audio" | "document" {
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+  return "document";
+}
+
+const UUID_RE = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/;
+const SHA256_RE = /^[a-f0-9]{64}$/i;
+
+export const POST = requireAuth(async (request: Request, session) => {
   const ip = extractIp(request);
   const rl = checkRateLimit(ip, "upload");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
@@ -37,6 +50,20 @@ export const POST = requireAuth(async (request: Request, _session) => {
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    const declaredSha256Raw = formData.get("sha256");
+    const clientEventIdRaw = formData.get("clientEventId");
+    const declaredSha256 =
+      typeof declaredSha256Raw === "string" && declaredSha256Raw ? declaredSha256Raw : null;
+    const clientEventId =
+      typeof clientEventIdRaw === "string" && clientEventIdRaw ? clientEventIdRaw : null;
+
+    if (declaredSha256 && !SHA256_RE.test(declaredSha256)) {
+      return NextResponse.json({ error: "Invalid sha256 digest" }, { status: 400 });
+    }
+    if (clientEventId && !UUID_RE.test(clientEventId)) {
+      return NextResponse.json({ error: "Invalid clientEventId" }, { status: 400 });
     }
 
     if (file.size > MAX_FILE_SIZE) {
@@ -67,6 +94,15 @@ export const POST = requireAuth(async (request: Request, _session) => {
     const filename = `${randomUUID()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    // D2*: end-to-end integrity — when the client declares a digest, verify
+    // the received bytes before anything is stored.
+    if (declaredSha256) {
+      const actualHash = createHash("sha256").update(buffer).digest("hex");
+      if (actualHash !== declaredSha256.toLowerCase()) {
+        return NextResponse.json({ error: "checksum_mismatch" }, { status: 422 });
+      }
+    }
+
     let fileUrl = "";
 
     // Prioritize Supabase Storage
@@ -84,12 +120,46 @@ export const POST = requireAuth(async (request: Request, _session) => {
       fileUrl = `/api/upload/files/${filename}`;
     }
 
+    // Asset-row creation happens ONLY for media-queue clients (clientEventId
+    // present). Web callers (circulars/finance/avatar) keep the legacy
+    // URL-only contract — no gallery flood, no double rows.
+    let asset: unknown = null;
+    if (clientEventId) {
+      const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+      const institutionId =
+        scopedInstitutionId && scopedInstitutionId !== "global" ? scopedInstitutionId : null;
+      const now = new Date().toISOString();
+      asset = await db
+        .insert(mediaAssets)
+        .values({
+          id: randomUUID(),
+          name: file.name,
+          fileUrl,
+          fileSize: file.size,
+          mimeType: file.type,
+          fileType: fileTypeFromMime(file.type),
+          status: "ready",
+          metadata: {
+            clientEventId,
+            verified: !!declaredSha256,
+            mode: "multipart",
+            ...(declaredSha256 ? { sha256: declaredSha256.toLowerCase() } : {}),
+          },
+          createdById: session.staffId,
+          institutionId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning()
+        .get();
+    }
 
     return NextResponse.json({
       url: fileUrl,
       filename: file.name,
       size: file.size,
       type: file.type,
+      ...(asset ? { asset } : {}),
     }, { status: 201 });
   } catch (error) {
     console.error("Upload error:", error);

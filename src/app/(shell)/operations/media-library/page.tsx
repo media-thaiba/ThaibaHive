@@ -196,7 +196,11 @@ export default function MediaLibraryPage() {
       const ext = file.name.split(".").pop() || "";
 
       // 1. Get signed upload URL
-      const { data: signData, ok: signOk } = await api.post<{ uploadUrl: string; fileUrl: string }>(
+      const { data: signData, ok: signOk } = await api.post<{
+        mode: "presign" | "multipart";
+        uploadUrl: string;
+        fileUrl: string | null;
+      }>(
         "/api/media/upload/sign",
         { ext },
         { toast: false }
@@ -213,15 +217,27 @@ export default function MediaLibraryPage() {
         prev.map((i) => (i.id === item.id ? { ...i, progress: 40 } : i))
       );
 
-      // 2. Upload file to signed/local upload URL
+      // 2. Upload file — presigned PUT (Supabase) or multipart fallback (D3*)
+      let finalFileUrl: string | null = signData.fileUrl;
       try {
-        const uploadRes = await fetch(signData.uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-        });
+        let uploadRes: Response;
+        if (signData.mode === "multipart" || !signData.fileUrl) {
+          const fd = new FormData();
+          fd.append("file", file);
+          uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+          if (uploadRes.ok) {
+            const uploaded = (await uploadRes.json()) as { url?: string };
+            finalFileUrl = uploaded.url ?? null;
+          }
+        } else {
+          uploadRes = await fetch(signData.uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+          });
+        }
 
-        if (!uploadRes.ok) {
+        if (!uploadRes.ok || !finalFileUrl) {
           setUploadQueue((prev) =>
             prev.map((i) => (i.id === item.id ? { ...i, status: "failed", error: "Upload failed" } : i))
           );
@@ -251,7 +267,7 @@ export default function MediaLibraryPage() {
         "/api/media/assets",
         {
           name: file.name,
-          fileUrl: signData.fileUrl,
+          fileUrl: finalFileUrl!,
           fileSize: file.size,
           mimeType: file.type || "application/octet-stream",
           fileType,
