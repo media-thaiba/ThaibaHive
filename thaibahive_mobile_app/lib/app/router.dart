@@ -785,6 +785,9 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
     // shell; the provider is disposed only when the app tears down.
     ref.watch(actionCenterBootstrapProvider);
     final pendingActionCount = ref.watch(pendingActionCountProvider);
+    // Tray renders on visible items (pending + snoozed + acknowledged);
+    // badges/FAB count pending + snoozed only.
+    final visibleActionCount = ref.watch(visibleActionCountProvider);
     final unreadCount = ref.watch(unreadCountProvider).valueOrNull ?? 0;
     final onTodayBranch = widget.navigationShell.currentIndex == 0;
 
@@ -827,8 +830,8 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
           // Main navigation content
           widget.navigationShell,
 
-          // Action Center Tray overlay (when actions pending)
-          if (onTodayBranch && pendingActionCount > 0)
+          // Action Center Tray overlay (visible items; Today branch only)
+          if (onTodayBranch && visibleActionCount > 0)
             const Positioned(
               left: 0,
               right: 0,

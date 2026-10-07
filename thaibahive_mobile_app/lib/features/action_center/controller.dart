@@ -610,6 +610,12 @@ final pendingActionCountProvider = Provider<int>((ref) {
   return ref.watch(actionCenterProvider).where((a) => a.isBadgeCounted).length;
 });
 
+/// Provider for items rendered in the tray (pending + snoozed +
+/// acknowledged — acknowledged is excluded from badges but stays visible).
+final visibleActionCountProvider = Provider<int>((ref) {
+  return ref.watch(actionCenterProvider).where((a) => a.isVisible).length;
+});
+
 /// Provider for urgent action count (badge subset)
 final urgentActionCountProvider = Provider<int>((ref) {
   return ref
