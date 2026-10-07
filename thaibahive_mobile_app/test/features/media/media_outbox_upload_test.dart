@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:thaibahive_mobile/core/services/network_service.dart';
 import 'package:thaibahive_mobile/features/media/data/media_outbox.dart';
 import 'package:thaibahive_mobile/features/media/data/media_outbox_uploader.dart';
 
@@ -15,6 +16,8 @@ class StubServer implements HttpClientAdapter {
   Future<ResponseBody> Function(RequestOptions options)? onSign;
   Future<ResponseBody> Function(RequestOptions options)? onComplete;
   Future<ResponseBody> Function(RequestOptions options)? onStoragePut;
+  Future<ResponseBody> Function(RequestOptions options)? onMediaAssets;
+  Future<ResponseBody> Function(RequestOptions options)? onMediaFolders;
 
   Duration uploadDelay = Duration.zero;
   final List<String> log = [];
@@ -77,6 +80,16 @@ class StubServer implements HttpClientAdapter {
         if (handler == null) return json(404, {'error': 'no complete route'});
         return await handler(options);
       }
+      if (path.endsWith('/media/assets')) {
+        final handler = onMediaAssets;
+        if (handler == null) return json(200, {'assets': []});
+        return await handler(options);
+      }
+      if (path.endsWith('/media/folders')) {
+        final handler = onMediaFolders;
+        if (handler == null) return json(200, {'folders': []});
+        return await handler(options);
+      }
       return json(404, {'error': 'unrouted ${options.uri}'});
     } finally {
       inFlight--;
@@ -85,6 +98,16 @@ class StubServer implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+class _SeededNetwork extends NetworkService {
+  _SeededNetwork(NetworkStatus initial) : super() {
+    state = initial;
+  }
+
+  void _init() {
+    // Skip real connectivity listener in tests
+  }
 }
 
 void main() {
