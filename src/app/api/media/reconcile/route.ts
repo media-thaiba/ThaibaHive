@@ -4,6 +4,8 @@ import { mediaAssets } from "@/db/schema";
 import { eq, or, and, lt } from "drizzle-orm";
 import crypto from "crypto";
 import { verifySession } from "@/lib/auth";
+import { hasPermission } from "@thaiba/auth";
+import type { StaffRole } from "@thaiba/auth";
 import {
   downloadFromSupabase,
   copySupabaseObject,
@@ -29,8 +31,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!isAuthorized) {
+      // D10*: the session path checks the declared `media:reconcile`
+      // permission (super_admin `*` and the `system` machine role hold it)
+      // instead of a hardcoded super_admin comparison.
       const session = await verifySession();
-      if (session && session.role === "super_admin") {
+      if (session && hasPermission(session.role as StaffRole, "media:reconcile")) {
         isAuthorized = true;
       }
     }

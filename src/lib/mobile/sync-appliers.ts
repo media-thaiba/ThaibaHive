@@ -10,11 +10,17 @@ import {
   staffInstitutions,
 } from "@/db/schema";
 import {
+  attendancePunchSchema,
   expenseClaimCreateSchema,
+  financialReconciliationItemMatchSchema,
   leaveCreateSchema,
+  purchaseApprovalActionSchema,
   taskCreateSchema,
 } from "@/lib/validation/schemas";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
+import { purchaseApprovalEngine } from "@/lib/finance/purchases/purchase-approval-engine";
+import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
+import { resolveShift } from "@/lib/attendance/shifts";
 import type { Role } from "@/lib/finance/models/approval-state";
 import {
   validateNfcCheckIn,
@@ -64,6 +70,12 @@ export async function applySyncMutation(
       return applyExpenseCreate(ctx, payload);
     case "attendance_nfc_checkin":
       return applyAttendanceNfcCheckin(ctx, payload);
+    case "attendance_punch":
+      return applyAttendancePunch(ctx, payload);
+    case "finance_purchase_action":
+      return applyFinancePurchaseAction(ctx, payload);
+    case "finance_reconciliation_match":
+      return applyFinanceReconciliationMatch(ctx, payload);
     case "approval_approve":
     case "approval_reject":
       return applyApprovalDecision(ctx, action === "approval_approve" ? "approve" : "reject", payload);
@@ -338,6 +350,126 @@ async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<st
     }
     throw error;
   }
+}
+
+// ─── Attendance (direct check-out punch, D3*) ───
+
+const PUNCH_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
+async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+  const payload = asRecord(raw);
+  const parsed = attendancePunchSchema.safeParse({
+    mode: payload.mode,
+    at: payload.at ?? payload.timestamp,
+    latitude: payload.latitude,
+    longitude: payload.longitude,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message || "Invalid attendance punch payload");
+  }
+
+  // Clamp the client event time to [serverNow - 48h, serverNow]: a punch
+  // replayed after midnight lands on the day it happened; future-dated
+  // timestamps are pulled back to serverNow.
+  const nowMs = Date.now();
+  const rawAt = Date.parse(parsed.data.at);
+  const atMs = Number.isNaN(rawAt)
+    ? nowMs
+    : Math.min(Math.max(rawAt, nowMs - PUNCH_MAX_AGE_MS), nowMs);
+  const at = new Date(atMs).toISOString();
+  const date = at.split("T")[0] || new Date(nowMs).toISOString().split("T")[0];
+
+  const log = await db
+    .select()
+    .from(attendanceLogs)
+    .where(and(eq(attendanceLogs.staffId, ctx.staffId), eq(attendanceLogs.date, date)))
+    .get();
+
+  if (!log) {
+    throw new Error("No check-in found for the punch date.");
+  }
+  if (log.checkOut) {
+    return; // double check-out is an idempotent success (REST returns 409; replay must not)
+  }
+
+  const checkInMs = log.checkIn ? Date.parse(log.checkIn) : atMs;
+  const workedMinutes = Math.max(0, Math.round((atMs - checkInMs) / 60000));
+
+  let earlyExitMinutes = 0;
+  try {
+    const shift = await resolveShift(ctx.staffId, date);
+    const [endH, endM] = shift.endTime.split(":").map(Number);
+    const shiftEnd = new Date(atMs);
+    shiftEnd.setHours(endH, endM, 0, 0);
+    if (atMs < shiftEnd.getTime()) {
+      earlyExitMinutes = Math.floor((shiftEnd.getTime() - atMs) / 60000);
+    }
+  } catch {
+    // Shift could not be resolved — keep defaults rather than failing the punch
+  }
+
+  await db
+    .update(attendanceLogs)
+    .set({ checkOut: at, workedMinutes, earlyExitMinutes })
+    .where(eq(attendanceLogs.id, log.id))
+    .run();
+}
+
+// ─── Finance (REST parity via the same engines the routes call, D2-applier) ───
+
+async function applyFinancePurchaseAction(
+  ctx: SyncApplierContext,
+  raw: Record<string, unknown>
+): Promise<void> {
+  const payload = asRecord(raw);
+  const parsed = purchaseApprovalActionSchema.safeParse({
+    purchaseRequestId: payload.purchaseRequestId ?? payload.id,
+    action: payload.action,
+    comments: payload.comments ?? payload.notes,
+    tierLevel: payload.tierLevel,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message || "Invalid purchase approval payload");
+  }
+
+  // Same engine call as POST /api/finance/purchases/approvals — the applier
+  // derives approver identity from the session, never the payload.
+  await purchaseApprovalEngine.processApproval({
+    purchaseRequestId: parsed.data.purchaseRequestId,
+    // mirrors resolveScopedInstitutionId's unscoped fallback
+    institutionId: actorScope(ctx) ?? "inst_default",
+    approverId: ctx.staffId,
+    approverRole: ctx.role,
+    action: parsed.data.action,
+    comments: parsed.data.comments,
+    tierLevel: parsed.data.tierLevel,
+  });
+}
+
+async function applyFinanceReconciliationMatch(
+  _ctx: SyncApplierContext,
+  raw: Record<string, unknown>
+): Promise<void> {
+  const payload = asRecord(raw);
+  const itemId = asString(payload.itemId, "itemId");
+  const parsed = financialReconciliationItemMatchSchema.safeParse({
+    matchStatus: payload.matchStatus,
+    matchedWithId: payload.matchedWithId,
+    varianceAmount: payload.varianceAmount,
+    resolutionNotes: payload.resolutionNotes,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message || "Invalid reconciliation match payload");
+  }
+
+  // Same engine call as PATCH /api/finance/reconciliation/[id]/match.
+  await reconciliationEngine.manualMatchItem({
+    itemId,
+    matchStatus: parsed.data.matchStatus,
+    matchedWithId: parsed.data.matchedWithId,
+    varianceAmount: parsed.data.varianceAmount,
+    resolutionNotes: parsed.data.resolutionNotes,
+  });
 }
 
 // ─── Unified approvals (mirrors PATCH /api/approvals decision rules) ───

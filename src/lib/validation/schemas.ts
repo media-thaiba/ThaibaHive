@@ -1121,6 +1121,62 @@ export const financialReconciliationItemMatchSchema = z.object({
 });
 export type FinancialReconciliationItemMatchInput = z.infer<typeof financialReconciliationItemMatchSchema>;
 
+// ─── Phase 3: offline sync flush (payload v2) + conflict resolution ───
+
+export type SyncDerivedEntity = {
+  entityType: string;
+  mutationType: "CREATE" | "UPDATE" | "DELETE";
+};
+
+/**
+ * Server-authoritative action → entity derivation. Clients may send
+ * mutationType/entityType (payload v2) but the server always re-derives from
+ * this map and rejects client values that disagree.
+ */
+export const SYNC_ACTION_ENTITY_MAP: Record<string, SyncDerivedEntity> = {
+  leave_apply: { entityType: "leave", mutationType: "CREATE" },
+  leave_cancel: { entityType: "leave", mutationType: "UPDATE" },
+  task_create: { entityType: "task", mutationType: "CREATE" },
+  task_update: { entityType: "task", mutationType: "UPDATE" },
+  task_delete: { entityType: "task", mutationType: "DELETE" },
+  expense_create: { entityType: "expense", mutationType: "CREATE" },
+  attendance_nfc_checkin: { entityType: "attendance", mutationType: "CREATE" },
+  attendance_punch: { entityType: "attendance", mutationType: "UPDATE" },
+  approval_approve: { entityType: "approval", mutationType: "UPDATE" },
+  approval_reject: { entityType: "approval", mutationType: "UPDATE" },
+  finance_purchase_action: { entityType: "purchase", mutationType: "UPDATE" },
+  finance_reconciliation_match: { entityType: "reconciliation_item", mutationType: "UPDATE" },
+};
+
+export function deriveSyncEntity(action: string): SyncDerivedEntity | null {
+  return SYNC_ACTION_ENTITY_MAP[action] ?? null;
+}
+
+export const attendancePunchSchema = z.object({
+  mode: z.literal("out"),
+  at: z.string().min(1),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+});
+export type AttendancePunchInput = z.infer<typeof attendancePunchSchema>;
+
+export const syncConflictResolveSchema = z.object({
+  fields: z.record(z.string(), z.unknown()),
+});
+export type SyncConflictResolveInput = z.infer<typeof syncConflictResolveSchema>;
+
+/** Identity/tenant columns clients can never overwrite via conflict resolve. */
+export const SYNC_IMMUTABLE_RESOLVE_FIELDS = [
+  "id",
+  "institutionId",
+  "tenantId",
+  "createdAt",
+  "staffId",
+  "userId",
+  "deviceId",
+  "createdById",
+] as const;
+
 
 
 
