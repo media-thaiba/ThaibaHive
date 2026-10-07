@@ -79,6 +79,7 @@ import '../features/staff/presentation/staff_profile_screen.dart';
 import '../features/facility/screens/technician_workorder_screen.dart';
 import '../features/facility/screens/qr_asset_scanner_screen.dart';
 import '../features/agent_hub/presentation/agent_hub_screen.dart';
+import '../features/sync/presentation/sync_status_screen.dart';
 import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/transitions/page_transitions.dart';
 
@@ -663,6 +664,14 @@ GoRouter buildRouter() {
           child: AgentHubScreen(
             initialGateId: state.uri.queryParameters['gateId'],
           ),
+        ),
+      ),
+      GoRoute(
+        path: '/sync-status',
+        name: 'syncStatus',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const SyncStatusScreen(),
         ),
       ),
     ],

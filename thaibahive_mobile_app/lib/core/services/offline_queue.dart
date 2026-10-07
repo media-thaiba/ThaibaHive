@@ -123,8 +123,10 @@ class OfflineQueue {
       aOptions: AndroidOptions(encryptedSharedPreferences: true),
     );
     
-    // Register adapter
-    Hive.registerAdapter(_OfflineEventAdapter());
+    // Register adapter if not already registered
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(_OfflineEventAdapter());
+    }
     
     // Get or generate encryption key
     final encryptionKey = await _getEncryptionKey();
@@ -424,6 +426,12 @@ class OfflineQueue {
   int getConflictEventsCount() {
     if (!_initialized) return 0;
     return _box.values.where((e) => e.status == QueueStatus.conflict).length;
+  }
+
+  /// Get completed receipts
+  List<OfflineEvent> getReceipts() {
+    if (!_initialized) return [];
+    return _box.values.where((e) => e.status == QueueStatus.completed).toList();
   }
 
   /// Retry all failed and conflict events by resetting them to pending

@@ -81,10 +81,13 @@ class SyncCoordinator extends StateNotifier<SyncCoordinatorState> {
     required this.connectivity,
     required this.ref,
     Duration? resumeGracePeriod,
+    bool autoStart = true,
   }) : _deviceId = '',
        _resumeGracePeriod = resumeGracePeriod ?? const Duration(seconds: 60),
        super(const SyncCoordinatorState()) {
-    _init();
+    if (autoStart) {
+      _init();
+    }
   }
 
   final OfflineQueue offlineQueue;
