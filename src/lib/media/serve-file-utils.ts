@@ -50,3 +50,29 @@ export function nodeStreamToWeb(nodeStream: NodeJS.ReadableStream | Readable): R
     },
   });
 }
+
+const UUID_NAME = /^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\.[a-zA-Z0-9]+$/;
+const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * D14*: validate a file key that is either
+ *  - a flat UUID filename (legacy multipart/Drive uploads), or
+ *  - a guarded nested path produced by sign/complete/reconcile:
+ *    `assets/tenant_X/dept_Y/uuid.ext` or `private_tmp/tenant_X/dept_Y/uuid.ext`.
+ * Segment charset + `..` rejection block traversal; root/tenant prefixes are allowlisted.
+ */
+export function validateFileKey(segments: string[]): string | null {
+  if (segments.length === 0 || segments.length > 5) return null;
+  if (segments.some((s) => !SAFE_SEGMENT.test(s) || s === "." || s === "..")) return null;
+
+  if (segments.length === 1) {
+    return UUID_NAME.test(segments[0]) ? segments[0] : null;
+  }
+
+  const [root, tenant] = segments;
+  if ((root !== "assets" && root !== "private_tmp") || !tenant?.startsWith("tenant_")) {
+    return null;
+  }
+  if (!UUID_NAME.test(segments[segments.length - 1])) return null;
+  return segments.join("/");
+}

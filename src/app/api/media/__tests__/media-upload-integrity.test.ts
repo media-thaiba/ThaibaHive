@@ -8,7 +8,8 @@
 import { POST as signPost } from "../upload/sign/route";
 import { POST as completePost } from "../upload/complete/route";
 import { POST as uploadPost } from "../../upload/route";
-import { GET as filesGet, validateFileKey } from "../../upload/files/[...filename]/route";
+import { GET as filesGet } from "../../upload/files/[...filename]/route";
+import { validateFileKey } from "@/lib/media/serve-file-utils";
 import { DELETE as folderDelete } from "../folders/[id]/route";
 import { DELETE as assetDelete } from "../assets/[id]/route";
 import { setTenantFeatureFlag, clearTenantFeatureOverrides } from "@/lib/features";
