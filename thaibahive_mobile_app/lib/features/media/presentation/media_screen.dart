@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
 
-/// Media Screen - Dedicated tab for users with media.asset.create capability
+/// Media Screen - Dedicated tab for users with the `media.asset.view`
+/// capability (see `lib/app/capability_registry.dart`)
 /// Camera capture, gallery, upload outbox, album management
 class MediaScreen extends ConsumerStatefulWidget {
   const MediaScreen({super.key});

@@ -9,7 +9,11 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../data/polls_provider.dart';
 
 class PollsScreen extends ConsumerStatefulWidget {
-  const PollsScreen({super.key});
+  /// When true, renders only the list content (for the Notices tab) without
+  /// an AppScaffold/AppBar/FAB wrapper.
+  final bool embedded;
+
+  const PollsScreen({super.key, this.embedded = false});
 
   @override
   ConsumerState<PollsScreen> createState() => _PollsScreenState();
@@ -28,14 +32,7 @@ class _PollsScreenState extends ConsumerState<PollsScreen> {
     final notifier = ref.read(pollsProvider.notifier);
     final theme = Theme.of(context);
 
-    return AppScaffold(
-      title: 'Polls',
-      showBack: false,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateDialog(context),
-        child: const Icon(Icons.add_rounded),
-      ),
-      body: Column(
+    final content = Column(
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -105,7 +102,17 @@ class _PollsScreenState extends ConsumerState<PollsScreen> {
                           ),
           ),
         ],
+      );
+
+    if (widget.embedded) return content;
+    return AppScaffold(
+      title: 'Polls',
+      showBack: false,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showCreateDialog(context),
+        child: const Icon(Icons.add_rounded),
       ),
+      body: content,
     );
   }
 

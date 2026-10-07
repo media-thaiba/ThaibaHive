@@ -5,14 +5,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants.dart';
+import 'capability_registry.dart' as caps;
 import 'theme.dart';
 import '../features/auth/data/auth_state.dart';
 import '../models/user_model.dart';
 import '../features/action_center/controller.dart';
+import '../features/action_center/action_producers.dart';
 import '../features/action_center/tray.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
 import '../features/today/presentation/today_screen.dart';
+import '../features/notices/presentation/notices_screen.dart';
+import '../features/notifications/data/notifications_provider.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/services/presentation/services_screen.dart';
 import '../features/me/presentation/me_hub_screen.dart';
 import '../features/media/presentation/media_screen.dart';
@@ -445,6 +450,22 @@ GoRouter buildRouter() {
         ),
       ),
       GoRoute(
+        path: '/services',
+        name: 'services',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ServicesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const NotificationsScreen(),
+        ),
+      ),
+      GoRoute(
         path: '/events',
         name: 'events',
         pageBuilder: (context, state) => AppTransitions.slide(
@@ -661,13 +682,14 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 1: Services (always visible)
+    // Branch 1: Notices (always visible) — segmented Circulars/Announcements/
+    // Polls. Services moved to a pushed top-level route (D2).
     StatefulShellBranch(
       routes: [
         GoRoute(
-          path: '/services',
-          name: 'services',
-          builder: (_, __) => const ServicesScreen(),
+          path: '/notices',
+          name: 'notices',
+          builder: (_, __) => const NoticesScreen(),
         ),
       ],
     ),
@@ -757,10 +779,16 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
     // Get user capabilities from auth state
     final authState = ref.watch(authProvider);
     final user = authState.user;
-    final hasMediaCapability = _hasCapability(user, 'media.asset.create');
+    // D7*: registry-backed check; `media.asset.view` gates the Media tab.
+    final hasMediaCapability = _hasCapability(user, 'media.asset.view');
+    // Start the action-center producers (pull + SSE + FCM) once for the whole
+    // shell; the provider is disposed only when the app tears down.
+    ref.watch(actionCenterBootstrapProvider);
     final pendingActionCount = ref.watch(pendingActionCountProvider);
+    final unreadCount = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+    final onTodayBranch = widget.navigationShell.currentIndex == 0;
 
-    // Build dynamic tab list
+    // Build dynamic tab list (D2: Today / Notices / My Hub / Media)
     final tabs = [
       const _TabData(
         branchIndex: 0,
@@ -770,9 +798,9 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
       ),
       const _TabData(
         branchIndex: 1,
-        icon: Icons.miscellaneous_services_rounded,
-        selectedIcon: Icons.miscellaneous_services_rounded,
-        label: 'Services',
+        icon: Icons.notifications_outlined,
+        selectedIcon: Icons.notifications_rounded,
+        label: 'Notices',
       ),
       const _TabData(
         branchIndex: 2,
@@ -790,13 +818,17 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
     ];
 
     return Scaffold(
+      // Single tray + single FAB layer, Today branch only (D5*).
+      floatingActionButton: onTodayBranch && pendingActionCount > 0
+          ? const ActionCenterFab()
+          : null,
       body: Stack(
         children: [
           // Main navigation content
           widget.navigationShell,
 
           // Action Center Tray overlay (when actions pending)
-          if (pendingActionCount > 0)
+          if (onTodayBranch && pendingActionCount > 0)
             const Positioned(
               left: 0,
               right: 0,
@@ -851,9 +883,26 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
                   );
                 },
                 destinations: tabs.map((tab) {
+                  // Bottom-nav badges (D12*): pending actions on Today,
+                  // unread notifications on Notices.
+                  final badgeCount = switch (tab.branchIndex) {
+                    0 => pendingActionCount,
+                    1 => unreadCount,
+                    _ => 0,
+                  };
                   return NavigationDestination(
-                    icon: Icon(tab.icon),
-                    selectedIcon: Icon(tab.selectedIcon),
+                    icon: badgeCount > 0
+                        ? Badge(
+                            label: Text('$badgeCount'),
+                            child: Icon(tab.icon),
+                          )
+                        : Icon(tab.icon),
+                    selectedIcon: badgeCount > 0
+                        ? Badge(
+                            label: Text('$badgeCount'),
+                            child: Icon(tab.selectedIcon),
+                          )
+                        : Icon(tab.selectedIcon),
                     label: tab.label,
                   );
                 }).toList(),
@@ -875,13 +924,11 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
     return 0;
   }
 
+  /// Registry-backed capability check (D7*): consults the mirrored
+  /// `packages/auth/capabilities.ts` role sets; unknown capabilities or a
+  /// missing role return false.
   bool _hasCapability(UserModel? user, String capability) {
-    if (user == null) return false;
-    const mediaRoles = ['staff', 'teacher', 'coordinator', 'admin', 'super_admin'];
-    if (capability == 'media.asset.create') {
-      return mediaRoles.contains(user.role);
-    }
-    return false;
+    return caps.hasCapability(user?.role, capability);
   }
 }
 

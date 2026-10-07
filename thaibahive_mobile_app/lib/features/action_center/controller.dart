@@ -144,6 +144,10 @@ class ActionCenterStore {
 
   Box get box => _box!;
 
+  /// True once the box has been opened successfully (Hive unavailable in
+  /// tests without init — persistence is then skipped entirely).
+  bool get isOpen => _box != null;
+
   Future<Box> open() async {
     _box ??= await Hive.openBox(boxName);
     return _box!;
@@ -511,6 +515,7 @@ class ActionCenterController extends StateNotifier<List<ActionItem>> {
   // ---------------------------------------------------------------------------
 
   void _schedulePersist() {
+    if (!_store.isOpen) return; // Hive unavailable — nothing to persist to.
     _persistTimer?.cancel();
     _persistTimer = Timer(_persistDebounce, () {
       unawaited(persistNow());

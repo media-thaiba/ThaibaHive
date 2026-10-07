@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
 import 'package:thaibahive_mobile/features/action_center/controller.dart';
-import 'package:thaibahive_mobile/features/action_center/tray.dart';
 import 'package:thaibahive_mobile/features/attendance/presentation/attendance_punch_card.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 import 'package:thaibahive_mobile/features/circulars/data/circulars_provider.dart';
@@ -66,20 +65,11 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
-    final actions = ref.watch(actionCenterProvider);
-    final totalActions = actions.length;
-    final hasUrgent = actions.any((a) => a.priority == ActionPriority.urgent);
 
     return Scaffold(
-      // Local tray/FAB live here until step 7 moves them to the shell
-      // overlay (single-layer rule, D5*).
-      floatingActionButton: totalActions > 0 ? const ActionCenterFab() : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _refresh,
-            child: CustomScrollView(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -131,7 +121,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: const [
                       TodayHubContent(),
-                      // Bottom padding for tray/FAB
+                      // Bottom padding for the shell overlay tray/FAB.
                       SizedBox(height: 100),
                     ],
                   ),
@@ -139,17 +129,6 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               ],
             ),
           ),
-          if (totalActions > 0)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ActionCenterTray(
-                initiallyExpanded: hasUrgent,
-              ),
-            ),
-        ],
-      ),
     );
   }
 

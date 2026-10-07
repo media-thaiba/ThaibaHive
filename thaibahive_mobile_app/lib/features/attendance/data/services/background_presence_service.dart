@@ -295,7 +295,8 @@ class BackgroundPresenceService {
       final dio = _getDio();
       dio.options.headers['Authorization'] = 'Bearer $token';
 
-      await dio.post('/api/attendance/check-out');
+      // AppConstants.apiBaseUrl already ends in /api — no second prefix (D8*).
+      await dio.post('/attendance/check-out');
       await stopTracking();
     } catch (e) {
       debugPrint('[BackgroundPresence] Auto checkout failed: $e');
