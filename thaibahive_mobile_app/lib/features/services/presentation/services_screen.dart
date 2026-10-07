@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
 import 'package:thaibahive_mobile/features/action_center/controller.dart';
-import 'package:thaibahive_mobile/features/action_center/tray.dart';
 import 'package:thaibahive_mobile/shared/widgets/quick_action_card.dart';
 
 /// Services Catalog Screen - Searchable catalog of campus utilities
@@ -28,8 +27,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final actions = ref.watch(actionCenterProvider);
-    final pendingCount = actions.length;
+    // Count chip only — the single Action Center tray lives on the Today
+    // branch of the shell (D5* single-layer rule).
+    final pendingCount = ref.watch(pendingActionCountProvider);
 
     // Service categories with their capabilities
     final serviceCategories = [
@@ -186,7 +186,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.pending_actions_rounded),
-                  onPressed: () => _showActionCenterSheet(context),
+                  onPressed: () => context.go('/today'),
                   tooltip: 'Action Center',
                 ),
                 Positioned(
@@ -287,24 +287,6 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showActionCenterSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => ActionCenterTray(
-          initiallyExpanded: true,
-          onClose: () => Navigator.of(context).pop(),
-        ),
       ),
     );
   }

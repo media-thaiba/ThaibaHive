@@ -12,10 +12,10 @@ class PollOption {
   });
 
   factory PollOption.fromJson(Map<String, dynamic> json) => PollOption(
-        id: json['id'] as String,
-        pollId: json['poll_id'] as String,
-        text: json['text'] as String,
-        voteCount: json['vote_count'] as int? ?? 0,
+        id: (json['id'] ?? '') as String,
+        pollId: (json['pollId'] ?? json['poll_id'] ?? '') as String,
+        text: (json['text'] ?? '') as String,
+        voteCount: (json['voteCount'] ?? json['vote_count'] ?? 0) as int,
       );
 
   Map<String, dynamic> toJson() => {
@@ -50,17 +50,25 @@ class PollModel {
   });
 
   factory PollModel.fromJson(Map<String, dynamic> json) => PollModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
+        id: (json['id'] ?? '') as String,
+        title: (json['title'] ?? '') as String,
         description: json['description'] as String?,
-        options: (json['options'] as List<dynamic>)
-            .map((e) => PollOption.fromJson(e as Map<String, dynamic>))
+        options: (json['options'] as List<dynamic>? ?? const [])
+            .map((e) =>
+                PollOption.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
-        selectedOptionId: json['selected_option_id'] as String?,
-        expiresAt: DateTime.parse(json['expires_at'] as String),
-        isActive: json['is_active'] as bool? ?? true,
-        createdById: json['created_by_id'] as String,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        selectedOptionId:
+            (json['selectedOptionId'] ?? json['selected_option_id'])
+                as String?,
+        expiresAt: DateTime.tryParse(
+                (json['expiresAt'] ?? json['expires_at'] ?? '').toString()) ??
+            DateTime.now(),
+        isActive: (json['isActive'] ?? json['is_active'] ?? true) as bool,
+        createdById:
+            (json['createdById'] ?? json['created_by_id'] ?? '') as String,
+        createdAt: DateTime.tryParse(
+                (json['createdAt'] ?? json['created_at'] ?? '').toString()) ??
+            DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {

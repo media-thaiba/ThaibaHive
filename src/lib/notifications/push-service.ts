@@ -96,12 +96,20 @@ export async function sendPushNotification(options: PushNotificationOptions): Pr
     createdAt: new Date().toISOString(),
   });
 
-  // 2. Dispatch real-time SSE event for open web dashboard tabs
+  // 2. Dispatch real-time SSE event for open web dashboard tabs and mobile
+  // (canonical {type:'new', notification:{…}} frame — matches notifications.ts)
   sendToConnection(`notification-${staffId}`, "notification", {
-    type: "new_notification",
-    notificationId,
-    title,
-    message,
+    type: "new",
+    notification: {
+      id: notificationId,
+      type,
+      referenceType: referenceType ?? null,
+      referenceId: referenceId ?? null,
+      title,
+      message,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    },
   });
 
   // 3. Fetch device tokens for target staff member

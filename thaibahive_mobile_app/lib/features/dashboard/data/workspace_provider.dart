@@ -44,7 +44,8 @@ class WorkspaceNotifier extends StateNotifier<WorkspaceState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final dio = _ref.read(dioProvider);
-      final response = await dio.get('/api/workspaces/data');
+      // AppConstants.apiBaseUrl already ends in /api — no second prefix (D8*).
+      final response = await dio.get('/workspaces/data');
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         state = WorkspaceState(isLoading: false, data: data);

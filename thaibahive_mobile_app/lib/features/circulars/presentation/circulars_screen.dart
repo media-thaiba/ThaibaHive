@@ -9,7 +9,11 @@ import '../../../shared/widgets/loading_widget.dart';
 import '../data/circulars_provider.dart';
 
 class CircularsScreen extends ConsumerStatefulWidget {
-  const CircularsScreen({super.key});
+  /// When true, renders only the list content (for the Notices tab) without
+  /// an AppScaffold/AppBar wrapper.
+  final bool embedded;
+
+  const CircularsScreen({super.key, this.embedded = false});
 
   @override
   ConsumerState<CircularsScreen> createState() => _CircularsScreenState();
@@ -36,21 +40,18 @@ class _CircularsScreenState extends ConsumerState<CircularsScreen> {
     final notifier = ref.read(circularsProvider.notifier);
     final theme = Theme.of(context);
 
-    return AppScaffold(
-      title: 'Circulars',
-      showBack: false,
-      body: state.isLoading
-          ? const ListShimmer()
-          : state.error != null
-              ? AppErrorWidget(
-                  message: state.error!,
-                  onRetry: () => notifier.loadCirculars(),
-                )
-              : state.circulars.isEmpty
-                  ? const EmptyStateWidget(
-                      message: 'No circulars',
-                      icon: Icons.campaign_rounded)
-                  : RefreshIndicator(
+    final content = state.isLoading
+        ? const ListShimmer()
+        : state.error != null
+            ? AppErrorWidget(
+                message: state.error!,
+                onRetry: () => notifier.loadCirculars(),
+              )
+            : state.circulars.isEmpty
+                ? const EmptyStateWidget(
+                    message: 'No circulars',
+                    icon: Icons.campaign_rounded)
+                : RefreshIndicator(
                       onRefresh: () => notifier.loadCirculars(),
                       child: ListView.builder(
                         itemCount: state.circulars.length,
@@ -92,7 +93,13 @@ class _CircularsScreenState extends ConsumerState<CircularsScreen> {
                           );
                         },
                       ),
-                    ),
+                    );
+
+    if (widget.embedded) return content;
+    return AppScaffold(
+      title: 'Circulars',
+      showBack: false,
+      body: content,
     );
   }
 

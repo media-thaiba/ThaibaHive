@@ -7,7 +7,8 @@ export type FeatureFlag =
   | 'push_notifications'
   | 'canteen'
   | 'academic_tracking'
-  | 'agentic_workflows';
+  | 'agentic_workflows'
+  | 'today_hub';
 
 // In production, agentic workflows require explicit enablement (process.env.FEATURE_AGENTIC_WORKFLOWS === 'true').
 // In development/test, it defaults to enabled unless explicitly set to 'false'.
@@ -25,6 +26,7 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   canteen: false,
   academic_tracking: false,
   agentic_workflows: defaultAgenticFlag,
+  today_hub: true,
 };
 
 // In-memory per-institution override registry for staged/canary tenant rollouts (D13)
@@ -60,4 +62,8 @@ export function isFeatureEnabled(flag: FeatureFlag, institutionId?: string): boo
 
 export function isAgenticWorkflowsEnabled(institutionId?: string): boolean {
   return isFeatureEnabled('agentic_workflows', institutionId);
+}
+
+export function isTodayHubEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('today_hub', institutionId);
 }

@@ -31,6 +31,28 @@ class TimelineItem {
         timestamp: DateTime.parse(json['timestamp'] as String),
         metadata: json['metadata'] as Map<String, dynamic>?,
       );
+
+  /// D10: maps an `activity_logs` row from `GET /api/activity-logs`
+  /// (`{id(int), action, resourceType, resourceId, details, createdAt, …}`).
+  /// `action` becomes the item type, `details` (when present) the title.
+  factory TimelineItem.fromActivityLogJson(Map<String, dynamic> json) {
+    final action = (json['action'] ?? 'activity') as String;
+    final details = json['details'] as String?;
+    return TimelineItem(
+      id: (json['id'] ?? '').toString(),
+      type: action,
+      title: (details != null && details.trim().isNotEmpty) ? details : action,
+      description: json['resourceType'] as String?,
+      timestamp: DateTime.tryParse(
+              (json['createdAt'] ?? json['created_at'] ?? '').toString()) ??
+          DateTime.now(),
+      metadata: {
+        'action': action,
+        if (json['resourceId'] != null) 'resourceId': json['resourceId'],
+        if (json['staffId'] != null) 'staffId': json['staffId'],
+      },
+    );
+  }
 }
 
 class TimelineRepository {
@@ -38,20 +60,23 @@ class TimelineRepository {
 
   TimelineRepository(this._apiClient);
 
-  Future<List<TimelineItem>> getTimeline({int page = 1}) async {
-    final response =
-        await _apiClient.get('/timeline', queryParameters: {'page': page});
-    final data = response;
-    if (data is List) {
-      return data
-          .map((e) => TimelineItem.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    if (data is Map && data['data'] is List) {
-      return (data['data'] as List)
-          .map((e) => TimelineItem.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    return [];
+  /// D10: repointed from the nonexistent `/timeline` to `/activity-logs`,
+  /// parsing the real `{logs, total, page, limit}` envelope. Scope (own +
+  /// same-department logs) is enforced server-side.
+  static List<TimelineItem> parseLogs(dynamic data) {
+    final list = data is Map ? (data['logs'] ?? data['data']) : data;
+    if (list is! List) return [];
+    return list
+        .whereType<Map>()
+        .map((e) => TimelineItem.fromActivityLogJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<List<TimelineItem>> getTimeline({int page = 1, int limit = 10}) async {
+    final response = await _apiClient.get(
+      '/activity-logs',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    return parseLogs(response);
   }
 }

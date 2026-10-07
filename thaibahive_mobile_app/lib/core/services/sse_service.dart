@@ -40,10 +40,15 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
   SSEServiceNotifier() : super(const SSEServiceState());
 
   Future<void> initialize() async {
-    final token = await _storage.read(key: AppConstants.storageTokenKey);
-    if (token == null || token.isEmpty) return;
-
-    _startConnection(token);
+    try {
+      final token = await _storage.read(key: AppConstants.storageTokenKey);
+      if (token == null || token.isEmpty) return;
+      // _startConnection is async-void; its own body guards failures.
+      _startConnection(token);
+    } catch (_) {
+      // Secure storage unavailable (e.g. tests) — SSE stays disconnected;
+      // callers rely on pull producers for state instead.
+    }
   }
 
   void _startConnection(String token) async {
@@ -57,7 +62,9 @@ class SSEServiceNotifier extends StateNotifier<SSEServiceState> {
     try {
       final request = http.Request(
         'GET',
-        Uri.parse('${AppConstants.apiBaseUrl}/api/notifications/subscribe'),
+        // AppConstants.apiBaseUrl already ends with /api — a second literal
+        // segment produced /api/api/... 404s and an infinite reconnect loop.
+        Uri.parse('${AppConstants.apiBaseUrl}/notifications/subscribe'),
       );
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'text/event-stream';

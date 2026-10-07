@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
+import 'package:thaibahive_mobile/features/action_center/action_state_machine.dart';
 import 'package:thaibahive_mobile/features/action_center/controller.dart';
 
 /// Action Center Tray - a contextual action tray that appears on the Today screen
@@ -69,12 +70,15 @@ class _ActionCenterTrayState extends ConsumerState<ActionCenterTray>
 
   @override
   Widget build(BuildContext context) {
-    final actions = ref.watch(actionCenterProvider);
+    // Watch the list so tiles rebuild on every state transition.
+    ref.watch(actionCenterProvider);
     final sortedActions = ref.watch(actionCenterProvider.notifier).sortedActions;
     final urgentCount = ref.watch(urgentActionCountProvider);
     final totalCount = ref.watch(pendingActionCountProvider);
 
-    if (totalCount == 0) {
+    // Tray renders whenever any visible item exists (pending + snoozed +
+    // acknowledged); only the badge counts exclude acknowledged.
+    if (sortedActions.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -168,10 +172,20 @@ class _ActionCenterTrayState extends ConsumerState<ActionCenterTray>
           separatorBuilder: (_, __) => const Divider(height: 1, indent: 56, endIndent: 16),
           itemBuilder: (context, index) {
             final action = sortedActions[index];
-            return _ActionTile(action: action, onTap: () {
-              context.push(action.route);
-              ref.read(actionCenterProvider.notifier).completeAction(action.id);
-            });
+            return _ActionTile(
+              action: action,
+              onTap: () {
+                context.push(action.route);
+                ref
+                    .read(actionCenterProvider.notifier)
+                    .completeAction(action.id);
+              },
+              onDismiss: () =>
+                  ref.read(actionCenterProvider.notifier).dismiss(action.id),
+              onSnooze: action.status == ActionStatus.pending
+                  ? () => ref.read(actionCenterProvider.notifier).snooze(action.id)
+                  : null,
+            );
           },
         ),
       ),
@@ -216,16 +230,24 @@ class _ActionCenterTrayState extends ConsumerState<ActionCenterTray>
 class _ActionTile extends StatelessWidget {
   final ActionItem action;
   final VoidCallback onTap;
+  final VoidCallback onDismiss;
+  final VoidCallback? onSnooze;
 
-  const _ActionTile({required this.action, required this.onTap});
+  const _ActionTile({
+    required this.action,
+    required this.onTap,
+    required this.onDismiss,
+    this.onSnooze,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final priorityColor = switch (action.priority) {
-      ActionPriority.urgent => Theme.of(context).colorScheme.error,
-      ActionPriority.high => Theme.of(context).colorScheme.tertiary,
-      ActionPriority.normal => Theme.of(context).colorScheme.primary,
-      ActionPriority.low => Theme.of(context).colorScheme.onSurfaceVariant,
+      ActionPriority.urgent => theme.colorScheme.error,
+      ActionPriority.high => theme.colorScheme.tertiary,
+      ActionPriority.normal => theme.colorScheme.primary,
+      ActionPriority.low => theme.colorScheme.onSurfaceVariant,
     };
 
     return ListTile(
@@ -238,21 +260,44 @@ class _ActionTile extends StatelessWidget {
           color: priorityColor,
         ),
       ),
-      title: Text(
-        action.title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              action.title,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
+          ),
+          if (action.status != ActionStatus.pending)
+            _StatusChip(status: action.status),
+        ],
       ),
       subtitle: Text(
         action.description,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (onSnooze != null)
+            IconButton(
+              icon: const Icon(Icons.snooze_rounded, size: 20),
+              tooltip: 'Snooze 2h',
+              onPressed: onSnooze,
+            ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 20),
+            tooltip: 'Dismiss',
+            onPressed: onDismiss,
+          ),
+        ],
+      ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
@@ -265,6 +310,47 @@ class _ActionTile extends StatelessWidget {
       ActionPriority.normal => Icons.assignment_rounded,
       ActionPriority.low => Icons.info_outline_rounded,
     };
+  }
+}
+
+/// Small status chip for non-pending tray items (acknowledged / snoozed).
+class _StatusChip extends StatelessWidget {
+  final ActionStatus status;
+
+  const _StatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      ActionStatus.acknowledged => (
+          'Acknowledged',
+          Theme.of(context).colorScheme.secondary,
+        ),
+      ActionStatus.snoozed => (
+          'Snoozed',
+          Theme.of(context).colorScheme.tertiary,
+        ),
+      _ => (
+          '',
+          Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+    };
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
   }
 }
 

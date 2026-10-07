@@ -12,7 +12,11 @@ import '../data/announcements_cache_provider.dart';
 import '../data/announcements_provider.dart';
 
 class AnnouncementsScreen extends ConsumerWidget {
-  const AnnouncementsScreen({super.key});
+  /// When true, renders only the list content (for the Notices tab) without
+  /// a Scaffold/AppBar/FAB wrapper.
+  final bool embedded;
+
+  const AnnouncementsScreen({super.key, this.embedded = false});
 
   static const _priorityFilters = ['All', 'Normal', 'Important', 'Urgent'];
 
@@ -22,9 +26,7 @@ class AnnouncementsScreen extends ConsumerWidget {
     final announcementsAsync = ref.watch(cachedAnnouncementsProvider);
     final selectedPriority = ref.watch(announcementPriorityProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Announcements')),
-      body: Column(
+    final content = Column(
         children: [
           const OfflineBanner(),
           Container(
@@ -115,7 +117,12 @@ class AnnouncementsScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
+      );
+
+    if (embedded) return content;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Announcements')),
+      body: content,
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateDialog(context, ref),
         child: const Icon(Icons.add_rounded),

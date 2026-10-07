@@ -23,15 +23,19 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) =>
       NotificationModel(
-        id: json['id'] as String,
-        userId: json['user_id'] as String,
-        type: json['type'] as String,
-        title: json['title'] as String,
+        id: (json['id'] ?? '') as String,
+        // Server rows use `staffId`; keep `user_id` for legacy fixtures.
+        userId:
+            (json['userId'] ?? json['user_id'] ?? json['staffId'] ?? '') as String,
+        type: (json['type'] ?? 'general') as String,
+        title: (json['title'] ?? '') as String,
         message: json['message'] as String?,
-        relatedId: json['related_id'] as String?,
-        relatedType: json['related_type'] as String?,
-        isRead: json['is_read'] as bool? ?? false,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        relatedId: (json['referenceId'] ?? json['related_id']) as String?,
+        relatedType: (json['referenceType'] ?? json['related_type']) as String?,
+        isRead: (json['isRead'] ?? json['is_read'] ?? false) as bool,
+        createdAt: DateTime.tryParse(
+                (json['createdAt'] ?? json['created_at'] ?? '').toString()) ??
+            DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {

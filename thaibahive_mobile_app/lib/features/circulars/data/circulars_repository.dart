@@ -12,21 +12,21 @@ class CircularsRepository {
 
   CircularsRepository(this._apiClient);
 
+  /// GET /api/circulars returns `{circulars: […]}` (D14* — the old parser
+  /// only handled `data`/bare lists and always yielded `[]`).
+  static List<CircularModel> parseList(dynamic data) {
+    final list = data is Map ? (data['circulars'] ?? data['data']) : data;
+    if (list is! List) return [];
+    return list
+        .whereType<Map>()
+        .map((e) => CircularModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
   Future<List<CircularModel>> getCirculars({int page = 1}) async {
     final response =
         await _apiClient.get('/circulars', queryParameters: {'page': page});
-    final data = response;
-    if (data is List) {
-      return data
-          .map((e) => CircularModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    if (data is Map && data['data'] is List) {
-      return (data['data'] as List)
-          .map((e) => CircularModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    return [];
+    return parseList(response);
   }
 
   Future<CircularModel> createCircular(Map<String, dynamic> data) async {
