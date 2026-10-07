@@ -25,29 +25,6 @@ import 'package:thaibahive_mobile/models/user_model.dart';
 
 /// Seeded gallery notifier for tests.
 class _SeededGallery extends MediaGalleryNotifier {
-  _SeededGallery() : super() {
-    state = AsyncValue.data([
-      MediaAssetModel(
-        id: 'a1',
-        name: 'Campus Event.jpg',
-        mimeType: 'image/jpeg',
-        fileType: 'image',
-        fileSize: 1024 * 1024,
-        thumbnailUrl: '/thumb/a1.jpg',
-        fileUrl: '/file/a1.jpg',
-      ),
-      MediaAssetModel(
-        id: 'a2',
-        name: 'Sports Day.mp4',
-        mimeType: 'video/mp4',
-        fileType: 'video',
-        fileSize: 50 * 1024 * 1024,
-        thumbnailUrl: '/thumb/a2.jpg',
-        fileUrl: '/file/a2.mp4',
-      ),
-    ]);
-  }
-
   @override
   Future<List<MediaAssetModel>> build() async => [
         MediaAssetModel(
@@ -73,10 +50,6 @@ class _SeededGallery extends MediaGalleryNotifier {
 
 /// Seeded folders notifier for tests.
 class _SeededFolders extends MediaFoldersNotifier {
-  _SeededFolders() : super() {
-    state = AsyncValue.data([]);
-  }
-
   @override
   Future<List<MediaFolderModel>> build() async => [];
 }
@@ -170,14 +143,15 @@ void main() {
   }
 
   Future<void> pumpMediaScreen(WidgetTester tester,
-      {List<Override> overrides = const []}) async {
+      {List<Override>? overrides}) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: overrides,
+        overrides: overrides ?? buildOverrides(),
         child: const MaterialApp(home: MediaScreen()),
       ),
     );
-    await tester.pumpAndSettle(const Duration(seconds: 5));
+    await tester.pump();
+    await tester.pump();
   }
 
   setUp(() async {
@@ -197,6 +171,8 @@ void main() {
   group('MediaScreen', () {
     testWidgets('gallery renders repo data with thumbnails', (tester) async {
       await pumpMediaScreen(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       // Gallery tab is default (index 0)
       expect(find.text('Campus Event.jpg'), findsOneWidget);
@@ -207,7 +183,8 @@ void main() {
       await pumpMediaScreen(tester, overrides: buildOverrides(role: 'hod'));
 
       await tester.tap(find.text('Capture'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       // Should show empty state for no capture capability
       expect(find.text('Capture Unavailable'), findsOneWidget);

@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
-import '../providers/attendance_provider.dart';
+
+class StudentRosterItem {
+  final String id;
+  final String name;
+  final String rollNo;
+  String status;
+
+  StudentRosterItem({
+    required this.id,
+    required this.name,
+    required this.rollNo,
+    this.status = 'present',
+  });
+}
 
 class StudentRosterScreen extends StatefulWidget {
   const StudentRosterScreen({super.key});

@@ -21,6 +21,7 @@ const _syncActionEntityMap = {
   'expense_create': {'entityType': 'expense', 'mutationType': 'CREATE'},
   'attendance_nfc_checkin': {'entityType': 'attendance', 'mutationType': 'CREATE'},
   'attendance_punch': {'entityType': 'attendance', 'mutationType': 'UPDATE'},
+  'attendance_checkout': {'entityType': 'attendance', 'mutationType': 'UPDATE'},
   'approval_approve': {'entityType': 'approval', 'mutationType': 'UPDATE'},
   'approval_reject': {'entityType': 'approval', 'mutationType': 'UPDATE'},
   'finance_purchase_action': {'entityType': 'purchase', 'mutationType': 'UPDATE'},
@@ -346,12 +347,12 @@ class OfflineQueue {
 
       var confirmed = 0;
       for (final event in pending) {
-        if (confirmedIds.contains(event.clientEventId)) {
+        if (conflictList.any((c) => c is Map && c['clientEventId'] == event.clientEventId)) {
+          final conflict = conflictList.firstWhere((c) => c is Map && c['clientEventId'] == event.clientEventId);
+          await markConflict(event.clientEventId, Map<String, dynamic>.from(conflict as Map));
+        } else if (confirmedIds.contains(event.clientEventId)) {
           await markCompleted(event.clientEventId);
           confirmed++;
-        } else if (conflictList.any((c) => c['clientEventId'] == event.clientEventId)) {
-          final conflict = conflictList.firstWhere((c) => c['clientEventId'] == event.clientEventId);
-          await markConflict(event.clientEventId, Map<String, dynamic>.from(conflict));
         } else {
           await markFailed(
             event.clientEventId,
@@ -496,21 +497,37 @@ class _OfflineEventAdapter extends TypeAdapter<OfflineEvent> {
     for (int i = 0; i < numOfFields; i++) {
       fields[reader.readByte()] = reader.read();
     }
+
+    QueueStatus parseStatus(dynamic raw) {
+      if (raw is int && raw >= 0 && raw < QueueStatus.values.length) {
+        return QueueStatus.values[raw];
+      }
+      if (raw is String) {
+        return QueueStatus.values.firstWhere(
+          (e) => e.name == raw,
+          orElse: () => QueueStatus.pending,
+        );
+      }
+      return QueueStatus.pending;
+    }
+
     return OfflineEvent(
       clientEventId: fields[0] as String,
       type: fields[1] as String,
       payload: Map<String, dynamic>.from(fields[2] as Map),
-      status: QueueStatus.values[fields[3] as int],
+      status: parseStatus(fields[3]),
       createdAt: DateTime.fromMillisecondsSinceEpoch(fields[4] as int),
       syncedAt: fields[5] != null ? DateTime.fromMillisecondsSinceEpoch(fields[5] as int) : null,
       retryCount: fields[6] as int? ?? 0,
       errorMessage: fields[7] as String?,
+      conflictDetails: fields[8] != null ? Map<String, dynamic>.from(fields[8] as Map) : null,
+      completedAt: fields[9] != null ? DateTime.fromMillisecondsSinceEpoch(fields[9] as int) : null,
     );
   }
 
   @override
   void write(BinaryWriter writer, OfflineEvent obj) {
-    writer.writeByte(8); // number of fields
+    writer.writeByte(10); // number of fields
     writer.writeByte(0);
     writer.write(obj.clientEventId);
     writer.writeByte(1);
@@ -527,6 +544,10 @@ class _OfflineEventAdapter extends TypeAdapter<OfflineEvent> {
     writer.write(obj.retryCount);
     writer.writeByte(7);
     writer.write(obj.errorMessage);
+    writer.writeByte(8);
+    writer.write(obj.conflictDetails);
+    writer.writeByte(9);
+    writer.write(obj.completedAt?.millisecondsSinceEpoch);
   }
 }
 

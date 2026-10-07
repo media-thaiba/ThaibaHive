@@ -174,6 +174,12 @@ class SyncCoordinator extends StateNotifier<SyncCoordinatorState> {
 
   /// Drain both offline queue and media outbox.
   Future<SyncResult> syncNow({SyncTrigger trigger = SyncTrigger.manual}) async {
+    final isOnline = ref.read(isOnlineProvider);
+    if (!isOnline) {
+      debugPrint('[SyncCoordinator] Offline, skipping $trigger');
+      return SyncResult(confirmed: 0, conflicts: 0, trigger: trigger);
+    }
+
     if (state.isSyncing) {
       debugPrint('[SyncCoordinator] Sync already in progress, skipping $trigger');
       return SyncResult(confirmed: 0, conflicts: 0, trigger: trigger);
@@ -181,73 +187,18 @@ class SyncCoordinator extends StateNotifier<SyncCoordinatorState> {
 
     state = state.copyWith(isSyncing: true, lastSyncAttempt: DateTime.now(), lastError: null);
 
-    int confirmed = 0;
-    int conflicts = 0;
-
     try {
-      // 1. Build payload v2 mutations from offline queue
-      final pendingEvents = offlineQueue.getPendingEvents();
-      if (pendingEvents.isNotEmpty) {
-        final mutations = pendingEvents.map((e) {
-          final mapping = _syncActionEntityMap[e.type];
-          return {
-            'id': e.clientEventId,
-            'action': e.type,
-            'timestamp': e.createdAt.toIso8601String(),
-            'payload': e.payload,
-            'mutationType': mapping?['mutationType'],
-            'entityType': mapping?['entityType'],
-          };
-        }).toList();
+      final confirmed = await offlineQueue.flush(deviceId: _deviceId.isEmpty ? null : _deviceId);
+      final conflicts = offlineQueue.getConflictEvents().length;
 
-        // 2. Send to server
-        final dio = ApiClient().dio;
-        final response = await dio.post(
-          '/mobile/v1/sync',
-          data: {
-            'deviceId': deviceId,
-            'lastSyncedAt': DateTime.now().toIso8601String(),
-            'mutations': mutations,
-          },
-        );
-
-        final body = response.data;
-        final processed = body is Map
-            ? (body['processedMutations'] as List? ?? const [])
-            : const <dynamic>[];
-        final conflictList = body is Map
-            ? (body['conflicts'] as List? ?? const [])
-            : const <dynamic>[];
-        final confirmedIds = processed.map((id) => id.toString()).toSet();
-
-        // 3. Handle confirmations
-        for (final event in pendingEvents) {
-          if (confirmedIds.contains(event.clientEventId)) {
-            await offlineQueue.markCompleted(event.clientEventId);
-            confirmed++;
-          } else {
-            await offlineQueue.markFailed(
-              event.clientEventId,
-              'Server did not confirm mutation',
-            );
-          }
-        }
-
-        // 4. Track conflicts
-        conflicts = conflictList.length;
-        state = state.copyWith(pendingConflictCount: conflicts);
-        if (conflicts > 0) {
-          debugPrint('[SyncCoordinator] $conflicts conflicts detected');
-        }
-      }
-
-      // 5. Drain media outbox
+      // Drain media outbox
       final mediaDrain = ref.read(mediaDrainProvider.notifier);
       await mediaDrain.drain();
 
       state = state.copyWith(
         isSyncing: false,
         lastSuccessfulSync: DateTime.now(),
+        pendingConflictCount: conflicts,
       );
 
       debugPrint('[SyncCoordinator] Sync completed (trigger: $trigger, confirmed: $confirmed, conflicts: $conflicts)');

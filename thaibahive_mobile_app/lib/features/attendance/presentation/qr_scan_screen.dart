@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:thaibahive_mobile/core/services/location_service.dart';
+import 'package:thaibahive_mobile/core/services/network_service.dart';
 import 'package:thaibahive_mobile/features/attendance/data/attendance_provider.dart';
 
 class QRScanScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,14 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
 
   void _onDetect(BarcodeCapture capture) {
     if (_isProcessing) return;
+    final isOnline = ref.read(isOnlineProvider);
+    if (!isOnline) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'QR Check-in requires an active internet connection';
+      });
+      return;
+    }
 
     for (final barcode in capture.barcodes) {
       final rawValue = barcode.rawValue;
@@ -96,54 +105,92 @@ class _QRScanScreenState extends ConsumerState<QRScanScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isOnline = ref.watch(isOnlineProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan QR Code'),
         actions: [
-          IconButton(
-            icon: ValueListenableBuilder<MobileScannerState>(
-              valueListenable: _controller!,
-              builder: (_, state, __) {
-                return Icon(
-                  state.torchState == TorchState.on
-                      ? Icons.flash_on_rounded
-                      : Icons.flash_off_rounded,
-                );
-              },
+          if (isOnline)
+            IconButton(
+              icon: ValueListenableBuilder<MobileScannerState>(
+                valueListenable: _controller!,
+                builder: (_, state, __) {
+                  return Icon(
+                    state.torchState == TorchState.on
+                        ? Icons.flash_on_rounded
+                        : Icons.flash_off_rounded,
+                  );
+                },
+              ),
+              onPressed: () => _controller!.toggleTorch(),
             ),
-            onPressed: () => _controller!.toggleTorch(),
-          ),
         ],
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          MobileScanner(
-            controller: _controller!,
-            onDetect: _onDetect,
-          ),
-          _buildOverlay(theme),
-          if (_isProcessing)
-            Container(
-              color: Colors.black54,
-              child: const Center(
+      body: !isOnline
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
+                    Icon(
+                      Icons.wifi_off_rounded,
+                      size: 64,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 16),
                     Text(
-                      'Processing check-in...',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      'Connection Required',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'QR Check-in requires an active internet connection. Please connect to the internet or use NFC Check-in instead.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.tonal(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Go Back'),
                     ),
                   ],
                 ),
               ),
+            )
+          : Stack(
+              fit: StackFit.expand,
+              children: [
+                MobileScanner(
+                  controller: _controller!,
+                  onDetect: _onDetect,
+                ),
+                _buildOverlay(theme),
+                if (_isProcessing)
+                  Container(
+                    color: Colors.black54,
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: Colors.white),
+                          SizedBox(height: 16),
+                          Text(
+                            'Processing check-in...',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (_hasError) _buildErrorOverlay(theme),
+              ],
             ),
-          if (_hasError) _buildErrorOverlay(theme),
-        ],
-      ),
     );
   }
 

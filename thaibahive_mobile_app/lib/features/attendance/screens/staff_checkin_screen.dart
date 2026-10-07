@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/attendance_provider.dart';
+import '../data/attendance_provider.dart';
 
 class StaffCheckinScreen extends ConsumerWidget {
   const StaffCheckinScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(attendanceProvider);
+    final state = ref.watch(attendanceProvider);
     final notifier = ref.read(attendanceProvider.notifier);
+
+    final isCheckedIn = state.stats?.todayStatus == 'present' &&
+        (state.lastAction?.checkOut == null && !state.isOfflineCheckOut);
+    final checkInTime = state.lastAction?.checkIn ??
+        (state.logs.isNotEmpty ? state.logs.first.checkIn : null);
+    final checkOutTime = state.lastAction?.checkOut ??
+        (state.logs.isNotEmpty ? state.logs.first.checkOut : null);
 
     return Scaffold(
       appBar: AppBar(
@@ -24,30 +31,30 @@ class StaffCheckinScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: status.isCheckedIn ? Colors.green.shade50 : Colors.blue.shade50,
+                color: isCheckedIn ? Colors.green.shade50 : Colors.blue.shade50,
                 border: Border.all(
-                  color: status.isCheckedIn ? Colors.green : Colors.blue,
+                  color: isCheckedIn ? Colors.green : Colors.blue,
                   width: 3,
                 ),
               ),
               child: Icon(
-                status.isCheckedIn ? Icons.access_time_filled : Icons.access_time,
+                isCheckedIn ? Icons.access_time_filled : Icons.access_time,
                 size: 72,
-                color: status.isCheckedIn ? Colors.green : Colors.blue,
+                color: isCheckedIn ? Colors.green : Colors.blue,
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              status.isCheckedIn ? 'Checked In' : 'Not Checked In',
+              isCheckedIn ? 'Checked In' : 'Not Checked In',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: status.isCheckedIn ? Colors.green.shade800 : Colors.black87,
+                color: isCheckedIn ? Colors.green.shade800 : Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              status.isCheckedIn
+              isCheckedIn
                   ? 'Active shift started. Tap below to check out.'
                   : 'Tap below to record your campus attendance check-in.',
               textAlign: TextAlign.center,
@@ -65,8 +72,8 @@ class StaffCheckinScreen extends ConsumerWidget {
                       children: [
                         const Text('Check-in Time:'),
                         Text(
-                          status.checkInTime != null
-                              ? status.checkInTime!.substring(11, 16)
+                          checkInTime != null && checkInTime.length >= 5
+                              ? checkInTime
                               : '--:--',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
@@ -78,8 +85,8 @@ class StaffCheckinScreen extends ConsumerWidget {
                       children: [
                         const Text('Check-out Time:'),
                         Text(
-                          status.checkOutTime != null
-                              ? status.checkOutTime!.substring(11, 16)
+                          checkOutTime != null && checkOutTime.length >= 5
+                              ? checkOutTime
                               : '--:--',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
@@ -95,12 +102,12 @@ class StaffCheckinScreen extends ConsumerWidget {
               height: 54,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: status.isCheckedIn ? Colors.red : Colors.green,
+                  backgroundColor: isCheckedIn ? Colors.red : Colors.green,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
-                  if (status.isCheckedIn) {
+                  if (isCheckedIn) {
                     await notifier.checkOut();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -116,9 +123,9 @@ class StaffCheckinScreen extends ConsumerWidget {
                     }
                   }
                 },
-                icon: Icon(status.isCheckedIn ? Icons.logout : Icons.login),
+                icon: Icon(isCheckedIn ? Icons.logout : Icons.login),
                 label: Text(
-                  status.isCheckedIn ? 'Check Out' : 'Check In Now',
+                  isCheckedIn ? 'Check Out' : 'Check In Now',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
