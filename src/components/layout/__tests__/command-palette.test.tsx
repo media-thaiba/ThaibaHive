@@ -134,4 +134,37 @@ describe("Web CommandPalette Universal Search Component", () => {
     expect(mockPush).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("loads and displays recent searches from localStorage", async () => {
+    localStorage.setItem(
+      "thaibahive_recent_searches_v1",
+      JSON.stringify(["Physics Lab", "Admission Forms"])
+    );
+
+    render(<CommandPalette open={true} onOpenChange={jest.fn()} />);
+
+    expect(screen.getByText("Recent Searches")).toBeInTheDocument();
+    expect(screen.getByText("Physics Lab")).toBeInTheDocument();
+    expect(screen.getByText("Admission Forms")).toBeInTheDocument();
+  });
+
+  it("shows error and allows retry on search failure", async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "Internal Server Error" }),
+    });
+
+    render(<CommandPalette open={true} onOpenChange={jest.fn()} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.change(input, { target: { value: "error-query" } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Search failed with status: 500/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Retry/i)).toBeInTheDocument();
+  });
 });
+

@@ -81,6 +81,13 @@ type SelectableItem =
   | { type: "entity"; data: SearchResultItem }
   | { type: "recent"; data: string };
 
+/**
+ * Universal Command Center (CommandPalette)
+ *
+ * Provides Cmd+K / Ctrl+K keyboard shortcut driven omnibox navigation and
+ * universal cross-entity search across 15 entity types and workspaces.
+ * Complies with WCAG 2.1 combobox keyboard navigation and live regions.
+ */
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const { currentWorkspace, availableWorkspaces } = useWorkspace();
@@ -91,6 +98,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const {
     query,
     setQuery,
+    results,
     flatEntityResults,
     loading,
     error,
