@@ -14,9 +14,7 @@ jobs:
       - name: Validate required secrets
         run: |
           missing=()
-          [ -z "${{ secrets.NEXT_PUBLIC_APP_URL }}" ] && missing+=("NEXT_PUBLIC_APP_URL")
           [ -z "${{ secrets.CRON_SECRET }}" ] && missing+=("CRON_SECRET")
-          [ -z "${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}" ] && missing+=("SYSTEM_ADMIN_SESSION_TOKEN")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required secrets for nonce cleanup: ${missing[*]}"
             exit 1
@@ -24,16 +22,13 @@ jobs:
 
       - name: Invoke nonce cleanup endpoint
         run: |
-          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL || 'https://thaiba-hive.vercel.app' }}"
           CRON_SECRET="${{ secrets.CRON_SECRET }}"
-          SESSION_TOKEN="${{ secrets.SYSTEM_ADMIN_SESSION_TOKEN }}"
           
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST "$APP_URL/api/system/cleanup-nonces" \
             -H "Content-Type: application/json" \
-            -H "x-cron-secret: $CRON_SECRET" \
-            -H "Authorization: Bearer $SESSION_TOKEN" \
-            -H "Cookie: thaibahive_session=$SESSION_TOKEN" || echo "000")
+            -H "x-cron-secret: $CRON_SECRET" || echo "000")
 
           if [ "$RESPONSE" != "200" ]; then
             echo "❌ Nonce cleanup failed with HTTP $RESPONSE against $APP_URL"

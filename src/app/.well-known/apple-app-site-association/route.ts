@@ -8,18 +8,21 @@ export async function GET() {
         {
           appID: "TEAMID1234.com.thaiba.thaibahive",
           paths: [
-            "/my-work/leaves/*",
-            "/my-work/tasks/*",
-            "/my-work/announcements/*",
-            "/my-work/approvals/*",
-            "/my-work/events/*",
-            "/my-work/reports/*",
-            "/operations/assets/*",
-            "/admin/marketplace/*",
+            "/my-work/*",
+            "/operations/*",
+            "/school/*",
+            "/admin/*",
+            "/portal/*",
+            "/sync-status",
+            "/share/*",
+            "/verify/*",
             "/"
           ]
         }
       ]
+    },
+    webcredentials: {
+      apps: ["TEAMID1234.com.thaiba.thaibahive"]
     }
   };
 
