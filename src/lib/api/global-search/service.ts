@@ -19,7 +19,7 @@ import {
   mediaAssets,
   staffInstitutions,
 } from "@/db/schema";
-import { like, ilike, or, and, eq, inArray, isNull } from "drizzle-orm";
+import { like, ilike, or, and, eq, inArray, isNull, type Column, type SQL } from "drizzle-orm";
 import type {
   EntityType,
   SearchResultItem,
@@ -27,7 +27,7 @@ import type {
 } from "./types";
 import { ENTITY_ROUTE_STRATEGY_MAP } from "./types";
 
-function searchPattern(col: any, query: string) {
+function searchPattern(col: Column | SQL, query: string) {
   const pattern = `%${query}%`;
   return isPostgres ? ilike(col, pattern) : like(col, pattern);
 }

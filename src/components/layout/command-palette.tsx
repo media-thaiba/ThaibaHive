@@ -360,7 +360,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5 px-3 py-1">
-                      {recentSearches.map((term, i) => {
+                      {recentSearches.map((term) => {
                         const itemIndex = currentItemIndex++;
                         return (
                           <div
@@ -564,7 +564,6 @@ function EntityCommandItem({
       )}
     >
       {item.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={item.avatarUrl}
           alt={item.title}
