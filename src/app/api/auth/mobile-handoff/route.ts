@@ -1,18 +1,39 @@
 import { NextResponse } from "next/server";
-import { jwtVerify } from "jose";
 import { db } from "@/db";
 import { staff, usedNonces } from "@/db/schema";
 import { createSession } from "@/lib/auth";
-import { getJwtSecretBytes } from "@thaiba/auth";
+import { verifyMobileNonce } from "@/lib/auth/mobile-nonce-service";
 import { checkDistributedRateLimit, extractIp } from "@/lib/api/rate-limit";
 import { eq } from "drizzle-orm";
 
 function redirectWithError(code: string, message: string) {
   const url = `/auth/error?code=${encodeURIComponent(code)}&message=${encodeURIComponent(message)}`;
-  return NextResponse.redirect(new URL(url, process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
+  return NextResponse.redirect(new URL(url, process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"), {
+    status: 302,
+  });
 }
 
-export async function POST(request: Request) {
+function sanitizeRedirect(rawRedirect?: string | null): string {
+  if (!rawRedirect || typeof rawRedirect !== "string") return "/";
+  try {
+    const parsed = new URL(rawRedirect, "http://localhost");
+    if (
+      rawRedirect.startsWith("/") &&
+      !rawRedirect.startsWith("//") &&
+      !rawRedirect.includes("\\") &&
+      !rawRedirect.includes("://") &&
+      !rawRedirect.includes("\r") &&
+      !rawRedirect.includes("\n")
+    ) {
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+  } catch {
+    return "/";
+  }
+  return "/";
+}
+
+async function handleMobileHandoff(request: Request) {
   try {
     const ip = extractIp(request);
     const rl = await checkDistributedRateLimit(ip, "auth");
@@ -20,33 +41,33 @@ export async function POST(request: Request) {
       return redirectWithError("rate_limited", "Too many requests. Please try again later.");
     }
 
+    let nonce: string | null = null;
     const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      nonce = authHeader.split(" ")[1];
+    } else {
+      const url = new URL(request.url);
+      nonce = url.searchParams.get("nonce");
+    }
+
+    if (!nonce) {
       return redirectWithError("missing_nonce", "Missing authentication token.");
     }
 
-    const nonce = authHeader.split(" ")[1];
-
-    let payload;
-    try {
-      const result = await jwtVerify(nonce, getJwtSecretBytes("session"), {
-        algorithms: ["HS256"],
-      });
-      payload = result.payload as Record<string, unknown>;
-    } catch {
+    const payload = await verifyMobileNonce(nonce);
+    if (!payload) {
       return redirectWithError("invalid_nonce", "Invalid or expired authentication token.");
     }
 
-    const jti = payload.jti as string | undefined;
-    if (!jti) {
+    const { jti, staffId, exp, tokenVersion: payloadTokenVersion, targetUrl } = payload;
+    if (!jti || !staffId) {
       return redirectWithError("invalid_nonce", "Token missing identifier.");
     }
 
-    const expiresAt = payload.exp as number | undefined;
     try {
       await db.insert(usedNonces).values({
         jti,
-        expiresAt: expiresAt ? new Date(expiresAt * 1000).toISOString() : new Date(Date.now() + 60_000).toISOString(),
+        expiresAt: exp ? new Date(exp * 1000).toISOString() : new Date(Date.now() + 60_000).toISOString(),
       }).run();
     } catch (err: unknown) {
       console.warn("[Security Audit] Nonce replay attempt blocked - Unique constraint failure:", {
@@ -55,11 +76,6 @@ export async function POST(request: Request) {
         error: err instanceof Error ? err.message : String(err),
       });
       return redirectWithError("replay_detected", "Token has already been used.");
-    }
-
-    const staffId = payload.staffId as string;
-    if (!staffId) {
-      return redirectWithError("invalid_token", "Token missing user identifier.");
     }
 
     const user = await db
@@ -85,22 +101,14 @@ export async function POST(request: Request) {
       return redirectWithError("account_deactivated", "Account has been deactivated.");
     }
 
-    const tokenVersion = payload.tokenVersion as number | undefined;
-    if (tokenVersion !== undefined && user.tokenVersion !== tokenVersion) {
+    const userTokenVersion = user.tokenVersion ?? 0;
+    const nonceTokenVersion = payloadTokenVersion ?? 0;
+    if (userTokenVersion !== nonceTokenVersion) {
       return redirectWithError("session_invalid", "Session is no longer valid. Please login again.");
     }
 
-    const rawRedirect = new URL(request.url).searchParams.get("redirect") || "/";
-    // Validate redirect is a same-origin relative path (no protocol-relative or absolute URLs)
-    let redirectPath = "/";
-    if (
-      rawRedirect.startsWith("/") &&
-      !rawRedirect.startsWith("//") &&
-      !rawRedirect.startsWith("/\\") &&
-      !rawRedirect.startsWith("\\/")
-    ) {
-      redirectPath = rawRedirect;
-    }
+    const rawRedirect = new URL(request.url).searchParams.get("redirect") || targetUrl || "/";
+    const redirectPath = sanitizeRedirect(rawRedirect);
 
     await createSession({
       staffId: user.id,
@@ -118,4 +126,12 @@ export async function POST(request: Request) {
     console.error("Mobile handoff error:", error);
     return redirectWithError("handoff_failed", "An unexpected error occurred during authentication.");
   }
+}
+
+export async function GET(request: Request) {
+  return handleMobileHandoff(request);
+}
+
+export async function POST(request: Request) {
+  return handleMobileHandoff(request);
 }

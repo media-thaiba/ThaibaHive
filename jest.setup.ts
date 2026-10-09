@@ -52,13 +52,27 @@ if (typeof global.Response === "undefined") {
   global.Response = class MockResponse {
     body: any;
     status: number;
-    headers: any;
+    headers: { get: (key: string) => string | null; set: (key: string, val: string) => void; entries: () => IterableIterator<[string, string]>; forEach: (cb: any) => void };
     constructor(body: any, init?: any) {
       this.body = body;
       this.status = init?.status || 200;
+      const headersMap = new Map<string, string>();
+      if (init?.headers) {
+        if (init.headers instanceof Map) {
+          init.headers.forEach((v: any, k: any) => headersMap.set(String(k).toLowerCase(), String(v)));
+        } else if (typeof init.headers.forEach === "function") {
+          init.headers.forEach((v: any, k: any) => headersMap.set(String(k).toLowerCase(), String(v)));
+        } else {
+          Object.entries(init.headers).forEach(([k, v]) => {
+            headersMap.set(k.toLowerCase(), String(v));
+          });
+        }
+      }
       this.headers = {
-        get: (key: string) => init?.headers?.[key] || null,
-        forEach: () => {}
+        get: (key: string) => headersMap.get(key.toLowerCase()) || null,
+        set: (key: string, val: string) => headersMap.set(key.toLowerCase(), String(val)),
+        entries: () => headersMap.entries(),
+        forEach: (cb: any) => headersMap.forEach(cb),
       };
     }
     async json() {
@@ -69,6 +83,12 @@ if (typeof global.Response === "undefined") {
     }
     static json(data: any, init?: any) {
       return new MockResponse(data, init);
+    }
+    static redirect(url: string | URL, status = 302) {
+      return new MockResponse(null, {
+        status,
+        headers: { location: url.toString() },
+      });
     }
   } as any;
 }

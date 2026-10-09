@@ -1,4 +1,5 @@
-import { randomBytes } from "crypto";
+import { SignJWT, jwtVerify } from "jose";
+import { getJwtSecretBytes } from "@thaiba/auth";
 
 export interface MobileNoncePayload {
   staffId: string;
@@ -9,16 +10,13 @@ export interface MobileNoncePayload {
   tokenVersion?: number;
   targetUrl?: string;
   deviceId?: string;
-  createdAt: number;
-  expiresAt: number;
+  institutionId?: string | null;
 }
 
-// In-memory nonce store with TTL expiration
-const nonceStore = new Map<string, MobileNoncePayload>();
-const NONCE_TTL_MS = 60_000; // 60 seconds TTL
+export const NONCE_TTL_SECONDS = 60; // 60 seconds TTL
 
 /**
- * Creates a short-lived single-use mobile authentication handoff nonce.
+ * Creates a short-lived single-use mobile authentication handoff nonce as an HMAC-signed JWT.
  */
 export async function createMobileNonce(params: {
   staffId: string;
@@ -29,25 +27,34 @@ export async function createMobileNonce(params: {
   tokenVersion?: number;
   targetUrl?: string;
   deviceId?: string;
+  institutionId?: string | null;
 }): Promise<{ nonce: string; expiresAt: string; redirectUrl: string }> {
-  const nonce = `mhn_${randomBytes(16).toString("hex")}`;
-  const now = Date.now();
-  const expiresAtMs = now + NONCE_TTL_MS;
-  const expiresAtISO = new Date(expiresAtMs).toISOString();
-
-  const payload: MobileNoncePayload = {
-    ...params,
-    createdAt: now,
-    expiresAt: expiresAtMs,
-  };
-
-  nonceStore.set(nonce, payload);
-
-  // Clean up expired nonces
-  cleanExpiredNonces();
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAtSeconds = now + NONCE_TTL_SECONDS;
+  const expiresAtISO = new Date(expiresAtSeconds * 1000).toISOString();
+  const jti = crypto.randomUUID();
 
   const target = params.targetUrl || "/";
-  const redirectUrl = `/auth/mobile-handoff?nonce=${nonce}&redirect=${encodeURIComponent(target)}`;
+
+  const nonce = await new SignJWT({
+    jti,
+    staffId: params.staffId,
+    email: params.email,
+    role: params.role,
+    employeeId: params.employeeId ?? null,
+    name: params.name ?? "",
+    tokenVersion: params.tokenVersion ?? 0,
+    institutionId: params.institutionId ?? null,
+    targetUrl: target,
+    deviceId: params.deviceId,
+    purpose: "mobile_handoff",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt(now)
+    .setExpirationTime(expiresAtSeconds)
+    .sign(getJwtSecretBytes("session"));
+
+  const redirectUrl = `/auth/mobile-handoff?nonce=${encodeURIComponent(nonce)}&redirect=${encodeURIComponent(target)}`;
 
   return {
     nonce,
@@ -57,34 +64,43 @@ export async function createMobileNonce(params: {
 }
 
 /**
- * Verifies and burns (deletes) a mobile handoff nonce. Returns null if invalid or expired.
+ * Verifies a mobile handoff nonce JWT. Returns the payload or null if invalid/expired.
  */
-export async function verifyAndBurnNonce(nonce: string): Promise<MobileNoncePayload | null> {
-  cleanExpiredNonces();
-
-  const payload = nonceStore.get(nonce);
-  if (!payload) {
-    return null;
-  }
-
-  // Immediately burn nonce (single-use guarantee)
-  nonceStore.delete(nonce);
-
-  if (Date.now() > payload.expiresAt) {
-    return null;
-  }
-
-  return payload;
-}
-
-/**
- * Utility to clear expired nonces from memory store.
- */
-function cleanExpiredNonces(): void {
-  const now = Date.now();
-  for (const [nonce, payload] of nonceStore.entries()) {
-    if (now > payload.expiresAt) {
-      nonceStore.delete(nonce);
+export async function verifyMobileNonce(nonce: string): Promise<{
+  jti: string;
+  staffId: string;
+  email: string;
+  role: string;
+  employeeId?: string | null;
+  name?: string;
+  tokenVersion?: number;
+  targetUrl?: string;
+  deviceId?: string;
+  institutionId?: string | null;
+  exp?: number;
+} | null> {
+  try {
+    const result = await jwtVerify(nonce, getJwtSecretBytes("session"), {
+      algorithms: ["HS256"],
+    });
+    const payload = result.payload as Record<string, unknown>;
+    if (payload.purpose !== "mobile_handoff" || !payload.jti || !payload.staffId) {
+      return null;
     }
+    return payload as unknown as {
+      jti: string;
+      staffId: string;
+      email: string;
+      role: string;
+      employeeId?: string | null;
+      name?: string;
+      tokenVersion?: number;
+      targetUrl?: string;
+      deviceId?: string;
+      institutionId?: string | null;
+      exp?: number;
+    };
+  } catch {
+    return null;
   }
 }

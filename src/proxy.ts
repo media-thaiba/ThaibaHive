@@ -36,6 +36,7 @@ const exactPublicPaths = new Set([
   "/mission",
   "/enquiry",
   "/affiliation",
+  "/apple-app-site-association",
   "/favicon.ico",
 ]);
 
@@ -43,6 +44,7 @@ const prefixPublicPaths = [
   "/_next",
   "/Logo",
   "/portal",
+  "/.well-known/",
   "/api/public/",
   "/api/media/share-links/",
   "/share/",
