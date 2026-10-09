@@ -11,7 +11,8 @@ enum AuthMode { signIn, signUp, google, forgotPassword }
 
 class LoginScreen extends ConsumerStatefulWidget {
   final String? initialMode;
-  const LoginScreen({super.key, this.initialMode});
+  final String? redirect;
+  const LoginScreen({super.key, this.initialMode, this.redirect});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -184,7 +185,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.status == AuthStatus.authenticated) {
-        context.go('/dashboard');
+        final dest = widget.redirect;
+        if (dest != null && dest.isNotEmpty && dest.startsWith('/')) {
+          context.go(dest);
+        } else {
+          context.go('/today');
+        }
       } else if (next.status == AuthStatus.error && next.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
