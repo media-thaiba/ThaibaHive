@@ -7093,6 +7093,69 @@ export const financialReconciliationItems = sqliteTable("financial_reconciliatio
   reconItemSourceIdx: index("idx_recon_item_source").on(t.sourceType, t.sourceReferenceId),
 }));
 
+// ─── Phase 6: Real-Time Push & Messaging Mesh ───
+
+export const chatChannels = sqliteTable("chat_channels", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull().default("group"), // 'direct' | 'group' | 'announcement'
+  createdById: text("created_by_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  avatarUrl: text("avatar_url"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  chatChannelsInstTypeIdx: index("idx_chat_channels_inst_type").on(t.institutionId, t.type, t.isActive),
+  chatChannelsInstIdx: index("idx_chat_channels_inst").on(t.institutionId),
+}));
+
+export const chatMembers = sqliteTable("chat_members", {
+  id: text("id").primaryKey(),
+  channelId: text("channel_id").notNull().references(() => chatChannels.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"), // 'owner' | 'admin' | 'member'
+  joinedAt: text("joined_at").notNull().default(sql`(current_timestamp)`),
+  lastReadAt: text("last_read_at"),
+  mutedUntil: text("muted_until"),
+}, (t) => ({
+  chatMembersChannelStaffIdx: uniqueIndex("idx_chat_members_channel_staff").on(t.channelId, t.staffId),
+  chatMembersStaffIdx: index("idx_chat_members_staff").on(t.staffId),
+  chatMembersChannelIdx: index("idx_chat_members_channel").on(t.channelId),
+}));
+
+export const chatChannelMessages = sqliteTable("chat_channel_messages", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  channelId: text("channel_id").notNull().references(() => chatChannels.id, { onDelete: "cascade" }),
+  senderId: text("sender_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  clientMessageId: text("client_message_id"),
+  content: text("content").notNull(),
+  type: text("type").notNull().default("text"), // 'text' | 'image' | 'file' | 'system'
+  replyToId: text("reply_to_id"),
+  attachmentUrl: text("attachment_url"),
+  editedAt: text("edited_at"),
+  deletedAt: text("deleted_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  chatMessagesChannelCreatedIdx: index("idx_chat_channel_msg_channel_created").on(t.channelId, t.createdAt),
+  chatMessagesInstChannelIdx: index("idx_chat_channel_msg_inst_channel").on(t.institutionId, t.channelId),
+  chatMessagesSenderClientIdx: index("idx_chat_channel_msg_sender_client").on(t.senderId, t.clientMessageId),
+}));
+
+export const chatReceipts = sqliteTable("chat_receipts", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").notNull().references(() => chatChannelMessages.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("delivered"), // 'delivered' | 'read'
+  deliveredAt: text("delivered_at").notNull().default(sql`(current_timestamp)`),
+  readAt: text("read_at"),
+}, (t) => ({
+  chatReceiptsMsgStaffIdx: uniqueIndex("idx_chat_receipts_msg_staff").on(t.messageId, t.staffId),
+  chatReceiptsStaffIdx: index("idx_chat_receipts_staff").on(t.staffId),
+}));
+
+
 
 
 
