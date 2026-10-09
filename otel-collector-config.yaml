@@ -1,0 +1,73 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'thaibahive-web'
+          static_configs:
+            - targets: ['thaibahive-web:3000']
+              labels:
+                service: 'thaibahive-web'
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  resource:
+    attributes:
+      - key: service.name
+        value: "thaibahive-web"
+        action: upsert
+      - key: deployment.environment
+        value: "production"
+        action: upsert
+      - key: service.version
+        value: "${APP_VERSION:-v3.36.0}"
+        action: upsert
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8888"
+    namespace: "thaibahive"
+    const_labels:
+      cluster: "thaibahive"
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+    labels:
+      attributes:
+        - key: service.name
+        - key: deployment.environment
+  tempo:
+    endpoint: "tempo:4317"
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [tempo]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch, resource]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [loki]
+  telemetry:
+    logs:
+      level: "info"
+    metrics:
+      level: "detailed"
+      address: "0.0.0.0:8888"

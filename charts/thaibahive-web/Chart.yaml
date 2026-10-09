@@ -1,0 +1,13 @@
+apiVersion: v2
+name: thaibahive-web
+description: ThaibaHive Web Application Helm Chart
+type: application
+version: 3.36.0
+appVersion: "v3.36.0"
+keywords:
+  - thaibahive
+  - education
+  - nextjs
+maintainers:
+  - name: ThaibaHive Team
+    email: ops@thaibahive.com

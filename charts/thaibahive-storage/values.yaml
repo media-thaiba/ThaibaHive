@@ -1,0 +1,54 @@
+image:
+  repository: minio/minio
+  tag: "RELEASE.2024-01-01"
+  pullPolicy: IfNotPresent
+
+mode: distributed
+replicas: 4
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+persistence:
+  enabled: true
+  size: 100Gi
+  storageClass: ""
+
+buckets:
+  - name: uploads
+    policy: none
+    purge: false
+  - name: backups
+    policy: none
+    purge: false
+  - name: media
+    policy: public
+    purge: false
+
+auth:
+  existingSecret: thaibahive-minio-secrets
+  secretKeys:
+    accessKey: minio-access-key
+    secretKey: minio-secret-key
+
+console:
+  enabled: true
+  ingress:
+    enabled: true
+    host: minio.thaibahive.example.com
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+lifecycleRules:
+  - id: abort-incomplete-multipart-uploads
+    enabled: true
+    abortIncompleteMultipartUploadDaysAfterInitiation: 7
+
+serviceMonitor:
+  enabled: true
+  interval: 30s

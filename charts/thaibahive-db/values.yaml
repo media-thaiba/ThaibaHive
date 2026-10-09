@@ -1,0 +1,104 @@
+image:
+  repository: postgres
+  tag: "16-alpine"
+  pullPolicy: IfNotPresent
+
+postgresql:
+  username: postgres
+  database: thaibahive
+  existingSecret: thaibahive-db-secrets
+  secretKeys:
+    adminPasswordKey: postgres-password
+    replicationPasswordKey: replication-password
+
+persistence:
+  enabled: true
+  size: 50Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+
+primary:
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+
+  configuration: |
+    max_connections = 200
+    shared_buffers = 1GB
+    effective_cache_size = 3GB
+    maintenance_work_mem = 256MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+    default_statistics_target = 100
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    work_mem = 4MB
+    min_wal_size = 1GB
+    max_wal_size = 4GB
+
+pgbouncer:
+  enabled: true
+  image:
+    repository: edoburu/pgbouncer
+    tag: latest
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  config:
+    pool_mode: transaction
+    max_client_conn: 1000
+    default_pool_size: 25
+    min_pool_size: 10
+    reserve_pool_size: 5
+
+replication:
+  enabled: true
+  replicas: 2
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  image:
+    repository: prodrigestivill/postgres-backup-local
+    tag: v12
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  s3:
+    bucket: thaibahive-db-backups
+    region: ap-south-1
+    endpoint: https://s3.ap-south-1.amazonaws.com
+  existingSecret: thaibahive-backup-secrets
+
+serviceMonitor:
+  enabled: true
+  interval: 30s

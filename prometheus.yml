@@ -1,0 +1,75 @@
+# Prometheus Configuration for ThaibaHive
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'thaibahive'
+    environment: 'production'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+scrape_configs:
+  # ─── ThaibaHive Web Application ────────────────────────────────────────
+  - job_name: 'thaibahive-web'
+    metrics_path: '/api/system/metrics'
+    scheme: 'http'
+    static_configs:
+      - targets: ['thaibahive-web:3000']
+        labels:
+          service: 'thaibahive-web'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: thaibahive-web:3000
+
+  # ─── Node Exporter (Host Metrics) ──────────────────────────────────────
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+        labels:
+          service: 'node-exporter'
+
+  # ─── PostgreSQL Exporter ───────────────────────────────────────────────
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9187']
+        labels:
+          service: 'postgres'
+
+  # ─── Redis Exporter ────────────────────────────────────────────────────
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9121']
+        labels:
+          service: 'redis'
+
+  # ─── Nginx Exporter ────────────────────────────────────────────────────
+  - job_name: 'nginx-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9113']
+        labels:
+          service: 'nginx'
+
+  # ─── Prometheus Self-Monitoring ────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ─── Alertmanager ──────────────────────────────────────────────────────
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  # ─── OpenTelemetry Collector ───────────────────────────────────────────
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']

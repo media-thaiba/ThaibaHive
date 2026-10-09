@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "thaibahive-db.fullname" . }}-primary
+  labels:
+    {{- include "thaibahive-db.labels" . | nindent 4 }}
+    role: primary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "thaibahive-db.selectorLabels" . | nindent 4 }}
+    role: primary
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "thaibahive-db.fullname" . }}-replicas
+  labels:
+    {{- include "thaibahive-db.labels" . | nindent 4 }}
+    role: replica
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "thaibahive-db.selectorLabels" . | nindent 4 }}
+    role: replica

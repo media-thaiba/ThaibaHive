@@ -1,0 +1,13 @@
+apiVersion: v2
+name: thaibahive-cache
+description: ThaibaHive Redis Cache Helm Chart
+type: application
+version: 3.36.0
+appVersion: "7.2"
+keywords:
+  - thaibahive
+  - redis
+  - cache
+maintainers:
+  - name: ThaibaHive Team
+    email: ops@thaibahive.com

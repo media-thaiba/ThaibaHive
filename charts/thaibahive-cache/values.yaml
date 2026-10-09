@@ -1,0 +1,69 @@
+image:
+  repository: redis
+  tag: "7-alpine"
+  pullPolicy: IfNotPresent
+
+cluster:
+  enabled: false
+  nodes: 6
+  replicas: 1
+
+architecture: standalone
+
+auth:
+  enabled: true
+  existingSecret: thaibahive-redis-secrets
+  secretKeys:
+    adminPasswordKey: redis-password
+
+master:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  persistence:
+    enabled: true
+    size: 10Gi
+  config:
+    maxmemory: 512mb
+    maxmemory-policy: allkeys-lru
+    appendonly: "yes"
+    save: "900 1 300 10 60 10000"
+
+replica:
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+sentinel:
+  enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+metrics:
+  enabled: true
+  image:
+    repository: oliver006/redis_exporter
+    tag: v1.45.0
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+serviceMonitor:
+  enabled: true
+  interval: 30s

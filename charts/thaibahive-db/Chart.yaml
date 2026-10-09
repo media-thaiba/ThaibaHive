@@ -1,0 +1,13 @@
+apiVersion: v2
+name: thaibahive-db
+description: ThaibaHive PostgreSQL Database Helm Chart
+type: application
+version: 3.36.0
+appVersion: "16.0"
+keywords:
+  - thaibahive
+  - postgresql
+  - database
+maintainers:
+  - name: ThaibaHive Team
+    email: ops@thaibahive.com

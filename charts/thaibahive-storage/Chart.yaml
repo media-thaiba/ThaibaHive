@@ -1,0 +1,14 @@
+apiVersion: v2
+name: thaibahive-storage
+description: ThaibaHive MinIO Object Storage Helm Chart
+type: application
+version: 3.36.0
+appVersion: "RELEASE.2024-01-01"
+keywords:
+  - thaibahive
+  - minio
+  - s3
+  - storage
+maintainers:
+  - name: ThaibaHive Team
+    email: ops@thaibahive.com

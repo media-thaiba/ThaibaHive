@@ -1,0 +1,165 @@
+prometheus:
+  enabled: true
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      retentionSize: 50GB
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: ""
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 100Gi
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+      serviceMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: ""
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 10Gi
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 256Mi
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: ${GRAFANA_ADMIN_PASSWORD}
+  persistence:
+    enabled: true
+    size: 10Gi
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://thaibahive-observability-prometheus:9090
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://thaibahive-observability-loki:3100
+          access: proxy
+        - name: Tempo
+          type: tempo
+          url: http://thaibahive-observability-tempo:3200
+          access: proxy
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'ThaibaHive'
+          orgId: 1
+          folder: 'ThaibaHive'
+          type: file
+          disableDeletion: false
+          updateIntervalSeconds: 10
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards/thaibahive
+  dashboards:
+    thaibahive:
+      web-overview:
+        gnetId: 1860
+        revision: 1
+        datasource: Prometheus
+      kubernetes-cluster:
+        gnetId: 315
+        revision: 1
+        datasource: Prometheus
+
+loki:
+  enabled: true
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    storage:
+      type: filesystem
+      filesystem:
+        chunks_directory: /loki/chunks
+        rules_directory: /loki/rules
+    schemaConfig:
+      configs:
+        - from: 2024-01-01
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    limitsConfig:
+      rejection_rate_limit: 100
+      ingestion_rate_mb: 50
+      ingestion_burst_size_mb: 100
+      per_stream_rate_limit: 25MB
+      per_stream_rate_limit_burst: 50MB
+    persistence:
+      enabled: true
+      size: 50Gi
+
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://thaibahive-observability-loki:3100/loki/api/v1/push
+    positions:
+      filename: /tmp/positions.yaml
+    scrape_configs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_promtail]
+            action: keep
+            regex: "true"
+
+tempo:
+  enabled: true
+  tempo:
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+    persistence:
+      enabled: true
+      size: 50Gi
+    metricsGenerator:
+      registry:
+        external_labels:
+          source: tempo
+          cluster: thaibahive
+
+alertmanager:
+  enabled: true
+  alertmanager:
+    retention: 30d
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ""
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi

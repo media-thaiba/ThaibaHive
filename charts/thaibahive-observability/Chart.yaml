@@ -1,0 +1,40 @@
+apiVersion: v2
+name: thaibahive-observability
+description: ThaibaHive Observability Stack (Prometheus, Grafana, Loki, Tempo, Alertmanager)
+type: application
+version: 3.36.0
+appVersion: "1.0.0"
+keywords:
+  - thaibahive
+  - observability
+  - monitoring
+  - logging
+  - tracing
+maintainers:
+  - name: ThaibaHive Team
+    email: ops@thaibahive.com
+dependencies:
+  - name: prometheus
+    version: "25.0.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: prometheus.enabled
+  - name: grafana
+    version: "6.50.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: grafana.enabled
+  - name: loki
+    version: "6.5.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: loki.enabled
+  - name: tempo
+    version: "1.5.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: tempo.enabled
+  - name: promtail
+    version: "6.5.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: promtail.enabled
+  - name: alertmanager
+    version: "5.5.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: alertmanager.enabled
