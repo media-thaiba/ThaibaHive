@@ -80,6 +80,8 @@ import '../features/facility/screens/technician_workorder_screen.dart';
 import '../features/facility/screens/qr_asset_scanner_screen.dart';
 import '../features/agent_hub/presentation/agent_hub_screen.dart';
 import '../features/sync/presentation/sync_status_screen.dart';
+import '../features/chat/presentation/channel_list_screen.dart';
+import '../features/chat/presentation/chat_screen.dart';
 import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/transitions/page_transitions.dart';
 
@@ -245,6 +247,24 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const HelpDeskScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: 'chatChannels',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const ChannelListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/chat/:id',
+        name: 'chatRoom',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: ChatScreen(
+            channelId: state.pathParameters['id']!,
+          ),
         ),
       ),
       GoRoute(

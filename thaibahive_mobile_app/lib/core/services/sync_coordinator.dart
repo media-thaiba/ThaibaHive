@@ -13,6 +13,7 @@ import 'package:thaibahive_mobile/core/network/api_client.dart';
 import 'package:thaibahive_mobile/core/services/network_service.dart';
 import 'package:thaibahive_mobile/features/media/data/media_outbox.dart';
 import 'package:thaibahive_mobile/features/media/data/media_providers.dart';
+import 'package:thaibahive_mobile/features/chat/data/chat_outbox.dart';
 import 'offline_queue.dart';
 
 /// Sync action → entity/mutationType map (mirrors server SYNC_ACTION_ENTITY_MAP).
@@ -197,6 +198,10 @@ class SyncCoordinator extends StateNotifier<SyncCoordinatorState> {
       // Drain media outbox
       final mediaDrain = ref.read(mediaDrainProvider.notifier);
       await mediaDrain.drain();
+
+      // Drain chat outbox
+      final chatDrain = ref.read(chatDrainProvider.notifier);
+      await chatDrain.drain();
 
       state = state.copyWith(
         isSyncing: false,

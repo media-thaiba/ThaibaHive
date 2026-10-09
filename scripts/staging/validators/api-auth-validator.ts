@@ -6,7 +6,31 @@
 import { SignJWT } from "jose";
 import { db, staff } from "@thaiba/db";
 import { eq, and } from "drizzle-orm";
+import crypto from "crypto";
 import type { ValidationResult } from "./health-db-validator";
+
+const HKDF_SALT = "thaibahive:jwt:salt:v1";
+
+function deriveSessionSecret(masterSecret: string): Uint8Array {
+  let hexSecret: string;
+  if (typeof crypto !== "undefined" && typeof crypto.hkdfSync === "function") {
+    const derived = crypto.hkdfSync(
+      "sha256",
+      Buffer.from(masterSecret, "utf-8"),
+      Buffer.from(HKDF_SALT, "utf-8"),
+      Buffer.from("thaibahive:purpose:session:v1", "utf-8"),
+      32
+    );
+    hexSecret = Buffer.from(derived).toString("hex");
+  } else {
+    // Fallback using HMAC-SHA256
+    const hmac = crypto.createHmac("sha256", masterSecret);
+    hmac.update("thaibahive:purpose:session:v1");
+    hexSecret = hmac.digest("hex");
+  }
+  // Match server's getJwtSecretBytes: hex string encoded as UTF-8
+  return new TextEncoder().encode(hexSecret);
+}
 
 export async function getStaffForRole(role: string, fallbackId = "34c45253-9416-4512-9fb6-179e257e346b"): Promise<string> {
   try {
@@ -16,8 +40,10 @@ export async function getStaffForRole(role: string, fallbackId = "34c45253-9416-
       .where(and(eq(staff.role, role), eq(staff.isActive, true)))
       .limit(1)
       .get();
+    console.log(`[Smoke] getStaffForRole(${role}):`, user?.id || 'NOT FOUND - using fallback');
     return user?.id || fallbackId;
-  } catch {
+  } catch (e) {
+    console.log(`[Smoke] getStaffForRole(${role}) ERROR:`, e);
     return fallbackId;
   }
 }
@@ -28,7 +54,7 @@ export async function createTestToken(
   staffId?: string
 ): Promise<string> {
   const resolvedStaffId = staffId || (await getStaffForRole(role));
-  const secretKey = new TextEncoder().encode(jwtSecret);
+  const secretKey = deriveSessionSecret(jwtSecret);
   return new SignJWT({
     staffId: resolvedStaffId,
     email: `${role}@staging.thaibahive.local`,

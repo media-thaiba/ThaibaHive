@@ -1219,6 +1219,49 @@ export const SYNC_IMMUTABLE_RESOLVE_FIELDS = [
   "createdById",
 ] as const;
 
+// ─── Phase 6: Real-Time Chat & Messaging Mesh ───
+
+export const createChatChannelSchema = z.object({
+  name: z.string().min(1).max(100),
+  type: z.enum(["direct", "group", "announcement"]).default("group"),
+  memberIds: z.array(z.string()).default([]),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+export type CreateChatChannelInput = z.infer<typeof createChatChannelSchema>;
+
+export const updateChatChannelSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+export type UpdateChatChannelInput = z.infer<typeof updateChatChannelSchema>;
+
+export const addChatMembersSchema = z.object({
+  staffIds: z.array(z.string().min(1)).min(1),
+  role: z.enum(["member", "admin"]).default("member"),
+});
+export type AddChatMembersInput = z.infer<typeof addChatMembersSchema>;
+
+export const sendChatMessageSchema = z.object({
+  content: z.string().min(1).max(4000),
+  type: z.enum(["text", "image", "file", "system"]).default("text"),
+  clientMessageId: z.string().optional().nullable(),
+  replyToId: z.string().optional().nullable(),
+  attachmentUrl: z.string().optional().nullable(),
+});
+export type SendChatMessageInput = z.infer<typeof sendChatMessageSchema>;
+
+export const editChatMessageSchema = z.object({
+  content: z.string().min(1).max(4000),
+});
+export type EditChatMessageInput = z.infer<typeof editChatMessageSchema>;
+
+export const markChatReadSchema = z.object({
+  messageIds: z.array(z.string().min(1)).min(1),
+});
+export type MarkChatReadInput = z.infer<typeof markChatReadSchema>;
+
+
 
 
 

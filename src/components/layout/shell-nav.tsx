@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Search, Bell, Settings, Sun, Moon, Monitor } from "lucide-react";
+import { Search, Bell, Settings, Sun, Moon, Monitor, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatarDropdown } from "@/components/layout/user-avatar-dropdown";
 import { subscribeNotifications } from "@/lib/realtime/notifications";
+import { ChatDrawer } from "@/components/chat/chat-drawer";
 
 type Notification = {
   id: string;
@@ -29,6 +30,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
   const { theme, setTheme } = useTheme();
   const { currentWorkspace, allWorkspaces, setWorkspace } = useWorkspace();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
 
@@ -136,6 +138,15 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         >
           <Search className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Search...</span>
+        </button>
+
+        {/* Chat Drawer Toggle */}
+        <button
+          onClick={() => setChatOpen(true)}
+          aria-label="Open Chat (Cmd+Shift+M)"
+          className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
+        >
+          <MessageSquare className="h-[18px] w-[18px]" />
         </button>
 
         {/* Notifications */}
@@ -265,6 +276,8 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         {/* User menu */}
         <UserAvatarDropdown />
       </div>
+
+      <ChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
     </>
   );
 }
