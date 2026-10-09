@@ -11,6 +11,7 @@ import { eq, and, desc, sql, lt } from "drizzle-orm";
 import { sendChatMessageSchema } from "@/lib/validation/schemas";
 import { randomUUID } from "crypto";
 import { chatPubSub, ChatEvent } from "@/lib/chat/pubsub-broker";
+import { dispatchChatMessagePush } from "@/lib/notifications/fcm-chat-notifier";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,17 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     timestamp: now,
   };
   chatPubSub.publishToChannel(channelId, event);
+
+  // Trigger push notifications to offline / background channel members
+  try {
+    await dispatchChatMessagePush({
+      channelId,
+      message: messageRecord,
+      institutionId,
+    });
+  } catch (pushErr) {
+    console.warn("[Chat API] Push notification dispatch warning:", pushErr);
+  }
 
   return NextResponse.json({ message: messageRecord }, { status: 201 });
 }, "chat:messages:send");

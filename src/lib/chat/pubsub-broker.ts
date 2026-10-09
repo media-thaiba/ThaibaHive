@@ -154,6 +154,18 @@ export class ChatPubSubBroker {
   }
 
   /**
+   * Check if a specific user is currently connected to a channel.
+   */
+  public isUserConnected(channelId: string, staffId: string): boolean {
+    const subs = this.channelSubscribers.get(channelId);
+    if (!subs) return false;
+    for (const sub of subs) {
+      if (sub.staffId === staffId) return true;
+    }
+    return false;
+  }
+
+  /**
    * Get all active channel IDs for a user.
    */
   public getUserChannels(staffId: string): Set<string> {
