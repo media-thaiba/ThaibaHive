@@ -3,23 +3,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../../../app/theme.dart';
 import '../data/search_models.dart';
 import 'search_provider.dart';
 
 class SearchBottomSheet extends ConsumerStatefulWidget {
-  const SearchBottomSheet({super.key});
+  final bool isModal;
 
-  static Future<T?> show<T>(BuildContext context) {
-    return showModalBottomSheet<T>(
+  const SearchBottomSheet({super.key, this.isModal = true});
+
+  static Future<SearchResult?> show(BuildContext context) async {
+    final result = await showModalBottomSheet<SearchResult>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const SearchBottomSheet(),
+      builder: (context) => const SearchBottomSheet(isModal: true),
     );
+
+    if (result != null && context.mounted) {
+      if (result.routeStrategy == EntityRouteStrategy.handoff || result.isWebOnly) {
+        final target = result.targetPath ?? result.webRoute;
+        final encodedPath = Uri.encodeComponent(target);
+        final encodedTitle = Uri.encodeComponent(result.title);
+        context.push('/handoff?path=$encodedPath&title=$encodedTitle');
+      } else {
+        context.push(result.nativeRoute);
+      }
+    }
+    return result;
   }
 
   @override
@@ -62,7 +75,9 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
         _selectResult(state.results[state.selectedIndex]);
       }
     } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-      Navigator.of(context).pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -74,15 +89,17 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
       notifier.addRecentSearch(state.query.trim());
     }
 
-    Navigator.of(context).pop();
-
-    if (result.routeStrategy == EntityRouteStrategy.handoff || result.isWebOnly) {
-      final target = result.targetPath ?? result.webRoute;
-      final encodedPath = Uri.encodeComponent(target);
-      final encodedTitle = Uri.encodeComponent(result.title);
-      context.push('/handoff?path=$encodedPath&title=$encodedTitle');
+    if (widget.isModal && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(result);
     } else {
-      context.push(result.nativeRoute);
+      if (result.routeStrategy == EntityRouteStrategy.handoff || result.isWebOnly) {
+        final target = result.targetPath ?? result.webRoute;
+        final encodedPath = Uri.encodeComponent(target);
+        final encodedTitle = Uri.encodeComponent(result.title);
+        context.push('/handoff?path=$encodedPath&title=$encodedTitle');
+      } else {
+        context.push(result.nativeRoute);
+      }
     }
   }
 
@@ -663,55 +680,51 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
   }
 
   Widget _buildLoadingSkeleton(bool isDark) {
-    return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF2A2E35) : Colors.grey[300]!,
-      highlightColor: isDark ? const Color(0xFF3B414B) : Colors.grey[100]!,
-      child: ListView.builder(
-        itemCount: 6,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
+    return ListView.builder(
+      itemCount: 6,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2A2E35) : const Color(0xFFE2E8F0),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A2E35) : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: 150,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 150,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A2E35) : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

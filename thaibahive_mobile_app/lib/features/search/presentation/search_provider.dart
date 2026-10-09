@@ -143,7 +143,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
     state = state.copyWith(
       query: query,
-      isLoading: true,
       clearError: true,
       selectedIndex: -1,
     );
@@ -156,6 +155,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
   Future<void> _executeSearch(String query) async {
     final cancelToken = CancelToken();
     _cancelToken = cancelToken;
+
+    state = state.copyWith(isLoading: true);
 
     try {
       final response = await _repository.search(
