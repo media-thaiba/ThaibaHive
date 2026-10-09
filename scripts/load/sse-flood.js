@@ -94,6 +94,6 @@ export function handleSummary(data) {
   };
 }
 
-function textSummary(data, options) {
+function textSummary(data) {
   return `SSE Flood Test Summary\n${JSON.stringify(data.metrics, null, 2)}`;
 }

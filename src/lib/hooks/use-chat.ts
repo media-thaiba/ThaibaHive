@@ -64,7 +64,6 @@ export function useChat() {
   const sseRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef<number>(1000);
-  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ─── Fetch Channels ───
   const fetchChannels = useCallback(async () => {

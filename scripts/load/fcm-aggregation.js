@@ -5,7 +5,6 @@ import { Rate, Trend, Counter } from 'k6/metrics';
 const fcmNotificationsSent = new Counter('fcm_notifications_sent');
 const fcmBatchLatency = new Trend('fcm_batch_latency_ms');
 const fcmDeliveryErrors = new Rate('fcm_delivery_errors');
-const fcmAggregationAccuracy = new Trend('fcm_aggregation_accuracy');
 
 export const options = {
   scenarios: {
@@ -88,6 +87,6 @@ export function handleSummary(data) {
   };
 }
 
-function textSummary(data, options) {
+function textSummary(data) {
   return `FCM Aggregation Stress Test Summary\n${JSON.stringify(data.metrics, null, 2)}`;
 }

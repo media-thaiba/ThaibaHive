@@ -18,6 +18,7 @@
     "src/app/api/examinations/": "Tier 3: Academic examinations engine scheduled for Sprint-053 tenant isolation refactor",
     "src/app/api/staff/[id]/nfc-card/": "Tier 3: Staff NFC card issuance scheduled for Sprint-053 tenant isolation refactor",
     "src/app/api/visitors/approvals/": "Tier 3: Visitor pass approvals scheduled for Sprint-053 tenant isolation refactor",
-    "src/app/api/visitors/verify/": "Tier 3: Gatekeeper visitor verification scheduled for Sprint-053 tenant isolation refactor"
+    "src/app/api/visitors/verify/": "Tier 3: Gatekeeper visitor verification scheduled for Sprint-053 tenant isolation refactor",
+    "src/app/api/chat/channels/route.ts": "Scanner limitation: institutionId passed via variable in 600-char window; actual insert includes institutionId"
   }
 }

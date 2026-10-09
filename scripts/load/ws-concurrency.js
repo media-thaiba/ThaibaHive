@@ -1,6 +1,5 @@
-import http from 'k6/http';
 import ws from 'k6/ws';
-import { check, sleep } from 'k6';
+import { sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
 
 const wsConnections = new Rate('ws_connections');
@@ -95,6 +94,6 @@ export function handleSummary(data) {
   };
 }
 
-function textSummary(data, options) {
+function textSummary(data) {
   return `WebSocket Load Test Summary\n${JSON.stringify(data.metrics, null, 2)}`;
 }

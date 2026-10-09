@@ -58,8 +58,8 @@ export default function () {
   dbPoolWaitTime.add(latency);
 
   const success = check(res, {
-    'Query status 200': (r) => r.status === 200,
-    'Query latency < 500ms': (r) => latency < 500,
+    'Query status 200': (_r) => _r.status === 200,
+    'Query latency < 500ms': () => latency < 500,
   });
 
   if (!success) {
@@ -82,6 +82,6 @@ export function handleSummary(data) {
   };
 }
 
-function textSummary(data, options) {
+function textSummary(data) {
   return `Database Pool Saturation Test Summary\n${JSON.stringify(data.metrics, null, 2)}`;
 }

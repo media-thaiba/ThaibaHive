@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { db, sql } from "@/db";
-import { redis } from "@/lib/cache/redis-cluster";
 import { SlidingWindowAggregator } from "@/lib/observability/sliding-window-aggregator";
 
 async function checkDatabase(): Promise<{ healthy: boolean; latencyMs: number; error?: string }> {
@@ -20,7 +19,12 @@ async function checkDatabase(): Promise<{ healthy: boolean; latencyMs: number; e
 async function checkRedis(): Promise<{ healthy: boolean; latencyMs: number; error?: string }> {
   const start = Date.now();
   try {
-    await redis.ping();
+    // Use dynamic import to avoid build-time dependency
+    const { createClient } = await import('redis');
+    const client = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+    await client.connect();
+    await client.ping();
+    await client.quit();
     return { healthy: true, latencyMs: Date.now() - start };
   } catch (error) {
     return { healthy: false, latencyMs: Date.now() - start, error: String(error) };

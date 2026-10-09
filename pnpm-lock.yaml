@@ -123,6 +123,9 @@ importers:
       '@types/pdfkit':
         specifier: ^0.17.6
         version: 0.17.6
+      '@types/redis':
+        specifier: ^4.0.11
+        version: 4.0.11(@opentelemetry/api@1.9.1)
       '@vercel/functions':
         specifier: ^3.7.6
         version: 3.7.6(ws@8.21.0)
@@ -186,6 +189,9 @@ importers:
       recharts:
         specifier: ^3.10.1
         version: 3.10.1(@types/react@19.2.17)(react-dom@19.2.4(react@19.2.4))(react-is@19.2.7)(react@19.2.4)(redux@5.0.1)
+      redis:
+        specifier: ^6.3.0
+        version: 6.3.0(@opentelemetry/api@1.9.1)
       resend:
         specifier: ^6.18.0
         version: 6.18.0
@@ -353,6 +359,8 @@ importers:
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0
+
+  packages/shared: {}
 
 packages:
 
@@ -2538,6 +2546,42 @@ packages:
   '@radix-ui/rect@1.1.2':
     resolution: {integrity: sha512-xnXE7wG13PI+cxieVssYXlQJuYVRhH9NBoxt3KNwzghDIA69GMm7d4wXRouHIYjE+KvS6U/MsMO73NdS2MH9ZA==}
 
+  '@redis/bloom@6.3.0':
+    resolution: {integrity: sha512-NQ5poYpZr0jv6zazN1cy6JY5kIipKFZ3R9GTL4kOUTX3a9YAfY29U8bsE4lWhVQEM+G4V0BXVC57mubIdDijeA==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.3.0
+
+  '@redis/client@6.3.0':
+    resolution: {integrity: sha512-fHrjwGCBvAANGi+TuRuwKi83sIOzgHr8eh+Uf48w3fSX7Hhrz174NrWqfJhAC2vnN0d/tfaZpdr6+o6JC3QHwg==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@node-rs/xxhash': ^1.1.0
+      '@opentelemetry/api': '>=1 <2'
+    peerDependenciesMeta:
+      '@node-rs/xxhash':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+
+  '@redis/json@6.3.0':
+    resolution: {integrity: sha512-yt6vRfPBXtW/3qm53cF81TSQpLMjWdW4/2E9WQ2GgbvsKkuCKCFQIcMiKlil1ZMnezK+IQuS795xKU5psbaegw==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.3.0
+
+  '@redis/search@6.3.0':
+    resolution: {integrity: sha512-RPXAZmKjZZG7Tm7m1w9keFdXzbL91PiSHQBfQRe9xwW40jNsTRbG0FwhIz4QlHPU4gKDAsCy8IQHj4yZl4H9rw==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.3.0
+
+  '@redis/time-series@6.3.0':
+    resolution: {integrity: sha512-+fJOB8mN1z5WRakCJNh5lVdz1KqvHGSOistsKeitD24QsCtPwyRQXWC0iq6T/i/ubLE/YcguZqPm8F598MKk4A==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.3.0
+
   '@reduxjs/toolkit@2.12.0':
     resolution: {integrity: sha512-KiT+RzZbp6mQET+Mg+h2c97+9j1sNflUxQkIHI7Yuzf6Peu+OYpmkn6nbHWmLLWj+1ZODUJFwGZ7gx3L9R9EOw==}
     peerDependencies:
@@ -2839,6 +2883,10 @@ packages:
 
   '@types/react@19.2.17':
     resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
+
+  '@types/redis@4.0.11':
+    resolution: {integrity: sha512-bI+gth8La8Wg/QCR1+V1fhrL9+LZUSWfcqpOj2Kc80ZQ4ffbdL173vQd5wovmoV9i071FU9oP2g6etLuEwb6Rg==}
+    deprecated: This is a stub types definition. redis provides its own type definitions, so you do not need this installed.
 
   '@types/request@2.48.13':
     resolution: {integrity: sha512-FGJ6udDNUCjd19pp0Q3iTiDkwhYup7J8hpMW9c4k53NrccQFFWKRho6hvtPPEhnXWKvukfwAlB6DbDz4yhH5Gg==}
@@ -6146,6 +6194,10 @@ packages:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
     engines: {node: '>=8'}
 
+  redis@6.3.0:
+    resolution: {integrity: sha512-XFQbPie1lGpKeUZ8ySYY43yLnQy/iIQtHNvIr/1XdaABpb96rUSdm3Mfl+98FEVbv9ZJIzINMno5s0Nh8E5LEw==}
+    engines: {node: '>= 20.0.0'}
+
   redux-thunk@3.1.0:
     resolution: {integrity: sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==}
     peerDependencies:
@@ -9264,6 +9316,26 @@ snapshots:
 
   '@radix-ui/rect@1.1.2': {}
 
+  '@redis/bloom@6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.3.0(@opentelemetry/api@1.9.1)
+
+  '@redis/client@6.3.0(@opentelemetry/api@1.9.1)':
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+
+  '@redis/json@6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.3.0(@opentelemetry/api@1.9.1)
+
+  '@redis/search@6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.3.0(@opentelemetry/api@1.9.1)
+
+  '@redis/time-series@6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.3.0(@opentelemetry/api@1.9.1)
+
   '@reduxjs/toolkit@2.12.0(react-redux@9.3.0(@types/react@19.2.17)(react@19.2.4)(redux@5.0.1))(react@19.2.4)':
     dependencies:
       '@standard-schema/spec': 1.1.0
@@ -9555,6 +9627,13 @@ snapshots:
   '@types/react@19.2.17':
     dependencies:
       csstype: 3.2.3
+
+  '@types/redis@4.0.11(@opentelemetry/api@1.9.1)':
+    dependencies:
+      redis: 6.3.0(@opentelemetry/api@1.9.1)
+    transitivePeerDependencies:
+      - '@node-rs/xxhash'
+      - '@opentelemetry/api'
 
   '@types/request@2.48.13':
     dependencies:
@@ -13377,6 +13456,17 @@ snapshots:
     dependencies:
       indent-string: 4.0.0
       strip-indent: 3.0.0
+
+  redis@6.3.0(@opentelemetry/api@1.9.1):
+    dependencies:
+      '@redis/bloom': 6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))
+      '@redis/client': 6.3.0(@opentelemetry/api@1.9.1)
+      '@redis/json': 6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))
+      '@redis/search': 6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))
+      '@redis/time-series': 6.3.0(@redis/client@6.3.0(@opentelemetry/api@1.9.1))
+    transitivePeerDependencies:
+      - '@node-rs/xxhash'
+      - '@opentelemetry/api'
 
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
