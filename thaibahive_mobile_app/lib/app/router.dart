@@ -103,7 +103,8 @@ GoRouter buildRouter() {
         name: 'login',
         builder: (context, state) {
           final mode = state.uri.queryParameters['mode'];
-          return LoginScreen(initialMode: mode);
+          final redirect = state.uri.queryParameters['redirect'];
+          return LoginScreen(initialMode: mode, redirect: redirect);
         },
       ),
       GoRoute(
@@ -674,6 +675,211 @@ GoRouter buildRouter() {
           child: const SyncStatusScreen(),
         ),
       ),
+
+      // ─── Workspace: My Work Aliases ───
+      GoRoute(
+        path: '/my-work/tasks',
+        redirect: (context, state) => '/tasks',
+      ),
+      GoRoute(
+        path: '/my-work/tasks/new',
+        redirect: (context, state) => '/tasks/create',
+      ),
+      GoRoute(
+        path: '/my-work/tasks/:id',
+        redirect: (context, state) => '/tasks/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/my-work/leaves',
+        redirect: (context, state) => '/leaves',
+      ),
+      GoRoute(
+        path: '/my-work/leaves/apply',
+        redirect: (context, state) => '/leaves/apply',
+      ),
+      GoRoute(
+        path: '/my-work/leaves/balance',
+        redirect: (context, state) => '/leaves/balance',
+      ),
+      GoRoute(
+        path: '/my-work/leaves/:id',
+        redirect: (context, state) => '/leaves/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/my-work/attendance',
+        redirect: (context, state) => '/attendance',
+      ),
+      GoRoute(
+        path: '/my-work/announcements',
+        redirect: (context, state) => '/announcements',
+      ),
+      GoRoute(
+        path: '/my-work/announcements/:id',
+        redirect: (context, state) => '/announcements/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/my-work/approvals',
+        redirect: (context, state) => '/approvals',
+      ),
+      GoRoute(
+        path: '/my-work/events',
+        redirect: (context, state) => '/events',
+      ),
+      GoRoute(
+        path: '/my-work/events/:id',
+        redirect: (context, state) => '/events/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/my-work/expenses',
+        redirect: (context, state) => '/expenses',
+      ),
+      GoRoute(
+        path: '/my-work/reports',
+        redirect: (context, state) => '/reports',
+      ),
+      GoRoute(
+        path: '/my-work/reports/new',
+        redirect: (context, state) => '/reports/create',
+      ),
+      GoRoute(
+        path: '/my-work/canteen',
+        redirect: (context, state) => '/canteen',
+      ),
+      GoRoute(
+        path: '/my-work/polls',
+        redirect: (context, state) => '/polls',
+      ),
+      GoRoute(
+        path: '/my-work/polls/:id',
+        redirect: (context, state) => '/polls/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/my-work/grievances',
+        redirect: (context, state) => '/grievances',
+      ),
+      GoRoute(
+        path: '/my-work/timeline',
+        redirect: (context, state) => '/timeline',
+      ),
+      GoRoute(
+        path: '/my-work/availability',
+        redirect: (context, state) => '/availability',
+      ),
+      GoRoute(
+        path: '/my-work/settings',
+        redirect: (context, state) => '/settings',
+      ),
+      GoRoute(
+        path: '/my-work/chat',
+        redirect: (context, state) => '/agent-hub',
+      ),
+
+      // ─── Workspace: Operations Aliases ───
+      GoRoute(
+        path: '/operations/assets',
+        redirect: (context, state) => '/assets',
+      ),
+      GoRoute(
+        path: '/operations/assets/:id',
+        redirect: (context, state) => '/assets/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/operations/bookings',
+        redirect: (context, state) => '/bookings',
+      ),
+      GoRoute(
+        path: '/operations/bookings/create',
+        redirect: (context, state) => '/bookings/create',
+      ),
+      GoRoute(
+        path: '/operations/bookings/:id',
+        redirect: (context, state) => '/bookings/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/operations/media-library',
+        redirect: (context, state) => '/media',
+      ),
+      GoRoute(
+        path: '/operations/visitors',
+        redirect: (context, state) => '/visitors',
+      ),
+      GoRoute(
+        path: '/operations/fleet',
+        redirect: (context, state) => '/vehicles',
+      ),
+      GoRoute(
+        path: '/operations/accounts',
+        redirect: (context, state) => '/accounts',
+      ),
+      GoRoute(
+        path: '/operations/procurement',
+        redirect: (context, state) => '/purchases',
+      ),
+      GoRoute(
+        path: '/operations/finance/purchases',
+        redirect: (context, state) => '/finance/purchase-approvals',
+      ),
+      GoRoute(
+        path: '/operations/finance/purchases/:id',
+        redirect: (context, state) => '/finance/purchase-approvals/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/operations/finance/reconciliation',
+        redirect: (context, state) => '/finance/reconciliation',
+      ),
+      GoRoute(
+        path: '/operations/finance/reconciliation/:id',
+        redirect: (context, state) => '/finance/reconciliation/${state.pathParameters['id']}',
+      ),
+      GoRoute(
+        path: '/operations/finance',
+        redirect: (context, state) => '/finance',
+      ),
+
+      // ─── Generic Dynamic Handoff Route ───
+      GoRoute(
+        path: '/handoff',
+        name: 'handoff',
+        pageBuilder: (context, state) {
+          final target = state.uri.queryParameters['path'] ?? state.uri.queryParameters['targetPath'] ?? '/';
+          final title = state.uri.queryParameters['title'] ?? 'ThaibaHive';
+          return AppTransitions.slide(
+            state: state,
+            child: WebViewHandoffScreen(
+              targetPath: target,
+              title: title,
+            ),
+          );
+        },
+      ),
+
+      // ─── Web-Only Tier-3 Catch-all Routes ───
+      GoRoute(
+        path: '/school/:path*',
+        pageBuilder: (context, state) {
+          final path = state.uri.path;
+          return AppTransitions.slide(
+            state: state,
+            child: WebViewHandoffScreen(
+              targetPath: path,
+              title: 'School Workspace',
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/admin/:path*',
+        pageBuilder: (context, state) {
+          final path = state.uri.path;
+          return AppTransitions.slide(
+            state: state,
+            child: WebViewHandoffScreen(
+              targetPath: path,
+              title: 'Admin Console',
+            ),
+          );
+        },
+      ),
     ],
   );
 }
@@ -757,10 +963,18 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isLoggedIn = token != null && token.isNotEmpty;
 
   if (!isLoggedIn && !isAuthRoute) {
+    final target = state.uri.toString();
+    if (target.isNotEmpty && target != '/' && target != '/today' && target != '/dashboard') {
+      return '/auth/login?redirect=${Uri.encodeComponent(target)}';
+    }
     return '/auth/login';
   }
 
   if (isLoggedIn && isAuthRoute) {
+    final redirectParam = state.uri.queryParameters['redirect'];
+    if (redirectParam != null && redirectParam.isNotEmpty && redirectParam.startsWith('/')) {
+      return redirectParam;
+    }
     return '/today';
   }
 

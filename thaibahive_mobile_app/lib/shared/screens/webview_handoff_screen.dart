@@ -37,6 +37,16 @@ class WebViewHandoffScreen extends ConsumerStatefulWidget {
     required this.title,
   });
 
+  /// Extracts the cookie value from a Set-Cookie header (e.g., 'thaibahive_session=abc; Path=/; HttpOnly' -> 'abc')
+  static String extractCookieValue(String setCookieHeader) {
+    final firstPart = setCookieHeader.split(';').first.trim();
+    final equalsIndex = firstPart.indexOf('=');
+    if (equalsIndex != -1) {
+      return firstPart.substring(equalsIndex + 1).trim();
+    }
+    return firstPart;
+  }
+
   @override
   ConsumerState<WebViewHandoffScreen> createState() =>
       _WebViewHandoffScreenState();
@@ -83,6 +93,17 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
         ),
       );
 
+      if (handoffResponse.statusCode == 401) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Session expired. Please log in again.';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       final setCookie = handoffResponse.headers.value('set-cookie');
       final location = handoffResponse.headers.value('location');
 
@@ -90,7 +111,7 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
         final cookieManager = WebViewCookieManager();
         final cookie = WebViewCookie(
           name: 'thaibahive_session',
-          value: _extractCookieValue(setCookie),
+          value: WebViewHandoffScreen.extractCookieValue(setCookie),
           domain: Uri.parse(AppConstants.webBaseUrl).host,
           path: '/',
         );
@@ -112,7 +133,7 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
               if (mounted) setState(() => _isLoading = false);
             },
             onWebResourceError: (error) {
-              if (mounted) {
+              if (mounted && (error.isForMainFrame ?? true)) {
                 setState(() {
                   _hasError = true;
                   _errorMessage = error.description;
@@ -149,25 +170,32 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
     }
   }
 
-  String _extractCookieValue(String setCookieHeader) {
-    final parts = setCookieHeader.split(';');
-    return parts.first.trim();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          if (_controller != null)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () => _controller!.reload(),
-            ),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final controller = _controller;
+        if (controller != null && await controller.canGoBack()) {
+          await controller.goBack();
+        } else if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          actions: [
+            if (_controller != null)
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => _controller!.reload(),
+              ),
+          ],
+        ),
+        body: _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 

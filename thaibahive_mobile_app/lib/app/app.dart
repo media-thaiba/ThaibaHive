@@ -41,6 +41,7 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
       overlays: [SystemUiOverlay.bottom],
     );
     _router = buildRouter();
+    FCMService.setRouter(_router);
     _router.routerDelegate.addListener(_onRouteChange);
     _initDeepLinks();
 

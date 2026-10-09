@@ -287,6 +287,15 @@ class FCMService {
   }
 
   /// Allowed route prefixes for deep links (used by validateAndWhitelistRoute for both FCM notification payloads and custom-scheme / universal link URLs).
+  /// Active GoRouter instance reference for background tap routing
+  static GoRouter? activeRouter;
+
+  /// Set the active router instance
+  static void setRouter(GoRouter router) {
+    activeRouter = router;
+  }
+
+  /// Allowed route prefixes for deep links (used by validateAndWhitelistRoute for both FCM notification payloads and custom-scheme / universal link URLs).
   static const List<String> _allowedRoutePrefixes = [
     '/leaves',
     '/tasks',
@@ -311,13 +320,34 @@ class FCMService {
     '/today',
     '/services',
     '/help-desk',
+    '/attendance',
+    '/media',
+    '/settings',
+    '/agent-hub',
+    '/chat',
+    '/sync-status',
+    '/handoff',
+    '/my-work',
+    '/operations',
+    '/school',
+    '/admin',
   ];
 
   /// Validate incoming route path against strict allowlist to prevent open redirects
   static String validateAndWhitelistRoute(String path) {
     final cleanPath = path.trim();
+    if (cleanPath.isEmpty) return '/';
+
+    Uri? parsed;
+    try {
+      parsed = Uri.parse(cleanPath);
+    } catch (_) {
+      return '/';
+    }
+
+    final pathOnly = parsed.path.isNotEmpty ? parsed.path : cleanPath;
     for (final prefix in _allowedRoutePrefixes) {
-      if (cleanPath == prefix || cleanPath.startsWith('$prefix/')) {
+      if (pathOnly == prefix || pathOnly.startsWith('$prefix/')) {
         return cleanPath;
       }
     }
@@ -326,67 +356,77 @@ class FCMService {
 
   /// Handle notification tap navigation using GoRouter deep linking mapping
   static Future<void> handleDeepLink(Map<String, dynamic> data, {GoRouter? router}) async {
-    final type = data['type']?.toString();
-    final id = data['id']?.toString();
+    final effectiveRouter = router ?? activeRouter;
+    final explicitRoute = data['url']?.toString() ??
+        data['route']?.toString() ??
+        data['targetPath']?.toString() ??
+        data['path']?.toString();
 
     String rawRoute = '/';
-    switch (type) {
-      case 'leave':
-        rawRoute = id != null ? '/leaves/$id' : '/leaves';
-        break;
-      case 'task':
-        rawRoute = id != null ? '/tasks/$id' : '/tasks';
-        break;
-      case 'announcement':
-        rawRoute = id != null ? '/announcements/$id' : '/announcements';
-        break;
-      case 'approval':
-        // GoRouter has /approvals list only — no /approvals/:id detail route
-        rawRoute = '/approvals';
-        break;
-      case 'event':
-        rawRoute = id != null ? '/events/$id' : '/events';
-        break;
-      case 'report':
-        // GoRouter has /reports list only — no /reports/:id detail route
-        rawRoute = '/reports';
-        break;
-      case 'asset':
-        rawRoute = id != null ? '/assets/$id' : '/assets';
-        break;
-      case 'expense':
-        rawRoute = '/expenses';
-        break;
-      case 'booking':
-        rawRoute = id != null ? '/bookings/$id' : '/bookings';
-        break;
-      case 'poll':
-        rawRoute = id != null ? '/polls/$id' : '/polls';
-        break;
-      case 'grievance':
-        rawRoute = '/grievances';
-        break;
-      case 'recognition':
-        rawRoute = '/recognition';
-        break;
-      case 'purchase':
-        rawRoute = '/purchases';
-        break;
-      case 'circular':
-        rawRoute = id != null ? '/circulars' : '/circulars';
-        break;
-      case 'general':
-        rawRoute = '/notifications';
-        break;
-      default:
-        rawRoute = '/';
-        break;
+    if (explicitRoute != null && explicitRoute.isNotEmpty) {
+      rawRoute = explicitRoute;
+    } else {
+      final type = data['type']?.toString();
+      final id = data['id']?.toString();
+
+      switch (type) {
+        case 'leave':
+          rawRoute = id != null ? '/leaves/$id' : '/leaves';
+          break;
+        case 'task':
+          rawRoute = id != null ? '/tasks/$id' : '/tasks';
+          break;
+        case 'announcement':
+          rawRoute = id != null ? '/announcements/$id' : '/announcements';
+          break;
+        case 'approval':
+          // GoRouter has /approvals list only — no /approvals/:id detail route
+          rawRoute = '/approvals';
+          break;
+        case 'event':
+          rawRoute = id != null ? '/events/$id' : '/events';
+          break;
+        case 'report':
+          // GoRouter has /reports list only — no /reports/:id detail route
+          rawRoute = '/reports';
+          break;
+        case 'asset':
+          rawRoute = id != null ? '/assets/$id' : '/assets';
+          break;
+        case 'expense':
+          rawRoute = '/expenses';
+          break;
+        case 'booking':
+          rawRoute = id != null ? '/bookings/$id' : '/bookings';
+          break;
+        case 'poll':
+          rawRoute = id != null ? '/polls/$id' : '/polls';
+          break;
+        case 'grievance':
+          rawRoute = '/grievances';
+          break;
+        case 'recognition':
+          rawRoute = '/recognition';
+          break;
+        case 'purchase':
+          rawRoute = '/purchases';
+          break;
+        case 'circular':
+          rawRoute = id != null ? '/circulars' : '/circulars';
+          break;
+        case 'general':
+          rawRoute = '/notifications';
+          break;
+        default:
+          rawRoute = '/';
+          break;
+      }
     }
 
     final targetRoute = validateAndWhitelistRoute(rawRoute);
 
-    if (router != null) {
-      router.go(targetRoute);
+    if (effectiveRouter != null) {
+      effectiveRouter.go(targetRoute);
     } else {
       // Buffer in memory & persist to storage (survives background process kills)
       _bufferedRoute = targetRoute;
@@ -399,7 +439,7 @@ class FCMService {
   static String? _bufferedRoute;
 
   /// Custom-scheme / universal-link entry point (e.g.
-  /// `thaibahive://finance/approvals/:id`).
+  /// `thaibahive://finance/approvals/:id` or `https://thaibahive.app/my-work/tasks`).
   ///
   /// Custom-scheme URIs put the first path segment in [Uri.host], so
   /// `thaibahive://finance/approvals/abc` is rebuilt as
@@ -408,18 +448,31 @@ class FCMService {
   /// When no [router] is supplied (cold start, user not authenticated yet)
   /// the target is buffered and flushed after sign-in.
   static Future<void> handleUriLink(Uri uri, {GoRouter? router}) async {
-    if (uri.scheme != 'thaibahive') return;
+    final effectiveRouter = router ?? activeRouter;
+    String rawPath;
 
-    final host = uri.host;
-    final rawPath = (host.isNotEmpty && !host.contains('.'))
-        ? '/$host${uri.path}'
-        : uri.path;
+    if (uri.scheme == 'thaibahive') {
+      final host = uri.host;
+      rawPath = (host.isNotEmpty && !host.contains('.'))
+          ? '/$host${uri.path}'
+          : uri.path;
+      if (uri.hasQuery) {
+        rawPath = '$rawPath?${uri.query}';
+      }
+    } else if (uri.scheme == 'https' || uri.scheme == 'http') {
+      rawPath = uri.path;
+      if (uri.hasQuery) {
+        rawPath = '$rawPath?${uri.query}';
+      }
+    } else {
+      return;
+    }
 
     final target = validateAndWhitelistRoute(rawPath.isEmpty ? '/' : rawPath);
     if (target == '/') return;
 
-    if (router != null) {
-      router.go(target);
+    if (effectiveRouter != null) {
+      effectiveRouter.go(target);
       return;
     }
 

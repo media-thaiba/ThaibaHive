@@ -121,10 +121,10 @@ export const MOBILE_ROUTES: ReadonlySet<string> = new Set([
   "/auth/diagnostics", "/auth/login", "/auth/signup", "/availability", "/biometric/enrollment",
   "/bookings", "/bookings/create", "/canteen", "/checklists", "/circulars", "/events",
   "/expenses", "/finance", "/finance/approvals", "/finance/reconciliation", "/grievances",
-  "/grievances/submit", "/help-desk", "/leaves", "/leaves/apply", "/leaves/balance", "/me",
+  "/grievances/submit", "/handoff", "/help-desk", "/leaves", "/leaves/apply", "/leaves/balance", "/me",
   "/me/attendance", "/me/leaves", "/me/leaves/apply", "/me/leaves/balance", "/media", "/polls",
   "/purchases", "/recognition", "/reports", "/reports/create", "/services", "/settings",
-  "/settings/diagnostics", "/settings/password", "/settings/profile", "/staff", "/tasks",
+  "/settings/diagnostics", "/settings/password", "/settings/profile", "/staff", "/sync-status", "/tasks",
   "/tasks/create", "/technician/scan", "/technician/workorders", "/timeline", "/today",
   "/vehicles", "/visitors", "/visitors/gate-verify",
 ]);
