@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { chatChannels, chatMembers, staff, staffDeviceTokens } from "@thaiba/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { chatPubSub } from "@/lib/chat/pubsub-broker";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getMessaging, type Messaging, type MulticastMessage } from "firebase-admin/messaging";

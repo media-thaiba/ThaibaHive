@@ -5,7 +5,7 @@ import { chatPubSub, ChatSubscriber, ChatEvent } from "./pubsub-broker";
 import { chatPresence } from "./presence-engine";
 import { db } from "@/db";
 import { chatMembers, chatChannelMessages, chatReceipts } from "@thaiba/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface WSClientMessage {

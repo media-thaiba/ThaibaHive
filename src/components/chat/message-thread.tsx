@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ChatMessageItem } from "@/lib/hooks/use-chat";
 import { ReadReceiptBadge } from "./read-receipt-badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface MessageThreadProps {
@@ -19,7 +19,7 @@ export function MessageThread({
   currentUserId,
   typingUsers = [],
   isLoading = false,
-  onReply,
+  onReply: _onReply,
 }: MessageThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,12 +71,6 @@ export function MessageThread({
         const senderName = msg.sender
           ? `${msg.sender.firstName || ""} ${msg.sender.lastName || ""}`.trim()
           : "Colleague";
-        const initials = senderName
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2) || "?";
 
         const timeString = new Date(msg.createdAt).toLocaleTimeString(undefined, {
           hour: "2-digit",
@@ -93,12 +87,12 @@ export function MessageThread({
             )}
           >
             {!isMe && (
-              <Avatar className="w-7 h-7 shrink-0 mb-1">
-                <AvatarImage src={msg.sender?.avatarUrl || undefined} />
-                <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <Avatar
+                src={msg.sender?.avatarUrl || undefined}
+                fallback={senderName}
+                size="sm"
+                className="shrink-0 mb-1 text-[10px]"
+              />
             )}
 
             <div

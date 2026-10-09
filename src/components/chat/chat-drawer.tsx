@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageSquare, X, Wifi, WifiOff, Users, Hash } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MessageSquare, X, WifiOff, Hash } from "lucide-react";
 
 interface ChatDrawerProps {
   open?: boolean;
@@ -35,7 +34,7 @@ export function ChatDrawer({ open: controlledOpen, onOpenChange: controlledOnOpe
     presence,
     typingUsers,
     isConnected,
-    isLoadingChannels,
+    isLoadingChannels: _isLoadingChannels,
     isLoadingMessages,
     sendMessage,
     sendTyping,

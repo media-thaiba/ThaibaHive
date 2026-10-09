@@ -162,8 +162,9 @@ export function useChat() {
         status: "sending",
         sender: {
           id: staff?.id || "",
-          firstName: staff?.name?.split(" ")[0] || "Me",
-          lastName: staff?.name?.split(" ")[1] || "",
+          firstName: staff?.firstName || "Me",
+          lastName: staff?.lastName || "",
+          avatarUrl: staff?.avatarUrl || null,
         },
       };
 
@@ -452,8 +453,6 @@ export function useChat() {
       isUnmounted = true;
       if (wsRef.current) wsRef.current.close();
       if (sseRef.current) sseRef.current.close();
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     };
   }, [staff, handleChatEvent]);
 

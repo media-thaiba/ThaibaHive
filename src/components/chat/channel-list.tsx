@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ChatChannelItem } from "@/lib/hooks/use-chat";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Hash, User, Megaphone, Search, Plus } from "lucide-react";
@@ -20,7 +19,7 @@ export function ChannelList({
   channels,
   activeChannelId,
   onSelectChannel,
-  presence = {},
+  presence: _presence = {},
   onCreateChannel,
 }: ChannelListProps) {
   const [search, setSearch] = useState("");

@@ -2,6 +2,31 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.36.0] - 2026-10-09
+### Phase 6: Real-Time Push & Bi-Directional Messaging Mesh
+#### Added
+- **Real-Time Mesh & WebSocket / SSE Transport**: Bi-directional in-memory Pub/Sub message broker with fallback SSE streaming (`/api/chat/sse`) and WebSocket transport (`/api/chat/ws`), heartbeat pings, presence tracking, and typing indicator broadcast debouncing.
+- **Dual-Dialect Database Parity**: 4 new tables (`chat_channels`, `chat_members`, `chat_channel_messages`, `chat_receipts`) across SQLite (`packages/db/schema.ts`) and PostgreSQL (`packages/db/schema.pg.ts`) with unique composite indexes and 100% dialect parity.
+- **Chat REST API & Multi-Tenant RBAC Guardrails**: 6 secure API endpoints (`/api/chat/channels`, `[id]`, `[id]/members`, `[id]/messages`, `messages/[id]`, `messages/[id]/read`, `presence`) guarded by `requireAuth` with granular permissions (`chat:read`, `chat:write`, `chat:admin`), Zod schema validation, and tenant isolation enforcement.
+- **FCM Multicast Engine & Smart Push Aggregator**: Firebase Cloud Messaging multi-device delivery with 30s notification aggregation buffer (coalescing burst messages into single summary notifications per channel) and universal deep link payload generation (`thaibahive://chat/:id`).
+- **Web Chat Center (`Cmd+Shift+M`)**: Slide-out drawer modal (`<ChatDrawer>`), responsive channel list (`<ChannelList>`), message stream with read receipts (`<MessageThread>`, `<ReadReceiptBadge>`), auto-expanding input (`<MessageInput>`), top navbar trigger button with unread count badge, and `useChat` React hook with optimistic UI and auto-reconnect backoff.
+- **Flutter Mobile Chat Module**: Riverpod-powered chat architecture (`chat_repository`, `chat_providers`), Hive local persistence & offline outbox (`chat_outbox`), integrated Step 3 drain in `SyncCoordinator`, `ChannelListScreen`, `ChatScreen`, and GoRouter navigation routes (`/chat`, `/chat/:id`).
+- **Comprehensive Quality Gates**: 16/16 verification gates passed with 0 TypeScript errors, 0 ESLint errors, 792/792 Jest test suites (4,909 tests), 263/263 Flutter tests, 100% RBAC permission coverage, 100% naked handler coverage, and 100% cross-tenant isolation.
+
+## [3.35.0] - 2026-10-09
+### Phase 5: Global Search & Omnibox Command Center
+#### Added
+- **Global Search & Omnibox Command Center (`Cmd+K`)**: Unified cross-platform omnibox with instant fuzzy matching, multi-domain search across staff, students, tasks, circulars, media, and facilities.
+- **SSE Live Suggestions**: Streaming search recommendations and keyword completions.
+- **Mobile Search & Deep Link Navigation**: Flutter omnibox integration with GoRouter navigation.
+
+## [3.34.0] - 2026-10-09
+### Phase 4: Deep Links & Mobile Auth Handoff
+#### Added
+- **Stateless HMAC SHA-256 Nonce Exchange**: Single-use mobile-to-web session handoff with 60s validity and replay protection.
+- **Universal Links & App Links**: `apple-app-site-association` and Android `assetlinks.json` verification.
+- **WebView Handoff Screen**: Flutter WebView handoff component with secure cookie injection.
+
 ## [3.33.0] - 2026-10-01
 ### Sprint-100: Autonomous Multi-Agent Workflow Orchestration (AIGENT-OS)
 #### Added

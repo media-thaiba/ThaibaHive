@@ -7,7 +7,7 @@ import {
   chatChannelMessages,
   staff,
 } from "@thaiba/db/schema";
-import { eq, and, desc, sql, lt } from "drizzle-orm";
+import { eq, and, desc, lt } from "drizzle-orm";
 import { sendChatMessageSchema } from "@/lib/validation/schemas";
 import { randomUUID } from "crypto";
 import { chatPubSub, ChatEvent } from "@/lib/chat/pubsub-broker";
