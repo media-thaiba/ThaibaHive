@@ -40,4 +40,22 @@ describe("Background Sync Status API (/api/mobile/sync/background-status)", () =
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
+
+  it("health GET requires authentication", async () => {
+    (verifySession as jest.Mock).mockResolvedValue(null);
+
+    const res = await GET(mockNextRequest("http://localhost:3000/api/mobile/sync/background-status"));
+    expect(res.status).toBe(401);
+  });
+
+  it("health GET is gated behind sync:manage (D10*)", async () => {
+    (verifySession as jest.Mock).mockResolvedValue({
+      staffId: "usr_001",
+      role: "staff",
+      institutionId: "inst_001",
+    });
+
+    const res = await GET(mockNextRequest("http://localhost:3000/api/mobile/sync/background-status"));
+    expect(res.status).toBe(403); // staff holds mobile:sync for POST, but not sync:manage for GET
+  });
 });

@@ -52,15 +52,17 @@ describe("Mobile Sync Reconciliation API", () => {
         mutations: [
           {
             id: "mut_1001",
-            action: "STAFF_CHECKIN",
+            // payload v2: the server re-derives entity metadata from its
+            // authoritative action map — unknown action names are rejected.
+            action: "attendance_nfc_checkin",
             timestamp: new Date().toISOString(),
-            payload: { location: "Main Gate", latitude: 11.25, longitude: 75.78 },
+            payload: { tagData: { id: "tag_1" }, latitude: 11.25, longitude: 75.78 },
           },
           {
             id: "mut_1002",
-            action: "VOUCHER_APPROVAL",
+            action: "approval_approve",
             timestamp: new Date().toISOString(),
-            payload: { voucherId: "v-99", decision: "approve" },
+            payload: { type: "leave", id: "lv_1" },
           },
         ],
       }),

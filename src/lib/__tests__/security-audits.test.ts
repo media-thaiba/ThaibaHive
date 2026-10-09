@@ -1,6 +1,6 @@
 import { hasPermission } from "../../../packages/auth/roles";
 import { POST as systemUpdatePost } from "../../app/api/system/update/route";
-import { GET as fileGet } from "../../app/api/upload/files/[filename]/route";
+import { GET as fileGet } from "../../app/api/upload/files/[...filename]/route";
 import { GET as avatarGet } from "../../app/api/upload/files/avatars/[filename]/route";
 import { GET as exportGet } from "../../app/api/export/route";
 import { verifySession } from "@thaiba/auth";

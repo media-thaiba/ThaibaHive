@@ -1,13 +1,14 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'crash_log_service.dart';
 import 'fcm_service.dart';
 import 'offline_queue.dart';
 import 'offline_cache_service.dart';
 import 'qr_anti_replay.dart';
-import 'offline_sync_service.dart';
+import 'sync_coordinator.dart';
 
 /// Centralized service initializer for the mobile app
 /// 
@@ -52,9 +53,9 @@ class ServiceInitializer {
       await Connectivity().checkConnectivity();
       debugPrint('[ServiceInitializer] Connectivity monitoring initialized');
       
-      // 6. Start offline sync service
-      offlineSyncService.start();
-      debugPrint('[ServiceInitializer] Offline sync service started');
+      // 6. Start sync coordinator
+      syncCoordinatorProvider;
+      debugPrint('[ServiceInitializer] Sync coordinator started');
 
       // 7. Initialize FCM Push Notifications service
       try {

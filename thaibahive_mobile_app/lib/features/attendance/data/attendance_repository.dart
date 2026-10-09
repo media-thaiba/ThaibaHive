@@ -33,7 +33,7 @@ class AttendanceRepository {
   }
 
   Future<AttendanceLogModel> checkIn({
-    String method = 'manual',
+    String method = 'qr',
     String? nfcTagId,
     String? qrCode,
     double? latitude,

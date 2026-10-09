@@ -8,7 +8,8 @@ export type FeatureFlag =
   | 'canteen'
   | 'academic_tracking'
   | 'agentic_workflows'
-  | 'today_hub';
+  | 'today_hub'
+  | 'media_queue';
 
 // In production, agentic workflows require explicit enablement (process.env.FEATURE_AGENTIC_WORKFLOWS === 'true').
 // In development/test, it defaults to enabled unless explicitly set to 'false'.
@@ -27,6 +28,7 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   academic_tracking: false,
   agentic_workflows: defaultAgenticFlag,
   today_hub: true,
+  media_queue: true,
 };
 
 // In-memory per-institution override registry for staged/canary tenant rollouts (D13)
@@ -66,4 +68,8 @@ export function isAgenticWorkflowsEnabled(institutionId?: string): boolean {
 
 export function isTodayHubEnabled(institutionId?: string): boolean {
   return isFeatureEnabled('today_hub', institutionId);
+}
+
+export function isMediaQueueEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('media_queue', institutionId);
 }

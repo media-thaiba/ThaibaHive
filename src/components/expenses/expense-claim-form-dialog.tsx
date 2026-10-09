@@ -37,21 +37,37 @@ export function ExpenseClaimFormDialog({ open, onOpenChange, onSubmitted }: Prop
     setReceiptFile(file);
     setUploading(true);
     try {
-      const { data, ok } = await api.post<{ uploadUrl: string; fileUrl: string }>(
+      const { data, ok } = await api.post<{
+        mode: "presign" | "multipart";
+        uploadUrl: string;
+        fileUrl: string | null;
+      }>(
         "/api/media/upload/sign",
         { ext: file.name.split(".").pop() || "pdf" },
         { toast: false }
       );
       if (!ok || !data) { toast.error("Failed to get upload URL"); return; }
 
-      const uploadRes = await fetch(data.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-      if (!uploadRes.ok) { toast.error("Failed to upload receipt"); return; }
+      let uploadedUrl: string | null = data.fileUrl;
+      let uploadRes: Response;
+      if (data.mode === "multipart" || !data.fileUrl) {
+        const fd = new FormData();
+        fd.append("file", file);
+        uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+        if (uploadRes.ok) {
+          const uploaded = (await uploadRes.json()) as { url?: string };
+          uploadedUrl = uploaded.url ?? null;
+        }
+      } else {
+        uploadRes = await fetch(data.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+      }
+      if (!uploadRes.ok || !uploadedUrl) { toast.error("Failed to upload receipt"); return; }
 
-      setReceiptUrl(data.fileUrl);
+      setReceiptUrl(uploadedUrl);
       toast.success("Receipt uploaded successfully!");
     } catch { toast.error("An error occurred during file upload"); }
     finally { setUploading(false); }

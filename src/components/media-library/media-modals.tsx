@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dropzone } from "@/components/ui/dropzone";
+import { mediaObjectUrl } from "@/lib/media/media-urls";
 import { UploadProgress, UploadItem } from "@/components/ui/upload-progress";
 import { FilePreview } from "@/components/ui/file-preview";
 import { ShareDialog } from "@/components/ui/share-dialog";
@@ -187,7 +188,7 @@ export function MediaModals({
         }}
         onDownload={(asset) => {
           const a = document.createElement("a");
-          a.href = asset.fileUrl;
+          a.href = mediaObjectUrl(asset.fileUrl);
           a.download = asset.name;
           a.click();
         }}

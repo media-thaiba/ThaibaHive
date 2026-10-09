@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
+import 'package:thaibahive_mobile/core/services/offline_queue.dart';
+import 'package:thaibahive_mobile/core/services/offline_queue_providers.dart';
 import 'package:thaibahive_mobile/features/attendance/data/attendance_provider.dart';
 import 'package:thaibahive_mobile/features/attendance/presentation/nfc_scan_screen.dart';
 import 'package:thaibahive_mobile/features/attendance/presentation/qr_scan_screen.dart';
@@ -125,6 +127,11 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
   }) {
     final theme = Theme.of(context);
     if (isCheckedIn) {
+      Widget? statusChip;
+      if (state.isOfflineCheckOut && state.pendingCheckOutId != null) {
+        statusChip = _OfflineStatusChip(pendingCheckOutId: state.pendingCheckOutId!);
+      }
+
       return Container(
         key: key,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -164,6 +171,10 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (statusChip != null) ...[
+                    const SizedBox(height: 4),
+                    statusChip,
+                  ],
                 ],
               ),
             ),
@@ -188,6 +199,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
                   : const Icon(Icons.logout_rounded, size: 16),
               label: const Text('Check out'),
             ),
+            if (statusChip != null) const SizedBox(width: 8),
           ],
         ),
       );
@@ -607,6 +619,67 @@ class _BottomSheetOption extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Status chip for offline check-out sync state.
+class _OfflineStatusChip extends ConsumerWidget {
+  const _OfflineStatusChip({required this.pendingCheckOutId});
+
+  final String pendingCheckOutId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offlineQueue = ref.watch(offlineQueueProvider);
+    final events = offlineQueue.getAllEvents();
+    final event = events.cast<OfflineEvent?>().firstWhere(
+      (e) => e?.clientEventId == pendingCheckOutId,
+      orElse: () => null,
+    );
+
+    if (event == null) {
+      // Event completed - show synced
+      return _buildChip(context, 'Synced', Colors.green, Icons.check_circle_rounded);
+    }
+
+    switch (event!.status) {
+      case QueueStatus.pending:
+        return _buildChip(context, 'Queued', Colors.orange, Icons.schedule_rounded);
+      case QueueStatus.syncing:
+        return _buildChip(context, 'Syncing...', Colors.blue, Icons.sync_rounded);
+      case QueueStatus.conflict:
+        return _buildChip(context, 'Conflict', Colors.red, Icons.error_rounded);
+      case QueueStatus.failed:
+        return _buildChip(context, 'Failed', Colors.red, Icons.error_rounded);
+      case QueueStatus.completed:
+        return _buildChip(context, 'Synced', Colors.green, Icons.check_circle_rounded);
+    }
+  }
+
+  Widget _buildChip(BuildContext context, String label, Color color, IconData icon) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
