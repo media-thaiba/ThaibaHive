@@ -394,10 +394,52 @@ export const systemUpdatePostSchema = z.object({
 });
 
 export const globalSearchSchema = z.object({
-  q: z.string().min(1, "Search query is required"),
-  entityTypes: z.array(z.enum(["students", "staff", "tasks", "events", "announcements", "daily-reports", "purchase-requests", "help-desk-tickets", "recognition", "asset-inventory", "circulars", "bookings", "polls", "comments", "media-assets"])).optional().default(["students", "staff", "tasks", "events"]),
+  q: z
+    .string()
+    .min(1, "Search query is required")
+    .max(100, "Search query too long")
+    .regex(/^[\p{L}\p{N}\s\-@.]+$/u, "Invalid characters in search query")
+    .transform((s) => s.replace(/[%_]/g, "").trim()),
+  entityTypes: z
+    .array(
+      z.enum([
+        "students",
+        "staff",
+        "tasks",
+        "events",
+        "announcements",
+        "daily-reports",
+        "purchase-requests",
+        "help-desk-tickets",
+        "recognition",
+        "asset-inventory",
+        "circulars",
+        "bookings",
+        "polls",
+        "comments",
+        "media-assets",
+      ])
+    )
+    .optional()
+    .default([
+      "students",
+      "staff",
+      "tasks",
+      "events",
+      "announcements",
+      "daily-reports",
+      "purchase-requests",
+      "help-desk-tickets",
+      "recognition",
+      "asset-inventory",
+      "circulars",
+      "bookings",
+      "polls",
+      "comments",
+      "media-assets",
+    ]),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(20).default(10),
 });
 
 export const studentSearchSchema = z.object({

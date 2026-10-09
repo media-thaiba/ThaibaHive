@@ -38,6 +38,12 @@
       "@thaiba/auth/*": [
         "./packages/auth/*"
       ],
+      "@thaiba/shared": [
+        "./packages/shared/src/index.ts"
+      ],
+      "@thaiba/shared/*": [
+        "./packages/shared/src/*"
+      ],
       "drizzle-orm": [
         "./node_modules/drizzle-orm"
       ],

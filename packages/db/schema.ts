@@ -90,6 +90,7 @@ export const staff = sqliteTable("staff", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   nfcTagIdx: uniqueIndex("idx_staff_nfc_tag").on(t.nfcTagId),
+  nameIdx: index("idx_staff_name").on(t.firstName, t.lastName),
 }));
 
 export const staffDepartments = sqliteTable("staff_departments", {
@@ -181,6 +182,8 @@ export const students = sqliteTable("students", {
   instIdx: index("idx_students_institution").on(t.institutionId),
   instStudentUniq: uniqueIndex("idx_students_inst_admission_no").on(t.institutionId, t.admissionNo),
   nfcTagIdx: index("idx_students_nfc_tag").on(t.nfcTagId),
+  nameIdx: index("idx_students_name").on(t.firstName, t.lastName),
+  emailIdx: index("idx_students_email").on(t.email),
 }));
 
 export const guardians = sqliteTable("guardians", {
@@ -411,6 +414,7 @@ export const tasks = sqliteTable("tasks", {
   assignedToStatusIdx: index("idx_tasks_assigned_to_status").on(t.assignedToId, t.status),
   departmentIdx: index("idx_tasks_department").on(t.departmentId),
   instIdx: index("idx_tasks_institution").on(t.institutionId),
+  titleIdx: index("idx_tasks_title").on(t.title),
 }));
 
 export const taskComments = sqliteTable("task_comments", {
@@ -482,6 +486,7 @@ export const announcements = sqliteTable("announcements", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   createdActiveIdx: index("idx_announcements_created_active").on(t.createdAt, t.isActive),
+  titleIdx: index("idx_announcements_title").on(t.title),
 }));
 
 export const announcementReads = sqliteTable("announcement_reads", {
@@ -514,7 +519,9 @@ export const events = sqliteTable("events", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  titleIdx: index("idx_events_title").on(t.title),
+}));
 
 export const eventRsvps = sqliteTable("event_rsvps", {
   id: text("id").primaryKey(),

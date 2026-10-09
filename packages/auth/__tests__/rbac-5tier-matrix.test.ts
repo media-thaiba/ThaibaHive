@@ -47,6 +47,7 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
       expect(hasPermission(role, "neuro:clusters:manage")).toBe(true);
       expect(hasPermission(role, "curriculum:catalog:manage")).toBe(true);
       expect(hasPermission(role, "alumni:chapters:manage")).toBe(true);
+      expect(hasPermission(role, "search:global")).toBe(true);
     });
 
     it("should deny unmapped or out-of-scope permissions", () => {
@@ -67,6 +68,7 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
       expect(hasPermission(role, "vision:lockdown:execute")).toBe(true);
       expect(hasPermission(role, "curriculum:plans:approve")).toBe(true);
       expect(hasPermission(role, "alumni:donations:manage")).toBe(true);
+      expect(hasPermission(role, "search:global")).toBe(true);
     });
 
     it("should strictly deny low-level system admin mutations (Negative Boundary)", () => {
@@ -90,6 +92,7 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
       expect(hasPermission(role, "supply:requisitions:create")).toBe(true);
       expect(hasPermission(role, "vision:alerts:view")).toBe(true);
       expect(hasPermission(role, "alumni:jobs:post")).toBe(true);
+      expect(hasPermission(role, "search:global")).toBe(true);
     });
 
     it("should strictly deny institution-wide and administrative permissions (Negative Boundary)", () => {
@@ -118,6 +121,7 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
       expect(hasPermission(role, "leaves:delete")).toBe(true);
       expect(hasPermission(role, "profile:write")).toBe(true);
       expect(hasPermission(role, "supply:requisitions:create")).toBe(true);
+      expect(hasPermission(role, "search:global")).toBe(true);
     });
 
     it("should strictly deny management and approval actions (Negative Boundary)", () => {

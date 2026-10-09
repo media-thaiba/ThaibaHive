@@ -225,6 +225,13 @@
       "when": 1791119408956,
       "tag": "0031_faithful_karen_page",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1791530000000,
+      "tag": "0032_global_search_indexes",
+      "breakpoints": true
     }
   ]
 }

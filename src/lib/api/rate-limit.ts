@@ -25,6 +25,7 @@ const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
   write: { windowMs: 60_000, max: 30, keyPrefix: "write" },
   read: { windowMs: 60_000, max: 100, keyPrefix: "read" },
   upload: { windowMs: 60_000, max: 10, keyPrefix: "upload" },
+  search: { windowMs: 60_000, max: 30, keyPrefix: "search" },
 };
 
 import { getDistributedRateLimiter } from "../security/rate-limit-redis";

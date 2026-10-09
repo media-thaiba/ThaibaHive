@@ -1,18 +1,35 @@
-/* Global Search API Route - P4-101 - Main Entry Point */
+/* Global Search API Route - Main Entry Point with Rate Limiting & Strict RBAC */
 
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { globalSearchSchema } from "@/lib/validation/schemas";
 import { globalSearch } from "@/lib/api/global-search/service";
 
-export const GET = requireAuth(async (request: Request, _session) => {
-try {
+export const GET = requireAuth(async (request: Request, session) => {
+  try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    const rateCheck = checkRateLimit(`${session.staffId}:${ip}`, "search");
+
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Rate limit exceeded. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.ceil(rateCheck.resetMs / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
 
-    const query = searchParams.get("q");
+    const query = searchParams.get("q") ?? "";
     const entityTypesParam = searchParams.get("entityTypes");
-    const page = searchParams.get("page");
-    const limit = searchParams.get("limit");
+    const page = searchParams.get("page") ?? undefined;
+    const limit = searchParams.get("limit") ?? undefined;
 
     const parsedData = globalSearchSchema.parse({
       q: query,
@@ -21,11 +38,14 @@ try {
       limit,
     });
 
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
+
     const results = await globalSearch(
       parsedData.q,
       parsedData.entityTypes,
       parsedData.page,
-      parsedData.limit
+      parsedData.limit,
+      scopedInstitutionId
     );
 
     return NextResponse.json({
@@ -39,22 +59,27 @@ try {
       },
     });
   } catch (error) {
-    console.error("Global search API error:", error);
-
-    if (error instanceof Error && "name" in error && error.name === "ZodError") {
+    if (error instanceof Error && error.name === "ZodError") {
       return NextResponse.json(
         { success: false, error: "Invalid search parameters" },
         { status: 400 }
       );
     }
 
+    if (error instanceof Error && error.name === "TenantMismatchError") {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized tenant access" },
+        { status: 403 }
+      );
+    }
+
+    console.error("Global search API error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }
-}, "profile:read");
-
+}, "search:global");
 
 export const OPTIONS = requireAuth(async () => {
   return new NextResponse(null, {
@@ -65,95 +90,4 @@ export const OPTIONS = requireAuth(async () => {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
-});
-
-// Global search distribution route for specific entity types
-const _tasks = requireAuth(async (request: Request, _session) => {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-
-  const { globalSearch } = await import("@/lib/api/global-search/service");
-  const results = await globalSearch(query, ["tasks"], 1, 20);
-
-  return NextResponse.json({
-    success: true,
-    data: results.tasks,
-    pagination: {
-      page: 1,
-      limit: 20,
-      totalResults: results.tasks.length,
-    },
-  });
-});
-
-const _staff = requireAuth(async (request: Request, _session) => {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-
-  const { globalSearch } = await import("@/lib/api/global-search/service");
-  const results = await globalSearch(query, ["staff"], 1, 20);
-
-  return NextResponse.json({
-    success: true,
-    data: results.staff,
-    pagination: {
-      page: 1,
-      limit: 20,
-      totalResults: results.staff.length,
-    },
-  });
-});
-
-const _students = requireAuth(async (request: Request, _session) => {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-
-  const { globalSearch } = await import("@/lib/api/global-search/service");
-  const results = await globalSearch(query, ["students"], 1, 20);
-
-  return NextResponse.json({
-    success: true,
-    data: results.students,
-    pagination: {
-      page: 1,
-      limit: 20,
-      totalResults: results.students.length,
-    },
-  });
-});
-
-const _events = requireAuth(async (request: Request, _session) => {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-
-  const { globalSearch } = await import("@/lib/api/global-search/service");
-  const results = await globalSearch(query, ["events"], 1, 20);
-
-  return NextResponse.json({
-    success: true,
-    data: results.events,
-    pagination: {
-      page: 1,
-      limit: 20,
-      totalResults: results.events.length,
-    },
-  });
-});
-
-const _announcements = requireAuth(async (request: Request, _session) => {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q") || "";
-
-  const { globalSearch } = await import("@/lib/api/global-search/service");
-  const results = await globalSearch(query, ["announcements"], 1, 20);
-
-  return NextResponse.json({
-    success: true,
-    data: results.announcements,
-    pagination: {
-      page: 1,
-      limit: 20,
-      totalResults: results.announcements.length,
-    },
-  });
-});
+}, "search:global");
