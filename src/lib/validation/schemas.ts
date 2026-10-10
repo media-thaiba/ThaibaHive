@@ -1281,6 +1281,24 @@ export const confirmAiDocumentSchema = z.object({
 });
 export type ConfirmAiDocumentInput = z.infer<typeof confirmAiDocumentSchema>;
 
+export const createVoiceSessionSchema = z.object({
+  channelType: z.enum(["voice", "text", "omni"]).default("voice"),
+  context: z.record(z.string(), z.any()).optional(),
+});
+export type CreateVoiceSessionInput = z.infer<typeof createVoiceSessionSchema>;
+
+export const voiceInteractSchema = z.object({
+  sessionId: z.string().min(1),
+  audioBase64: z.string().optional(),
+  clientTranscript: z.string().optional(),
+  format: z.enum(["pcm", "wav", "mp3", "opus"]).default("pcm"),
+  voiceProfile: z.enum(["neutral_professional", "friendly_campus", "urgent_alert", "academic_tutor"]).default("neutral_professional"),
+  language: z.string().default("en-US"),
+  returnAudio: z.boolean().default(true),
+});
+export type VoiceInteractInput = z.infer<typeof voiceInteractSchema>;
+
+
 
 
 

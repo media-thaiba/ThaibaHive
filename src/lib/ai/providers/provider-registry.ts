@@ -1,6 +1,8 @@
 import {
   IChatProvider,
   IEmbeddingProvider,
+  ISpeechToTextProvider,
+  ITextToSpeechProvider,
   ChatRequest,
   ChatResponse,
   ChatStreamChunk,
@@ -28,6 +30,14 @@ export class ProviderRegistry implements IChatProvider, IEmbeddingProvider {
   getProvider(override?: "gemini" | "ollama" | "vertex"): IChatProvider {
     if (override === "ollama") return this.ollama;
     if (override === "vertex") return this.vertex;
+    return this.gemini;
+  }
+
+  getSpeechToTextProvider(): ISpeechToTextProvider {
+    return this.gemini;
+  }
+
+  getTextToSpeechProvider(): ITextToSpeechProvider {
     return this.gemini;
   }
 

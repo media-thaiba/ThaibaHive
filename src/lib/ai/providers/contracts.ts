@@ -58,18 +58,19 @@ export interface IEmbeddingProvider {
 }
 
 export interface TranscriptionResult {
-  text: string;
+  transcript: string;
   confidence?: number;
   durationSeconds?: number;
   language?: string;
+  words?: Array<{ word: string; startMs: number; endMs: number }>;
 }
 
 export interface ISpeechToTextProvider {
   readonly id: string;
-  transcribe(audio: Buffer, mimeType: string): Promise<TranscriptionResult>;
+  transcribe(request: { audioBuffer: Buffer; mimeType: string; language?: string; institutionId?: string }): Promise<TranscriptionResult>;
 }
 
 export interface ITextToSpeechProvider {
   readonly id: string;
-  synthesize(text: string, voiceId?: string): Promise<Buffer>;
+  synthesize(request: { text: string; voiceId?: string; speed?: number; pitch?: number; format?: string; institutionId?: string }): Promise<{ audioBuffer: Buffer; durationMs?: number }>;
 }
