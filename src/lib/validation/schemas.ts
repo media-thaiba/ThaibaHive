@@ -1629,6 +1629,65 @@ export const biometricZeroizeSchema = z.object({
 });
 export type BiometricZeroizeInput = z.infer<typeof biometricZeroizeSchema>;
 
+// ============================================
+// Phase 10: AI Agent Marketplace Validation Schemas
+// ============================================
+
+export const agentPluginManifestSchema = z.object({
+  permissions: z.array(z.string()).default([]),
+  resourceBudget: z
+    .object({
+      maxExecutionTimeMs: z.number().int().positive().optional(),
+      maxMemoryMb: z.number().int().positive().optional(),
+      maxTokens: z.number().int().positive().optional(),
+    })
+    .optional(),
+  entryDslRef: z.string().optional(),
+  egressUrls: z.array(z.string().url()).optional(),
+  configSchema: z.record(z.string(), z.unknown()).optional(),
+  environmentVariables: z.array(z.string()).optional(),
+}).passthrough();
+export type AgentPluginManifest = z.infer<typeof agentPluginManifestSchema>;
+
+export const agentPluginPublishSchema = z.object({
+  pluginKey: z
+    .string()
+    .min(3)
+    .max(128)
+    .regex(/^[a-z0-9-_.]+$/, "pluginKey must be alphanumeric with dashes, underscores, or dots"),
+  displayName: z.string().min(2).max(128),
+  summary: z.string().min(3).max(512),
+  description: z.string().optional(),
+  version: z
+    .string()
+    .regex(/^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/, "version must follow semantic versioning (e.g. 1.0.0)"),
+  scope: z.enum(["global", "institution_private", "institution_shared"]).default("institution_private"),
+  category: z.enum(["finance", "facilities", "vision", "compliance", "academic", "hr", "general"]),
+  capabilities: z.array(z.string()).default([]),
+  manifest: agentPluginManifestSchema,
+});
+export type AgentPluginPublishInput = z.infer<typeof agentPluginPublishSchema>;
+
+export const agentPluginApproveSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  reason: z.string().max(512).optional(),
+});
+export type AgentPluginApproveInput = z.infer<typeof agentPluginApproveSchema>;
+
+export const agentPluginInstallSchema = z.object({
+  requestedPermissions: z.array(z.string()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
+  enabled: z.boolean().default(true).optional(),
+});
+export type AgentPluginInstallInput = z.infer<typeof agentPluginInstallSchema>;
+
+export const agentPluginReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  reviewText: z.string().max(1024).optional(),
+});
+export type AgentPluginReviewInput = z.infer<typeof agentPluginReviewSchema>;
+
+
 
 
 
