@@ -1352,6 +1352,136 @@ export const remediationApproveSchema = z.object({
 });
 export type RemediationApproveInput = z.infer<typeof remediationApproveSchema>;
 
+// ============================================
+// Phase 9: Hardware Radar & IoT Mesh Schemas
+// ============================================
+
+export const hardwareDeviceRegisterSchema = z.object({
+  name: z.string().min(1, "Device name is required"),
+  type: z.enum([
+    "beacon",
+    "gate_kiosk",
+    "nfc_reader",
+    "camera",
+    "biometric_scanner",
+    "environmental_sensor",
+    "patrol_device",
+  ]),
+  model: z.string().optional(),
+  firmwareVersion: z.string().optional(),
+  macAddress: z.string().min(6, "MAC address is required").optional(),
+  ipAddress: z.string().optional(),
+  zoneId: z.string().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  certificateThumbprint: z.string().optional(),
+  hmacKeyId: z.string().optional(),
+  configurationJson: z.string().optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareDeviceRegisterInput = z.infer<typeof hardwareDeviceRegisterSchema>;
+
+export const hardwareDeviceUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  type: z.enum([
+    "beacon",
+    "gate_kiosk",
+    "nfc_reader",
+    "camera",
+    "biometric_scanner",
+    "environmental_sensor",
+    "patrol_device",
+  ]).optional(),
+  model: z.string().optional(),
+  firmwareVersion: z.string().optional(),
+  ipAddress: z.string().optional(),
+  status: z.enum(["online", "offline", "maintenance", "decommissioned", "quarantined"]).optional(),
+  zoneId: z.string().nullable().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  configurationJson: z.string().optional(),
+  metadataJson: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+export type HardwareDeviceUpdateInput = z.infer<typeof hardwareDeviceUpdateSchema>;
+
+export const hardwareHeartbeatSchema = z.object({
+  deviceId: z.string().min(1, "Device ID is required"),
+  firmwareVersion: z.string().optional(),
+  batteryLevel: z.number().min(0).max(100).optional(),
+  cpuUsagePercent: z.number().min(0).max(100).optional(),
+  memoryUsagePercent: z.number().min(0).max(100).optional(),
+  networkLatencyMs: z.number().nonnegative().optional(),
+  packetLossPercent: z.number().min(0).max(100).optional(),
+  temperatureCelsius: z.number().optional(),
+  humidityPercent: z.number().min(0).max(100).optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareHeartbeatInput = z.infer<typeof hardwareHeartbeatSchema>;
+
+export const hardwareTelemetryIngestSchema = z.object({
+  deviceId: z.string().min(1, "Device ID is required"),
+  zoneId: z.string().optional(),
+  logType: z.enum([
+    "heartbeat",
+    "rssi_scan",
+    "battery",
+    "temperature",
+    "humidity",
+    "motion",
+    "firmware_status",
+    "certificate_expiry",
+    "network_stats",
+  ]),
+  rssi: z.number().optional(),
+  snr: z.number().optional(),
+  batteryLevel: z.number().optional(),
+  temperatureCelsius: z.number().optional(),
+  humidityPercent: z.number().optional(),
+  motionDetected: z.boolean().optional(),
+  firmwareVersion: z.string().optional(),
+  certificateExpiryDays: z.number().optional(),
+  cpuUsagePercent: z.number().optional(),
+  memoryUsagePercent: z.number().optional(),
+  networkLatencyMs: z.number().optional(),
+  packetLossPercent: z.number().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  merkleRoot: z.string().optional(),
+  merkleProof: z.string().optional(),
+  metadataJson: z.string().optional(),
+  timestamp: z.string().optional(),
+});
+export type HardwareTelemetryIngestInput = z.infer<typeof hardwareTelemetryIngestSchema>;
+
+export const firmwareReleaseSchema = z.object({
+  version: z.string().min(1, "Firmware version is required"),
+  deviceType: z.enum([
+    "beacon",
+    "gate_kiosk",
+    "nfc_reader",
+    "camera",
+    "biometric_scanner",
+    "environmental_sensor",
+    "patrol_device",
+  ]),
+  targetModel: z.string().optional(),
+  binaryUrl: z.string().url("Valid binary URL required"),
+  binarySha256: z.string().length(64, "SHA-256 hash must be 64 characters"),
+  signature: z.string().min(1, "Cryptographic signature is required"),
+  releaseNotes: z.string().optional(),
+  minCurrentVersion: z.string().optional(),
+  rolloutStage: z.enum(["draft", "staged", "canary_1", "staging_10", "fleet_100", "aborted", "completed"]).default("draft"),
+});
+export type FirmwareReleaseInput = z.infer<typeof firmwareReleaseSchema>;
+
+
 
 
 
