@@ -4,11 +4,25 @@ replicaCount: 3
 image:
   repository: thaibahive/thaibahive-web
   pullPolicy: IfNotPresent
-  tag: "v3.37.0"
+  tag: "v3.38.0"
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+rollout:
+  enabled: false # Set true for Argo Rollouts progressive canary
+  canary:
+    steps:
+      - setWeight: 5
+        pause: { duration: 15m }
+      - setWeight: 25
+        pause: { duration: 30m }
+      - setWeight: 50
+        pause: { duration: 30m }
+    analysis:
+      successfulRunHistoryLimit: 5
+      unsuccessfulRunHistoryLimit: 5
 
 serviceAccount:
   create: true
@@ -45,6 +59,9 @@ ingress:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     nginx.ingress.kubernetes.io/websocket-services: "thaibahive-web"
     nginx.ingress.kubernetes.io/rate-limit: "100"
     nginx.ingress.kubernetes.io/rate-limit-window: "1s"
@@ -61,9 +78,9 @@ ingress:
 resources:
   limits:
     cpu: 2000m
-    memory: 2Gi
+    memory: 4Gi
   requests:
-    cpu: 1000m
+    cpu: 500m
     memory: 1Gi
 
 autoscaling:
@@ -116,6 +133,8 @@ env:
     value: "3000"
   - name: HOSTNAME
     value: "0.0.0.0"
+  - name: NODE_OPTIONS
+    value: "--max-old-space-size=3072"
 
 envFrom:
   - secretRef:
@@ -152,7 +171,7 @@ startupProbe:
 
 podDisruptionBudget:
   enabled: true
-  minAvailable: 50%
+  maxUnavailable: 1
 
 networkPolicy:
   enabled: true

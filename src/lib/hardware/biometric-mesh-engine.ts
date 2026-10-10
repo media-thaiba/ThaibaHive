@@ -4,7 +4,9 @@ import {
   hardwareBadges,
 } from "@/db/schema";
 import { eq, and, gt, desc } from "drizzle-orm";
-import { createCipheriv, createDecipheriv, randomBytes, createHmac, createHash } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, createHmac, createHash, timingSafeEqual } from "crypto";
+
+let cachedKeyBuffer: Buffer | null = null;
 
 export interface EnrolledTemplateInfo {
   id: string;
@@ -31,10 +33,13 @@ export interface VerificationResult {
 
 export class BiometricMeshEngine {
   private static getKeyBuffer(): Buffer {
-    const rawKey =
-      process.env.BIOMETRIC_ENCRYPTION_KEY ||
-      "thaibahive_biometric_master_aes256_secret_key";
-    return createHash("sha256").update(rawKey).digest();
+    if (!cachedKeyBuffer) {
+      const rawKey =
+        process.env.BIOMETRIC_ENCRYPTION_KEY ||
+        "thaibahive_biometric_master_aes256_secret_key";
+      cachedKeyBuffer = createHash("sha256").update(rawKey).digest();
+    }
+    return cachedKeyBuffer;
   }
 
   /**
@@ -132,7 +137,12 @@ export class BiometricMeshEngine {
       }
 
       const expected = createHmac("sha256", secretKey).update(nonce).digest("hex");
-      return expected === signature;
+      const expectedBuf = Buffer.from(expected, "utf8");
+      const sigBuf = Buffer.from(signature, "utf8");
+      if (expectedBuf.length !== sigBuf.length) {
+        return false;
+      }
+      return timingSafeEqual(expectedBuf, sigBuf);
     } catch {
       return false;
     }
