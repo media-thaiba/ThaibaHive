@@ -1481,6 +1481,58 @@ export const firmwareReleaseSchema = z.object({
 });
 export type FirmwareReleaseInput = z.infer<typeof firmwareReleaseSchema>;
 
+export const hardwareZoneSchema = z.object({
+  name: z.string().min(1, "Zone name is required"),
+  type: z.enum([
+    "building",
+    "floor",
+    "room",
+    "corridor",
+    "gate",
+    "parking",
+    "outdoor",
+    "muster_point",
+  ]),
+  parentZoneId: z.string().optional(),
+  floorNumber: z.number().int().default(0),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  width: z.number().positive().optional(),
+  height: z.number().positive().optional(),
+  pathLossExponent: z.number().min(1.5).max(5.0).default(3.0),
+  wallAttenuationDb: z.number().nonnegative().default(0),
+  isMusterPoint: z.boolean().default(false),
+  emergencyEgressRoute: z.string().optional(),
+  boundaryCoordinates: z.array(z.tuple([z.number(), z.number()])).optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareZoneInput = z.infer<typeof hardwareZoneSchema>;
+
+export const hardwareZoneUpdateSchema = hardwareZoneSchema.partial();
+export type HardwareZoneUpdateInput = z.infer<typeof hardwareZoneUpdateSchema>;
+
+export const trilaterationCalculateSchema = z.object({
+  observations: z
+    .array(
+      z.object({
+        anchorId: z.string().min(1),
+        coordinates: z.object({
+          x: z.number(),
+          y: z.number(),
+          z: z.number().optional(),
+        }),
+        rssi: z.number().min(-120).max(0),
+        txPower1m: z.number().optional(),
+        pathLossExponent: z.number().optional(),
+        wallAttenuationDb: z.number().optional(),
+      })
+    )
+    .min(1, "At least 1 anchor observation is required"),
+});
+export type TrilaterationCalculateInput = z.infer<typeof trilaterationCalculateSchema>;
+
+
 
 
 

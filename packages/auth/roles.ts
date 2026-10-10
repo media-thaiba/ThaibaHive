@@ -168,7 +168,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "chat:channels:create", "chat:channels:view", "chat:channels:moderate", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:admin:moderate", "chat:presence:read",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query", "ai:audit:view", "ai:usage:view", "ai:budget:manage",
-    "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read",
+    "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view",
   ],
   regional_auditor: [
     "regional:view", "warehouse:export", "reports:read", "reports:review", "staff:read",
@@ -190,7 +190,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "chat:channels:view", "chat:messages:read", "chat:presence:read",
     "search:global",
     "ai:rag:query", "ai:audit:view", "ai:usage:view",
-    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read",
+    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
   ],
   admin: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -326,7 +326,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:audit:view", "agent:telemetry:view",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:ingest", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
-    "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read",
+    "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view",
   ],
   hod: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -376,7 +376,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:telemetry:view",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
-    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read",
+    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
   ],
   staff: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -457,7 +457,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:approve",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
-    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read",
+    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
   ],
   purchase: [
     "staff:read",
@@ -488,7 +488,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:approve",
 "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
-    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read",
+    "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
   ],
 };
 
