@@ -8,6 +8,8 @@ export type FeatureFlag =
   | 'canteen'
   | 'academic_tracking'
   | 'agentic_workflows'
+  | 'workflow_studio'
+  | 'live_streaming'
   | 'today_hub'
   | 'media_queue';
 
@@ -17,6 +19,12 @@ const isProd = process.env.NODE_ENV === 'production';
 const defaultAgenticFlag = isProd
   ? process.env.FEATURE_AGENTIC_WORKFLOWS === 'true'
   : process.env.FEATURE_AGENTIC_WORKFLOWS !== 'false';
+const defaultWorkflowStudioFlag = isProd
+  ? process.env.FEATURE_WORKFLOW_STUDIO === 'true'
+  : process.env.FEATURE_WORKFLOW_STUDIO !== 'false';
+const defaultLiveStreamingFlag = isProd
+  ? process.env.FEATURE_LIVE_STREAMING === 'true'
+  : process.env.FEATURE_LIVE_STREAMING !== 'false';
 
 export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   nfc_enrollment: true,
@@ -27,6 +35,8 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   canteen: false,
   academic_tracking: false,
   agentic_workflows: defaultAgenticFlag,
+  workflow_studio: defaultWorkflowStudioFlag,
+  live_streaming: defaultLiveStreamingFlag,
   today_hub: true,
   media_queue: true,
 };
@@ -64,6 +74,14 @@ export function isFeatureEnabled(flag: FeatureFlag, institutionId?: string): boo
 
 export function isAgenticWorkflowsEnabled(institutionId?: string): boolean {
   return isFeatureEnabled('agentic_workflows', institutionId);
+}
+
+export function isWorkflowStudioEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('workflow_studio', institutionId);
+}
+
+export function isLiveStreamingEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('live_streaming', institutionId);
 }
 
 export function isTodayHubEnabled(institutionId?: string): boolean {

@@ -48,6 +48,7 @@ const basePermissions = {
     "telemetry:ingest",
     "mobile:sync",
     "cleanup:execute",
+    "marketplace:plugins:approve", // global/system plugin approval pipelines
   ],
   coordinator: [
     "academic.student.admissions", "academic.student.admissions", "academic.classes.manage", "academic.classes.manage", "academic.grade.create", "academic.classes.manage",
@@ -60,6 +61,7 @@ const basePermissions = {
     "operations:read", "observability:read", "search:global",
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
+    "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
   ],
   institutional_head: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -86,6 +88,7 @@ const basePermissions = {
     "km:advising:audit", "km:analytics:view", "km:knowledge:search", "reviews:read", "reviews:create", "reviews:update",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
+    "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
   ],
   academic_coordinator: [
     "academic.grade.create", "academic.classes.manage", "academic.classes.manage", "academic.classes.manage",
@@ -97,6 +100,7 @@ const basePermissions = {
     "search:global",
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
+    "marketplace:plugins:read", "workflow_studio:read", "workflow_studio:design",
   ],
   exam_coordinator: [
     "exam:create", "exam:read", "exam:publish_results", "exam:enter_marks", "exam:approve_marks",
@@ -106,6 +110,7 @@ const basePermissions = {
     "search:global",
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
+    "marketplace:plugins:read", "workflow_studio:read", "workflow_studio:design",
   ],
   teacher: [
     "exam.marks.enter", "exam.marks.enter", "exam:enter_marks", "exam:read",
@@ -119,6 +124,7 @@ const basePermissions = {
     "profile:read", "profile:write",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
+    "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design",
   ],
   inspector: [
     "reports:read", "reports:review", "staff:read", "attendance:read", "student_attendance:read",
@@ -127,6 +133,7 @@ const basePermissions = {
     "search:global",
     "chat:channels:view", "chat:messages:read", "chat:presence:read",
     "ai:rag:query", "ai:audit:view",
+    "marketplace:plugins:read", "workflow_studio:read", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
   ],
 };
 
@@ -169,6 +176,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query", "ai:audit:view", "ai:usage:view", "ai:budget:manage",
     "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view", "hardware:gates:lockdown",
+    "marketplace:plugins:read", "workflow_studio:read", "live_stream:view",
   ],
   regional_auditor: [
     "regional:view", "warehouse:export", "reports:read", "reports:review", "staff:read",
@@ -191,6 +199,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "search:global",
     "ai:rag:query", "ai:audit:view", "ai:usage:view",
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
+    "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "live_stream:view", "live_stream:snippets:read",
   ],
   admin: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -260,6 +269,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view", "ai:budget:manage",
     "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view", "hardware:gates:lockdown",
+    "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:plugins:approve", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
   ],
   principal: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -328,6 +338,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:ingest", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
     "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view", "hardware:gates:lockdown",
+    "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
   ],
   hod: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -378,6 +389,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
+    "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
   ],
   staff: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -424,6 +436,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:execute",
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
+    "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "live_stream:view", "live_stream:snippets:read",
   ],
   accounts: [
     "staff:read",
@@ -459,6 +472,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
+    "marketplace:plugins:read", "workflow_studio:read",
   ],
   purchase: [
     "staff:read",
@@ -490,6 +504,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
 "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
+    "marketplace:plugins:read", "workflow_studio:read",
   ],
 };
 
