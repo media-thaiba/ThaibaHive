@@ -28,7 +28,7 @@ patches:
 
 images:
   - name: thaibahive/thaibahive-web
-    newTag: v3.36.0
+    newTag: v3.37.0
 
 configMapGenerator:
   - name: thaibahive-config

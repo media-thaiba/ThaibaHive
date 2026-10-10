@@ -4,7 +4,7 @@ replicaCount: 3
 image:
   repository: thaibahive/thaibahive-web
   pullPolicy: IfNotPresent
-  tag: "v3.36.0"
+  tag: "v3.37.0"
 
 imagePullSecrets: []
 nameOverride: ""
