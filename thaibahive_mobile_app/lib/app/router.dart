@@ -82,6 +82,8 @@ import '../features/agent_hub/presentation/agent_hub_screen.dart';
 import '../features/sync/presentation/sync_status_screen.dart';
 import '../features/chat/presentation/channel_list_screen.dart';
 import '../features/chat/presentation/chat_screen.dart';
+import '../features/hardware/presentation/guard_patrol_screen.dart';
+import '../features/hardware/presentation/hardware_radar_screen.dart';
 import '../shared/screens/webview_handoff_screen.dart';
 import '../shared/transitions/page_transitions.dart';
 
@@ -694,6 +696,30 @@ GoRouter buildRouter() {
           state: state,
           child: const SyncStatusScreen(),
         ),
+      ),
+      GoRoute(
+        path: '/radar',
+        name: 'hardwareRadar',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const HardwareRadarScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/guard-patrol',
+        name: 'guardPatrol',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const GuardPatrolScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/operations/radar',
+        redirect: (context, state) => '/radar',
+      ),
+      GoRoute(
+        path: '/operations/guard-patrol',
+        redirect: (context, state) => '/guard-patrol',
       ),
 
       // ─── Workspace: My Work Aliases ───

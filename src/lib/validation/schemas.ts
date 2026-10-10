@@ -1352,6 +1352,287 @@ export const remediationApproveSchema = z.object({
 });
 export type RemediationApproveInput = z.infer<typeof remediationApproveSchema>;
 
+// ============================================
+// Phase 9: Hardware Radar & IoT Mesh Schemas
+// ============================================
+
+export const hardwareDeviceRegisterSchema = z.object({
+  name: z.string().min(1, "Device name is required"),
+  type: z.enum([
+    "beacon",
+    "gate_kiosk",
+    "nfc_reader",
+    "camera",
+    "biometric_scanner",
+    "environmental_sensor",
+    "patrol_device",
+  ]),
+  model: z.string().optional(),
+  firmwareVersion: z.string().optional(),
+  macAddress: z.string().min(6, "MAC address is required").optional(),
+  ipAddress: z.string().optional(),
+  zoneId: z.string().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  certificateThumbprint: z.string().optional(),
+  hmacKeyId: z.string().optional(),
+  configurationJson: z.string().optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareDeviceRegisterInput = z.infer<typeof hardwareDeviceRegisterSchema>;
+
+export const hardwareDeviceUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  type: z.enum([
+    "beacon",
+    "gate_kiosk",
+    "nfc_reader",
+    "camera",
+    "biometric_scanner",
+    "environmental_sensor",
+    "patrol_device",
+  ]).optional(),
+  model: z.string().optional(),
+  firmwareVersion: z.string().optional(),
+  ipAddress: z.string().optional(),
+  status: z.enum(["online", "offline", "maintenance", "decommissioned", "quarantined"]).optional(),
+  zoneId: z.string().nullable().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  configurationJson: z.string().optional(),
+  metadataJson: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+export type HardwareDeviceUpdateInput = z.infer<typeof hardwareDeviceUpdateSchema>;
+
+export const hardwareHeartbeatSchema = z.object({
+  deviceId: z.string().min(1, "Device ID is required"),
+  firmwareVersion: z.string().optional(),
+  batteryLevel: z.number().min(0).max(100).optional(),
+  cpuUsagePercent: z.number().min(0).max(100).optional(),
+  memoryUsagePercent: z.number().min(0).max(100).optional(),
+  networkLatencyMs: z.number().nonnegative().optional(),
+  packetLossPercent: z.number().min(0).max(100).optional(),
+  temperatureCelsius: z.number().optional(),
+  humidityPercent: z.number().min(0).max(100).optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareHeartbeatInput = z.infer<typeof hardwareHeartbeatSchema>;
+
+export const hardwareTelemetryIngestSchema = z.object({
+  deviceId: z.string().min(1, "Device ID is required"),
+  zoneId: z.string().optional(),
+  logType: z.enum([
+    "heartbeat",
+    "rssi_scan",
+    "battery",
+    "temperature",
+    "humidity",
+    "motion",
+    "firmware_status",
+    "certificate_expiry",
+    "network_stats",
+  ]),
+  rssi: z.number().optional(),
+  snr: z.number().optional(),
+  batteryLevel: z.number().optional(),
+  temperatureCelsius: z.number().optional(),
+  humidityPercent: z.number().optional(),
+  motionDetected: z.boolean().optional(),
+  firmwareVersion: z.string().optional(),
+  certificateExpiryDays: z.number().optional(),
+  cpuUsagePercent: z.number().optional(),
+  memoryUsagePercent: z.number().optional(),
+  networkLatencyMs: z.number().optional(),
+  packetLossPercent: z.number().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  merkleRoot: z.string().optional(),
+  merkleProof: z.string().optional(),
+  metadataJson: z.string().optional(),
+  timestamp: z.string().optional(),
+});
+export type HardwareTelemetryIngestInput = z.infer<typeof hardwareTelemetryIngestSchema>;
+
+export const firmwareReleaseSchema = z.object({
+  version: z.string().min(1, "Firmware version is required"),
+  deviceType: z.enum([
+    "beacon",
+    "gate_kiosk",
+    "nfc_reader",
+    "camera",
+    "biometric_scanner",
+    "environmental_sensor",
+    "patrol_device",
+  ]),
+  targetModel: z.string().optional(),
+  binaryUrl: z.string().url("Valid binary URL required"),
+  binarySha256: z.string().length(64, "SHA-256 hash must be 64 characters"),
+  signature: z.string().min(1, "Cryptographic signature is required"),
+  releaseNotes: z.string().optional(),
+  minCurrentVersion: z.string().optional(),
+  rolloutStage: z.enum(["draft", "staged", "canary_1", "staging_10", "fleet_100", "aborted", "completed"]).default("draft"),
+});
+export type FirmwareReleaseInput = z.infer<typeof firmwareReleaseSchema>;
+
+export const hardwareZoneSchema = z.object({
+  name: z.string().min(1, "Zone name is required"),
+  type: z.enum([
+    "building",
+    "floor",
+    "room",
+    "corridor",
+    "gate",
+    "parking",
+    "outdoor",
+    "muster_point",
+  ]),
+  parentZoneId: z.string().optional(),
+  floorNumber: z.number().int().default(0),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  width: z.number().positive().optional(),
+  height: z.number().positive().optional(),
+  pathLossExponent: z.number().min(1.5).max(5.0).default(3.0),
+  wallAttenuationDb: z.number().nonnegative().default(0),
+  isMusterPoint: z.boolean().default(false),
+  emergencyEgressRoute: z.string().optional(),
+  boundaryCoordinates: z.array(z.tuple([z.number(), z.number()])).optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareZoneInput = z.infer<typeof hardwareZoneSchema>;
+
+export const hardwareZoneUpdateSchema = hardwareZoneSchema.partial();
+export type HardwareZoneUpdateInput = z.infer<typeof hardwareZoneUpdateSchema>;
+
+export const trilaterationCalculateSchema = z.object({
+  observations: z
+    .array(
+      z.object({
+        anchorId: z.string().min(1),
+        coordinates: z.object({
+          x: z.number(),
+          y: z.number(),
+          z: z.number().optional(),
+        }),
+        rssi: z.number().min(-120).max(0),
+        txPower1m: z.number().optional(),
+        pathLossExponent: z.number().optional(),
+        wallAttenuationDb: z.number().optional(),
+      })
+    )
+    .min(1, "At least 1 anchor observation is required"),
+});
+export type TrilaterationCalculateInput = z.infer<typeof trilaterationCalculateSchema>;
+
+export const gateAccessVerifySchema = z.object({
+  badgeId: z.string().min(1, "Badge ID / Credential is required"),
+  deviceId: z.string().min(1, "Device ID is required"),
+  zoneId: z.string().optional(),
+  direction: z.enum(["in", "out"]).default("in"),
+  authenticationMethod: z.enum([
+    "nfc",
+    "ble",
+    "qr",
+    "face",
+    "fingerprint",
+    "pin",
+    "hybrid",
+    "emergency_override",
+  ]).default("nfc"),
+  pin: z.string().optional(),
+  stepUpToken: z.string().optional(),
+  stepUpAuthMethod: z.enum(["biometric", "pin", "supervisor_approval"]).optional(),
+  emergencyOverride: z.boolean().default(false),
+  rssi: z.number().optional(),
+  snr: z.number().optional(),
+  distanceEstimateMeters: z.number().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  metadataJson: z.string().optional(),
+});
+export type GateAccessVerifyInput = z.infer<typeof gateAccessVerifySchema>;
+
+export const gateLockdownSchema = z.object({
+  zoneId: z.string().optional(),
+  isLocked: z.boolean(),
+  reason: z.string().optional(),
+  emergencyType: z.enum(["active_threat", "fire", "medical", "drill", "manual_override"]).default("active_threat"),
+});
+export type GateLockdownInput = z.infer<typeof gateLockdownSchema>;
+
+export const hardwareBadgeRegisterSchema = z.object({
+  badgeId: z.string().min(1, "Badge identifier is required"),
+  badgeType: z.enum(["nfc_card", "ble_beacon", "qr_code", "hybrid"]),
+  credentialType: z.enum(["staff_id", "student_id", "visitor_pass", "contractor_badge", "emergency_responder"]),
+  staffId: z.string().optional(),
+  studentId: z.string().optional(),
+  encodedData: z.string().optional(),
+  certificateThumbprint: z.string().optional(),
+  hmacKeyId: z.string().optional(),
+  validFrom: z.string().optional(),
+  validUntil: z.string().optional(),
+  accessRulesJson: z.string().optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareBadgeRegisterInput = z.infer<typeof hardwareBadgeRegisterSchema>;
+
+export const hardwareBadgeRevokeSchema = z.object({
+  reason: z.string().min(1, "Revocation reason is required"),
+});
+export type HardwareBadgeRevokeInput = z.infer<typeof hardwareBadgeRevokeSchema>;
+
+export const biometricEnrollSchema = z.object({
+  ownerType: z.enum(["staff", "student", "visitor"]),
+  ownerId: z.string().min(1, "Owner ID is required"),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]),
+  templateVector: z.array(z.number()).min(16, "Template vector must contain embeddings"),
+  algorithm: z.string().default("facenet-512d-v1"),
+  qualityScore: z.number().min(0).max(1).default(0.95),
+  enrolledByDeviceId: z.string().optional(),
+  enrolledByStaffId: z.string().optional(),
+  metadataJson: z.string().optional(),
+});
+export type BiometricEnrollInput = z.infer<typeof biometricEnrollSchema>;
+
+export const biometricVerifySchema = z.object({
+  ownerType: z.enum(["staff", "student", "visitor"]).optional(),
+  ownerId: z.string().optional(),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]).default("face"),
+  probeVector: z.array(z.number()).min(16, "Probe vector must contain embeddings"),
+  threshold: z.number().min(0).max(1).default(0.75),
+  challengeNonce: z.string().optional(),
+  challengeSignature: z.string().optional(),
+});
+export type BiometricVerifyInput = z.infer<typeof biometricVerifySchema>;
+
+export const biometricSyncSchema = z.object({
+  since: z.string().optional(), // ISO date string for delta sync
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]).optional(),
+});
+export type BiometricSyncInput = z.infer<typeof biometricSyncSchema>;
+
+export const biometricZeroizeSchema = z.object({
+  ownerType: z.enum(["staff", "student", "visitor"]),
+  ownerId: z.string().min(1, "Owner ID is required"),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]).optional(),
+  reason: z.string().min(1, "Zeroization reason is required"),
+});
+export type BiometricZeroizeInput = z.infer<typeof biometricZeroizeSchema>;
+
+
+
+
+
 
 
 
