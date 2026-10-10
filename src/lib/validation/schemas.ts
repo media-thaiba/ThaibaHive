@@ -1261,6 +1261,27 @@ export const markChatReadSchema = z.object({
 });
 export type MarkChatReadInput = z.infer<typeof markChatReadSchema>;
 
+export const uploadAiDocumentSchema = z.object({
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
+  documentType: z.enum(["fee_receipt", "medical_certificate", "identity_card", "cctv_incident", "general_document"]),
+  fileUrl: z.string().optional(),
+  rawText: z.string().optional(),
+  fileBase64: z.string().optional(),
+  fileSizeBytes: z.number().int().nonnegative().optional(),
+  targetEntityType: z.string().optional(),
+  targetEntityId: z.string().optional(),
+});
+export type UploadAiDocumentInput = z.infer<typeof uploadAiDocumentSchema>;
+
+export const confirmAiDocumentSchema = z.object({
+  confirmedData: z.record(z.string(), z.any()).optional(),
+  targetEntityType: z.string().optional(),
+  targetEntityId: z.string().optional(),
+});
+export type ConfirmAiDocumentInput = z.infer<typeof confirmAiDocumentSchema>;
+
+
 
 
 
