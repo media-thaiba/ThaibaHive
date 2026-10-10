@@ -111,6 +111,7 @@
     "@types/pdfkit": "^0.17.6",
     "@types/redis": "^4.0.11",
     "@vercel/functions": "^3.7.6",
+    "@xyflow/react": "^12.12.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

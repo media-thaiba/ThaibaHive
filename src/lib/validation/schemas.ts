@@ -1687,6 +1687,83 @@ export const agentPluginReviewSchema = z.object({
 });
 export type AgentPluginReviewInput = z.infer<typeof agentPluginReviewSchema>;
 
+// ============================================
+// Phase 10: Visual Workflow Studio Validation Schemas
+// ============================================
+
+export const studioNodeDataSchema = z.object({
+  label: z.string().min(1).max(128),
+  nodeType: z.enum(["trigger", "action", "agentStep", "branch", "approval", "wait", "parallel", "notification", "hardware"]),
+  agent: z.string().max(128).optional(),
+  tool: z.string().max(128).optional(),
+  input: z.record(z.string(), z.unknown()).optional(),
+  condition: z.string().max(512).optional(),
+  waitMs: z.number().int().min(0).max(3_600_000).optional(),
+  approval: z
+    .object({
+      required: z.boolean(),
+      permission: z.string().max(128).optional(),
+      severity: z.enum(["critical", "high", "medium", "low"]).optional(),
+      autoExpireHours: z.number().int().positive().optional(),
+      onExpiry: z.enum(["escalate", "hold", "reject"]).optional(),
+    })
+    .optional(),
+  trigger: z
+    .object({
+      type: z.enum(["manual", "schedule", "event", "anomaly"]),
+      cron: z.string().max(64).optional(),
+      topic: z.string().max(128).optional(),
+      subsystem: z.string().max(128).optional(),
+      severityThreshold: z.enum(["low", "medium", "high", "critical"]).optional(),
+    })
+    .optional(),
+});
+
+export const studioCanvasStateSchema = z.object({
+  nodes: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(64),
+        type: z.string().max(64).optional(),
+        position: z.object({ x: z.number(), y: z.number() }),
+        data: studioNodeDataSchema,
+      })
+    )
+    .min(1)
+    .max(200),
+  edges: z
+    .array(
+      z.object({
+        id: z.string().max(128).optional(),
+        source: z.string().min(1).max(64),
+        target: z.string().min(1).max(64),
+        sourceHandle: z.string().max(64).nullable().optional(),
+        label: z.string().max(64).optional(),
+      })
+    )
+    .max(400),
+});
+export type StudioCanvasStateInput = z.infer<typeof studioCanvasStateSchema>;
+
+export const workflowGraphCreateSchema = z.object({
+  graphName: z.string().min(2).max(128),
+  description: z.string().max(512).optional(),
+  key: z
+    .string()
+    .min(2)
+    .max(64)
+    .regex(/^[a-zA-Z0-9_-]+$/, "key must be alphanumeric with dashes or underscores"),
+  canvasState: studioCanvasStateSchema,
+});
+export type WorkflowGraphCreateInput = z.infer<typeof workflowGraphCreateSchema>;
+
+export const workflowGraphUpdateSchema = z.object({
+  graphName: z.string().min(2).max(128).optional(),
+  description: z.string().max(512).optional(),
+  canvasState: studioCanvasStateSchema.optional(),
+});
+export type WorkflowGraphUpdateInput = z.infer<typeof workflowGraphUpdateSchema>;
+
 
 
 

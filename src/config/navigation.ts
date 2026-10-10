@@ -9,7 +9,7 @@ import {
   Megaphone, PartyPopper, ScrollText, Vote, MessageSquare,
   Receipt, CalendarClock, AlertTriangle, Banknote, FileSearch,
   Inbox, UserCheck, Image as ImageIcon, CalendarRange,
-  Store, Boxes, BookOpen,
+  Store, Boxes, BookOpen, Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -145,6 +145,7 @@ const operationsItems: NavItem[] = [
   { href: "/operations/finance-requests", label: "Finance Requests", desc: "Reimbursement & fund requests pending finance review", icon: Inbox, workspace: "operations", roles: ["accounts", "admin", "super_admin", "principal"] },
   { href: "/operations/visitors", label: "Visitors", desc: "Visitor pre-registration, passes & gate logs", icon: UserCheck, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod"] },
   { href: "/operations/media-library", label: "Media Library", desc: "Shared institutional photos, videos & documents", icon: ImageIcon, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff"] },
+  { href: "/operations/workflow-studio", label: "Workflow Studio", desc: "Design & publish visual DAG workflows for the agentic engine", icon: Workflow, permission: "workflow_studio:read", workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff", "teacher", "accounts", "purchase", "coordinator", "exam_coordinator", "regional_admin", "regional_auditor"] },
 ];
 
 // --- Administration ---
