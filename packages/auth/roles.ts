@@ -323,7 +323,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "engage:campaign:manage", "engage:campaign:view", "engage:chat:interact", "engage:preferences:manage", "engage:template:edit", "engage:workflow:manage",
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:audit:view", "agent:telemetry:view",
     "search:global",
-    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:ingest", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
   ],
   hod: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",

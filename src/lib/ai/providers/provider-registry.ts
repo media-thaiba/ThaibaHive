@@ -144,3 +144,8 @@ export class ProviderRegistry implements IChatProvider, IEmbeddingProvider {
 }
 
 export const aiProvider = new ProviderRegistry();
+
+export const embeddingProvider = {
+  embed: (texts: string[]) => aiProvider.embed(texts),
+  dimension: 1536,
+};

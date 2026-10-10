@@ -1298,6 +1298,28 @@ export const voiceInteractSchema = z.object({
 });
 export type VoiceInteractInput = z.infer<typeof voiceInteractSchema>;
 
+export const ragQuerySchema = z.object({
+  query: z.string().min(1).max(2000),
+  topK: z.coerce.number().int().min(1).max(50).default(10),
+  vectorWeight: z.coerce.number().min(0).max(1).default(0.6),
+  keywordWeight: z.coerce.number().min(0).max(1).default(0.4),
+  sourceTypes: z.array(z.enum(["policy", "circular", "academic", "hr", "fee", "general"])).optional(),
+  minScore: z.coerce.number().min(0).max(1).default(0.1),
+});
+
+export type RagQueryInput = z.infer<typeof ragQuerySchema>;
+
+export const ragCorpusIngestSchema = z.object({
+  documents: z.array(z.object({
+    content: z.string().min(1).max(50000),
+    sourceType: z.enum(["policy", "circular", "academic", "hr", "fee", "general"]),
+    sourceId: z.string().min(1),
+    title: z.string().min(1).max(500),
+  })).min(1).max(50),
+});
+
+export type RagCorpusIngestInput = z.infer<typeof ragCorpusIngestSchema>;
+
 
 
 
