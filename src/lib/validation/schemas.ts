@@ -1532,6 +1532,65 @@ export const trilaterationCalculateSchema = z.object({
 });
 export type TrilaterationCalculateInput = z.infer<typeof trilaterationCalculateSchema>;
 
+export const gateAccessVerifySchema = z.object({
+  badgeId: z.string().min(1, "Badge ID / Credential is required"),
+  deviceId: z.string().min(1, "Device ID is required"),
+  zoneId: z.string().optional(),
+  direction: z.enum(["in", "out"]).default("in"),
+  authenticationMethod: z.enum([
+    "nfc",
+    "ble",
+    "qr",
+    "face",
+    "fingerprint",
+    "pin",
+    "hybrid",
+    "emergency_override",
+  ]).default("nfc"),
+  pin: z.string().optional(),
+  stepUpToken: z.string().optional(),
+  stepUpAuthMethod: z.enum(["biometric", "pin", "supervisor_approval"]).optional(),
+  emergencyOverride: z.boolean().default(false),
+  rssi: z.number().optional(),
+  snr: z.number().optional(),
+  distanceEstimateMeters: z.number().optional(),
+  coordinatesX: z.number().optional(),
+  coordinatesY: z.number().optional(),
+  coordinatesZ: z.number().optional(),
+  metadataJson: z.string().optional(),
+});
+export type GateAccessVerifyInput = z.infer<typeof gateAccessVerifySchema>;
+
+export const gateLockdownSchema = z.object({
+  zoneId: z.string().optional(),
+  isLocked: z.boolean(),
+  reason: z.string().optional(),
+  emergencyType: z.enum(["active_threat", "fire", "medical", "drill", "manual_override"]).default("active_threat"),
+});
+export type GateLockdownInput = z.infer<typeof gateLockdownSchema>;
+
+export const hardwareBadgeRegisterSchema = z.object({
+  badgeId: z.string().min(1, "Badge identifier is required"),
+  badgeType: z.enum(["nfc_card", "ble_beacon", "qr_code", "hybrid"]),
+  credentialType: z.enum(["staff_id", "student_id", "visitor_pass", "contractor_badge", "emergency_responder"]),
+  staffId: z.string().optional(),
+  studentId: z.string().optional(),
+  encodedData: z.string().optional(),
+  certificateThumbprint: z.string().optional(),
+  hmacKeyId: z.string().optional(),
+  validFrom: z.string().optional(),
+  validUntil: z.string().optional(),
+  accessRulesJson: z.string().optional(),
+  metadataJson: z.string().optional(),
+});
+export type HardwareBadgeRegisterInput = z.infer<typeof hardwareBadgeRegisterSchema>;
+
+export const hardwareBadgeRevokeSchema = z.object({
+  reason: z.string().min(1, "Revocation reason is required"),
+});
+export type HardwareBadgeRevokeInput = z.infer<typeof hardwareBadgeRevokeSchema>;
+
+
 
 
 
