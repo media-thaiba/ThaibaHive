@@ -1590,6 +1590,46 @@ export const hardwareBadgeRevokeSchema = z.object({
 });
 export type HardwareBadgeRevokeInput = z.infer<typeof hardwareBadgeRevokeSchema>;
 
+export const biometricEnrollSchema = z.object({
+  ownerType: z.enum(["staff", "student", "visitor"]),
+  ownerId: z.string().min(1, "Owner ID is required"),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]),
+  templateVector: z.array(z.number()).min(16, "Template vector must contain embeddings"),
+  algorithm: z.string().default("facenet-512d-v1"),
+  qualityScore: z.number().min(0).max(1).default(0.95),
+  enrolledByDeviceId: z.string().optional(),
+  enrolledByStaffId: z.string().optional(),
+  metadataJson: z.string().optional(),
+});
+export type BiometricEnrollInput = z.infer<typeof biometricEnrollSchema>;
+
+export const biometricVerifySchema = z.object({
+  ownerType: z.enum(["staff", "student", "visitor"]).optional(),
+  ownerId: z.string().optional(),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]).default("face"),
+  probeVector: z.array(z.number()).min(16, "Probe vector must contain embeddings"),
+  threshold: z.number().min(0).max(1).default(0.75),
+  challengeNonce: z.string().optional(),
+  challengeSignature: z.string().optional(),
+});
+export type BiometricVerifyInput = z.infer<typeof biometricVerifySchema>;
+
+export const biometricSyncSchema = z.object({
+  since: z.string().optional(), // ISO date string for delta sync
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]).optional(),
+});
+export type BiometricSyncInput = z.infer<typeof biometricSyncSchema>;
+
+export const biometricZeroizeSchema = z.object({
+  ownerType: z.enum(["staff", "student", "visitor"]),
+  ownerId: z.string().min(1, "Owner ID is required"),
+  modality: z.enum(["face", "fingerprint", "iris", "palm_vein"]).optional(),
+  reason: z.string().min(1, "Zeroization reason is required"),
+});
+export type BiometricZeroizeInput = z.infer<typeof biometricZeroizeSchema>;
+
+
 
 
 
