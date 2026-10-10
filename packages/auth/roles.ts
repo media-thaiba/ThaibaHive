@@ -59,6 +59,7 @@ const basePermissions = {
     "timetables:read", "timetables:manage", "enquiries:read", "enquiries:manage",
     "operations:read", "observability:read", "search:global",
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
   ],
   institutional_head: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -84,6 +85,7 @@ const basePermissions = {
     "curriculum:advising:chat", "curriculum:audit:execute", "curriculum:catalog:manage", "curriculum:plans:approve", "curriculum:plans:edit", "curriculum:plans:view", "curriculum:retention:intervene", "curriculum:retention:view", "curriculum:transfer:articulate",
     "km:advising:audit", "km:analytics:view", "km:knowledge:search", "reviews:read", "reviews:create", "reviews:update",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
   ],
   academic_coordinator: [
     "academic.grade.create", "academic.classes.manage", "academic.classes.manage", "academic.classes.manage",
@@ -94,6 +96,7 @@ const basePermissions = {
     "documents:read", "documents:generate", "exports:read", "exports:create",
     "search:global",
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
   ],
   exam_coordinator: [
     "exam:create", "exam:read", "exam:publish_results", "exam:enter_marks", "exam:approve_marks",
@@ -102,6 +105,7 @@ const basePermissions = {
     "documents:read", "documents:generate", "exports:read", "exports:create",
     "search:global",
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
   ],
   teacher: [
     "exam.marks.enter", "exam.marks.enter", "exam:enter_marks", "exam:read",
@@ -114,6 +118,7 @@ const basePermissions = {
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
     "profile:read", "profile:write",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
   ],
   inspector: [
     "reports:read", "reports:review", "staff:read", "attendance:read", "student_attendance:read",
@@ -121,6 +126,7 @@ const basePermissions = {
     "regional:view", "autonomy:view", "operations:read", "observability:read",
     "search:global",
     "chat:channels:view", "chat:messages:read", "chat:presence:read",
+    "ai:rag:query", "ai:audit:view",
   ],
 };
 
@@ -161,6 +167,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:manage", "agent:memory:view", "agent:audit:view", "agent:guardrails:manage", "agent:telemetry:view",
     "chat:channels:create", "chat:channels:view", "chat:channels:moderate", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:admin:moderate", "chat:presence:read",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query", "ai:audit:view", "ai:usage:view", "ai:budget:manage",
   ],
   regional_auditor: [
     "regional:view", "warehouse:export", "reports:read", "reports:review", "staff:read",
@@ -181,6 +188,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:audit:view", "agent:telemetry:view",
     "chat:channels:view", "chat:messages:read", "chat:presence:read",
     "search:global",
+    "ai:rag:query", "ai:audit:view", "ai:usage:view",
   ],
   admin: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -248,6 +256,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "agent:workflows:view", "agent:workflows:create", "agent:workflows:execute", "agent:workflows:approve", "agent:workflows:manage",
     "agent:memory:view", "agent:memory:manage", "agent:audit:view", "agent:guardrails:manage", "agent:killswitch:engage", "agent:telemetry:view",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view", "ai:budget:manage",
   ],
   principal: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -314,6 +323,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "engage:campaign:manage", "engage:campaign:view", "engage:chat:interact", "engage:preferences:manage", "engage:template:edit", "engage:workflow:manage",
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:audit:view", "agent:telemetry:view",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
   ],
   hod: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -362,6 +372,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "operations:read", "profile:read", "profile:write",
     "agent:workflows:view", "agent:workflows:execute", "agent:workflows:approve", "agent:memory:view", "agent:telemetry:view",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
   ],
   staff: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -407,6 +418,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "profile:read", "profile:write",
     "agent:workflows:view", "agent:workflows:execute",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
   ],
   accounts: [
     "staff:read",
@@ -440,6 +452,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "profile:read", "profile:write",
     "agent:workflows:view", "agent:workflows:approve",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
   ],
   purchase: [
     "staff:read",
@@ -469,6 +482,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "profile:read", "profile:write",
     "agent:workflows:view", "agent:workflows:approve",
     "search:global",
+    "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query",
   ],
 };
 

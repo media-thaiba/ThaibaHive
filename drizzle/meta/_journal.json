@@ -239,6 +239,13 @@
       "when": 1791553190600,
       "tag": "0033_early_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1791626779932,
+      "tag": "0034_complex_iron_monger",
+      "breakpoints": true
     }
   ]
 }

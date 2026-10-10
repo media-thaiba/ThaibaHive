@@ -7158,6 +7158,84 @@ export const chatReceipts = sqliteTable("chat_receipts", {
   chatReceiptsStaffIdx: index("idx_pg_chat_receipts_staff").on(t.staffId),
 }));
 
+// ─── Phase 8: AI Copilot V2 — Multimodal LLM & Autonomous Remediation ───
+
+export const aiDocuments = sqliteTable("ai_documents", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  uploadedById: text("uploaded_by_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSizeBytes: integer("file_size_bytes").notNull(),
+  mimeType: text("mime_type").notNull(),
+  documentType: text("document_type").notNull(), // 'fee_receipt' | 'medical_certificate' | 'identity_card' | 'cctv_incident' | 'general_document'
+  status: text("status").notNull().default("pending"), // 'pending' | 'processing' | 'extracted' | 'waiting_approval' | 'confirmed' | 'rejected' | 'failed'
+  confidenceScore: real("confidence_score"),
+  extractedDataJson: text("extracted_data_json"),
+  validationErrorsJson: text("validation_errors_json"),
+  confirmedById: text("confirmed_by_id").references(() => staff.id, { onDelete: "set null" }),
+  confirmedAt: text("confirmed_at"),
+  targetEntityType: text("target_entity_type"),
+  targetEntityId: text("target_entity_id"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  aiDocInstStatusIdx: index("idx_pg_ai_documents_inst_status").on(t.institutionId, t.status),
+  aiDocInstTypeIdx: index("idx_pg_ai_documents_inst_type").on(t.institutionId, t.documentType),
+  aiDocInstCreatedIdx: index("idx_pg_ai_documents_inst_created").on(t.institutionId, t.createdAt),
+}));
+
+export const aiCopilotSessions = sqliteTable("ai_copilot_sessions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  channelType: text("channel_type").notNull().default("text"), // 'voice' | 'text' | 'omni'
+  status: text("status").notNull().default("active"), // 'active' | 'idle' | 'ended'
+  contextJson: text("context_json"),
+  totalTurns: integer("total_turns").notNull().default(0),
+  totalInputTokens: integer("total_input_tokens").notNull().default(0),
+  totalOutputTokens: integer("total_output_tokens").notNull().default(0),
+  lastInteractionAt: text("last_interaction_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  endedAt: text("ended_at"),
+}, (t) => ({
+  aiSessionInstStaffIdx: index("idx_pg_ai_sessions_inst_staff").on(t.institutionId, t.staffId),
+  aiSessionInstStatusIdx: index("idx_pg_ai_sessions_inst_status").on(t.institutionId, t.status),
+}));
+
+export const aiRagCorpus = sqliteTable("ai_rag_corpus", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  sourceType: text("source_type").notNull(), // 'policy' | 'circular' | 'calendar' | 'hr_rule' | 'fee_structure' | 'handbook'
+  sourceId: text("source_id"),
+  chunkIndex: integer("chunk_index").notNull(),
+  chunkContent: text("chunk_content").notNull(),
+  parentSection: text("parent_section"),
+  embedding: text("embedding"), // Vector / JSON serialized in PG
+  metadataJson: text("metadata_json"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  aiRagInstSourceIdx: index("idx_pg_ai_rag_inst_source").on(t.institutionId, t.sourceType),
+  aiRagInstChunkIdx: index("idx_pg_ai_rag_inst_chunk").on(t.institutionId, t.chunkIndex),
+}));
+
+export const aiTokenBudgets = sqliteTable("ai_token_budgets", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  monthlyTokenLimit: integer("monthly_token_limit").notNull().default(1000000),
+  usedInputTokens: integer("used_input_tokens").notNull().default(0),
+  usedOutputTokens: integer("used_output_tokens").notNull().default(0),
+  usedCachedTokens: integer("used_cached_tokens").notNull().default(0),
+  billingCycleStart: text("billing_cycle_start").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  aiBudgetInstIdx: uniqueIndex("idx_pg_ai_token_budgets_inst").on(t.institutionId),
+}));
+
 
 
 
