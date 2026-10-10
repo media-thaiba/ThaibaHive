@@ -5,7 +5,7 @@ import {
   hardwareDevices,
   hardwareZones,
 } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { createHash } from "crypto";
 import { AntiPassbackEngine, AntiPassbackMode, APBLastEvent } from "./anti-passback-engine";
 
@@ -673,5 +673,66 @@ export class GateAccessEngine {
       );
 
     return { ...existing, status: "revoked", revokedAt: now, revokedReason: reason };
+  }
+
+  /**
+   * Cryptographically verify 100% untampered sequential SHA-256 Merkle hash chain
+   */
+  static async verifyMerkleAuditTrail(
+    institutionId: string
+  ): Promise<{ valid: boolean; totalEvents: number; error?: string }> {
+    const events = await db
+      .select()
+      .from(hardwareAccessEvents)
+      .where(eq(hardwareAccessEvents.institutionId, institutionId))
+      .orderBy(asc(hardwareAccessEvents.timestamp));
+
+    if (events.length === 0) {
+      return { valid: true, totalEvents: 0 };
+    }
+
+    let expectedPrevHash = "0".repeat(64);
+
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+
+      // Check linked previous hash
+      if (ev.merkleProof && ev.merkleProof !== expectedPrevHash) {
+        return {
+          valid: false,
+          totalEvents: events.length,
+          error: `Merkle pointer broken at event ${ev.id}: expected prevHash ${expectedPrevHash}, found ${ev.merkleProof}`,
+        };
+      }
+
+      // Recompute payload hash
+      const payload = JSON.stringify({
+        prevHash: expectedPrevHash,
+        id: ev.id,
+        inst: institutionId,
+        type: ev.eventType,
+        badge: ev.badgeId,
+        dev: ev.deviceId,
+        res: ev.verificationResult,
+        ts: ev.timestamp,
+      });
+
+      const calculatedRoot = createHash("sha256").update(payload).digest("hex");
+
+      if (ev.merkleRoot !== calculatedRoot) {
+        return {
+          valid: false,
+          totalEvents: events.length,
+          error: `Merkle root hash mismatch at event ${ev.id}: computed ${calculatedRoot}, stored ${ev.merkleRoot}`,
+        };
+      }
+
+      expectedPrevHash = ev.merkleRoot;
+    }
+
+    return {
+      valid: true,
+      totalEvents: events.length,
+    };
   }
 }

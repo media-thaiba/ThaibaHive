@@ -2,6 +2,21 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.38.0] - 2026-10-10
+### Phase 9: Track 3C Hardware Radar & IoT Mesh
+#### Added
+- **Fleet Management & Device Onboarding**: Micro-agent IoT orchestration for BLE beacons, gateways, environmental sensors, turnstiles, and cameras with X.509 mTLS and HMAC-SHA256 device authentication, and automated fleet anomaly detection (low battery, offline heartbeat timeouts, RF packet loss).
+- **High-Volume Telemetry Ingestion & Firmware OTA**: In-memory buffered write-behind batch worker (`TelemetryIngestionWorker`) with sub-second flushing, and chunked SHA-256 signed firmware OTA staging state machine (`FirmwareOTAEngine`) with canary rollouts (1% → 10% → 100%) and automatic rollback watchdog.
+- **Proximity Radar & Spatial Geofencing**: 2.4GHz BLE RSSI distance estimation via Log-Distance Path Loss model, 1D Kalman filter smoothing, Weighted Least Squares (WLS) multi-anchor trilateration, and Ray-Casting point-in-polygon algorithm for convex/concave campus boundaries and restricted security zones.
+- **Dynamic Emergency Muster Headcount**: Real-time evacuation accounting engine (`MusterEngine`) tracking safe occupants inside assembly zones vs missing occupants, with evacuation percentage progress metrics.
+- **Smart Turnstile Gate & 5-Tier Anti-Passback State Machine**: Sub-50ms transit verification engine (`GateAccessEngine`) with 5 APB modes (`hard`, `soft`, `timed`, `forgiving`, `disabled`), double-swipe jitter tolerance, and campus/zone emergency lockdown override.
+- **Edge Biometric Mesh & Zeroization**: AES-256-GCM envelope encrypted biometric template storage, vector cosine similarity matching ($\ge 0.82$), replay-defense challenge nonces, differential delta sync for edge terminals, and GDPR Article 17 / FERPA cryptographic zeroization.
+- **Web Command Center & Canvas Radar Map**: 60 FPS interactive visual radar canvas (`<CampusRadarMap>`), live gate monitoring console (`<GateMonitoringConsole>`), device fleet manager (`<DeviceFleetTable>`), and operations pages at `/operations/radar` and `/operations/hardware`.
+- **Flutter Mobile Guard Patrol & Radar**: Riverpod-backed `GuardPatrolScreen` for NFC/QR checkpoint transit logging, offline outbox queuing, and `HardwareRadarScreen` with live muster evacuation widgets and 2D spatial blip visualization.
+- **Dual-Dialect Database Parity**: 6 new tables (`hardware_devices`, `hardware_zones`, `hardware_badges`, `hardware_biometric_templates`, `hardware_access_events`, `hardware_telemetry_logs`) across SQLite and PostgreSQL schemas with unique indexes, foreign key cascades, and migrations (`0035_many_talkback.sql`, `0019_low_mystique.sql`).
+- **5-Tier Granular RBAC Matrix**: 9 new hardware & radar permissions mapped across `super_admin`, `admin`, `principal`, `hod`, `staff`, `accounts`, `purchase`, `regional_admin`, and `regional_auditor`.
+- **8-Stage End-to-End Simulation CLI**: Verified 100% completion via `pnpm hardware:simulate`.
+
 ## [3.37.0] - 2026-10-10
 ### Phase 8: AI Copilot V2 (Multimodal LLM & Autonomous Remediation)
 #### Added

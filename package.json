@@ -69,6 +69,7 @@
     "fee:simulate": "tsx scripts/fee-simulate.ts",
     "alumni:simulate": "tsx scripts/alumni-simulate.ts",
     "agent:simulate": "tsx scripts/agent-simulate.ts",
+    "hardware:simulate": "tsx scripts/hardware-simulate.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {
