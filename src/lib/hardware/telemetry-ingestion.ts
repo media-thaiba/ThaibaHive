@@ -109,38 +109,38 @@ export class TelemetryIngestionWorker {
     this.buffer = [];
 
     try {
-      // Chunk inserts in batches of 50 to maintain database stability
-      const chunkSize = 50;
+      // Chunk inserts in batches of 100 for high-performance multi-row bulk SQL writes
+      const chunkSize = 100;
       for (let i = 0; i < itemsToFlush.length; i += chunkSize) {
         const chunk = itemsToFlush.slice(i, i + chunkSize);
-        for (const log of chunk) {
-          await db.insert(hardwareTelemetryLogs).values({
-            id: log.id,
-            institutionId: log.institutionId,
-            deviceId: log.deviceId,
-            zoneId: log.zoneId ?? null,
-            logType: log.logType,
-            rssi: log.rssi ?? null,
-            snr: log.snr ?? null,
-            batteryLevel: log.batteryLevel ?? null,
-            temperatureCelsius: log.temperatureCelsius ?? null,
-            humidityPercent: log.humidityPercent ?? null,
-            motionDetected: log.motionDetected ?? null,
-            firmwareVersion: log.firmwareVersion ?? null,
-            certificateExpiryDays: log.certificateExpiryDays ?? null,
-            cpuUsagePercent: log.cpuUsagePercent ?? null,
-            memoryUsagePercent: log.memoryUsagePercent ?? null,
-            networkLatencyMs: log.networkLatencyMs ?? null,
-            packetLossPercent: log.packetLossPercent ?? null,
-            coordinatesX: log.coordinatesX ?? null,
-            coordinatesY: log.coordinatesY ?? null,
-            coordinatesZ: log.coordinatesZ ?? null,
-            merkleRoot: log.merkleRoot ?? null,
-            merkleProof: log.merkleProof ?? null,
-            metadataJson: log.metadataJson ?? null,
-            timestamp: log.timestamp,
-          });
-        }
+        const rows = chunk.map((log) => ({
+          id: log.id,
+          institutionId: log.institutionId,
+          deviceId: log.deviceId,
+          zoneId: log.zoneId ?? null,
+          logType: log.logType,
+          rssi: log.rssi ?? null,
+          snr: log.snr ?? null,
+          batteryLevel: log.batteryLevel ?? null,
+          temperatureCelsius: log.temperatureCelsius ?? null,
+          humidityPercent: log.humidityPercent ?? null,
+          motionDetected: log.motionDetected ?? null,
+          firmwareVersion: log.firmwareVersion ?? null,
+          certificateExpiryDays: log.certificateExpiryDays ?? null,
+          cpuUsagePercent: log.cpuUsagePercent ?? null,
+          memoryUsagePercent: log.memoryUsagePercent ?? null,
+          networkLatencyMs: log.networkLatencyMs ?? null,
+          packetLossPercent: log.packetLossPercent ?? null,
+          coordinatesX: log.coordinatesX ?? null,
+          coordinatesY: log.coordinatesY ?? null,
+          coordinatesZ: log.coordinatesZ ?? null,
+          merkleRoot: log.merkleRoot ?? null,
+          merkleProof: log.merkleProof ?? null,
+          metadataJson: log.metadataJson ?? null,
+          timestamp: log.timestamp,
+        }));
+
+        await db.insert(hardwareTelemetryLogs).values(rows);
       }
 
       return itemsToFlush.length;

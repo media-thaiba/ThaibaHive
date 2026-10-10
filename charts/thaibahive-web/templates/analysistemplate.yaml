@@ -1,0 +1,52 @@
+{{- if .Values.rollout.enabled -}}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "thaibahive-web.fullname" . }}-canary-metrics
+  labels:
+    {{- include "thaibahive-web.labels" . | nindent 4 }}
+spec:
+  metrics:
+    # 1. HTTP 5xx Error Rate (< 0.1%)
+    - name: http-error-rate
+      interval: 1m
+      count: 15
+      failureLimit: 1
+      consecutiveErrorLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local:9090
+          query: >-
+            sum(rate(http_requests_total{status=~"5.*",app="thaibahive-web-canary"}[2m]))
+            /
+            (sum(rate(http_requests_total{app="thaibahive-web-canary"}[2m])) > 0)
+      successCondition: result[0] <= 0.001
+
+    # 2. HTTP P95 Latency (< 100ms)
+    - name: p95-latency
+      interval: 1m
+      count: 15
+      failureLimit: 1
+      consecutiveErrorLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local:9090
+          query: >-
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app="thaibahive-web-canary"}[2m])) by (le))
+      successCondition: result[0] <= 0.100
+
+    # 3. WebSocket Abnormal Closure Rate (< 0.05%)
+    - name: ws-drop-rate
+      interval: 1m
+      count: 15
+      failureLimit: 1
+      consecutiveErrorLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local:9090
+          query: >-
+            sum(rate(websocket_abnormal_closures_total{app="thaibahive-web-canary"}[2m]))
+            /
+            (sum(rate(websocket_connections_total{app="thaibahive-web-canary"}[2m])) > 0)
+      successCondition: result[0] <= 0.0005
+{{- end }}

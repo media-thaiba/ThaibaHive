@@ -1,0 +1,76 @@
+name: Staging K6 Performance & Soak Certification
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_url:
+        description: 'Staging Environment Base URL'
+        required: true
+        default: 'https://staging.thaibahive.example.com'
+      duration_minutes:
+        description: 'Soak duration in minutes per scenario'
+        required: false
+        default: '10'
+  schedule:
+    # Weekly soak certification every Sunday at 02:00 UTC
+    - cron: '0 2 * * 0'
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=6144"
+
+jobs:
+  k6-soak-certification:
+    name: K6 Soak Load Certification (v3.38.0)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Create reports directory
+        run: mkdir -p reports/k6
+
+      - name: 1. Run Hardware Telemetry Ingestion Soak (5,000 pkts/s)
+        run: |
+          k6 run \
+            -e BASE_URL="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" \
+            --summary-export=reports/k6/telemetry-soak-summary.json \
+            k6/hardware-telemetry-soak.js
+
+      - name: 2. Run Smart Turnstile Gate Access Load (500 RPS)
+        run: |
+          k6 run \
+            -e BASE_URL="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" \
+            --summary-export=reports/k6/gate-access-summary.json \
+            k6/gate-access-load.js
+
+      - name: 3. Run Voice Copilot Duplex Turn Soak (500 WS)
+        run: |
+          k6 run \
+            -e BASE_URL="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" \
+            --summary-export=reports/k6/voice-copilot-summary.json \
+            k6/voice-copilot-soak.js
+
+      - name: 4. Run RAG Vector Hybrid Search Soak (200 RPS)
+        run: |
+          k6 run \
+            -e BASE_URL="${{ github.event.inputs.staging_url || 'http://localhost:3000' }}" \
+            --summary-export=reports/k6/rag-hybrid-summary.json \
+            k6/rag-hybrid-query-soak.js
+
+      - name: Upload K6 Soak Test Reports Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-soak-reports
+          path: reports/k6/
+          retention-days: 30
