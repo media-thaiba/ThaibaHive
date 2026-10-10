@@ -7236,6 +7236,232 @@ export const aiTokenBudgets = sqliteTable("ai_token_budgets", {
   aiBudgetInstIdx: uniqueIndex("idx_pg_ai_token_budgets_inst").on(t.institutionId),
 }));
 
+// ============================================
+// Phase 9: Hardware Radar & IoT Mesh Tables
+// ============================================
+
+export const hardwareDevices = pgTable("hardware_devices", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  model: text("model"),
+  firmwareVersion: text("firmware_version"),
+  macAddress: text("mac_address"),
+  ipAddress: text("ip_address"),
+  status: text("status").notNull().default("offline"),
+  zoneId: text("zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  coordinatesX: real("coordinates_x"),
+  coordinatesY: real("coordinates_y"),
+  coordinatesZ: real("coordinates_z"),
+  lastHeartbeatAt: text("last_heartbeat_at"),
+  lastFirmwareCheckAt: text("last_firmware_check_at"),
+  firmwareUpdateAvailable: boolean("firmware_update_available").notNull().default(false),
+  certificateThumbprint: text("certificate_thumbprint"),
+  hmacKeyId: text("hmac_key_id"),
+  configurationJson: text("configuration_json"),
+  metadataJson: text("metadata_json"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  hwInstStatusIdx: index("idx_pg_hw_devices_inst_status").on(t.institutionId, t.status),
+  hwInstZoneIdx: index("idx_pg_hw_devices_inst_zone").on(t.institutionId, t.zoneId),
+  hwMacIdx: uniqueIndex("idx_pg_hw_devices_mac").on(t.macAddress),
+  hwCertIdx: index("idx_pg_hw_devices_cert").on(t.certificateThumbprint),
+}));
+
+// @ts-ignore
+// Self-referencing table for zone hierarchy
+export const hardwareZones = pgTable("hardware_zones", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  parentZoneId: text("parent_zone_id").references((): any => hardwareZones.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  floorNumber: integer("floor_number"),
+  coordinatesX: real("coordinates_x"),
+  coordinatesY: real("coordinates_y"),
+  coordinatesZ: real("coordinates_z"),
+  width: real("width"),
+  height: real("height"),
+  pathLossExponent: real("path_loss_exponent").default(3.0),
+  wallAttenuationDb: real("wall_attenuation_db").default(0),
+  isMusterPoint: boolean("is_muster_point").notNull().default(false),
+  emergencyEgressRoute: text("emergency_egress_route"),
+  metadataJson: text("metadata_json"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, // @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
+(t) => {
+  return {
+    hzInstParentIdx: index("idx_pg_hw_zones_inst_parent").on(t.institutionId, t.parentZoneId),
+    hzInstTypeIdx: index("idx_pg_hw_zones_inst_type").on(t.institutionId, t.type),
+    hzMusterIdx: index("idx_pg_hw_zones_muster").on(t.isMusterPoint),
+  };
+});
+
+export const hardwareBadges = pgTable("hardware_badges", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  staffId: text("staff_id").references(() => staff.id, { onDelete: "set null" }),
+  studentId: text("student_id").references(() => students.id, { onDelete: "set null" }),
+  badgeId: text("badge_id").notNull(),
+  badgeType: text("badge_type").notNull(),
+  credentialType: text("credential_type").notNull(),
+  encodedData: text("encoded_data"),
+  certificateThumbprint: text("certificate_thumbprint"),
+  hmacKeyId: text("hmac_key_id"),
+  encryptedPrivateKey: text("encrypted_private_key"),
+  pinHash: text("pin_hash"),
+  biometricEnrolled: boolean("biometric_enrolled").notNull().default(false),
+  faceTemplateId: text("face_template_id"),
+  fingerprintTemplateId: text("fingerprint_template_id"),
+  status: text("status").notNull().default("active"),
+  validFrom: text("valid_from").notNull(),
+  validUntil: text("valid_until"),
+  lastUsedAt: text("last_used_at"),
+  lastUsedZoneId: text("last_used_zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  lastUsedDeviceId: text("last_used_device_id").references(() => hardwareDevices.id, { onDelete: "set null" }),
+  accessRulesJson: text("access_rules_json"),
+  revokedAt: text("revoked_at"),
+  revokedReason: text("revoked_reason"),
+  metadataJson: text("metadata_json"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  hbInstStatusIdx: index("idx_pg_hw_badges_inst_status").on(t.institutionId, t.status),
+  hbInstStaffIdx: index("idx_pg_hw_badges_inst_staff").on(t.institutionId, t.staffId),
+  hbInstStudentIdx: index("idx_pg_hw_badges_inst_student").on(t.institutionId, t.studentId),
+  hbBadgeIdIdx: uniqueIndex("idx_pg_hw_badges_badge_id").on(t.badgeId),
+  hbCertIdx: index("idx_pg_hw_badges_cert").on(t.certificateThumbprint),
+  hbValidityIdx: index("idx_pg_hw_badges_validity").on(t.validFrom, t.validUntil),
+}));
+
+export const hardwareBiometricTemplates = pgTable("hardware_biometric_templates", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  ownerType: text("owner_type").notNull(),
+  ownerId: text("owner_id").notNull(),
+  modality: text("modality").notNull(),
+  encryptedTemplate: text("encrypted_template").notNull(),
+  encryptionKeyVersion: integer("encryption_key_version").notNull().default(1),
+  algorithm: text("algorithm").notNull().default("facenet-512d-v1"),
+  qualityScore: real("quality_score").notNull().default(0),
+  enrolledAt: text("enrolled_at").notNull(),
+  enrolledByDeviceId: text("enrolled_by_device_id").references(() => hardwareDevices.id, { onDelete: "set null" }),
+  enrolledByStaffId: text("enrolled_by_staff_id").references(() => staff.id, { onDelete: "set null" }),
+  lastVerifiedAt: text("last_verified_at"),
+  verificationCount: integer("verification_count").notNull().default(0),
+  falseAcceptCount: integer("false_accept_count").notNull().default(0),
+  falseRejectCount: integer("false_reject_count").notNull().default(0),
+  status: text("status").notNull().default("active"),
+  expiresAt: text("expires_at"),
+  metadataJson: text("metadata_json"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  hbtInstOwnerIdx: index("idx_pg_hw_bio_templates_inst_owner").on(t.institutionId, t.ownerType, t.ownerId),
+  hbtInstModalityIdx: index("idx_pg_hw_bio_templates_inst_modality").on(t.institutionId, t.modality),
+  hbtOwnerIdx: uniqueIndex("idx_pg_hw_bio_templates_owner_modality").on(t.ownerType, t.ownerId, t.modality),
+  hbtStatusIdx: index("idx_pg_hw_bio_templates_status").on(t.status),
+}));
+
+export const hardwareAccessEvents = pgTable("hardware_access_events", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  badgeId: text("badge_id").references(() => hardwareBadges.id, { onDelete: "set null" }),
+  staffId: text("staff_id").references(() => staff.id, { onDelete: "set null" }),
+  studentId: text("student_id").references(() => students.id, { onDelete: "set null" }),
+  deviceId: text("device_id").notNull().references(() => hardwareDevices.id, { onDelete: "restrict" }),
+  zoneId: text("zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  fromZoneId: text("from_zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  toZoneId: text("to_zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  authenticationMethod: text("authentication_method").notNull(),
+  verificationResult: text("verification_result").notNull(),
+  antiPassbackViolation: boolean("anti_passback_violation").notNull().default(false),
+  tailgateDetected: boolean("tailgate_detected").notNull().default(false),
+  duressSignal: boolean("duress_signal").notNull().default(false),
+  emergencyOverride: boolean("emergency_override").notNull().default(false),
+  stepUpAuthTriggered: boolean("step_up_auth_triggered").notNull().default(false),
+  stepUpAuthMethod: text("step_up_auth_method"),
+  stepUpAuthResult: text("step_up_auth_result"),
+  rssi: integer("rssi"),
+  snr: real("snr"),
+  distanceEstimateMeters: real("distance_estimate_meters"),
+  coordinatesX: real("coordinates_x"),
+  coordinatesY: real("coordinates_y"),
+  coordinatesZ: real("coordinates_z"),
+  merkleRoot: text("merkle_root"),
+  merkleProof: text("merkle_proof"),
+  metadataJson: text("metadata_json"),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  haeInstEventIdx: index("idx_pg_hw_access_events_inst_event").on(t.institutionId, t.eventType),
+  haeInstDeviceIdx: index("idx_pg_hw_access_events_inst_device").on(t.institutionId, t.deviceId),
+  haeInstBadgeIdx: index("idx_pg_hw_access_events_inst_badge").on(t.institutionId, t.badgeId),
+  haeInstStaffIdx: index("idx_pg_hw_access_events_inst_staff").on(t.institutionId, t.staffId),
+  haeInstStudentIdx: index("idx_pg_hw_access_events_inst_student").on(t.institutionId, t.studentId),
+  haeInstZoneIdx: index("idx_pg_hw_access_events_inst_zone").on(t.institutionId, t.zoneId),
+  haeInstTimestampIdx: index("idx_pg_hw_access_events_inst_timestamp").on(t.institutionId, t.timestamp),
+  haeEventTypeIdx: index("idx_pg_hw_access_events_type").on(t.eventType),
+  haeMerkleIdx: index("idx_pg_hw_access_events_merkle").on(t.merkleRoot),
+  haeDuressIdx: index("idx_pg_hw_access_events_duress").on(t.duressSignal),
+}));
+
+export const hardwareTelemetryLogs = pgTable("hardware_telemetry_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  deviceId: text("device_id").notNull().references(() => hardwareDevices.id, { onDelete: "cascade" }),
+  zoneId: text("zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  logType: text("log_type").notNull(),
+  rssi: integer("rssi"),
+  snr: real("snr"),
+  batteryLevel: real("battery_level"),
+  temperatureCelsius: real("temperature_celsius"),
+  humidityPercent: real("humidity_percent"),
+  motionDetected: boolean("motion_detected"),
+  firmwareVersion: text("firmware_version"),
+  certificateExpiryDays: integer("certificate_expiry_days"),
+  cpuUsagePercent: real("cpu_usage_percent"),
+  memoryUsagePercent: real("memory_usage_percent"),
+  networkLatencyMs: integer("network_latency_ms"),
+  packetLossPercent: real("packet_loss_percent"),
+  coordinatesX: real("coordinates_x"),
+  coordinatesY: real("coordinates_y"),
+  coordinatesZ: real("coordinates_z"),
+  merkleRoot: text("merkle_root"),
+  merkleProof: text("merkle_proof"),
+  metadataJson: text("metadata_json"),
+  timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  htlInstDeviceIdx: index("idx_pg_hw_telemetry_inst_device").on(t.institutionId, t.deviceId),
+  htlInstTypeIdx: index("idx_pg_hw_telemetry_inst_type").on(t.institutionId, t.logType),
+  htlInstTimestampIdx: index("idx_pg_hw_telemetry_inst_timestamp").on(t.institutionId, t.timestamp),
+  htlDeviceTimestampIdx: index("idx_pg_hw_telemetry_device_timestamp").on(t.deviceId, t.timestamp),
+  htlMerkleIdx: index("idx_pg_hw_telemetry_merkle").on(t.merkleRoot),
+}));
+
 
 
 
