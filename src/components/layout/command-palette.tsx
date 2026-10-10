@@ -33,6 +33,7 @@ import { useGlobalSearch } from "@/hooks/use-global-search";
 import type { EntityType, SearchResultItem } from "@/lib/api/global-search/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { VoiceCopilotTrigger } from "@/components/copilot/voice-copilot-trigger";
 
 const ENTITY_ICON_MAP: Record<EntityType, React.ComponentType<{ className?: string }>> = {
   students: GraduationCap,
@@ -301,6 +302,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
+            {/* Voice Copilot Trigger */}
+            <VoiceCopilotTrigger variant="compact" />
             <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
               esc
             </kbd>
