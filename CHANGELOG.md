@@ -2,6 +2,19 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.37.0] - 2026-10-10
+### Phase 8: AI Copilot V2 (Multimodal LLM & Autonomous Remediation)
+#### Added
+- **Multimodal Document Intelligence**: OCR + structured JSON extraction pipeline for fee receipts, medical certificates, student ID cards, CCTV frames, and administrative documents with deterministic multi-factor confidence scoring ($0.4 \times \text{Zod} + 0.3 \times \text{Rule} + 0.3 \times \text{OCR}$).
+- **PII / FERPA / HIPAA DLP Sanitizer**: Automatic regex-based masking of Aadhaar, PAN, SSN, Credit Cards, and Phone numbers with local-first on-premise routing for sensitive medical records.
+- **Voice Copilot V2 Audio Mesh**: 16kHz PCM audio stream parser with Root Mean Square (RMS) energy VAD, silence detection, native Web Speech API passthrough, STT/TTS synthesis with 4 voice profiles, and duplex turn endpoint (`/api/ai/copilot/voice/interact`).
+- **Structure-Aware RAG Engine**: Markdown and table-aware document chunking (512 tokens, 50 overlap), dual-dialect hybrid vector search (PostgreSQL `pgvector` HNSW + SQLite in-memory cosine + BM25 keyword matching), and Reciprocal Rank Fusion (RRF $k=60$) with groundedness verification.
+- **Autonomous Remediation Runtime & Typed Tools**: Multi-step saga engine with typed tool executors (`finance.*`, `leave.*`, `notification.*`, `rag.*`), human-in-the-loop (HITL) approval gates, D12 Step-Up authentication freshness enforcement ($\le 300\text{s}$), reverse-order compensating rollbacks, and real-time Merkle ledger flushing.
+- **Cryptographic Merkle Audit Trail**: Verification endpoint (`/api/ai/audit/merkle`) and viewer guaranteeing sequential SHA-256 Merkle chain integrity across all AI tool invocations.
+- **Web UI & Action Center Integration**: CommandPalette (`Cmd+K`) Voice Copilot trigger button with live audio visualization, ActionCenter Document Intelligence 3-tab upload & preview drawer, RAG policy search dialog, and HITL approval diff modal.
+- **Dual-Dialect Database Parity**: 4 new tables (`ai_documents`, `ai_copilot_sessions`, `ai_rag_corpus`, `ai_token_budgets`) across SQLite and PostgreSQL with 100% dialect parity, tenant indexes, and migrations (`0034_complex_iron_monger.sql`, `0018_smooth_boom_boom.sql`).
+- **Granular RBAC Matrix**: Fully mapped 11 new AI permissions across the 5-tier role hierarchy.
+
 ## [3.36.0] - 2026-10-09
 ### Phase 6: Real-Time Push & Bi-Directional Messaging Mesh
 #### Added
