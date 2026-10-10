@@ -1320,6 +1320,39 @@ export const ragCorpusIngestSchema = z.object({
 
 export type RagCorpusIngestInput = z.infer<typeof ragCorpusIngestSchema>;
 
+export const remediationTriggerSchema = z.object({
+  planId: z.string().optional(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  triggerType: z.enum(["anomaly", "copilot", "manual", "scheduled"]).default("copilot"),
+  steps: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      tool: z.string().min(1),
+      params: z.record(z.string(), z.any()).default({}),
+      requiresHitl: z.boolean().optional(),
+      requiresStepUpAuth: z.boolean().optional(),
+      hitlRole: z.string().optional(),
+      compensatingAction: z
+        .object({
+          tool: z.string().min(1),
+          params: z.record(z.string(), z.any()).default({}),
+        })
+        .optional(),
+    })
+  ).min(1),
+});
+export type RemediationTriggerInput = z.infer<typeof remediationTriggerSchema>;
+
+export const remediationApproveSchema = z.object({
+  gateId: z.string().min(1),
+  decision: z.enum(["approve", "reject"]),
+  stepUpFreshnessSeconds: z.number().nonnegative().optional(),
+});
+export type RemediationApproveInput = z.infer<typeof remediationApproveSchema>;
+
+
 
 
 
