@@ -7268,7 +7268,6 @@ export const hardwareDevices = sqliteTable("hardware_devices", {
   hwCertIdx: index("idx_hw_devices_cert").on(t.certificateThumbprint),
 }));
 
-// @ts-ignore
 // Self-referencing table for zone hierarchy
 export const hardwareZones = sqliteTable("hardware_zones", {
   id: text("id").primaryKey(),
@@ -7290,34 +7289,7 @@ export const hardwareZones = sqliteTable("hardware_zones", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-}, // @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
+},
 (t) => {
   return {
     hzInstParentIdx: index("idx_hw_zones_inst_parent").on(t.institutionId, t.parentZoneId),

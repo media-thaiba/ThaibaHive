@@ -37,7 +37,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runDbPool() {
   const headers = getAuthHeaders();
 
   // Execute multiple queries to stress connection pool

@@ -7271,7 +7271,6 @@ export const hardwareDevices = pgTable("hardware_devices", {
   hwCertIdx: index("idx_pg_hw_devices_cert").on(t.certificateThumbprint),
 }));
 
-// @ts-ignore
 // Self-referencing table for zone hierarchy
 export const hardwareZones = pgTable("hardware_zones", {
   id: text("id").primaryKey(),
@@ -7293,25 +7292,7 @@ export const hardwareZones = pgTable("hardware_zones", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-}, // @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
-// @ts-ignore
+},
 (t) => {
   return {
     hzInstParentIdx: index("idx_pg_hw_zones_inst_parent").on(t.institutionId, t.parentZoneId),

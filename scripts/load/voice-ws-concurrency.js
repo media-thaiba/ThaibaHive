@@ -49,7 +49,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runVoiceWsConcurrency() {
   const headers = getAuthHeaders();
   const transcript = TEST_VOICE_COMMANDS[Math.floor(Math.random() * TEST_VOICE_COMMANDS.length)];
   const sessionId = `load-voice-${__VU}-${__ITER}-${Date.now()}`;

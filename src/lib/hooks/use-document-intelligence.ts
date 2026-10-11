@@ -12,14 +12,6 @@ interface DocumentPreview {
   createdAt: Date;
 }
 
-interface ConfirmedDocument {
-  id: string;
-  type: string;
-  data: Record<string, any>;
-  targetTable: string;
-  confirmedAt: Date;
-}
-
 interface UseDocumentIntelligenceReturn {
   uploadDocument: (file: File) => Promise<void>;
   confirmDocument: (id: string) => Promise<any>;

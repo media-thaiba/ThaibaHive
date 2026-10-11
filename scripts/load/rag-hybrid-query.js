@@ -46,7 +46,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runRagHybridQuery() {
   const headers = getAuthHeaders();
   const query = RAG_TEST_QUERIES[Math.floor(Math.random() * RAG_TEST_QUERIES.length)];
 

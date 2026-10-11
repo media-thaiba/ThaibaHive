@@ -44,13 +44,23 @@ type SignupData = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/**
+ * Auth boundary transitions must force a full document load so every piece of
+ * in-memory client state (query caches, context providers, open SSE sockets) is
+ * torn down. `router.push()` would keep stale authenticated data rendered after
+ * a login, signup, logout or session revocation.
+ */
+const hardRedirect = (destination: string) => {
+  window.location.href = destination;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [staff, setStaff] = useState<StaffUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Listen for revocation events (auto-logout when session invalidated)
   useRevocationListener(staff?.id ?? null, () => {
-    window.location.href = "/auth/login";
+    hardRedirect("/auth/login");
   });
 
   // fetch initial auth state - runs once on mount
@@ -87,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return data;
       }
 
-      window.location.href = "/";
+      hardRedirect("/");
       return data;
     },
     []
@@ -106,14 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.error || "Signup failed");
       }
 
-      window.location.href = "/";
+      hardRedirect("/");
     },
     []
   );
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/auth/login";
+    hardRedirect("/auth/login");
   }, []);
 
   return (

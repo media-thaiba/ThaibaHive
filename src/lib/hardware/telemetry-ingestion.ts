@@ -1,6 +1,5 @@
 import { db } from "@/db";
-import { hardwareTelemetryLogs, hardwareDevices } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { hardwareTelemetryLogs } from "@/db/schema";
 import type { HardwareTelemetryIngestInput } from "@/lib/validation/schemas";
 
 export interface BufferedTelemetryItem {

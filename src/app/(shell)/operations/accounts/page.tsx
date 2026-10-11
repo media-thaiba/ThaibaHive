@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, AlertTriangle } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -39,6 +40,7 @@ const _ledgerCategories = {
 };
 
 export default function AccountsPage() {
+  const router = useRouter();
   const { staff } = useAuth();
   const isAuthorized = staff ? ["super_admin", "admin", "principal", "hod", "accounts"].includes(staff.role) : false;
   const isWriter = staff ? ["super_admin", "admin", "accounts"].includes(staff.role) : false;
@@ -138,7 +140,7 @@ export default function AccountsPage() {
               You do not have the necessary accounting permissions to view institutional financial metrics.
               Please contact the Finance &amp; IT Administrator if you require access.
             </p>
-            <Button variant="outline" onClick={() => window.location.href = "/"}>Return to Dashboard</Button>
+            <Button variant="outline" onClick={() => router.push("/")}>Return to Dashboard</Button>
           </CardContent>
         </Card>
       </div>

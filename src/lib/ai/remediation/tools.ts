@@ -1,7 +1,6 @@
 import { db } from "@/db";
 import {
   leaveRequests,
-  aiRagCorpus,
 } from "@thaiba/db/schema";
 import { eq, and } from "drizzle-orm";
 import { RemediationToolContext } from "./types";
@@ -149,8 +148,8 @@ export class RemediationToolRegistry {
     });
 
     // 5. Notification: Send Multicast Notification
-    this.registerTool("notification.sendMulticast", async (params, ctx) => {
-      const { title, body, targetRoles, recipientIds } = params;
+    this.registerTool("notification.sendMulticast", async (params, _ctx) => {
+      const { title, targetRoles, recipientIds } = params;
       return {
         dispatched: true,
         title,

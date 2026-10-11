@@ -346,7 +346,7 @@ async function runSimulation() {
 
     const sampleVector = [0.12, 0.45, -0.32, 0.78, 0.05, -0.11, 0.88, -0.42, 0.33, 0.19, -0.65, 0.41, 0.22, -0.08, 0.54, -0.31];
 
-    const enrolled = await BiometricMeshEngine.enroll(instId, {
+    await BiometricMeshEngine.enroll(instId, {
       ownerType: "staff",
       ownerId: "staff_sim_01",
       modality: "face",

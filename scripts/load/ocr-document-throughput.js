@@ -67,7 +67,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runOcrDocumentThroughput() {
   const headers = getAuthHeaders();
   const sample = SAMPLE_DOCUMENT_PAYLOADS[Math.floor(Math.random() * SAMPLE_DOCUMENT_PAYLOADS.length)];
 

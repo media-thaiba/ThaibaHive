@@ -6,7 +6,7 @@ import { GET as getMerkleAudit } from "../../audit/merkle/route";
 const mockInstId = "inst_test_rem_api_001";
 const mockStaffId = "staff_test_rem_api_001";
 
-let currentMockSession = {
+const currentMockSession = {
   staffId: mockStaffId,
   email: "remediation_tester@thaiba.dev",
   role: "admin",

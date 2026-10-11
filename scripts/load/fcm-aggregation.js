@@ -42,7 +42,7 @@ function getAuthHeaders() {
 
 const CHANNEL_IDS = Array.from({ length: 50 }, (_, i) => `load-test-channel-${i}`);
 
-export default function () {
+export default function runFcmAggregation() {
   const headers = getAuthHeaders();
   const channelId = CHANNEL_IDS[Math.floor(Math.random() * CHANNEL_IDS.length)];
 

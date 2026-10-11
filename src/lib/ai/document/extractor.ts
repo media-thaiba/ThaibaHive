@@ -1,13 +1,6 @@
 import { aiProvider } from "../providers/provider-registry";
 import { dlpSanitizer } from "../guardrails/dlp-sanitizer";
 import { confidenceEngine, ConfidenceEvaluation } from "./confidence";
-import {
-  FeeReceiptSchema,
-  MedicalCertificateSchema,
-  StudentIdCardSchema,
-  CctvIncidentSchema,
-  GeneralDocumentSchema,
-} from "./schemas";
 
 export interface ExtractionRequest {
   fileName: string;

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { hardwareDevices, hardwareTelemetryLogs } from "@/db/schema";
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "crypto";
 import type {
   HardwareDeviceRegisterInput,

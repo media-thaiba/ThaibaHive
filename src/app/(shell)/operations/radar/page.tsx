@@ -8,16 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { ensureArray } from "@/lib/utils";
-import { toast } from "sonner";
 import {
   Radio,
-  Users,
-  AlertOctagon,
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
-  Navigation,
 } from "lucide-react";
 
 interface MusterReportData {

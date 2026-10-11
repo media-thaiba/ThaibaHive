@@ -649,6 +649,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
       staffId={stepUpState.staffId}
       onSuccess={() => {
         setStepUpState((prev) => ({ ...prev, isOpen: false }));
+        // Hard reload after login so every cached client state is rebuilt for the new session.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- intentional full reload across the auth boundary
         window.location.href = "/";
       }}
       onFailure={() => {

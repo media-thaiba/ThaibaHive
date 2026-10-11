@@ -310,10 +310,10 @@ async function runSimulation() {
     const liveSession = await liveManager.startSession(
       instAlpha,
       {
-        provider: "mock",
-        title: "Campus Security Live Drone Feed",
-        hazardsEnabled: true,
-        maxDurationMinutes: 10,
+        sessionType: "cctv_analysis",
+        modelId: "gemini-3.8-live",
+        keyframeIntervalSeconds: 1,
+        maxDurationSeconds: 600,
       },
       superStaffId
     );
@@ -327,7 +327,7 @@ async function runSimulation() {
 
     // Ingest simulated live event and test broadcast
     let eventReceived = false;
-    const unsubscribe = liveManager.subscribe(liveSession.id, instAlpha, (event, data) => {
+    const unsubscribe = liveManager.subscribe(liveSession.id, instAlpha, (event, _data) => {
       if (event === "hazard" || event === "transcript") {
         eventReceived = true;
       }

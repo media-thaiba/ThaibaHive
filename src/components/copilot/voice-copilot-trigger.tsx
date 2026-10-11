@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVoiceCopilot } from "@/lib/hooks/use-voice-copilot";
 
@@ -28,7 +28,6 @@ export function VoiceCopilotTrigger({
     error,
     startSession,
     endSession,
-    sendAudioChunk,
   } = useVoiceCopilot();
 
   const [showTranscript, setShowTranscript] = useState(false);
@@ -142,7 +141,7 @@ export function VoiceCopilotTrigger({
             </span>
             {showTranscript && transcript && (
               <span className="text-muted-foreground max-w-[200px] truncate">
-                "{transcript}"
+                &ldquo;{transcript}&rdquo;
               </span>
             )}
             <span className="text-muted-foreground">

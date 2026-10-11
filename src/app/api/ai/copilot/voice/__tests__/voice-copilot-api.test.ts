@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 const mockInstId = "inst_test_voice_copilot_001";
 const mockStaffId = "staff_test_voice_copilot_001";
 
-let currentMockSession = {
+const currentMockSession = {
   staffId: mockStaffId,
   email: "voice_tester@thaiba.dev",
   role: "admin",

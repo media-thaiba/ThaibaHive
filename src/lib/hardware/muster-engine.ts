@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { hardwareZones, hardwareBadges, hardwareAccessEvents, staff, students } from "@/db/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { hardwareZones, hardwareBadges } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 export interface MusterZoneSummary {
   zoneId: string;
@@ -49,7 +49,6 @@ export class MusterEngine {
       );
 
     const musterZoneIds = new Set(musterZones.map((z) => z.id));
-    const musterZoneMap = new Map(musterZones.map((z) => [z.id, z]));
 
     // 2. Get active badges currently on-campus (e.g. status='active' and not 'outside')
     const activeBadges = await db

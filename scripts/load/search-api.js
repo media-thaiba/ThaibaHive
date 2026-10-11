@@ -41,7 +41,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runSearchApi() {
   const headers = getAuthHeaders();
   const query = SEARCH_QUERIES[Math.floor(Math.random() * SEARCH_QUERIES.length)];
   const limit = Math.floor(Math.random() * 20) + 5;

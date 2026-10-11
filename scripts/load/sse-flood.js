@@ -38,7 +38,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runSseFlood() {
   const headers = getAuthHeaders();
   const channels = [`test-channel-${__VU}-${__ITER}`, `announcements`, `general`].join(',');
 

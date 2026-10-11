@@ -11,24 +11,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Upload,
   FileText,
-  Image,
+  Image as ImageIcon,
   CreditCard,
   Stethoscope,
   IdCard,
   Camera,
   Loader2,
   CheckCircle2,
-  AlertCircle,
   Eye,
-  Edit,
   Download,
   Trash2,
   RotateCcw,
@@ -61,7 +57,6 @@ export function DocumentIntelligencePreview({
     isUploading,
     isConfirming,
     error,
-    setError,
   } = useDocumentIntelligence();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -94,7 +89,7 @@ export function DocumentIntelligencePreview({
     } catch (error) {
       console.error("Confirmation failed:", error);
     }
-  }, [preview, confirmDocument, onConfirm]);
+  }, [preview, confirmDocument, onConfirm, setConfirmedData]);
 
   const handleDelete = useCallback(async () => {
     if (!preview) return;
@@ -106,7 +101,7 @@ export function DocumentIntelligencePreview({
     } catch (error) {
       console.error("Delete failed:", error);
     }
-  }, [preview, deleteDocument]);
+  }, [preview, deleteDocument, setPreview]);
 
   const getDocumentIcon = (type: string) => {
     switch (type) {
@@ -331,7 +326,7 @@ export function DocumentIntelligencePreview({
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <Image className="h-4 w-4" />
+                          <ImageIcon className="h-4 w-4" />
                           Document Preview
                         </CardTitle>
                       </CardHeader>

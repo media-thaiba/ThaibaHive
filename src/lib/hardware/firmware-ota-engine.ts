@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { hardwareDevices } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { createVerify } from "crypto";
 import type { FirmwareReleaseInput } from "@/lib/validation/schemas";
 

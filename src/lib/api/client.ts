@@ -122,6 +122,9 @@ async function request<T = unknown>(
       if (showToast) toast.error(msg);
       if (typeof window !== "undefined" && window.location.pathname !== "/auth/login") {
         try {
+          // Plain fetch wrapper — no React router is reachable from here, so the
+          // session-expiry bounce has to be a full document load.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- non-React module, no router available
           window.location.href = "/auth/login";
         } catch {
           // Ignore navigation error in test environment (jsdom)

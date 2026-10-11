@@ -52,8 +52,8 @@ export class RemediationRuntime {
 
       // 1. Check HITL gate
       if (step.requiresHitl) {
-        // D12 Step-Up auth check: Freshness must be <= 300 seconds
-        const stepUpFresh = (ctx.stepUpFreshnessSeconds ?? 9999) <= 300;
+        // D12 Step-Up freshness is enforced at approval time (see resolveApprovalGate),
+        // since the approver's session cannot be evaluated until they act.
         const gateId = randomUUID();
 
         const gate: ApprovalGate = {

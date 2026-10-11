@@ -128,7 +128,7 @@ export class BiometricMeshEngine {
   ): boolean {
     try {
       const decoded = Buffer.from(nonce, "base64url").toString("utf8");
-      const [deviceId, tsStr] = decoded.split(":");
+      const [, tsStr] = decoded.split(":");
       const ts = parseInt(tsStr, 10);
 
       // Check timestamp window (within 60s)
@@ -411,7 +411,7 @@ export class BiometricMeshEngine {
     // Replace template data with tombstone zeros
     const tombstonePayload = `000000000000:00000000000000000000000000000000:ZEROIZED_TOMBSTONE_${Date.now()}`;
 
-    const updateRes = await db
+    await db
       .update(hardwareBiometricTemplates)
       .set({
         status: "revoked",

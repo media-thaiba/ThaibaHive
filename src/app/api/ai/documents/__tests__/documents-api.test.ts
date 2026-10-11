@@ -10,7 +10,7 @@ const mockInstId = "inst_test_ai_doc_001";
 const mockOtherInstId = "inst_other_ai_doc_002";
 const mockStaffId = "staff_test_ai_doc_001";
 
-let currentMockSession = {
+const currentMockSession = {
   staffId: mockStaffId,
   email: "ai_doc_tester@thaiba.dev",
   role: "admin",

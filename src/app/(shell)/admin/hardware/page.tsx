@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 
 type DashboardStats = {
@@ -18,6 +19,7 @@ type DashboardStats = {
 };
 
 export default function NfcDashboardPage() {
+  const router = useRouter();
   const { staff, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function NfcDashboardPage() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Only operators with administrator privileges are permitted to view or manage NFC card operations.
             </p>
-            <Button variant="outline" onClick={() => window.location.href = "/"}>Return to Dashboard</Button>
+            <Button variant="outline" onClick={() => router.push("/")}>Return to Dashboard</Button>
           </CardContent>
         </Card>
       </div>

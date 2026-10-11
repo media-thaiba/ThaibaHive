@@ -39,7 +39,7 @@ function getAuthHeaders() {
   };
 }
 
-export default function () {
+export default function runWsConcurrency() {
   const headers = getAuthHeaders();
   const channelId = `test-channel-${__VU}-${__ITER}`;
 

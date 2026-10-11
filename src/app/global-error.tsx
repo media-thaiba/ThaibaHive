@@ -13,6 +13,13 @@ export default function GlobalError({
     console.error("Global root layout error:", error);
   }, [error]);
 
+  // GlobalError replaces the root layout, so no router exists here. A full
+  // document load is the only way to re-bootstrap the application shell.
+  const reloadApplication = () => {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- no router in a global error boundary
+    window.location.href = "/";
+  };
+
   return (
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground font-sans antialiased">
@@ -46,7 +53,7 @@ export default function GlobalError({
               Try again
             </button>
             <button
-              onClick={() => (window.location.href = "/")}
+              onClick={reloadApplication}
               className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               Reload Application

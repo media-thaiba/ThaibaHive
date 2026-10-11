@@ -3,7 +3,6 @@ import {
   hardwareAccessEvents,
   hardwareBadges,
   hardwareDevices,
-  hardwareZones,
 } from "@/db/schema";
 import { eq, and, desc, asc } from "drizzle-orm";
 import { createHash } from "crypto";

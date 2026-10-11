@@ -1,19 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectItem } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ensureArray } from "@/lib/utils";
 import {
   Radio,
-  Users,
-  ShieldAlert,
   Layers,
   RefreshCw,
-  Maximize2,
-  Navigation,
 } from "lucide-react";
 
 export interface RadarZone {

@@ -15,6 +15,13 @@ export default function Error({
     console.error("Unhandled route error:", error);
   }, [error]);
 
+  // Error boundaries have no router available, so a full document load is the
+  // only reliable way to recover and discard the failed render tree.
+  const goToDashboard = () => {
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- no router in an error boundary
+    window.location.href = "/dashboard";
+  };
+
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center p-6 text-center">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
@@ -40,11 +47,7 @@ export default function Error({
           <RefreshCw className="h-4 w-4" />
           Try again
         </Button>
-        <Button
-          onClick={() => (window.location.href = "/dashboard")}
-          variant="outline"
-          className="gap-2"
-        >
+        <Button onClick={goToDashboard} variant="outline" className="gap-2">
           <Home className="h-4 w-4" />
           Go to Dashboard
         </Button>

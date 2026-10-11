@@ -5,12 +5,10 @@ import { DeviceFleetTable, HardwareDeviceItem } from "@/components/hardware/devi
 import { GateMonitoringConsole, GateAccessEvent } from "@/components/hardware/gate-monitoring-console";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { toast } from "sonner";
 import {
   Cpu,
   Fingerprint,
   RefreshCw,
-  Layers,
 } from "lucide-react";
 
 export default function HardwareCommandCenterPage() {

@@ -35,13 +35,6 @@ export function useVoiceCopilot() {
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const updateSession = useCallback((updates: Partial<VoiceSession>) => {
-    setState((prev) => ({
-      ...prev,
-      session: prev.session ? { ...prev.session, ...updates } : null,
-    }));
-  }, []);
-
   const startSession = useCallback(async () => {
     try {
       setState((prev) => ({
@@ -180,7 +173,7 @@ export function useVoiceCopilot() {
     }));
   }, []);
 
-  const sendAudioChunk = useCallback(async (chunk: Blob) => {
+  const sendAudioChunk = useCallback(async (_chunk: Blob) => {
     // For real-time streaming, we could send chunks to a WebSocket
     // For now, we collect chunks in the MediaRecorder
   }, []);
