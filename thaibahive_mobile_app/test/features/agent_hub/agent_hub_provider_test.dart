@@ -62,6 +62,71 @@ class FakeAgentHubRepository extends AgentHubRepository {
   }) async {
     return true;
   }
+
+  @override
+  Future<List<MobileAgentPlugin>> getInstalledPlugins({
+    dynamic storage,
+    bool useCacheFallback = true,
+  }) async {
+    return const [
+      MobileAgentPlugin(
+        id: 'plug-1',
+        pluginKey: 'thaiba.finance.reconciler',
+        displayName: 'Finance Reconciler',
+        summary: 'Reconcile ledgers',
+        version: '1.0.0',
+        category: 'finance',
+        isInstalled: true,
+        isEnabled: true,
+      ),
+    ];
+  }
+
+  @override
+  Future<List<MobileAgentPlugin>> getMarketplacePlugins() async {
+    return const [
+      MobileAgentPlugin(
+        id: 'plug-2',
+        pluginKey: 'thaiba.security.guard',
+        displayName: 'Perimeter Guard Plugin',
+        summary: 'Radar anomaly alerts',
+        version: '2.0.0',
+        category: 'security',
+        isInstalled: false,
+      ),
+    ];
+  }
+
+  @override
+  Future<bool> togglePluginEnabled(String pluginId, bool enabled) async {
+    return true;
+  }
+
+  @override
+  Future<bool> installPlugin(String pluginId, {List<String>? requestedPermissions}) async {
+    return true;
+  }
+
+  @override
+  Future<bool> uninstallPlugin(String pluginId) async {
+    return true;
+  }
+
+  @override
+  Future<Map<String, dynamic>> triggerWorkflowRun(
+    String workflowId, {
+    Map<String, dynamic>? inputs,
+  }) async {
+    return {
+      'id': 'run-new-1',
+      'workflowId': workflowId,
+      'workflowName': 'Triggered Workflow',
+      'status': 'running',
+      'currentStep': 0,
+      'totalSteps': 2,
+      'startedAt': '2026-10-11T12:00:00.000Z',
+    };
+  }
 }
 
 void main() {
@@ -83,6 +148,10 @@ void main() {
       expect(notifier.state.pendingApprovals.length, 1);
       expect(notifier.state.pendingApprovals.first.id, 'gate-1');
       expect(notifier.state.recentRuns.length, 1);
+      expect(notifier.state.installedPlugins.length, 1);
+      expect(notifier.state.installedPlugins.first.id, 'plug-1');
+      expect(notifier.state.marketplacePlugins.length, 1);
+      expect(notifier.state.marketplacePlugins.first.id, 'plug-2');
       expect(notifier.state.isKillSwitchEngaged, false);
     });
 
@@ -95,6 +164,44 @@ void main() {
 
       expect(result, true);
       expect(notifier.state.pendingApprovals.isEmpty, true);
+    });
+
+    test('togglePlugin updates plugin enabled state optimistically', () async {
+      await notifier.loadHub();
+      expect(notifier.state.installedPlugins.first.isEnabled, true);
+
+      final result = await notifier.togglePlugin('plug-1', false);
+      expect(result, true);
+      expect(notifier.state.installedPlugins.first.isEnabled, false);
+    });
+
+    test('triggerWorkflowRun prepends new run to recentRuns', () async {
+      await notifier.loadHub();
+      final initialCount = notifier.state.recentRuns.length;
+
+      final ok = await notifier.triggerWorkflowRun('wf-custom-sync');
+      expect(ok, true);
+      expect(notifier.state.recentRuns.length, initialCount + 1);
+      expect(notifier.state.recentRuns.first.workflowId, 'wf-custom-sync');
+    });
+
+    test('addLiveSnippet prepends live multimodal snippets up to 50 items', () {
+      const snippet = MobileLiveSnippet(
+        id: 'snip-1',
+        sessionId: 'sess-1',
+        speaker: 'gemini_live',
+        text: 'Hazard detected in corridor B',
+        hazardType: 'slip_hazard',
+        severity: 'high',
+        timestamp: '2026-10-11T12:00:00.000Z',
+      );
+
+      notifier.addLiveSnippet(snippet);
+      expect(notifier.state.liveSnippets.length, 1);
+      expect(notifier.state.liveSnippets.first.isHazard, true);
+
+      notifier.clearLiveSnippets();
+      expect(notifier.state.liveSnippets.isEmpty, true);
     });
   });
 }
