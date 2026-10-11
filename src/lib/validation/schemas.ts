@@ -1764,6 +1764,31 @@ export const workflowGraphUpdateSchema = z.object({
 });
 export type WorkflowGraphUpdateInput = z.infer<typeof workflowGraphUpdateSchema>;
 
+// ============================================
+// Phase 10: Gemini Live Streaming Validation Schemas
+// ============================================
+
+export const liveSessionStartSchema = z.object({
+  sessionType: z.enum(["cctv_analysis", "operator_console"]).default("cctv_analysis"),
+  cameraZoneId: z.string().max(64).optional(),
+  modelId: z.string().max(64).default("gemini-3.8-live"),
+  keyframeIntervalSeconds: z.number().int().min(1).max(10).default(1),
+  maxDurationSeconds: z.number().int().min(30).max(3600).default(900),
+  systemInstruction: z.string().max(2048).optional(),
+});
+export type LiveSessionStartInput = z.infer<typeof liveSessionStartSchema>;
+
+export const liveSessionEventSchema = z.object({
+  type: z.enum(["audio", "keyframe", "text"]),
+  pcm16Base64: z.string().optional(),
+  jpegBase64: z.string().optional(),
+  mimeType: z.string().max(64).optional(),
+  text: z.string().max(4096).optional(),
+  timestamp: z.number().int().positive().optional(),
+});
+export type LiveSessionEventInput = z.infer<typeof liveSessionEventSchema>;
+
+
 
 
 
