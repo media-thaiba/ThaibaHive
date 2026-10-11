@@ -19,6 +19,7 @@
     "src/app/api/staff/[id]/nfc-card/": "Tier 3: Staff NFC card issuance scheduled for Sprint-053 tenant isolation refactor",
     "src/app/api/visitors/approvals/": "Tier 3: Visitor pass approvals scheduled for Sprint-053 tenant isolation refactor",
     "src/app/api/visitors/verify/": "Tier 3: Gatekeeper visitor verification scheduled for Sprint-053 tenant isolation refactor",
-    "src/app/api/chat/channels/route.ts": "Scanner limitation: institutionId passed via variable in 600-char window; actual insert includes institutionId"
+    "src/app/api/chat/channels/route.ts": "Scanner limitation: institutionId passed via variable in 600-char window; actual insert includes institutionId",
+    "src/app/api/agent-plugins/": "Phase 10: agent_plugins.institution_id is intentionally NULL only for scope='global' system listings (approved by super_admin/system); all tenant-scoped inserts include institutionId"
   }
 }

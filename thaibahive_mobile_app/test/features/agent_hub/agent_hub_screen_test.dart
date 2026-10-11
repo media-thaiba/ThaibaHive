@@ -17,6 +17,8 @@ void main() {
       // Verify App Bar Title & Tab headers
       expect(find.text('AIGENT-OS Cockpit'), findsOneWidget);
       expect(find.text('Approvals'), findsOneWidget);
+      expect(find.text('Plugins'), findsOneWidget);
+      expect(find.text('Live Stream'), findsOneWidget);
       expect(find.text('Domain Fleet'), findsOneWidget);
       expect(find.text('Workflow Runs'), findsOneWidget);
 

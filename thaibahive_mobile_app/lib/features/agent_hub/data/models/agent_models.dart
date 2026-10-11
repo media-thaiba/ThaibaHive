@@ -148,3 +148,198 @@ class MobileWorkflowRun {
     'error': error,
   };
 }
+
+class MobileAgentPlugin {
+  final String id;
+  final String pluginKey;
+  final String displayName;
+  final String summary;
+  final String? description;
+  final String version;
+  final String category;
+  final double ratingAvg;
+  final int ratingCount;
+  final int installedCount;
+  final List<String> capabilities;
+  final Map<String, dynamic> manifest;
+  final bool isInstalled;
+  final bool isEnabled;
+  final List<String> grantedPermissions;
+  final String? installationId;
+  final bool authorVerified;
+  final String scope;
+
+  const MobileAgentPlugin({
+    required this.id,
+    required this.pluginKey,
+    required this.displayName,
+    required this.summary,
+    this.description,
+    required this.version,
+    required this.category,
+    this.ratingAvg = 0.0,
+    this.ratingCount = 0,
+    this.installedCount = 0,
+    this.capabilities = const [],
+    this.manifest = const {},
+    this.isInstalled = false,
+    this.isEnabled = true,
+    this.grantedPermissions = const [],
+    this.installationId,
+    this.authorVerified = false,
+    this.scope = 'global',
+  });
+
+  MobileAgentPlugin copyWith({
+    String? id,
+    String? pluginKey,
+    String? displayName,
+    String? summary,
+    String? description,
+    String? version,
+    String? category,
+    double? ratingAvg,
+    int? ratingCount,
+    int? installedCount,
+    List<String>? capabilities,
+    Map<String, dynamic>? manifest,
+    bool? isInstalled,
+    bool? isEnabled,
+    List<String>? grantedPermissions,
+    String? installationId,
+    bool? authorVerified,
+    String? scope,
+  }) {
+    return MobileAgentPlugin(
+      id: id ?? this.id,
+      pluginKey: pluginKey ?? this.pluginKey,
+      displayName: displayName ?? this.displayName,
+      summary: summary ?? this.summary,
+      description: description ?? this.description,
+      version: version ?? this.version,
+      category: category ?? this.category,
+      ratingAvg: ratingAvg ?? this.ratingAvg,
+      ratingCount: ratingCount ?? this.ratingCount,
+      installedCount: installedCount ?? this.installedCount,
+      capabilities: capabilities ?? this.capabilities,
+      manifest: manifest ?? this.manifest,
+      isInstalled: isInstalled ?? this.isInstalled,
+      isEnabled: isEnabled ?? this.isEnabled,
+      grantedPermissions: grantedPermissions ?? this.grantedPermissions,
+      installationId: installationId ?? this.installationId,
+      authorVerified: authorVerified ?? this.authorVerified,
+      scope: scope ?? this.scope,
+    );
+  }
+
+  factory MobileAgentPlugin.fromJson(Map<String, dynamic> json) {
+    List<String> parseList(dynamic raw) {
+      if (raw is List) return raw.map((e) => e.toString()).toList();
+      return const [];
+    }
+
+    double parseDouble(dynamic raw) {
+      if (raw is num) return raw.toDouble();
+      if (raw is String) return double.tryParse(raw) ?? 0.0;
+      return 0.0;
+    }
+
+    int parseInt(dynamic raw) {
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      if (raw is String) return int.tryParse(raw) ?? 0;
+      return 0;
+    }
+
+    final manifestRaw = json['manifest'];
+    final Map<String, dynamic> manifestData = manifestRaw is Map
+        ? Map<String, dynamic>.from(manifestRaw)
+        : const <String, dynamic>{};
+
+    return MobileAgentPlugin(
+      id: json['id']?.toString() ?? '',
+      pluginKey: json['pluginKey']?.toString() ?? '',
+      displayName: json['displayName']?.toString() ?? '',
+      summary: json['summary']?.toString() ?? '',
+      description: json['description']?.toString(),
+      version: json['version']?.toString() ?? '1.0.0',
+      category: json['category']?.toString() ?? 'general',
+      ratingAvg: parseDouble(json['ratingAvg']),
+      ratingCount: parseInt(json['ratingCount']),
+      installedCount: parseInt(json['installedCount']),
+      capabilities: parseList(json['capabilities']),
+      manifest: manifestData,
+      isInstalled: json['isInstalled'] == true || json['installationId'] != null,
+      isEnabled: json['enabled'] != false && json['isEnabled'] != false,
+      grantedPermissions: parseList(json['grantedPermissions'] ?? json['grantedToolPermissions']),
+      installationId: json['installationId']?.toString(),
+      authorVerified: json['authorVerified'] == true,
+      scope: json['scope']?.toString() ?? 'global',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'pluginKey': pluginKey,
+    'displayName': displayName,
+    'summary': summary,
+    'description': description,
+    'version': version,
+    'category': category,
+    'ratingAvg': ratingAvg,
+    'ratingCount': ratingCount,
+    'installedCount': installedCount,
+    'capabilities': capabilities,
+    'manifest': manifest,
+    'isInstalled': isInstalled,
+    'isEnabled': isEnabled,
+    'grantedPermissions': grantedPermissions,
+    'installationId': installationId,
+    'authorVerified': authorVerified,
+    'scope': scope,
+  };
+}
+
+class MobileLiveSnippet {
+  final String id;
+  final String sessionId;
+  final String speaker;
+  final String text;
+  final String? hazardType;
+  final String? severity;
+  final String timestamp;
+
+  const MobileLiveSnippet({
+    required this.id,
+    required this.sessionId,
+    required this.speaker,
+    required this.text,
+    this.hazardType,
+    this.severity,
+    required this.timestamp,
+  });
+
+  bool get isHazard => hazardType != null && hazardType!.isNotEmpty;
+
+  factory MobileLiveSnippet.fromJson(Map<String, dynamic> json) {
+    return MobileLiveSnippet(
+      id: json['id']?.toString() ?? '',
+      sessionId: json['sessionId']?.toString() ?? '',
+      speaker: json['speaker']?.toString() ?? 'system',
+      text: json['text']?.toString() ?? '',
+      hazardType: json['hazardType']?.toString(),
+      severity: json['severity']?.toString(),
+      timestamp: json['timestamp']?.toString() ?? DateTime.now().toIso8601String(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'sessionId': sessionId,
+    'speaker': speaker,
+    'text': text,
+    'hazardType': hazardType,
+    'severity': severity,
+    'timestamp': timestamp,
+  };
+}

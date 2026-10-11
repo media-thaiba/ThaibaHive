@@ -9,7 +9,8 @@ import {
   Megaphone, PartyPopper, ScrollText, Vote, MessageSquare,
   Receipt, CalendarClock, AlertTriangle, Banknote, FileSearch,
   Inbox, UserCheck, Image as ImageIcon, CalendarRange,
-  Store, Boxes, BookOpen,
+  Store, Boxes, BookOpen, Workflow,
+  Puzzle, Radio,
   type LucideIcon,
 } from "lucide-react";
 
@@ -145,6 +146,8 @@ const operationsItems: NavItem[] = [
   { href: "/operations/finance-requests", label: "Finance Requests", desc: "Reimbursement & fund requests pending finance review", icon: Inbox, workspace: "operations", roles: ["accounts", "admin", "super_admin", "principal"] },
   { href: "/operations/visitors", label: "Visitors", desc: "Visitor pre-registration, passes & gate logs", icon: UserCheck, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod"] },
   { href: "/operations/media-library", label: "Media Library", desc: "Shared institutional photos, videos & documents", icon: ImageIcon, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff"] },
+  { href: "/operations/workflow-studio", label: "Workflow Studio", desc: "Design & publish visual DAG workflows for the agentic engine", icon: Workflow, permission: "workflow_studio:read", workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff", "teacher", "accounts", "purchase", "coordinator", "exam_coordinator", "regional_admin", "regional_auditor"] },
+  { href: "/operations/live-sessions", label: "Live Sessions", desc: "Duplex multimodal streaming cockpit: transcripts, hazard alerts & session controls", icon: Radio, permission: "live_stream:view", workspace: "operations", roles: ["admin", "super_admin", "principal", "hod"] },
 ];
 
 // --- Administration ---
@@ -158,6 +161,7 @@ const adminItems: NavItem[] = [
   { href: "/admin/keys", label: "Key Management", desc: "Encryption keys, rotation policies & HSM integration", icon: Key, permission: "system:admin", workspace: "admin", roles: ["super_admin"] },
   { href: "/admin/staff", label: "Staff Directory", desc: "Employee records, profiles, roles & department assignments", icon: UsersIcon, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
   { href: "/admin/marketplace", label: "Marketplace", desc: "App marketplace: instant utilities & department portals", icon: Store, workspace: "admin", roles: ["admin", "super_admin"] },
+  { href: "/admin/agent-marketplace", label: "Agent Marketplace", desc: "Sandboxed agent plugins: capability tags, manifest reviews, install & approvals", icon: Puzzle, permission: "marketplace:plugins:read", workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
   { href: "/admin/docs", label: "Documentation", desc: "Platform documentation, API references & runbooks", icon: BookOpen, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
 ];
 

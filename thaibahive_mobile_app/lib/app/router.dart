@@ -79,6 +79,7 @@ import '../features/staff/presentation/staff_profile_screen.dart';
 import '../features/facility/screens/technician_workorder_screen.dart';
 import '../features/facility/screens/qr_asset_scanner_screen.dart';
 import '../features/agent_hub/presentation/agent_hub_screen.dart';
+import '../features/agent_hub/presentation/plugin_detail_screen.dart';
 import '../features/sync/presentation/sync_status_screen.dart';
 import '../features/chat/presentation/channel_list_screen.dart';
 import '../features/chat/presentation/chat_screen.dart';
@@ -686,6 +687,16 @@ GoRouter buildRouter() {
           state: state,
           child: AgentHubScreen(
             initialGateId: state.uri.queryParameters['gateId'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/agent-hub/plugins/:id',
+        name: 'agentPluginDetail',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: PluginDetailScreen(
+            pluginId: state.pathParameters['id']!,
           ),
         ),
       ),

@@ -7462,6 +7462,142 @@ export const hardwareTelemetryLogs = pgTable("hardware_telemetry_logs", {
   htlMerkleIdx: index("idx_pg_hw_telemetry_merkle").on(t.merkleRoot),
 }));
 
+// ============================================
+// Phase 10: AI Agent Marketplace & Live Streaming Tables
+// ============================================
+
+export const agentPlugins = pgTable("agent_plugins", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }), // NULL = global/system listing
+  scope: text("scope").notNull().default("global"), // 'global' | 'institution_private' | 'institution_shared'
+  pluginKey: text("plugin_key").notNull(),
+  displayName: text("display_name").notNull(),
+  summary: text("summary").notNull(),
+  description: text("description"),
+  version: text("version").notNull(),
+  authorStaffId: text("author_staff_id").references(() => staff.id, { onDelete: "set null" }),
+  authorVerified: boolean("author_verified").notNull().default(false),
+  category: text("category").notNull(),
+  capabilitiesJson: text("capabilities_json").notNull(),
+  manifestJson: text("manifest_json").notNull(),
+  manifestHash: text("manifest_hash").notNull(),
+  approvalStatus: text("approval_status").notNull().default("draft"),
+  installedCount: integer("installed_count").notNull().default(0),
+  ratingAvg: real("rating_avg").notNull().default(0),
+  ratingCount: integer("rating_count").notNull().default(0),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  apKeyVerIdx: uniqueIndex("idx_pg_agent_plugins_key_ver").on(t.pluginKey, t.version),
+  apInstScopeIdx: index("idx_pg_agent_plugins_inst_scope").on(t.institutionId, t.scope, t.approvalStatus),
+  apCategoryIdx: index("idx_pg_agent_plugins_category").on(t.category),
+  apManifestIdx: index("idx_pg_agent_plugins_manifest").on(t.manifestHash),
+}));
+
+export const agentPluginInstallations = pgTable("agent_plugin_installations", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  pluginId: text("plugin_id").notNull().references(() => agentPlugins.id, { onDelete: "cascade" }),
+  installedVersion: text("installed_version").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  grantedToolPermissionsJson: text("granted_tool_permissions_json").notNull(),
+  configJson: text("config_json"),
+  installedBy: text("installed_by").references(() => staff.id, { onDelete: "set null" }),
+  lastRunAt: text("last_run_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  apiTenantPluginIdx: uniqueIndex("idx_pg_agent_plugin_inst_tenant_plugin").on(t.institutionId, t.pluginId),
+  apiEnabledIdx: index("idx_pg_agent_plugin_inst_enabled").on(t.institutionId, t.enabled),
+}));
+
+export const agentPluginReviews = pgTable("agent_plugin_reviews", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  pluginId: text("plugin_id").notNull().references(() => agentPlugins.id, { onDelete: "cascade" }),
+  reviewerStaffId: text("reviewer_staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  reviewText: text("review_text"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  aprInstUserPluginIdx: uniqueIndex("idx_pg_agent_reviews_inst_user_plugin").on(t.institutionId, t.pluginId, t.reviewerStaffId),
+  aprPluginIdx: index("idx_pg_agent_reviews_plugin").on(t.pluginId),
+}));
+
+export const agentWorkflowGraphs = pgTable("agent_workflow_graphs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  graphName: text("graph_name").notNull(),
+  description: text("description"),
+  canvasStateJson: text("canvas_state_json").notNull(),
+  dslPayloadJson: text("dsl_payload_json").notNull(),
+  dslHash: text("dsl_hash").notNull(),
+  workflowId: text("workflow_id").references(() => agenticWorkflows.id, { onDelete: "set null" }),
+  graphVersion: integer("graph_version").notNull().default(1),
+  status: text("status").notNull().default("draft"),
+  createdBy: text("created_by").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  awgInstNameVerIdx: uniqueIndex("idx_pg_agent_graphs_inst_name_ver").on(t.institutionId, t.graphName, t.graphVersion),
+  awgInstStatusIdx: index("idx_pg_agent_graphs_inst_status").on(t.institutionId, t.status),
+}));
+
+export const agentWorkflowGraphVersions = pgTable("agent_workflow_graph_versions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  graphId: text("graph_id").notNull().references(() => agentWorkflowGraphs.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  graphName: text("graph_name").notNull(),
+  description: text("description"),
+  canvasStateJson: text("canvas_state_json").notNull(),
+  dslPayloadJson: text("dsl_payload_json").notNull(),
+  dslHash: text("dsl_hash").notNull(),
+  status: text("status").notNull().default("draft"),
+  changeKind: text("change_kind").notNull().default("manual"),
+  restoredFromVersion: integer("restored_from_version"),
+  createdBy: text("created_by").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  awgvGraphVerIdx: uniqueIndex("idx_pg_agent_graph_versions_graph_ver").on(t.graphId, t.version),
+  awgvInstCreatedIdx: index("idx_pg_agent_graph_versions_inst_created").on(t.institutionId, t.createdAt),
+}));
+
+export const agentLiveSessions = pgTable("agent_live_sessions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  sessionType: text("session_type").notNull(),
+  cameraZoneId: text("camera_zone_id").references(() => hardwareZones.id, { onDelete: "set null" }),
+  modelId: text("model_id").notNull(),
+  status: text("status").notNull().default("active"),
+  keyframeIntervalSeconds: integer("keyframe_interval_seconds").notNull().default(1),
+  maxDurationSeconds: integer("max_duration_seconds").notNull().default(900),
+  totalSeconds: integer("total_seconds").notNull().default(0),
+  totalFrames: integer("total_frames").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  startedBy: text("started_by").references(() => staff.id, { onDelete: "set null" }),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  endedAt: text("ended_at"),
+}, (t) => ({
+  alsInstStatusIdx: index("idx_pg_agent_live_inst_status").on(t.institutionId, t.status, t.startedAt),
+  alsZoneIdx: index("idx_pg_agent_live_zone").on(t.cameraZoneId),
+}));
+
+export const agentLiveSessionSegments = pgTable("agent_live_session_segments", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull().references(() => agentLiveSessions.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+  segmentType: text("segment_type").notNull(),
+  payloadJson: text("payload_json").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  alsegSeqIdx: uniqueIndex("idx_pg_agent_live_segments_seq").on(t.sessionId, t.sequence),
+  alsegInstTimeIdx: index("idx_pg_agent_live_segments_inst_time").on(t.institutionId, t.createdAt),
+}));
+
 
 
 

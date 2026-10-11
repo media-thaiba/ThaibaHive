@@ -79,5 +79,66 @@ void main() {
       expect(run.totalSteps, 5);
       expect(run.durationMs, 1250);
     });
+
+    test('MobileAgentPlugin parses JSON with capabilities and granted permissions', () {
+      final json = {
+        'id': 'plug-1',
+        'pluginKey': 'thaiba.finance.reconciler',
+        'displayName': 'Finance Reconciler Plugin',
+        'summary': 'Automated 3-way matching and ledger reconciler',
+        'version': '1.2.0',
+        'category': 'finance',
+        'ratingAvg': 4.8,
+        'ratingCount': 24,
+        'installedCount': 120,
+        'capabilities': ['reconcile', 'export_csv'],
+        'manifest': {'entrypoint': 'index.js'},
+        'isInstalled': true,
+        'enabled': true,
+        'grantedPermissions': ['finance:ledger:read', 'finance:ledger:write'],
+        'authorVerified': true,
+        'scope': 'institution',
+      };
+
+      final plugin = MobileAgentPlugin.fromJson(json);
+
+      expect(plugin.id, 'plug-1');
+      expect(plugin.pluginKey, 'thaiba.finance.reconciler');
+      expect(plugin.displayName, 'Finance Reconciler Plugin');
+      expect(plugin.ratingAvg, 4.8);
+      expect(plugin.capabilities, contains('reconcile'));
+      expect(plugin.isInstalled, true);
+      expect(plugin.isEnabled, true);
+      expect(plugin.grantedPermissions, contains('finance:ledger:write'));
+      expect(plugin.authorVerified, true);
+      expect(plugin.scope, 'institution');
+
+      final serialized = plugin.toJson();
+      expect(serialized['id'], 'plug-1');
+      expect(serialized['pluginKey'], 'thaiba.finance.reconciler');
+    });
+
+    test('MobileLiveSnippet parses transcript and hazard segments', () {
+      final json = {
+        'id': 'snip-10',
+        'sessionId': 'session-xyz',
+        'speaker': 'gemini_live',
+        'text': 'The library room shows an open fire exit door.',
+        'hazardType': 'fire_exit_breach',
+        'severity': 'high',
+        'timestamp': '2026-10-11T12:00:00.000Z',
+      };
+
+      final snippet = MobileLiveSnippet.fromJson(json);
+
+      expect(snippet.id, 'snip-10');
+      expect(snippet.speaker, 'gemini_live');
+      expect(snippet.isHazard, true);
+      expect(snippet.hazardType, 'fire_exit_breach');
+      expect(snippet.severity, 'high');
+
+      final serialized = snippet.toJson();
+      expect(serialized['hazardType'], 'fire_exit_breach');
+    });
   });
 }
