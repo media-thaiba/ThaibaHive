@@ -191,7 +191,8 @@ async function runSimulation() {
       throw new Error("Installation record invalid");
     }
     console.log(`  ✓ Plugin installed into ${instAlpha} (Installation ID: ${installation.id})`);
-    console.log(`  ✓ Granted permissions: ${JSON.stringify(installation.grantedToolPermissions)}`);
+    const grantedPermissions = JSON.parse(installation.grantedToolPermissionsJson || "[]");
+    console.log(`  ✓ Granted permissions: ${JSON.stringify(grantedPermissions)}`);
 
     // ---------------------------------------------------------------------------
     // Stage 5: Visual Workflow Studio DAG Assembly & Compilation
@@ -320,7 +321,9 @@ async function runSimulation() {
     if (!liveSession || liveSession.status !== "active") {
       throw new Error("Failed to start Live Multimodal Session");
     }
-    console.log(`  ✓ Live session started (ID: ${liveSession.id}, Title: '${liveSession.title}')`);
+    console.log(
+      `  ✓ Live session started (ID: ${liveSession.id}, Type: ${liveSession.sessionType}, Model: ${liveSession.modelId})`
+    );
 
     // Ingest simulated live event and test broadcast
     let eventReceived = false;
