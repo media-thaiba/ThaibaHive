@@ -2,6 +2,20 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.39.0] - 2026-10-11
+### Phase 10: Track 3B AI Agent Marketplace & Live Multimodal Streaming
+#### Added
+- **AI Agent Marketplace & Plugin Engine**: Multi-tenant agent plugin registry with deterministic canonical SHA-256 manifest hashing, public catalog browsing, and least-privilege installation (`grantedPermissions ⊆ manifest ∩ installerACL`). Includes reviews & star ratings engine (`agent_plugin_reviews`), scope isolation (`global` vs `institution_private` vs `institution_shared`), and super-admin approval boundary controls.
+- **Egress-Controlled Plugin Sandbox**: Sandboxed execution runtime (`PluginSandbox`) with resource budgeting (timeout, memory, token ceiling), concurrency semaphores, and SSRF defense (blocking RFC 1918 private IPs, AWS cloud metadata `169.254.169.254`, loopback, and internal `.local`/`.internal` domains). Includes real-time Merkle audit logging.
+- **Visual Workflow Studio (`/operations/workflow-studio`)**: ReactFlow canvas (`@xyflow/react`) for drag-and-drop workflow DAG construction, accessible keyboard palette, and bidirectional compiler (`graph-compiler.ts`) converting visual DAGs to cycle-free Kahn topologically sorted Workflow DSL with fingerprint verification. Includes immutable version history engine (`agent_workflow_graph_versions`).
+- **Gemini Live Multimodal Adapter & Real-Time Engine**: High-frequency streaming adapter (`LiveSessionProvider`, `GeminiLiveProvider`, `MockLiveProvider`) consuming bidirectional PCM16 16kHz audio, Keyframe pipeline with drop-oldest bounded queuing (1 FPS), RMS energy VAD transcriber, and live hazard event dispatch over HTTP SSE duplex stream (`/api/live/sessions/[id]/stream`).
+- **Institutional Quota & Concurrency Governance**: Tenant-level session quotas (3 concurrent sessions max, 120 minutes/day ceiling) with single-statement atomic usage counter increments and clean auto-termination timers.
+- **Web Admin & Operations Cockpits**: Agent Marketplace console (`/admin/agent-marketplace`) with catalog grid, capability chips, review composer, and install dialog; Live Multimodal Operations console (`/operations/live-sessions`) with live event viewer, transcript log, and quota stat cards.
+- **Mobile Agent Hub Companion Extensions (Flutter)**: Riverpod-powered plugins catalog, detail screen (`PluginDetailScreen`), enabled/quarantined toggle, live multimodal stream transcript/hazard cards (`LiveSnippetCard`), workflow run trigger dialog, and offline secure storage read caching.
+- **Dual-Dialect Database Parity**: 7 new multi-tenant tables (`agent_plugins`, `agent_plugin_installations`, `agent_plugin_reviews`, `agent_workflow_graphs`, `agent_workflow_graph_versions`, `agent_live_sessions`, `agent_live_session_segments`) across SQLite and PostgreSQL schemas with migrations (`0036_flimsy_kitty_pryde.sql`, `0020_sad_turbo.sql`).
+- **5-Tier Granular RBAC Matrix**: 10 new permission keys (`marketplace:browse`, `marketplace:install`, `marketplace:publish`, `marketplace:review`, `marketplace:admin`, `workflow_studio:view`, `workflow_studio:edit`, `workflow_studio:publish`, `live_stream:view`, `live_stream:operator`) mapped across all 5 tiers and specialized roles.
+- **8-Stage End-to-End Simulation CLI**: Verified 100% completion via `pnpm marketplace:simulate`.
+
 ## [3.38.0] - 2026-10-10
 ### Phase 9: Track 3C Hardware Radar & IoT Mesh
 #### Added

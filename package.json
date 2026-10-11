@@ -70,6 +70,7 @@
     "alumni:simulate": "tsx scripts/alumni-simulate.ts",
     "agent:simulate": "tsx scripts/agent-simulate.ts",
     "hardware:simulate": "tsx scripts/hardware-simulate.ts",
+    "marketplace:simulate": "tsx scripts/marketplace-simulate.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {
