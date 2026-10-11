@@ -42,7 +42,7 @@ export class VadTranscriber {
     const rms = VadTranscriber.calculateRms(buffer);
     const now = Date.now();
 
-    let isVoiceActive = rms >= this.energyThreshold;
+    const isVoiceActive = rms >= this.energyThreshold;
     let shouldSegment = false;
 
     if (isVoiceActive) {

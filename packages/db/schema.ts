@@ -7551,6 +7551,26 @@ export const agentWorkflowGraphs = sqliteTable("agent_workflow_graphs", {
   awgInstStatusIdx: index("idx_agent_graphs_inst_status").on(t.institutionId, t.status),
 }));
 
+export const agentWorkflowGraphVersions = sqliteTable("agent_workflow_graph_versions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  graphId: text("graph_id").notNull().references(() => agentWorkflowGraphs.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  graphName: text("graph_name").notNull(),
+  description: text("description"),
+  canvasStateJson: text("canvas_state_json").notNull(), // immutable ReactFlow snapshot
+  dslPayloadJson: text("dsl_payload_json").notNull(), // compiled WorkflowDsl snapshot
+  dslHash: text("dsl_hash").notNull(),
+  status: text("status").notNull().default("draft"), // 'draft' | 'published' | 'archived'
+  changeKind: text("change_kind").notNull().default("manual"), // 'create' | 'auto_save' | 'publish' | 'restore'
+  restoredFromVersion: integer("restored_from_version"),
+  createdBy: text("created_by").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  awgvGraphVerIdx: uniqueIndex("idx_agent_graph_versions_graph_ver").on(t.graphId, t.version),
+  awgvInstCreatedIdx: index("idx_agent_graph_versions_inst_created").on(t.institutionId, t.createdAt),
+}));
+
 export const agentLiveSessions = sqliteTable("agent_live_sessions", {
   id: text("id").primaryKey(),
   institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
@@ -10,8 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
-import { Plus, Save, Rocket, Trash2, Workflow } from "lucide-react";
+import { Plus, Save, Rocket, Trash2, Workflow, Lock } from "lucide-react";
 import { ensureArray } from "@/lib/utils";
+import { useFeatureFlags } from "@/lib/hooks/use-feature-flags";
+import { VersionHistoryPanel, type RestoredGraph } from "./_components/version-history-panel";
 import type { StudioCanvasState } from "@/lib/workflow-studio/graph-compiler";
 
 const WorkflowStudioCanvas = dynamic(
@@ -44,6 +47,8 @@ function slugify(value: string): string {
 }
 
 export default function WorkflowStudioPage() {
+  const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+  const studioEnabled = isFeatureEnabled("workflow_studio");
   const [graphs, setGraphs] = useState<StudioGraph[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [graphName, setGraphName] = useState("Untitled Workflow");
@@ -77,8 +82,10 @@ export default function WorkflowStudioPage() {
   }, []);
 
   useEffect(() => {
-    loadGraphs().catch(() => {});
-  }, [loadGraphs]);
+    if (studioEnabled) {
+      loadGraphs().catch(() => {});
+    }
+  }, [loadGraphs, studioEnabled]);
 
   const selectGraph = useCallback((graph: StudioGraph | null) => {
     setErrors([]);
@@ -97,6 +104,15 @@ export default function WorkflowStudioPage() {
       toast.error("Stored canvas state is corrupt; starting blank");
     }
   }, []);
+
+  const handleRestored = useCallback(
+    (graph: RestoredGraph) => {
+      selectGraph(graph as unknown as StudioGraph);
+      setErrors([]);
+      loadGraphs().catch(() => {});
+    },
+    [selectGraph, loadGraphs]
+  );
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -184,138 +200,178 @@ export default function WorkflowStudioPage() {
       <PageHeader
         title="Workflow Studio"
         description="Design agentic workflows visually and publish them to the execution engine"
+        actions={
+          <Badge variant={studioEnabled ? "success" : "secondary"} className="text-[10px]">
+            {studioEnabled ? "Feature enabled" : "Feature disabled"}
+          </Badge>
+        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-        {/* Graph list */}
-        <Card aria-label="Saved workflows">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Workflows</CardTitle>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => selectGraph(null)}
-                aria-label="Start a new blank workflow"
-              >
-                <Plus aria-hidden className="mr-1 h-3.5 w-3.5" />
-                New
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-full" aria-label="Loading workflows" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            ) : (
-              <div className="max-h-[420px] overflow-y-auto">
-                <ul className="space-y-1" aria-label="Workflow list">
-                  {graphs.map((g) => (
-                    <li key={g.id}>
-                      <button
-                        type="button"
-                        onClick={() => selectGraph(g)}
-                        className={`w-full text-left rounded-md px-2 py-1.5 text-xs hover:bg-accent ${
-                          g.id === selectedId ? "bg-accent font-medium" : ""
-                        }`}
-                        aria-current={g.id === selectedId ? "true" : undefined}
-                        aria-label={`Open workflow ${g.graphName} (${g.status})`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="truncate flex items-center gap-1.5">
-                            <Workflow aria-hidden className="h-3 w-3 shrink-0 text-muted-foreground" />
-                            {g.graphName}
-                          </span>
-                          <Badge variant={g.status === "published" ? "success" : "secondary"} className="text-[10px] shrink-0">
-                            {g.status}
-                          </Badge>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                  {graphs.length === 0 && (
-                    <li className="text-xs text-muted-foreground italic px-1 py-2">
-                      No workflows yet — start a new one.
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {!flagsLoading && !studioEnabled ? (
+        <div className="space-y-4">
+          <Alert variant="warning" role="alert" aria-label="Workflow Studio disabled">
+            <p className="font-semibold text-sm">Workflow Studio is switched off for this institution</p>
+            <p className="text-xs mt-1">
+              The <code className="rounded bg-background px-1">workflow_studio</code> feature flag is disabled, so the
+              DAG canvas, version history and publish pipeline are unavailable. Publishing additionally requires the{" "}
+              <code className="rounded bg-background px-1">agentic_workflows</code> flag. An administrator can enable
+              both under Institution Settings → Features.
+            </p>
+          </Alert>
+          <Card aria-label="Workflow Studio disabled">
+            <CardContent className="py-12 flex flex-col items-center text-center gap-3">
+              <Lock aria-hidden className="h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm font-semibold">Studio locked</p>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                Existing published workflows keep running in the Agent Cockpit. Only the authoring surface is disabled.
+              </p>
+              <Link href="/admin/agents" className={buttonVariants({ variant: "outline" })}>
+                Open Agent Cockpit
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+          <div className="space-y-6">
+            {/* Graph list */}
+            <Card aria-label="Saved workflows">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Workflows</CardTitle>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => selectGraph(null)}
+                    aria-label="Start a new blank workflow"
+                  >
+                    <Plus aria-hidden className="mr-1 h-3.5 w-3.5" />
+                    New
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-full" aria-label="Loading workflows" />
+                    <Skeleton className="h-8 w-full" />
+                  </div>
+                ) : (
+                  <div className="max-h-[420px] overflow-y-auto">
+                    <ul className="space-y-1" aria-label="Workflow list">
+                      {graphs.map((g) => (
+                        <li key={g.id}>
+                          <button
+                            type="button"
+                            onClick={() => selectGraph(g)}
+                            className={`w-full text-left rounded-md px-2 py-1.5 text-xs hover:bg-accent ${
+                              g.id === selectedId ? "bg-accent font-medium" : ""
+                            }`}
+                            aria-current={g.id === selectedId ? "true" : undefined}
+                            aria-label={`Open workflow ${g.graphName} (${g.status})`}
+                          >
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="truncate flex items-center gap-1.5">
+                                <Workflow aria-hidden className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                {g.graphName}
+                              </span>
+                              <Badge variant={g.status === "published" ? "success" : "secondary"} className="text-[10px] shrink-0">
+                                {g.status}
+                              </Badge>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                      {graphs.length === 0 && (
+                        <li className="text-xs text-muted-foreground italic px-1 py-2">
+                          No workflows yet — start a new one.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Editor */}
-        <div className="space-y-4 min-w-0">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[220px] space-y-1.5">
-              <label htmlFor="wf-name" className="text-xs font-medium text-muted-foreground">
-                Workflow name
-              </label>
-              <Input
-                id="wf-name"
-                value={graphName}
-                onChange={(e) => setGraphName(e.target.value)}
-                placeholder="e.g. Fee Default Escalation"
-                maxLength={120}
-              />
-            </div>
-            <Button type="button" onClick={handleSave} disabled={saving || publishing} aria-label="Save workflow draft">
-              <Save aria-hidden className="mr-1.5 h-4 w-4" />
-              {saving ? "Saving…" : "Save"}
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              onClick={handlePublish}
-              disabled={publishing || saving || !selectedId}
-              aria-label="Publish workflow to execution engine"
-            >
-              <Rocket aria-hidden className="mr-1.5 h-4 w-4" />
-              {publishing ? "Publishing…" : "Publish"}
-            </Button>
-            {selectedId && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={handleDelete}
-                disabled={saving || publishing}
-                aria-label={`Delete workflow ${graphName}`}
-              >
-                <Trash2 aria-hidden className="h-4 w-4" />
-              </Button>
-            )}
-            {selectedGraph && (
-              <Badge variant="outline" className="text-[10px]">
-                v{selectedGraph.graphVersion} · {selectedGraph.status}
-                {selectedGraph.dslHash ? ` · ${selectedGraph.dslHash.slice(0, 8)}` : ""}
-              </Badge>
-            )}
+            <VersionHistoryPanel
+              graphId={selectedId}
+              currentVersion={selectedGraph ? selectedGraph.graphVersion : null}
+              disabled={saving || publishing}
+              onRestored={handleRestored}
+            />
           </div>
 
-          {errors.length > 0 && (
-            <Alert variant="error" role="alert" aria-label="Workflow validation errors">
-              <p className="font-semibold text-sm mb-1">Compilation problems</p>
-              <ul className="list-disc pl-5 space-y-0.5">
-                {errors.map((e, i) => (
-                  <li key={i} className="text-xs">
-                    {e}
-                  </li>
-                ))}
-              </ul>
-            </Alert>
-          )}
+          {/* Editor */}
+          <div className="space-y-4 min-w-0">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[220px] space-y-1.5">
+                <label htmlFor="wf-name" className="text-xs font-medium text-muted-foreground">
+                  Workflow name
+                </label>
+                <Input
+                  id="wf-name"
+                  value={graphName}
+                  onChange={(e) => setGraphName(e.target.value)}
+                  placeholder="e.g. Fee Default Escalation"
+                  maxLength={120}
+                />
+              </div>
+              <Button type="button" onClick={handleSave} disabled={saving || publishing} aria-label="Save workflow draft">
+                <Save aria-hidden className="mr-1.5 h-4 w-4" />
+                {saving ? "Saving…" : "Save"}
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                onClick={handlePublish}
+                disabled={publishing || saving || !selectedId}
+                aria-label="Publish workflow to execution engine"
+              >
+                <Rocket aria-hidden className="mr-1.5 h-4 w-4" />
+                {publishing ? "Publishing…" : "Publish"}
+              </Button>
+              {selectedId && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={handleDelete}
+                  disabled={saving || publishing}
+                  aria-label={`Delete workflow ${graphName}`}
+                >
+                  <Trash2 aria-hidden className="h-4 w-4" />
+                </Button>
+              )}
+              {selectedGraph && (
+                <Badge variant="outline" className="text-[10px]">
+                  v{selectedGraph.graphVersion} · {selectedGraph.status}
+                  {selectedGraph.dslHash ? ` · ${selectedGraph.dslHash.slice(0, 8)}` : ""}
+                </Badge>
+              )}
+            </div>
 
-          <WorkflowStudioCanvas
-            key={selectedId || "new"}
-            initialCanvas={canvasState}
-            onCanvasChange={setCanvasState}
-          />
+            {errors.length > 0 && (
+              <Alert variant="error" role="alert" aria-label="Workflow validation errors">
+                <p className="font-semibold text-sm mb-1">Compilation problems</p>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {errors.map((e, i) => (
+                    <li key={i} className="text-xs">
+                      {e}
+                    </li>
+                  ))}
+                </ul>
+              </Alert>
+            )}
+
+            <WorkflowStudioCanvas
+              key={selectedId || "new"}
+              initialCanvas={canvasState}
+              onCanvasChange={setCanvasState}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

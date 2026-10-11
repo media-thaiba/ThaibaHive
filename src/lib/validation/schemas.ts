@@ -1764,6 +1764,11 @@ export const workflowGraphUpdateSchema = z.object({
 });
 export type WorkflowGraphUpdateInput = z.infer<typeof workflowGraphUpdateSchema>;
 
+export const workflowGraphVersionRestoreSchema = z.object({
+  version: z.number().int().min(1),
+});
+export type WorkflowGraphVersionRestoreInput = z.infer<typeof workflowGraphVersionRestoreSchema>;
+
 // ============================================
 // Phase 10: Gemini Live Streaming Validation Schemas
 // ============================================

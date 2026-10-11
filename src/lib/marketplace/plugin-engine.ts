@@ -86,7 +86,7 @@ export class MarketplaceEngine {
 
     // 2. Resolve institutionId and scope
     let institutionId: string | null = null;
-    let scope = input.scope || "institution_private";
+    const scope = input.scope || "institution_private";
 
     if (scope === "global") {
       // Global listings have null institutionId

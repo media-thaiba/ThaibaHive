@@ -85,7 +85,7 @@ export class PluginSandbox {
     const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
     const ipMatch = hostname.match(ipv4Regex);
     if (ipMatch) {
-      const [_, o1, o2, o3, o4] = ipMatch.map(Number);
+      const [_, o1, o2, _o3, _o4] = ipMatch.map(Number);
       if (
         o1 === 10 || // 10.0.0.0/8
         o1 === 127 || // 127.0.0.0/8

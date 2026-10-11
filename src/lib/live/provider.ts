@@ -106,7 +106,7 @@ export class MockLiveProvider implements LiveSessionProvider {
     });
   }
 
-  public async sendAudioChunk(pcm16Base64: string): Promise<void> {
+  public async sendAudioChunk(_pcm16Base64: string): Promise<void> {
     if (this.status !== "active") return;
     this.audioChunkCount++;
 
@@ -134,7 +134,7 @@ export class MockLiveProvider implements LiveSessionProvider {
     }
   }
 
-  public async sendKeyframe(jpegBase64: string, mimeType: string = "image/jpeg"): Promise<void> {
+  public async sendKeyframe(jpegBase64: string, _mimeType: string = "image/jpeg"): Promise<void> {
     if (this.status !== "active") return;
     this.frameCount++;
 

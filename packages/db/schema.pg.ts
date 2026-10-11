@@ -7545,6 +7545,26 @@ export const agentWorkflowGraphs = pgTable("agent_workflow_graphs", {
   awgInstStatusIdx: index("idx_pg_agent_graphs_inst_status").on(t.institutionId, t.status),
 }));
 
+export const agentWorkflowGraphVersions = pgTable("agent_workflow_graph_versions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  graphId: text("graph_id").notNull().references(() => agentWorkflowGraphs.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  graphName: text("graph_name").notNull(),
+  description: text("description"),
+  canvasStateJson: text("canvas_state_json").notNull(),
+  dslPayloadJson: text("dsl_payload_json").notNull(),
+  dslHash: text("dsl_hash").notNull(),
+  status: text("status").notNull().default("draft"),
+  changeKind: text("change_kind").notNull().default("manual"),
+  restoredFromVersion: integer("restored_from_version"),
+  createdBy: text("created_by").references(() => staff.id, { onDelete: "set null" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  awgvGraphVerIdx: uniqueIndex("idx_pg_agent_graph_versions_graph_ver").on(t.graphId, t.version),
+  awgvInstCreatedIdx: index("idx_pg_agent_graph_versions_inst_created").on(t.institutionId, t.createdAt),
+}));
+
 export const agentLiveSessions = pgTable("agent_live_sessions", {
   id: text("id").primaryKey(),
   institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
