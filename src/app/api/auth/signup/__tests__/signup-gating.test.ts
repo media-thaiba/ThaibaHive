@@ -12,6 +12,10 @@ jest.mock("next/headers", () => ({
   headers: jest.fn().mockResolvedValue(new Headers()),
 }));
 
+jest.mock("@vercel/functions", () => ({
+  waitUntil: (promise: Promise<unknown>) => promise,
+}));
+
 describe("Auth Signup Gating & Security", () => {
   const originalEnv = process.env;
   const testEmail = `gated-signup-${Date.now()}@thaibahive.local`;
@@ -75,7 +79,7 @@ describe("Auth Signup Gating & Security", () => {
     expect(data.error).toContain("Invalid or expired invitation token");
   });
 
-  it("should allow signup when a valid invitation token is provided", async () => {
+  it("should allow signup when a valid invitation token is provided, without creating a session", async () => {
     process.env.ALLOW_PUBLIC_SIGNUP = "false";
     process.env.INVITATION_SECRET = "VALID_CAMPUS_SECRET_2026";
 
@@ -95,8 +99,14 @@ describe("Auth Signup Gating & Security", () => {
     const response = await POST(request);
     expect(response.status).toBe(201);
     const data = await response.json();
-    expect(data.user).toBeDefined();
-    expect(data.user.email).toBe(testEmail);
-    expect(data.token).toBeDefined();
+    // No session token — user must verify email first
+    expect(data.token).toBeUndefined();
+    expect(data.user).toBeUndefined();
+    expect(data.message).toContain("verification");
+
+    // Account starts unverified
+    const created = await db.select().from(staff).where(eq(staff.email, testEmail)).get();
+    expect(created).toBeTruthy();
+    expect(created!.emailVerifiedAt).toBeNull();
   });
 });

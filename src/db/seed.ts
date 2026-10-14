@@ -152,6 +152,7 @@ async function seed() {
       role: s.role,
       passwordHash: passwordHashMgmt,
       isActive: true,
+      emailVerifiedAt: new Date().toISOString(),
     }).run();
 
     const deptId = departmentIdMap[s.departmentCode];
@@ -357,6 +358,7 @@ async function seedAcademic() {
       passwordHash: adminPasswordHash,
       nfcTagId: "test-nfc-tag-id-99",
       isActive: true,
+      emailVerifiedAt: new Date().toISOString(),
     }).run();
   }
 

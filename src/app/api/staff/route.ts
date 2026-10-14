@@ -137,6 +137,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         designation,
         role: role || "staff",
         passwordHash,
+        emailVerifiedAt: new Date().toISOString(),
         aadhaar: encryptPiiField(parsed.data.aadhaar),
         pan: encryptPiiField(parsed.data.pan),
         bankAccount: encryptPiiField(parsed.data.bankAccount),

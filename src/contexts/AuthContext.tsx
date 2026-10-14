@@ -90,7 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+        const err = new Error(data.error || "Login failed") as Error & { code?: string };
+        err.code = data.code;
+        throw err;
       }
 
       if (data.stepUpRequired) {
@@ -116,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.error || "Signup failed");
       }
 
-      hardRedirect("/");
+      // No session is created at signup — the user must verify their email first.
     },
     []
   );

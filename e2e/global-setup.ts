@@ -45,6 +45,7 @@ async function globalSetup() {
         role,
         isFirstLogin: false,
         isActive: true,
+        emailVerifiedAt: new Date().toISOString(),
         nfcTagId: nfcTagId || null,
       }).run();
       console.log(`Seeded test user: ${email} (${role})`);
@@ -53,6 +54,7 @@ async function globalSetup() {
       await db.update(staff).set({
         isFirstLogin: false,
         isActive: true,
+        emailVerifiedAt: new Date().toISOString(),
         nfcTagId: nfcTagId || null,
         passwordHash,
       }).where(eq(staff.email, email)).run();

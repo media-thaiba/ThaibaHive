@@ -59,6 +59,10 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
+  const [resendError, setResendError] = useState("");
+  const [signupSent, setSignupSent] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [fingerprint, setFingerprint] = useState<DeviceFingerprint | null>(null);
   const [stepUpState, setStepUpState] = useState<{
@@ -155,9 +159,34 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         });
       }
     } catch (err) {
+      if (err instanceof Error && (err as Error & { code?: string }).code === "EMAIL_NOT_VERIFIED") {
+        setEmailNotVerified(true);
+      }
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    setResendError("");
+    setResendState("sending");
+    try {
+      const res = await fetch("/api/auth/verify-email/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResendError(data.error || "Failed to resend verification email");
+        return;
+      }
+      setResendState("sent");
+    } catch {
+      setResendError("An unexpected error occurred");
+    } finally {
+      setResendState((prev) => (prev === "sending" ? "idle" : prev));
     }
   }
 
@@ -178,6 +207,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         password: signupForm.password,
         invitationToken: signupForm.invitationToken || undefined,
       });
+      setSignupSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
@@ -353,6 +383,33 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         )}
 
         {mode === "signup" && (
+          <div className="space-y-3">
+            {signupSent ? (
+              <div role="status" aria-live="polite" className="py-6 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+                  <Mail className="w-6 h-6" aria-hidden="true" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-foreground">VERIFY YOUR EMAIL</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+                    Account created. We sent a verification link to{" "}
+                    <span className="font-semibold text-foreground">{signupForm.email}</span>.
+                    Click the link to activate your account, then sign in.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupSent(false);
+                    handleModeChange("signin");
+                  }}
+                  aria-label="Return to sign in"
+                  className="w-full bg-transparent hover:bg-muted/60 border border-border hover:border-foreground/20 active:scale-[0.99] text-foreground hover:text-foreground font-bold rounded-full h-11 flex items-center justify-center transition-all text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            ) : (
           <form onSubmit={handleSignupSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -490,7 +547,28 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
 
             {error && (
               <div aria-live="polite">
-                <Alert variant="error" className="py-2 px-3 text-xs rounded-xl">{error}</Alert>
+                <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
+              </div>
+            )}
+
+            {emailNotVerified && !error && (
+              <div aria-live="polite">
+                <Alert variant="warning" className="py-2.5 px-3.5 text-xs rounded-xl space-y-2">
+                  <p>Email not verified. Check your inbox for the verification link.</p>
+                  {resendState === "sent" ? (
+                    <p className="font-semibold">Verification email sent. Check your inbox (and spam folder).</p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendState === "sending" || !email}
+                      className="font-semibold underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+                    >
+                      {resendState === "sending" ? "Sending..." : "Resend verification email"}
+                    </button>
+                  )}
+                  {resendError && <p className="text-destructive">{resendError}</p>}
+                </Alert>
               </div>
             )}
 
@@ -516,6 +594,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               </button>
             </div>
           </form>
+            )}
+          </div>
         )}
 
         {mode === "google" && (

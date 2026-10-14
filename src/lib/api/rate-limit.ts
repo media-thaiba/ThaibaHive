@@ -22,6 +22,7 @@ const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
   auth: { windowMs: 60_000, max: 5, keyPrefix: "auth" },
   "auth-signup": { windowMs: 60_000, max: 3, keyPrefix: "auth-signup" },
   authForgotPassword: { windowMs: 60_000, max: 3, keyPrefix: "auth-forgot-password" },
+  authVerifyResend: { windowMs: 60_000, max: 3, keyPrefix: "auth-verify-resend" },
   write: { windowMs: 60_000, max: 30, keyPrefix: "write" },
   read: { windowMs: 60_000, max: 100, keyPrefix: "read" },
   upload: { windowMs: 60_000, max: 10, keyPrefix: "upload" },

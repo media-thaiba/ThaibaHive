@@ -81,6 +81,7 @@ export const staff = sqliteTable("staff", {
   isFirstLogin: boolean("is_first_login").notNull().default(true),
   onboardingCompletedAt: text("onboarding_completed_at"),
   passwordHash: text("password_hash"),
+  emailVerifiedAt: text("email_verified_at"),
   nfcTagId: text("nfc_tag_id").unique(),
   faceEmbedding: text("face_embedding"),
   faceRegisteredAt: text("face_registered_at"),
@@ -1329,7 +1330,16 @@ export const passwordResetTokens = sqliteTable("password_reset_tokens", {
   tokenHash: text("token_hash").notNull().unique(),
   expiresAt: text("expires_at").notNull(),
   usedAt: text("used_at"),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull(),
+});
+
+export const emailVerificationTokens = sqliteTable("email_verification_tokens", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull(),
 });
 
 // ─── Mobile offline sync idempotency ───

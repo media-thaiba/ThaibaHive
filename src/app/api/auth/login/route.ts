@@ -60,6 +60,19 @@ export const POST = withPublicApm(async function POST(request: Request) {
       );
     }
 
+    // Hard-block unverified emails (invite/public signups start unverified)
+    if (!staffMember.emailVerifiedAt) {
+      serverLogger.warn("Login blocked: email not verified", { email });
+      return NextResponse.json(
+        {
+          error:
+            "Email not verified. Check your inbox for the verification link, or resend it from the login page.",
+          code: "EMAIL_NOT_VERIFIED",
+        },
+        { status: 403 }
+      );
+    }
+
     // 1. Device Fingerprint & Trust Scoring (IDP-005)
     const deviceFingerprint = (body as any).deviceFingerprint;
     let deviceTrustScore = 100;

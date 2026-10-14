@@ -60,6 +60,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Federated IdP already proved email ownership — auto-verify on first SSO login
+    if (!staffMember.emailVerifiedAt) {
+      await db
+        .update(staff)
+        .set({ emailVerifiedAt: new Date().toISOString() })
+        .where(eq(staff.id, staffMember.id));
+    }
+
     const token = await createSession({
       staffId: staffMember.id,
       email: staffMember.email,

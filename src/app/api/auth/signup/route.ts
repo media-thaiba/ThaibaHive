@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff } from "@/db/schema";
-import { hashPassword, createSession } from "@/lib/auth";
+import { staff, emailVerificationTokens } from "@/db/schema";
+import { hashPassword } from "@/lib/auth";
 import { signupSchema } from "@/lib/auth/schemas";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq } from "drizzle-orm";
 import { withPublicApm } from "@/lib/api/public-apm";
+import { sendVerificationEmail } from "@/lib/email";
+import { waitUntil } from "@vercel/functions";
+import crypto from "crypto";
 
 export const POST = withPublicApm(async function POST(request: Request) {
   try {
@@ -68,38 +71,33 @@ export const POST = withPublicApm(async function POST(request: Request) {
         lastName,
         passwordHash,
         role: "staff",
+        emailVerifiedAt: null,
       })
       .returning()
       .get();
 
-    const token = await createSession({
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(verifyToken).digest("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    await db.insert(emailVerificationTokens).values({
       staffId: newStaff.id,
-      email: newStaff.email,
-      role: newStaff.role,
-      employeeId: newStaff.employeeId,
-      name: `${newStaff.firstName} ${newStaff.lastName}`,
-      tokenVersion: newStaff.tokenVersion ?? 0,
+      tokenHash,
+      expiresAt,
     });
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const verifyUrl = `${appUrl}/auth/verify-email/${verifyToken}`;
+    waitUntil(
+      sendVerificationEmail(newStaff.email, newStaff.firstName, verifyUrl).catch(
+        console.error
+      )
+    );
 
     return NextResponse.json(
       {
-        token,
-        user: {
-          id: newStaff.id,
-          email: newStaff.email,
-          firstName: newStaff.firstName,
-          lastName: newStaff.lastName,
-          role: newStaff.role,
-          employeeId: newStaff.employeeId,
-        },
-        staff: {
-          id: newStaff.id,
-          email: newStaff.email,
-          firstName: newStaff.firstName,
-          lastName: newStaff.lastName,
-          role: newStaff.role,
-          employeeId: newStaff.employeeId,
-        },
+        message:
+          "Account created. Check your email for a verification link to activate your account.",
       },
       { status: 201 }
     );

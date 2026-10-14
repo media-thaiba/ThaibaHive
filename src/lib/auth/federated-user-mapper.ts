@@ -53,6 +53,13 @@ export class FederatedUserMapper {
     if (existingStaff) {
       targetUserId = existingStaff.id;
       mappedRole = existingStaff.role || mappedRole;
+      // Federated IdP already proved email ownership — auto-verify on first SSO login
+      if (!existingStaff.emailVerifiedAt) {
+        await db.update(staff).set({
+          emailVerifiedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }).where(eq(staff.id, existingStaff.id));
+      }
     } else {
       // JIT Provisioning
       targetUserId = `stf_${crypto.randomUUID()}`;
@@ -68,6 +75,7 @@ export class FederatedUserMapper {
         lastName,
         role: mappedRole,
         isActive: true,
+        emailVerifiedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });

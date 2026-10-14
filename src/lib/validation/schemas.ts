@@ -309,6 +309,10 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8),
 });
 
+export const resendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
 export const dailyReportCreateSchema = z.object({
   date: z.string().min(1),
   summary: z.string().optional(),
