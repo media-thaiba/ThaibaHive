@@ -93,3 +93,8 @@ build_history.json
 # Ruflo local secrets and runtime data
 .claude-flow/
 .swarm/
+
+# per-run jest database snapshot (created by jest.global-setup.ts)
+test.db
+test.db-wal
+test.db-shm

@@ -5,6 +5,8 @@ const createJestConfig = nextJest({ dir: "./" });
 const customJestConfig = {
   testEnvironment: "jsdom",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  globalSetup: "<rootDir>/jest.global-setup.ts",
+  globalTeardown: "<rootDir>/jest.global-teardown.ts",
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@thaiba/auth/(.*)$": "<rootDir>/packages/auth/$1",
