@@ -7576,6 +7576,163 @@ export const agentLiveSessionSegments = sqliteTable("agent_live_session_segments
   alsegInstTimeIdx: index("idx_agent_live_segments_inst_time").on(t.institutionId, t.createdAt),
 }));
 
+// ============================================
+// Phase 11: Multi-Campus Federation & SIS/LMS Standards Sync
+// ============================================
+
+export const sisConnectors = sqliteTable("sis_connectors", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  standard: text("standard").notNull(), // 'edfi' | 'oneroster' | 'csv'
+  name: text("name").notNull(),
+  baseUrl: text("base_url").notNull(),
+  credentialRef: text("credential_ref").notNull(), // Vault/env key name reference, never plaintext secret
+  authMode: text("auth_mode").notNull().default("oauth2"), // 'oauth2' | 'basic' | 'apiKey'
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  scheduleCron: text("schedule_cron"),
+  fieldMappingJson: text("field_mapping_json"),
+  lastSyncAt: text("last_sync_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  siscInstNameIdx: uniqueIndex("idx_sis_connectors_inst_name").on(t.institutionId, t.name),
+  siscInstEnabledIdx: index("idx_sis_connectors_inst_enabled").on(t.institutionId, t.enabled),
+}));
+
+export const sisSyncRuns = sqliteTable("sis_sync_runs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  connectorId: text("connector_id").notNull().references(() => sisConnectors.id, { onDelete: "cascade" }),
+  mode: text("mode").notNull().default("full"), // 'dry_run' | 'full' | 'delta'
+  status: text("status").notNull().default("queued"), // 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  checkpointJson: text("checkpoint_json"),
+  readCount: integer("read_count").notNull().default(0),
+  createdCount: integer("created_count").notNull().default(0),
+  updatedCount: integer("updated_count").notNull().default(0),
+  skippedCount: integer("skipped_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  errorSummary: text("error_summary"),
+  startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  sisrInstStartedIdx: index("idx_sis_sync_runs_inst_started").on(t.institutionId, t.startedAt),
+  sisrConnStatusIdx: index("idx_sis_sync_runs_conn_status").on(t.connectorId, t.status),
+  sisrConnRunningIdx: uniqueIndex("idx_sis_sync_runs_conn_running").on(t.connectorId).where(sql`status = 'running'`),
+}));
+
+export const sisSyncRecords = sqliteTable("sis_sync_records", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  connectorId: text("connector_id").notNull().references(() => sisConnectors.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(), // 'students' | 'staff' | 'courses' | 'sections' | 'enrollments'
+  externalId: text("external_id").notNull(),
+  localTable: text("local_table"),
+  localId: text("local_id"),
+  state: text("state").notNull().default("mapped"), // 'mapped' | 'unmatched' | 'ignored'
+  lastSeenAt: text("last_seen_at").notNull().default(sql`(current_timestamp)`),
+  payloadHash: text("payload_hash"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  sisrecUniqIdx: uniqueIndex("idx_sis_sync_records_uniq").on(t.connectorId, t.entityType, t.externalId),
+  sisrecInstEntityIdx: index("idx_sis_sync_records_inst_entity").on(t.institutionId, t.entityType),
+  sisrecLocalIdx: index("idx_sis_sync_records_local").on(t.localTable, t.localId),
+}));
+
+export const sisMappingQueue = sqliteTable("sis_mapping_queue", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  connectorId: text("connector_id").notNull().references(() => sisConnectors.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  externalId: text("external_id").notNull(),
+  proposedPayloadJson: text("proposed_payload_json").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending' | 'mapped' | 'created' | 'ignored'
+  resolvedBy: text("resolved_by").references(() => staff.id, { onDelete: "set null" }),
+  resolvedAt: text("resolved_at"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  sismqInstStatusIdx: index("idx_sis_mapping_queue_inst_status").on(t.institutionId, t.status),
+  sismqConnStatusIdx: index("idx_sis_mapping_queue_conn_status").on(t.connectorId, t.status),
+  sismqEntityExtIdx: index("idx_sis_mapping_queue_entity_ext").on(t.entityType, t.externalId),
+}));
+
+export const sisSyncAudit = sqliteTable("sis_sync_audit", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  runId: text("run_id").references(() => sisSyncRuns.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  externalId: text("external_id").notNull(),
+  action: text("action").notNull(), // 'create' | 'update' | 'skip' | 'error' | 'delete' | 'map'
+  inputHash: text("input_hash").notNull(),
+  prevHash: text("prev_hash").notNull(),
+  entryHash: text("entry_hash").notNull(),
+  retentionDays: integer("retention_days").notNull().default(90),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  sisaRunIdx: index("idx_sis_sync_audit_run").on(t.runId),
+  sisaInstCreatedIdx: index("idx_sis_sync_audit_inst_created").on(t.institutionId, t.createdAt),
+}));
+
+export const resourcePools = sqliteTable("resource_pools", {
+  id: text("id").primaryKey(),
+  regionalGroupId: text("regional_group_id").notNull().references(() => regionalGroups.id, { onDelete: "cascade" }),
+  homeInstitutionId: text("home_institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  resourceType: text("resource_type").notNull(), // 'lab' | 'hall' | 'bus' | 'exam_venue' | 'equipment'
+  name: text("name").notNull(),
+  capacity: integer("capacity").notNull().default(1),
+  description: text("description"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  rpRegGroupIdx: index("idx_resource_pools_reg_group").on(t.regionalGroupId),
+  rpHomeInstIdx: index("idx_resource_pools_home_inst").on(t.homeInstitutionId),
+  rpTypeIdx: index("idx_resource_pools_type").on(t.resourceType),
+}));
+
+export const crossCampusBookings = sqliteTable("cross_campus_bookings", {
+  id: text("id").primaryKey(),
+  poolId: text("pool_id").notNull().references(() => resourcePools.id, { onDelete: "cascade" }),
+  requesterInstitutionId: text("requester_institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  hostInstitutionId: text("host_institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  startsAt: text("starts_at").notNull(),
+  endsAt: text("ends_at").notNull(),
+  expiresAt: text("expires_at"),
+  status: text("status").notNull().default("requested"), // 'requested' | 'approved' | 'declined' | 'confirmed' | 'cancelled' | 'expired'
+  requestedBy: text("requested_by").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  decidedBy: text("decided_by").references(() => staff.id, { onDelete: "set null" }),
+  decidedAt: text("decided_at"),
+  decisionReason: text("decision_reason"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ccbPoolStatusIdx: index("idx_cross_campus_bookings_pool_status").on(t.poolId, t.status),
+  ccbReqInstIdx: index("idx_cross_campus_bookings_req_inst").on(t.requesterInstitutionId, t.status),
+  ccbHostInstIdx: index("idx_cross_campus_bookings_host_inst").on(t.hostInstitutionId, t.status),
+  ccbTimeIdx: index("idx_cross_campus_bookings_time").on(t.startsAt, t.endsAt),
+  ccbPoolStartsIdx: uniqueIndex("idx_cross_campus_bookings_pool_starts").on(t.poolId, t.startsAt).where(sql`status IN ('approved', 'confirmed')`),
+}));
+
+export const crossCampusAllocations = sqliteTable("cross_campus_allocations", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").notNull().references(() => crossCampusBookings.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+  action: text("action").notNull(), // 'requested' | 'approved' | 'declined' | 'confirmed' | 'cancelled' | 'expired'
+  actorId: text("actor_id").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  prevHash: text("prev_hash").notNull(),
+  entryHash: text("entry_hash").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  ccaBookingSeqIdx: uniqueIndex("idx_cross_campus_alloc_booking_seq").on(t.bookingId, t.sequence),
+  ccaBookingIdx: index("idx_cross_campus_alloc_booking").on(t.bookingId),
+}));
+
+
 
 
 

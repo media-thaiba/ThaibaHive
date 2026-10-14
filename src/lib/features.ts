@@ -11,7 +11,8 @@ export type FeatureFlag =
   | 'workflow_studio'
   | 'live_streaming'
   | 'today_hub'
-  | 'media_queue';
+  | 'media_queue'
+  | 'sis_sync';
 
 // In production, agentic workflows require explicit enablement (process.env.FEATURE_AGENTIC_WORKFLOWS === 'true').
 // In development/test, it defaults to enabled unless explicitly set to 'false'.
@@ -25,6 +26,7 @@ const defaultWorkflowStudioFlag = isProd
 const defaultLiveStreamingFlag = isProd
   ? process.env.FEATURE_LIVE_STREAMING === 'true'
   : process.env.FEATURE_LIVE_STREAMING !== 'false';
+const defaultSisSyncFlag = process.env.FEATURE_SIS_SYNC === 'true';
 
 export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   nfc_enrollment: true,
@@ -39,6 +41,7 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   live_streaming: defaultLiveStreamingFlag,
   today_hub: true,
   media_queue: true,
+  sis_sync: defaultSisSyncFlag,
 };
 
 // In-memory per-institution override registry for staged/canary tenant rollouts (D13)
@@ -91,3 +94,8 @@ export function isTodayHubEnabled(institutionId?: string): boolean {
 export function isMediaQueueEnabled(institutionId?: string): boolean {
   return isFeatureEnabled('media_queue', institutionId);
 }
+
+export function isSisSyncEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('sis_sync', institutionId);
+}
+

@@ -243,6 +243,106 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
     });
   });
 
+  describe("Phase 11: Multi-Campus Federation & SIS/LMS Standards Sync (7 Keys x 9 Roles)", () => {
+    it("super_admin has universal access to all SIS and Cross-Campus permissions", () => {
+      expect(hasPermission("super_admin", "sis:read")).toBe(true);
+      expect(hasPermission("super_admin", "sis:manage")).toBe(true);
+      expect(hasPermission("super_admin", "sis:sync")).toBe(true);
+      expect(hasPermission("super_admin", "sis:webhooks:manage")).toBe(true);
+      expect(hasPermission("super_admin", "crosscampus:read")).toBe(true);
+      expect(hasPermission("super_admin", "crosscampus:request")).toBe(true);
+      expect(hasPermission("super_admin", "crosscampus:approve")).toBe(true);
+    });
+
+    it("admin has management access to SIS and cross-campus, but denied sis:webhooks:manage", () => {
+      expect(hasPermission("admin", "sis:read")).toBe(true);
+      expect(hasPermission("admin", "sis:manage")).toBe(true);
+      expect(hasPermission("admin", "sis:sync")).toBe(true);
+      expect(hasPermission("admin", "crosscampus:read")).toBe(true);
+      expect(hasPermission("admin", "crosscampus:request")).toBe(true);
+      expect(hasPermission("admin", "crosscampus:approve")).toBe(true);
+      // Negative boundary
+      expect(hasPermission("admin", "sis:webhooks:manage")).toBe(false);
+    });
+
+    it("principal has oversight access to SIS and cross-campus, but denied sis:manage, sis:sync, sis:webhooks:manage", () => {
+      expect(hasPermission("principal", "sis:read")).toBe(true);
+      expect(hasPermission("principal", "crosscampus:read")).toBe(true);
+      expect(hasPermission("principal", "crosscampus:request")).toBe(true);
+      expect(hasPermission("principal", "crosscampus:approve")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("principal", "sis:manage")).toBe(false);
+      expect(hasPermission("principal", "sis:sync")).toBe(false);
+      expect(hasPermission("principal", "sis:webhooks:manage")).toBe(false);
+    });
+
+    it("hod has departmental cross-campus access, but strictly denied approval and SIS management", () => {
+      expect(hasPermission("hod", "crosscampus:read")).toBe(true);
+      expect(hasPermission("hod", "crosscampus:request")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("hod", "crosscampus:approve")).toBe(false);
+      expect(hasPermission("hod", "sis:read")).toBe(false);
+      expect(hasPermission("hod", "sis:manage")).toBe(false);
+      expect(hasPermission("hod", "sis:sync")).toBe(false);
+      expect(hasPermission("hod", "sis:webhooks:manage")).toBe(false);
+    });
+
+    it("staff can view and request cross-campus bookings, but cannot approve or access SIS", () => {
+      expect(hasPermission("staff", "crosscampus:read")).toBe(true);
+      expect(hasPermission("staff", "crosscampus:request")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("staff", "crosscampus:approve")).toBe(false);
+      expect(hasPermission("staff", "sis:read")).toBe(false);
+      expect(hasPermission("staff", "sis:manage")).toBe(false);
+      expect(hasPermission("staff", "sis:sync")).toBe(false);
+      expect(hasPermission("staff", "sis:webhooks:manage")).toBe(false);
+    });
+
+    it("accounts can read SIS and cross-campus, but cannot request or approve bookings", () => {
+      expect(hasPermission("accounts", "sis:read")).toBe(true);
+      expect(hasPermission("accounts", "crosscampus:read")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("accounts", "sis:manage")).toBe(false);
+      expect(hasPermission("accounts", "sis:sync")).toBe(false);
+      expect(hasPermission("accounts", "sis:webhooks:manage")).toBe(false);
+      expect(hasPermission("accounts", "crosscampus:request")).toBe(false);
+      expect(hasPermission("accounts", "crosscampus:approve")).toBe(false);
+    });
+
+    it("purchase can read and request cross-campus resources, but cannot approve or manage SIS", () => {
+      expect(hasPermission("purchase", "crosscampus:read")).toBe(true);
+      expect(hasPermission("purchase", "crosscampus:request")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("purchase", "crosscampus:approve")).toBe(false);
+      expect(hasPermission("purchase", "sis:read")).toBe(false);
+      expect(hasPermission("purchase", "sis:manage")).toBe(false);
+      expect(hasPermission("purchase", "sis:sync")).toBe(false);
+      expect(hasPermission("purchase", "sis:webhooks:manage")).toBe(false);
+    });
+
+    it("regional_admin has regional federation rights, but denied sis:webhooks:manage", () => {
+      expect(hasPermission("regional_admin", "sis:read")).toBe(true);
+      expect(hasPermission("regional_admin", "sis:manage")).toBe(true);
+      expect(hasPermission("regional_admin", "sis:sync")).toBe(true);
+      expect(hasPermission("regional_admin", "crosscampus:read")).toBe(true);
+      expect(hasPermission("regional_admin", "crosscampus:request")).toBe(true);
+      expect(hasPermission("regional_admin", "crosscampus:approve")).toBe(true);
+      // Negative boundary
+      expect(hasPermission("regional_admin", "sis:webhooks:manage")).toBe(false);
+    });
+
+    it("regional_auditor has read-only access to SIS and cross-campus", () => {
+      expect(hasPermission("regional_auditor", "sis:read")).toBe(true);
+      expect(hasPermission("regional_auditor", "crosscampus:read")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("regional_auditor", "sis:manage")).toBe(false);
+      expect(hasPermission("regional_auditor", "sis:sync")).toBe(false);
+      expect(hasPermission("regional_auditor", "sis:webhooks:manage")).toBe(false);
+      expect(hasPermission("regional_auditor", "crosscampus:request")).toBe(false);
+      expect(hasPermission("regional_auditor", "crosscampus:approve")).toBe(false);
+    });
+  });
+
   describe("Role Validation & Anti-Tampering Security Guardrails", () => {
     it("should validate all declared valid staff roles", () => {
       expect(VALID_STAFF_ROLES).toContain("super_admin");
