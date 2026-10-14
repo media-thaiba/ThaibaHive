@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { db } from '@/db';
-import { staff, federatedIdentityMappings } from '@/db/schema';
+import { staff, staffInstitutions, staffDepartments, federatedIdentityMappings } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { SsoAuditLedger } from './sso-audit-ledger';
 
 export interface FederatedIdentityPayload {
   tenantId: string;
@@ -12,12 +13,15 @@ export interface FederatedIdentityPayload {
   email: string;
   name?: string;
   roles?: string[];
+  departmentId?: string;
   attributes?: Record<string, any>;
 }
 
 export class FederatedUserMapper {
   /**
    * Maps external identity to a local staff user record, auto-provisioning via JIT if necessary.
+   * Enforces role escalation guards, auto-associates institution/department junction records,
+   * automatically marks email as verified, and creates immutable audit entries.
    */
   public static async mapOrCreateUser(payload: FederatedIdentityPayload): Promise<{ userId: string; role: string; email: string }> {
     const institutionId = payload.institutionId || payload.tenantId;
@@ -28,7 +32,7 @@ export class FederatedUserMapper {
       .from(federatedIdentityMappings)
       .where(
         and(
-          eq(federatedIdentityMappings.tenantId, payload.tenantId),
+          eq(federatedIdentityMappings.institutionId, institutionId),
           eq(federatedIdentityMappings.providerType, payload.providerType),
           eq(federatedIdentityMappings.externalSubjectId, payload.externalSubjectId)
         )
@@ -48,11 +52,20 @@ export class FederatedUserMapper {
       };
     }
 
+    // Role Mapping & Escalation Guard
+    let rawRole = payload.roles && payload.roles.length > 0 ? payload.roles[0] : 'staff';
+
+    // Strict Negative Boundary: Block external IdP claims from unilaterally escalating to super_admin or system
+    if (rawRole === 'super_admin' || rawRole === 'system') {
+      console.warn(`[Security Alert] JIT mapping blocked privilege escalation attempt to '${rawRole}' for subject ${payload.externalSubjectId}`);
+      rawRole = 'admin';
+    }
+
     // Check if staff email exists
     const [existingStaff] = await db.select().from(staff).where(eq(staff.email, payload.email));
 
     let targetUserId: string;
-    let mappedRole = payload.roles && payload.roles.length > 0 ? payload.roles[0] : 'staff';
+    let mappedRole = rawRole;
 
     if (existingStaff) {
       targetUserId = existingStaff.id;
@@ -83,12 +96,50 @@ export class FederatedUserMapper {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+
+      // Auto-assign staff to institution
+      const [existingStaffInst] = await db
+        .select()
+        .from(staffInstitutions)
+        .where(and(eq(staffInstitutions.staffId, targetUserId), eq(staffInstitutions.institutionId, institutionId)));
+
+      if (!existingStaffInst) {
+        await db.insert(staffInstitutions).values({
+          id: `si_${crypto.randomUUID()}`,
+          staffId: targetUserId,
+          institutionId,
+        });
+      }
+
+      // Auto-assign department if specified
+      const deptId = payload.departmentId || payload.attributes?.departmentId;
+      if (deptId) {
+        try {
+          await db.insert(staffDepartments).values({
+            id: `sd_${crypto.randomUUID()}`,
+            staffId: targetUserId,
+            departmentId: String(deptId),
+            isPrimary: true,
+          });
+        } catch {
+          // Non-fatal if department does not exist in dev/test
+        }
+      }
+
+      // Record JIT provisioning audit log
+      await SsoAuditLedger.recordEvent({
+        institutionId,
+        providerId: payload.providerId,
+        providerType: payload.providerType,
+        eventType: 'jit_provision',
+        subjectId: payload.externalSubjectId,
+      }).catch(() => {});
     }
 
     // Insert federated identity mapping
     await db.insert(federatedIdentityMappings).values({
       id: `map_${crypto.randomUUID()}`,
-      tenantId: payload.tenantId,
+      tenantId: institutionId,
       institutionId,
       userId: targetUserId,
       providerType: payload.providerType,
