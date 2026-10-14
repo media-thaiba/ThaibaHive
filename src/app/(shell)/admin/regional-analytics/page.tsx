@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { RegionalKpiHeader } from "./_components/regional-kpi-header";
 import { CampusHealthTable, CampusHealthRecord } from "./_components/campus-health-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,6 +104,18 @@ export default function RegionalAnalyticsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Executive Regional Analytics</h1>
         <p className="text-sm text-slate-500">Multi-campus aggregated performance, cross-institution analytics, and enterprise data warehouse status</p>
+      </div>
+
+      <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+        <div>
+          <span className="font-semibold text-primary">Cross-Campus Operations:</span> Looking for shared resource pools, cross-institution booking requests, and allocation scheduling?
+        </div>
+        <Link
+          href="/admin/cross-campus"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline ml-4 shrink-0"
+        >
+          Open Cross-Campus Cockpit &rarr;
+        </Link>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}

@@ -10,7 +10,7 @@ import {
   Receipt, CalendarClock, AlertTriangle, Banknote, FileSearch,
   Inbox, UserCheck, Image as ImageIcon, CalendarRange,
   Store, Boxes, BookOpen, Workflow,
-  Puzzle, Radio,
+  Puzzle, Radio, Network, Share2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -162,6 +162,8 @@ const adminItems: NavItem[] = [
   { href: "/admin/staff", label: "Staff Directory", desc: "Employee records, profiles, roles & department assignments", icon: UsersIcon, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
   { href: "/admin/marketplace", label: "Marketplace", desc: "App marketplace: instant utilities & department portals", icon: Store, workspace: "admin", roles: ["admin", "super_admin"] },
   { href: "/admin/agent-marketplace", label: "Agent Marketplace", desc: "Sandboxed agent plugins: capability tags, manifest reviews, install & approvals", icon: Puzzle, permission: "marketplace:plugins:read", workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
+  { href: "/admin/sis", label: "SIS & LMS Standards", desc: "Ed-Fi, OneRoster & CSV standards sync, mapping queue & connector health", icon: Network, permission: "sis:read", workspace: "admin", roles: ["admin", "super_admin", "principal", "accounts", "regional_admin", "regional_auditor"] },
+  { href: "/admin/cross-campus", label: "Cross-Campus Federation", desc: "Shared resource pools, allocation scheduling & cross-institution booking inbox", icon: Share2, permission: "crosscampus:read", workspace: "admin", roles: ["admin", "super_admin", "principal", "accounts", "regional_admin", "regional_auditor"] },
   { href: "/admin/docs", label: "Documentation", desc: "Platform documentation, API references & runbooks", icon: BookOpen, workspace: "admin", roles: ["admin", "super_admin", "regional_admin"] },
 ];
 
