@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
+import { withPublicApm } from "@/lib/api/public-apm";
 import { ConnectorRegistry } from "@/lib/sis/connector-registry";
 import { CredentialVault } from "@/lib/sis/credential-vault";
 import { RecordMapper } from "@/lib/sis/record-mapper";
@@ -39,7 +40,7 @@ function cleanExpiredNonces(): void {
  * Enforces bounded raw body, constant-time HMAC over timestamp.body,
  * ±300s window, and 600s nonce replay defense (Gates 12 & 18).
  */
-export async function POST(
+export const POST = withPublicApm(async function POST(
   request: Request,
   context?: { params?: Promise<{ connectorId?: string }> }
 ) {
@@ -202,4 +203,4 @@ export async function POST(
     success: true,
     processed: processedCount,
   });
-}
+});
