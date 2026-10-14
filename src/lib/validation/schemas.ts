@@ -1956,11 +1956,35 @@ export type ConferenceJoinInput = z.infer<typeof conferenceJoinSchema>;
 
 export const conferenceSignalSchema = z.object({
   targetPeerId: z.string().min(1, "Target peer ID is required"),
-  signalType: z.enum(["offer", "answer", "candidate", "renegotiate", "key_rotation"]),
+  signalType: z.enum([
+    "offer",
+    "answer",
+    "ice_candidate",
+    "candidate",
+    "peer_joined",
+    "peer_left",
+    "key_exchange",
+    "key_rotation",
+    "renegotiate",
+    "room_lock",
+  ]),
   payloadJson: z.string().min(2, "Signal payload JSON is required"),
   sequenceNum: z.coerce.number().int().min(0).default(0),
 });
 export type ConferenceSignalInput = z.infer<typeof conferenceSignalSchema>;
+
+export const conferenceManageSchema = z.object({
+  action: z.enum(["kick_participant", "lock_room", "unlock_room", "end_room", "mute_participant"]),
+  targetPeerId: z.string().optional().nullable(),
+  reason: z.string().max(255).optional().nullable(),
+});
+export type ConferenceManageInput = z.infer<typeof conferenceManageSchema>;
+
+export const conferenceRecordSchema = z.object({
+  action: z.enum(["start", "stop"]),
+  streamId: z.string().optional().nullable(),
+});
+export type ConferenceRecordInput = z.infer<typeof conferenceRecordSchema>;
 
 
 

@@ -1,34 +1,48 @@
-import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { WebRtcSignalingManager } from "@/lib/streaming/webrtc-signaling";
+import { NextResponse } from 'next/server';
+import { requireAuth, resolveRequestInstitution } from '@/lib/api/auth-guard';
+import { isWebRtcConferencingEnabled } from '@/lib/features';
+import { signalingManager } from '@/lib/streaming/webrtc-signaling';
 
-const signalingManager = new WebRtcSignalingManager();
+export const POST = requireAuth(async (request, session, context) => {
+  const url = new URL(request.url);
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get('institutionId'));
 
-export const POST = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
-  try {
-    const params = context ? await context.params : { id: "room-001" };
-    const roomId = params.id;
-    const body = await request.json();
-    const { type, sdp, candidate, payload } = body;
-    const senderId = (session as any).userId || "user-001";
-    const tenantId = (session as any).institutionId || "inst-001";
-
-    const msg = signalingManager.createSignalingMessage(
-      roomId,
-      senderId,
-      tenantId,
-      type,
-      sdp,
-      candidate,
-      payload
-    );
-
-    return NextResponse.json({
-      success: true,
-      signal: msg,
-      iceServers: signalingManager.getIceServers(),
-    });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+  if (!isWebRtcConferencingEnabled(institutionId)) {
+    return NextResponse.json({ error: 'WebRTC conferencing is disabled for this institution' }, { status: 403 });
   }
-}, "streaming:access");
+
+  const params = context ? await context.params : {};
+  const roomId = params.id;
+  if (!roomId) {
+    return NextResponse.json({ error: 'Room ID required' }, { status: 400 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+
+  // Support both Phase 12 schema and legacy structure
+  const senderPeerId = body.senderPeerId || session.staffId;
+  const targetPeerId = body.targetPeerId || body.recipientPeerId || '*';
+  const signalType = body.signalType || body.type;
+  const payloadJson = body.payloadJson || JSON.stringify(body.payload || { sdp: body.sdp, candidate: body.candidate });
+  const sequenceNum = body.sequenceNum || 1;
+
+  if (!signalType) {
+    return NextResponse.json({ error: 'signalType is required' }, { status: 400 });
+  }
+
+  const signal = await signalingManager.dispatchSignal({
+    institutionId,
+    roomId,
+    senderPeerId,
+    recipientPeerId: targetPeerId,
+    signalType,
+    payloadJson,
+    sequenceNum,
+  });
+
+  return NextResponse.json({
+    success: true,
+    signal,
+    iceServers: signalingManager.getIceServers(),
+  });
+}, 'conference:join');
