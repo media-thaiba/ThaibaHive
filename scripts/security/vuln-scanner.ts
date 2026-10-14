@@ -40,40 +40,85 @@ export function parseAuditOutput(jsonOutput: string, allowlistIds: string[] = []
   let lowCount = 0;
   let allowlistedCount = 0;
 
+  const recordVulnerability = (
+    id: string,
+    packageName: string,
+    rawSeverity: string,
+    title: string,
+    url?: string,
+    range?: string
+  ) => {
+    const severity = (rawSeverity || "low").toLowerCase() as "critical" | "high" | "moderate" | "low" | "info";
+    const isAllowlisted = allowlistIds.includes(id);
+
+    if (isAllowlisted) {
+      allowlistedCount++;
+    } else {
+      if (severity === "critical") criticalCount++;
+      else if (severity === "high") highCount++;
+      else if (severity === "moderate") moderateCount++;
+      else lowCount++;
+    }
+
+    vulnerabilities.push({
+      id,
+      packageName,
+      severity,
+      title: title || "Security advisory",
+      url,
+      range,
+      isAllowlisted,
+    });
+  };
+
   try {
-    const lines = jsonOutput.trim().split("\n");
-    for (const line of lines) {
-      if (!line.trim()) continue;
+    const trimmed = jsonOutput.trim();
+
+    // Modern pnpm audit format (single top-level JSON object with advisories)
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
       try {
-        const entry = JSON.parse(line);
-        // pnpm audit json format
-        if (entry.type === "auditAdvisory" && entry.data?.advisory) {
-          const adv = entry.data.advisory;
-          const id = String(adv.id || adv.cve || adv.ghsaId || `adv-${vulnerabilities.length + 1}`);
-          const severity = (adv.severity || "low").toLowerCase();
-          const isAllowlisted = allowlistIds.includes(id);
-
-          if (isAllowlisted) {
-            allowlistedCount++;
-          } else {
-            if (severity === "critical") criticalCount++;
-            else if (severity === "high") highCount++;
-            else if (severity === "moderate") moderateCount++;
-            else lowCount++;
+        const parsed = JSON.parse(trimmed);
+        if (parsed.advisories && typeof parsed.advisories === "object") {
+          for (const [key, advRaw] of Object.entries(parsed.advisories)) {
+            const adv = advRaw as Record<string, any>;
+            const id = String(adv.id || adv.cve || adv.github_advisory_id || key);
+            recordVulnerability(
+              id,
+              adv.module_name || adv.name || "unknown",
+              adv.severity,
+              adv.title,
+              adv.url,
+              adv.vulnerable_versions
+            );
           }
-
-          vulnerabilities.push({
-            id,
-            packageName: adv.module_name || entry.data?.resolution?.path || "unknown",
-            severity,
-            title: adv.title || "Security advisory",
-            url: adv.url,
-            range: adv.vulnerable_versions,
-            isAllowlisted,
-          });
         }
       } catch {
-        // Line might not be json
+        // Fall back to line-by-line if full-string JSON parse fails
+      }
+    }
+
+    // Line-by-line parsing (legacy npm v6 / pnpm audit stream format)
+    if (vulnerabilities.length === 0 && trimmed) {
+      const lines = trimmed.split("\n");
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const entry = JSON.parse(line);
+          if (entry.type === "auditAdvisory" && entry.data?.advisory) {
+            const adv = entry.data.advisory;
+            const id = String(adv.id || adv.cve || adv.ghsaId || `adv-${vulnerabilities.length + 1}`);
+            recordVulnerability(
+              id,
+              adv.module_name || entry.data?.resolution?.path || "unknown",
+              adv.severity,
+              adv.title,
+              adv.url,
+              adv.vulnerable_versions
+            );
+          }
+        } catch {
+          // Line might not be json
+        }
       }
     }
   } catch (err) {
@@ -96,7 +141,7 @@ export function parseAuditOutput(jsonOutput: string, allowlistIds: string[] = []
   };
 }
 
-export async function runVulnerabilityScan(dryRun = false): Promise<VulnerabilityAuditReport> {
+export async function runVulnerabilityScan(dryRun = false, allDeps = false): Promise<VulnerabilityAuditReport> {
   console.log("🛡️ [VulnScanner] Initiating dependency supply chain vulnerability scan...");
 
   // Load allowlist
@@ -134,7 +179,8 @@ export async function runVulnerabilityScan(dryRun = false): Promise<Vulnerabilit
 
   let auditJson = "";
   try {
-    auditJson = execSync("pnpm audit --json", { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    const scopeFlag = allDeps ? "" : "--prod ";
+    auditJson = execSync(`pnpm audit ${scopeFlag}--json`, { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
   } catch (err: unknown) {
     // pnpm audit exits with non-zero when vulnerabilities found, but outputs json to stdout
     const execErr = err as { stdout?: string | Buffer };
@@ -153,7 +199,8 @@ export async function runVulnerabilityScan(dryRun = false): Promise<Vulnerabilit
 
 if (require.main === module) {
   const isDryRun = process.argv.includes("--dry-run");
-  runVulnerabilityScan(isDryRun)
+  const allDeps = process.argv.includes("--all");
+  runVulnerabilityScan(isDryRun, allDeps)
     .then((report) => {
       if (!report.passed) {
         console.error("❌ [VulnScanner] Security audit failed: Unresolved Critical/High CVEs detected.");
