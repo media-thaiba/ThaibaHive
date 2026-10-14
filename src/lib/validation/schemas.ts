@@ -1861,7 +1861,8 @@ export const resourcePoolCreateSchema = z.object({
   description: z.string().max(512).optional().nullable(),
   isActive: z.boolean().optional().default(true),
 });
-export type ResourcePoolCreateInput = z.infer<typeof resourcePoolCreateSchema>;
+export type ResourcePoolCreateInput = z.input<typeof resourcePoolCreateSchema>;
+export type ResourcePoolCreateOutput = z.output<typeof resourcePoolCreateSchema>;
 
 export const resourcePoolUpdateSchema = z.object({
   regionalGroupId: z.string().min(1).max(64).optional(),
