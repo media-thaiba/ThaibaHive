@@ -1,11 +1,18 @@
 export interface SamlIdentityProviderConfig {
   id: string;
-  tenantId: string;
+  institutionId: string;
   name: string;
-  idpEntityId: string;
+  entityId: string;
+  idpEntityId?: string;
   ssoUrl: string;
   x509Certificate: string;
+  certExpiresAt?: string | null;
+  binding?: string; // HTTP-POST | HTTP-Redirect
+  wantAssertionsSigned?: boolean;
+  attributeMappingJson?: string | null;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SamlAuthnRequestOptions {
@@ -13,6 +20,7 @@ export interface SamlAuthnRequestOptions {
   acsUrl: string;
   requestId: string;
   issueInstant: string;
+  relayState?: string;
 }
 
 export interface SamlAssertionClaims {
@@ -23,4 +31,12 @@ export interface SamlAssertionClaims {
   roles?: string[];
   attributes: Record<string, any>;
   sessionIndex?: string;
+  assertionId: string;
+  issueInstant: string;
+}
+
+export interface SamlValidationOptions {
+  allowedClockSkewSeconds?: number;
+  checkReplay?: boolean;
+  enforceSignature?: boolean;
 }

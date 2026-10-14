@@ -1900,6 +1900,69 @@ export const crossCampusBookingDecisionSchema = z.object({
 });
 export type CrossCampusBookingDecisionInput = z.infer<typeof crossCampusBookingDecisionSchema>;
 
+// ============================================
+// Phase 12: SSO Identity Federation & WebRTC Conferencing Validation Schemas
+// ============================================
+
+export const samlProviderInputSchema = z.object({
+  name: z.string().min(2, "Provider name must be at least 2 characters").max(100),
+  entityId: z.string().min(3, "Entity ID is required"),
+  ssoUrl: z.string().url("SSO URL must be a valid URL"),
+  x509Certificate: z.string().min(20, "Valid X.509 certificate required"),
+  binding: z.enum(["HTTP-POST", "HTTP-Redirect"]).default("HTTP-POST"),
+  wantAssertionsSigned: z.boolean().default(true),
+  attributeMappingJson: z.string().optional().nullable(),
+  isActive: z.boolean().default(true),
+});
+export type SamlProviderInput = z.infer<typeof samlProviderInputSchema>;
+
+export const oidcProviderInputSchema = z.object({
+  name: z.string().min(2, "Provider name must be at least 2 characters").max(100),
+  issuerUrl: z.string().url("Issuer URL must be a valid URL"),
+  clientId: z.string().min(1, "Client ID is required"),
+  clientSecret: z.string().min(1, "Client Secret is required"),
+  authorizationEndpoint: z.string().url("Authorization endpoint must be a valid URL").optional().nullable(),
+  tokenEndpoint: z.string().url("Token endpoint must be a valid URL").optional().nullable(),
+  userinfoEndpoint: z.string().url("Userinfo endpoint must be a valid URL").optional().nullable(),
+  jwksUri: z.string().url("JWKS URI must be a valid URL").optional().nullable(),
+  scopes: z.string().default("openid profile email roles"),
+  isActive: z.boolean().default(true),
+});
+export type OidcProviderInput = z.infer<typeof oidcProviderInputSchema>;
+
+export const ssoTestInputSchema = z.object({
+  providerType: z.enum(["SAML", "OIDC"]),
+  providerId: z.string().optional().nullable(),
+  targetUrl: z.string().url().optional().nullable(),
+});
+export type SsoTestInput = z.infer<typeof ssoTestInputSchema>;
+
+export const conferenceRoomCreateSchema = z.object({
+  roomName: z.string().min(2, "Room name must be at least 2 characters").max(100),
+  roomType: z.enum(["MEETING", "CLASSROOM", "EXAM", "BROADCAST"]).default("MEETING"),
+  maxParticipants: z.coerce.number().int().min(2).max(250).default(50),
+  passcode: z.string().min(4, "Passcode must be at least 4 characters").max(32).optional().nullable(),
+  isE2eeEnabled: z.boolean().default(true),
+  recordingEnabled: z.boolean().default(false),
+  expiresAt: z.string().optional().nullable(),
+});
+export type ConferenceRoomCreateInput = z.infer<typeof conferenceRoomCreateSchema>;
+
+export const conferenceJoinSchema = z.object({
+  passcode: z.string().optional().nullable(),
+  e2eePublicKey: z.string().min(10, "Valid ephemeral P-256 ECDH public key is required").optional().nullable(),
+});
+export type ConferenceJoinInput = z.infer<typeof conferenceJoinSchema>;
+
+export const conferenceSignalSchema = z.object({
+  targetPeerId: z.string().min(1, "Target peer ID is required"),
+  signalType: z.enum(["offer", "answer", "candidate", "renegotiate", "key_rotation"]),
+  payloadJson: z.string().min(2, "Signal payload JSON is required"),
+  sequenceNum: z.coerce.number().int().min(0).default(0),
+});
+export type ConferenceSignalInput = z.infer<typeof conferenceSignalSchema>;
+
+
 
 
 
