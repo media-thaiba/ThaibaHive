@@ -102,6 +102,8 @@ const eslintConfig = defineConfig([
     "thaibahive_mobile_app/**",
     "scratch/**",
     ".opencode/**",
+    ".claude/**",
+    ".claude-flow/**",
   ]),
 ]);
 
