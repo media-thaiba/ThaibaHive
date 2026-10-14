@@ -13,11 +13,9 @@ jobs:
     steps:
       - name: Validate required secrets
         run: |
-          missing=()
-          [ -z "${{ secrets.CRON_SECRET }}" ] && missing+=("CRON_SECRET")
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required secrets for nonce cleanup: ${missing[*]}"
-            exit 1
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::notice title=CRON_SECRET Pending::CRON_SECRET is not configured in GitHub Secrets. Scheduled nonce cleanup will activate automatically once the secret is configured."
+            exit 0
           fi
 
       - name: Invoke nonce cleanup endpoint

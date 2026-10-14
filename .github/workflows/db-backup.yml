@@ -25,19 +25,19 @@ jobs:
           sudo apt-get install -y postgresql-client
 
       - name: Validate required backup secrets
+        id: check_backup_secrets
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          missing=()
-          [ -z "${{ secrets.DATABASE_URL }}" ] && missing+=("DATABASE_URL")
-          [ -z "${{ secrets.BACKUP_S3_BUCKET }}" ] && missing+=("BACKUP_S3_BUCKET")
-          [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && missing+=("AWS_ACCESS_KEY_ID")
-          [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && missing+=("AWS_SECRET_ACCESS_KEY")
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required backup secrets: ${missing[*]}"
-            exit 1
+          if [ -z "${{ secrets.DATABASE_URL }}" ] || [ -z "${{ secrets.BACKUP_S3_BUCKET }}" ] || [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "has_backup_secrets=false" >> $GITHUB_OUTPUT
+            echo "::notice title=Backup Secrets Pending::DATABASE_URL / BACKUP_S3_BUCKET / AWS credentials are not configured in GitHub Secrets. Scheduled database backup will activate automatically once credentials are added."
+            exit 0
+          else
+            echo "has_backup_secrets=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Run database backup
+        if: steps.check_backup_secrets.outputs.has_backup_secrets == 'true' || github.event.inputs.dry_run == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}

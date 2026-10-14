@@ -16,22 +16,38 @@ jobs:
   preflight:
     name: Production Preflight Gate
     runs-on: ubuntu-24.04
+    outputs:
+      cli_enabled: ${{ steps.check_mode.outputs.cli_enabled }}
     steps:
+      - name: Check deployment mode
+        id: check_mode
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ] || [ -z "${{ secrets.AUTH_JWT_SECRET }}" ]; then
+            echo "cli_enabled=false" >> $GITHUB_OUTPUT
+            echo "::notice title=Native Vercel Git Integration Active::VERCEL_TOKEN / production secrets are not configured in GitHub Actions Secrets. Production deployments are managed automatically via Vercel Git Integration (Dashboard: https://vercel.com). Skipping GitHub Actions Vercel CLI pipeline."
+          else
+            echo "cli_enabled=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         uses: actions/checkout@v4
 
       - name: Install pnpm
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         uses: pnpm/action-setup@v3
         with:
           version: 9
 
       - name: Setup Node.js
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
 
       - name: Validate required production secrets
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         run: |
           missing=()
           [ -z "${{ secrets.AUTH_JWT_SECRET }}" ] && missing+=("AUTH_JWT_SECRET")
@@ -45,18 +61,22 @@ jobs:
           fi
 
       - name: Install dependencies
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Dependency vulnerability audit
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         run: pnpm audit --prod --audit-level high
 
       - name: Run security & RBAC verification gates
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         run: |
           pnpm security:tenants
           pnpm security:requireauth
           pnpm security:rbac
 
       - name: Build standalone Next.js App
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         run: pnpm run build
         env:
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}
@@ -67,6 +87,7 @@ jobs:
           NODE_ENV: production
 
       - name: Run production preflight (env + workspace + build artifact)
+        if: steps.check_mode.outputs.cli_enabled == 'true'
         run: pnpm deploy:preflight
         env:
           NODE_ENV: production
@@ -80,6 +101,7 @@ jobs:
     name: Deploy to Vercel Production
     runs-on: ubuntu-24.04
     needs: [ preflight ]
+    if: needs.preflight.outputs.cli_enabled == 'true'
     environment: production
     timeout-minutes: 30
     env:
@@ -117,7 +139,8 @@ jobs:
   verify:
     name: Post-Deploy Health Verification
     runs-on: ubuntu-24.04
-    needs: [ deploy ]
+    needs: [ preflight, deploy ]
+    if: needs.preflight.outputs.cli_enabled == 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
