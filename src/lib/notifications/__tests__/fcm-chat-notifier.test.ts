@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { eq, inArray } from "drizzle-orm";
 import {
   institutions,
   staff,
@@ -23,6 +24,22 @@ describe("FCM Chat Notifier & Aggregation Buffer Unit Tests", () => {
   const channelId = "chan_fcm_test_001";
 
   beforeAll(async () => {
+    // Tests run against the persistent dev.db, so clear rows from prior runs
+    // before inserting: the UNIQUE(channel_id, staff_id) index makes
+    // onConflictDoNothing keep a stale muted_until, which expires after 1h
+    // and fails the dispatch test on later runs.
+    await db.delete(chatMembers).where(eq(chatMembers.channelId, channelId));
+    await db
+      .delete(staffDeviceTokens)
+      .where(
+        inArray(staffDeviceTokens.staffId, [
+          senderId,
+          recipientId,
+          mutedRecipientId,
+          onlineRecipientId,
+        ])
+      );
+
     // Setup institution
     await db
       .insert(institutions)
