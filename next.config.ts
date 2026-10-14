@@ -10,7 +10,7 @@ const bundleAnalyzer = withBundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   allowedDevOrigins: process.env.DEV_ORIGINS?.split(",") || [],
   serverExternalPackages: ["pdfkit"],
 

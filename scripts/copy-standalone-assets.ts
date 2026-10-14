@@ -2,6 +2,10 @@ import * as fs from "fs";
 import * as path from "path";
 
 export function copyStandaloneAssets() {
+  if (process.env.VERCEL) {
+    console.log("[standalone] Vercel deployment detected; skipping standalone asset copy.");
+    return;
+  }
   const root = process.cwd();
   const staticSrc = path.join(root, ".next", "static");
   const staticDest = path.join(root, ".next", "standalone", ".next", "static");
