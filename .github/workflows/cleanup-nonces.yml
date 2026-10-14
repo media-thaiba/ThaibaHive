@@ -1,15 +1,13 @@
 name: Nonce Cleanup
 
 on:
-  schedule:
-    # Run daily at 02:00 UTC (7:30 IST)
-    - cron: '0 2 * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:  # On-demand manual trigger to stay within GitHub Actions free tier
 
 jobs:
   cleanup-nonces:
     name: Purge Expired Nonces
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - name: Validate required secrets
         run: |

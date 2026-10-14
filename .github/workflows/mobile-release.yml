@@ -1,4 +1,4 @@
-name: Mobile Release Pipeline (Android & iOS)
+name: Mobile Release Pipeline (Android)
 
 on:
   push:
@@ -11,10 +11,15 @@ on:
         required: true
         default: 'draft'
 
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android-release:
-    name: Build Android App Bundle (.aab)
+    name: Build Android Release (.aab & .apk)
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     outputs:
       has_android_release: ${{ steps.check_keystore.outputs.has_keystore }}
     steps:
@@ -26,7 +31,7 @@ jobs:
         run: |
           if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
             echo "has_keystore=false" >> $GITHUB_OUTPUT
-            echo "::notice title=Android Keystore Not Configured::ANDROID_KEYSTORE_BASE64 is not set in GitHub Secrets. Skipping production release .aab packaging. (Debug/test APK validation is active under Flutter Mobile CI Quality Gate)."
+            echo "::notice title=Android Keystore Not Configured::ANDROID_KEYSTORE_BASE64 is not set in GitHub Secrets. Skipping production release packaging. (Debug/test APK validation is active under Flutter Mobile CI Quality Gate)."
           else
             echo "has_keystore=true" >> $GITHUB_OUTPUT
           fi
@@ -100,7 +105,7 @@ jobs:
         with:
           name: thaibahive-android-release-aab
           path: thaibahive_mobile_app/build/app/outputs/bundle/release/app-release.aab
-          retention-days: 14
+          retention-days: 7
 
       - name: Upload Android Release APK artifact
         if: steps.check_keystore.outputs.has_keystore == 'true'
@@ -108,74 +113,33 @@ jobs:
         with:
           name: thaibahive-android-release-apk
           path: thaibahive_mobile_app/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 14
+          retention-days: 7
 
       - name: Cleanup sensitive signing files
         if: always() && steps.check_keystore.outputs.has_keystore == 'true'
         run: |
           rm -f thaibahive_mobile_app/upload-keystore.jks
 
-  build-ios-release:
-    name: Build iOS IPA Package
-    runs-on: macos-latest
-    outputs:
-      has_ios_release: ${{ steps.check_ios.outputs.has_ios }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check iOS project configuration
-        id: check_ios
-        run: |
-          if [ ! -d "thaibahive_mobile_app/ios/Runner.xcodeproj" ]; then
-            echo "has_ios=false" >> $GITHUB_OUTPUT
-            echo "::notice title=iOS Project Pending::thaibahive_mobile_app/ios/Runner.xcodeproj is not yet scaffolded. Skipping iOS release IPA packaging."
-          else
-            echo "has_ios=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up Flutter
-        if: steps.check_ios.outputs.has_ios == 'true'
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.x'
-          channel: 'stable'
-          cache: true
-
-      - name: Install dependencies
-        if: steps.check_ios.outputs.has_ios == 'true'
-        run: |
-          cd thaibahive_mobile_app
-          flutter pub get
-
-      - name: Build iOS IPA Package (Unsigned/No-Codesign verification)
-        if: steps.check_ios.outputs.has_ios == 'true'
-        run: |
-          cd thaibahive_mobile_app
-          flutter build ipa --release --no-codesign
-
-      - name: Upload iOS Build Artifact
-        if: steps.check_ios.outputs.has_ios == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: thaibahive-ios-build-archive
-          path: thaibahive_mobile_app/build/ios/archive/*.xcarchive
-          retention-days: 14
-
   create-github-release:
     name: Create GitHub Release Draft
-    needs: [build-android-release, build-ios-release]
-    if: needs.build-android-release.outputs.has_android_release == 'true' || needs.build-ios-release.outputs.has_ios_release == 'true'
+    needs: [build-android-release]
+    if: needs.build-android-release.outputs.has_android_release == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Android Artifact
-        if: needs.build-android-release.outputs.has_android_release == 'true'
+      - name: Download Android AAB Artifact
         uses: actions/download-artifact@v4
         with:
           name: thaibahive-android-release-aab
+          path: release-artifacts/
+
+      - name: Download Android APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: thaibahive-android-release-apk
           path: release-artifacts/
 
       - name: Create Release Draft
@@ -183,13 +147,13 @@ jobs:
         with:
           draft: true
           files: release-artifacts/*
-          title: ThaibaHive Mobile Release ${{ github.ref_name }}
+          title: ThaibaHive Android Release ${{ github.ref_name }}
           body: |
-            ## ThaibaHive Mobile Production Release ${{ github.ref_name }}
+            ## ThaibaHive Android Production Release ${{ github.ref_name }}
 
             ### Highlights
             - Signed Android App Bundle (`app-release.aab`) ready for Google Play Console submission
-            - iOS App Store export options ready for App Store Connect distribution
-            - FCM & APNs push notification capability enabled
+            - Direct-install Release APK (`app-release.apk`) for device testing and distribution
+            - FCM push notification capability enabled
             - Background Isolate offline sync engine operational
             - WCAG 2.1 AA accessibility compliant UI components

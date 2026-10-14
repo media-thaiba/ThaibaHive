@@ -11,9 +11,6 @@ on:
         description: 'Soak duration in minutes per scenario'
         required: false
         default: '10'
-  schedule:
-    # Weekly soak certification every Sunday at 02:00 UTC
-    - cron: '0 2 * * 0'
 
 env:
   NODE_OPTIONS: "--max-old-space-size=6144"

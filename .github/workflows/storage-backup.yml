@@ -1,9 +1,6 @@
 name: Automated Supabase Storage Backup
 
 on:
-  schedule:
-    # Runs weekly on Sundays at 04:00 UTC
-    - cron: "0 4 * * 0"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -15,6 +12,7 @@ jobs:
   storage-backup:
     name: Backup Supabase Storage Bucket
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

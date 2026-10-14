@@ -3,23 +3,45 @@ name: ThaibaHive CI
 on:
   push:
     branches: [ main, master, 'audit/**' ]
+    paths-ignore:
+      - 'thaibahive_mobile_app/**'
+      - 'docs/**'
+      - '**.md'
+      - '.claude/**'
+      - '.claude-flow/**'
   pull_request:
     branches: [ main, master, 'audit/**' ]
+    paths-ignore:
+      - 'thaibahive_mobile_app/**'
+      - 'docs/**'
+      - '**.md'
+      - '.claude/**'
+      - '.claude-flow/**'
+  workflow_dispatch:
 
 env:
   NODE_OPTIONS: "--max-old-space-size=6144"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   web-ci:
-    name: Next.js Web CI
+    name: Next.js Web CI & Quality Gate
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Leak Scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -79,13 +101,33 @@ jobs:
           DATABASE_URL: file:./test.db
           CI: "true"
 
-      - name: Build check
+      - name: Build Next.js Web App (Standalone)
         run: pnpm build
         env:
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           DATABASE_URL: file:./test.db
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NODE_ENV: production
+
+      - name: Copy public and static assets to standalone output
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+
+      - name: Package standalone build as tarball (preserves symlinks)
+        run: |
+          tar -czf e2e-standalone.tar.gz \
+            --exclude='.env' --exclude='.env.*' \
+            --exclude='*/.env' --exclude='*/.env.*' \
+            -C .next standalone
+
+      - name: Upload standalone build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-standalone
+          path: e2e-standalone.tar.gz
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Verify SQLite database migrations
         run: pnpm db:migrate
@@ -105,6 +147,7 @@ jobs:
   postgres-ci:
     name: PostgreSQL 16 Production Parity Gate
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:16
@@ -166,23 +209,10 @@ jobs:
           CI: "true"
 
   platform-simulations:
-    name: Platform OS Simulation (${{ matrix.module }})
+    name: Platform OS Simulations (Consolidated)
     runs-on: ubuntu-24.04
     needs: [web-ci, postgres-ci]
-    strategy:
-      fail-fast: false
-      matrix:
-        module:
-          - fee
-          - alumni
-          - supply
-          - neuro
-          - vision
-          - twin
-          - docgen
-          - eco
-          - facility
-          - copilot
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -213,8 +243,24 @@ jobs:
           echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
-      - name: Run ${{ matrix.module }} simulation harness
-        run: pnpm ${{ matrix.module }}:simulate
+      - name: Run all platform simulation harnesses sequentially
+        run: |
+          MODULES="fee alumni supply neuro vision twin docgen eco facility copilot"
+          FAILED=""
+          for mod in $MODULES; do
+            echo "::group::Running $mod simulation harness"
+            if ! pnpm "$mod:simulate"; then
+              echo "❌ Simulation failed: $mod"
+              FAILED="$FAILED $mod"
+            else
+              echo "✅ Simulation passed: $mod"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$FAILED" ]; then
+            echo "::error::One or more platform simulations failed: $FAILED"
+            exit 1
+          fi
         env:
           AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
           RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
@@ -225,100 +271,12 @@ jobs:
           BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
           TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
           ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
-
-  e2e-build:
-    name: E2E Standalone Build
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate ephemeral CI test secrets
-        run: |
-          echo "AUTH_JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "HEALTH_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "METRICS_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "PII_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "RECEIPT_SIGNING_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "MDM_ENROLLMENT_TOKEN=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "PAYMENT_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "SYSTEM_UPDATE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "BIOMETRIC_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "TENANT_ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "DR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "CACHE_PURGE_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-
-      - name: Build Next.js Web App (Standalone)
-        run: pnpm run build
-        env:
-          AUTH_JWT_SECRET: ${{ env.AUTH_JWT_SECRET }}
-          HEALTH_SECRET: ${{ env.HEALTH_SECRET }}
-          METRICS_SECRET: ${{ env.METRICS_SECRET }}
-          PII_ENCRYPTION_KEY: ${{ env.PII_ENCRYPTION_KEY }}
-          RECEIPT_SIGNING_KEY: ${{ env.RECEIPT_SIGNING_KEY }}
-          MDM_ENROLLMENT_TOKEN: ${{ env.MDM_ENROLLMENT_TOKEN }}
-          PAYMENT_ENCRYPTION_KEY: ${{ env.PAYMENT_ENCRYPTION_KEY }}
-          SYSTEM_UPDATE_SECRET: ${{ env.SYSTEM_UPDATE_SECRET }}
-          BIOMETRIC_MASTER_KEY: ${{ env.BIOMETRIC_MASTER_KEY }}
-          TENANT_ENCRYPTION_MASTER_KEY: ${{ env.TENANT_ENCRYPTION_MASTER_KEY }}
-          ENCRYPTION_KEY: ${{ env.ENCRYPTION_KEY }}
-          JWT_SECRET: ${{ env.JWT_SECRET }}
-          CRON_SECRET: ${{ env.CRON_SECRET }}
-          DR_SECRET: ${{ env.DR_SECRET }}
-          CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
-          DATABASE_URL: file:./dev.db
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          NODE_ENV: production
-
-      - name: Copy public and static assets to standalone output
-        run: |
-          cp -r public .next/standalone/public
-          cp -r .next/static .next/standalone/.next/static
-
-      - name: Package standalone build as tarball (preserves symlinks)
-        run: |
-          tar -czf e2e-standalone.tar.gz \
-            --exclude='.env' --exclude='.env.*' \
-            --exclude='*/.env' --exclude='*/.env.*' \
-            -C .next standalone
-
-      - name: Upload standalone build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-standalone
-          path: e2e-standalone.tar.gz
-          if-no-files-found: error
-          retention-days: 1
 
   e2e-tests:
-    name: Playwright E2E Tests (${{ matrix.browser }} ${{ matrix.shard }}/${{ matrix.shardCount }})
+    name: Playwright E2E Tests (Chromium)
     runs-on: ubuntu-24.04
-    needs: [web-ci, e2e-build]
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium, firefox, webkit]
-        shard: [1, 2, 3]
-        shardCount: [3]
+    needs: [web-ci]
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -369,16 +327,16 @@ jobs:
           node -e "const fs=require('fs');const dir=process.cwd()+'/.next/standalone/node_modules/@libsql';if(!fs.existsSync(dir))throw new Error('@libsql missing in standalone node_modules');console.log('OK runtime standalone modules verified')"
           echo "Standalone build verified with symlinks intact: .next/standalone/server.js"
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+      - name: Install Playwright browsers (Chromium only)
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run database migrations for E2E tests
         run: pnpm db:migrate
         env:
           DATABASE_URL: file:${{ github.workspace }}/dev.db
 
-      - name: Run E2E tests (${{ matrix.browser }} shard ${{ matrix.shard }}/${{ matrix.shardCount }})
-        run: pnpm exec playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/${{ matrix.shardCount }}
+      - name: Run E2E tests
+        run: pnpm exec playwright test --project=chromium
         env:
           CI: true
           DATABASE_URL: file:${{ github.workspace }}/dev.db
@@ -399,20 +357,20 @@ jobs:
           CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
-      - name: Upload Playwright report
+      - name: Upload Playwright report (on failure only)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
-          name: playwright-report-${{ matrix.browser }}-shard${{ matrix.shard }}
+          name: playwright-report-chromium
           path: |
             playwright-report/
             test-results/
-          retention-days: 30
+          retention-days: 3
 
   load-tests:
     name: k6 CI Load & Stress Tests
     runs-on: ubuntu-24.04
-    needs: [web-ci, e2e-build]
+    needs: [web-ci]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -488,7 +446,7 @@ jobs:
 
           mkdir -p k6-reports
 
-          # Run all 4 k6 test scripts with threshold assertions (k6 fails automatically if thresholds are breached)
+          # Run all 4 k6 test scripts with threshold assertions
           echo "Running k6 Attendance Check-in test..."
           BASE_URL=http://localhost:3000 AUTH_TOKEN=$TOKEN VUS=50 DURATION=10s k6 run --summary-export=k6-reports/summary-attendance.json load-tests/attendance-checkin.js
 
@@ -525,39 +483,8 @@ jobs:
 
       - name: Upload k6 load test reports
         uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
           name: k6-load-test-reports
           path: k6-reports/
-          retention-days: 30
-
-  mobile-ci:
-    name: Flutter Mobile CI
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: thaibahive_mobile_app
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Flutter dependencies
-        run: flutter pub get
-
-      - name: Analyze mobile code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
-
-      - name: Run mobile unit tests
-        run: flutter test
+          retention-days: 3

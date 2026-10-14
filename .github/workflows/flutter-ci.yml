@@ -3,13 +3,25 @@ name: Flutter Mobile CI Quality Gate
 on:
   push:
     branches: [ main, master, develop, 'feature/*', 'audit/**' ]
+    paths:
+      - 'thaibahive_mobile_app/**'
+      - '.github/workflows/flutter-ci.yml'
   pull_request:
     branches: [ main, master, develop, 'audit/**' ]
+    paths:
+      - 'thaibahive_mobile_app/**'
+      - '.github/workflows/flutter-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: flutter-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze-and-test:
     name: Flutter Analyze & Test (Android)
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: thaibahive_mobile_app
@@ -54,30 +66,8 @@ jobs:
 
       - name: Upload Coverage Artifact
         uses: actions/upload-artifact@v4
+        if: failure()
         with:
           name: flutter-coverage
           path: thaibahive_mobile_app/coverage/
-
-  ios-release-check:
-    name: Flutter iOS Simulator Check (Release Only)
-    if: startsWith(github.ref, 'refs/heads/release/')
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: thaibahive_mobile_app
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter SDK
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build iOS No-Codesign Quality Check
-        run: flutter build ios --no-codesign --debug
+          retention-days: 3

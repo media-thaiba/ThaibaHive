@@ -1,8 +1,6 @@
 name: Dependency Security & Supply Chain Audit
 
 on:
-  schedule:
-    - cron: "0 4 * * *" # Daily at 04:00 UTC
   pull_request:
     paths:
       - "package.json"

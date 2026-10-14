@@ -1,9 +1,6 @@
 name: Weekly Database Restore Quality Gate
 
 on:
-  schedule:
-    # Runs weekly every Sunday at 04:00 UTC (1 hour after Sunday backup)
-    - cron: "0 4 * * 0"
   workflow_dispatch:
     inputs:
       force_run:
@@ -15,6 +12,7 @@ jobs:
   db-restore-drill:
     name: PostgreSQL Automated Restore & Row-Count Drill
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     services:
       postgres:

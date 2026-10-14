@@ -1,9 +1,6 @@
 name: Automated Disaster Recovery Chaos Drill & Failover Verification
 
 on:
-  schedule:
-    # Run every Sunday at 03:00 UTC
-    - cron: '0 3 * * 0'
   push:
     tags:
       - 'v*'
