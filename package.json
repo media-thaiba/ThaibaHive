@@ -71,6 +71,7 @@
     "agent:simulate": "tsx scripts/agent-simulate.ts",
     "hardware:simulate": "tsx scripts/hardware-simulate.ts",
     "marketplace:simulate": "tsx scripts/marketplace-simulate.ts",
+    "sis:simulate": "tsx scripts/sis-simulate.ts",
     "aios:validate": "node scripts/aios-validate.js"
   },
   "dependencies": {

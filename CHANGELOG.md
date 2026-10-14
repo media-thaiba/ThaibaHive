@@ -2,6 +2,21 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.40.0] - 2026-10-14
+### Phase 11: Multi-Campus Federation & SIS/LMS Standards Sync
+#### Added
+- **SIS/LMS Standards Adapters & Sync Engine**: Automated roster synchronization supporting Ed-Fi Alliance v5.3 REST API (`api/v5.x/data/v1`), 1EdTech OneRoster 1.2 REST API, and standardized CSV S3/HTTPS ingest with differential record hashing and Change Data Capture (CDC) updates.
+- **Idempotent Replay & Human Mapping Queue (Gate 9)**: Deterministic SHA-256 payload hashing (`RecordMapper.hashPayload`) guaranteeing zero duplicate row insertions on replayed sync runs; unmatched external identifiers automatically enqueued to `sis_mapping_queue` for manual triage with audit logs.
+- **Standards OAuth2 Token Lifecycle (`token-lifecycle.ts`)**: Proactive TTL-aware token refresh manager targeting Ed-Fi and OneRoster OAuth2 endpoints with 300s clock-skew buffer, per-connector cache, and fail-closed exception handling.
+- **SSRF Egress Defense & IP Pinning (Gate 11)**: Strict outbound egress guard (`EgressGuard`) rejecting cloud metadata endpoints (`169.254.169.254`, `metadata.google.internal`), private RFC 1918 CIDRs, loopbacks, and `.internal`/`.local` hostnames prior to and post-DNS resolution with pinned IP caching and per-hop redirect validation.
+- **Webhook Ingress Security & Replay Prevention (Gates 12 & 18)**: High-security webhook ingress endpoint (`/api/sis/webhooks/[connectorId]`) with bounded raw body parsing, constant-time HMAC-SHA256 signature verification over `timestamp.body`, ±300s timestamp window, and 600s TTL per-connector nonce cache.
+- **Cross-Campus Resource Pools & Double-Booking Conflict Defense (Gate 10)**: Regional shared resource pools (`resource_pools`) for research labs, auditoriums, exam venues, and transit fleets with atomic double-booking prevention via PostgreSQL `EXCLUDE USING gist` exclusion constraints and SQLite single-transaction interval overlap predicates, rejecting colliding requests with `409 Conflict`.
+- **Allocation Merkle Ledger & Automated Expiry Sweeper (Gates 10 & 19)**: Append-only chained Merkle ledger (`cross_campus_allocations`) with cryptographic verification (`verifyAuditTrail`), and automated `ExpirySweeper` transitioning stale pending requests past `expiresAt` to `expired` with full audit entries.
+- **Dual-Dialect Database Parity**: 8 new multi-tenant tables (`sis_connectors`, `sis_sync_runs`, `sis_sync_records`, `sis_mapping_queue`, `sis_sync_audit`, `resource_pools`, `cross_campus_bookings`, `cross_campus_allocations`) with 100% column parity across SQLite and PostgreSQL schemas and migrations (`0038_dashing_wildside.sql`, `0039_high_nightshade.sql` / `0022_oval_iron_fist.sql`, `0023_rich_lady_bullseye.sql`).
+- **Web Admin Cockpits & Navigation**: Cockpits for SIS Standards (`/admin/sis`) and Cross-Campus Federation (`/admin/cross-campus`) with slot availability checker, booking request inbox, and bidirectional cross-link banner to Executive Regional Analytics (`/admin/regional-analytics`).
+- **5-Tier Granular RBAC Matrix**: 7 new permission keys (`sis:read`, `sis:manage`, `sis:sync`, `sis:webhooks:manage`, `crosscampus:read`, `crosscampus:request`, `crosscampus:approve`) mapped across all 5 tiers and specialized roles, gated by `sis_sync` feature flag.
+- **8-Stage End-to-End Simulation CLI**: Verified 100% completion across all 8 stages via `pnpm sis:simulate`.
+
 ## [3.39.0] - 2026-10-11
 ### Phase 10: Track 3B AI Agent Marketplace & Live Multimodal Streaming
 #### Added

@@ -101,7 +101,7 @@ export class ResourcePoolService {
         .where(eq(resourcePools.id, id))
         .limit(1);
 
-      if (!row) return null;
+      if (!row) return inMemoryPools.get(id) || null;
       return {
         ...row,
         resourceType: row.resourceType as any,
