@@ -1793,6 +1793,110 @@ export const liveSessionEventSchema = z.object({
 });
 export type LiveSessionEventInput = z.infer<typeof liveSessionEventSchema>;
 
+// ============================================
+// Phase 11: Multi-Campus Federation & SIS/LMS Standards Sync
+// ============================================
+
+export const sisConnectorCreateSchema = z.object({
+  name: z.string().min(1).max(128),
+  standard: z.enum(["edfi", "oneroster", "csv"]),
+  baseUrl: z.string().url().max(512),
+  credentialRef: z.string().min(1).max(128).regex(/^[a-zA-Z0-9_\-./]+$/, "credentialRef must be a vault/env reference key"),
+  authMode: z.enum(["oauth2", "basic", "apiKey"]).default("oauth2"),
+  enabled: z.boolean().optional().default(true),
+  scheduleCron: z.string().max(64).optional().nullable(),
+  fieldMappingJson: z.string().optional().nullable(),
+});
+export type SisConnectorCreateInput = z.input<typeof sisConnectorCreateSchema>;
+export type SisConnectorCreateOutput = z.output<typeof sisConnectorCreateSchema>;
+
+export const sisConnectorUpdateSchema = z.object({
+  name: z.string().min(1).max(128).optional(),
+  standard: z.enum(["edfi", "oneroster", "csv"]).optional(),
+  baseUrl: z.string().url().max(512).optional(),
+  credentialRef: z.string().min(1).max(128).regex(/^[a-zA-Z0-9_\-./]+$/, "credentialRef must be a vault/env reference key").optional(),
+  authMode: z.enum(["oauth2", "basic", "apiKey"]).optional(),
+  enabled: z.boolean().optional(),
+  scheduleCron: z.string().max(64).optional().nullable(),
+  fieldMappingJson: z.string().optional().nullable(),
+});
+export type SisConnectorUpdateInput = z.infer<typeof sisConnectorUpdateSchema>;
+
+export const sisSyncTriggerSchema = z.object({
+  mode: z.enum(["dry_run", "full", "delta"]).default("full"),
+  checkpoint: z.string().optional().nullable(),
+});
+export type SisSyncTriggerInput = z.input<typeof sisSyncTriggerSchema>;
+export type SisSyncTriggerOutput = z.output<typeof sisSyncTriggerSchema>;
+
+export const sisMappingResolveSchema = z.object({
+  action: z.enum(["map", "create", "ignore"]),
+  localTable: z.string().min(1).max(64).optional(),
+  localId: z.string().min(1).max(64).optional(),
+});
+export type SisMappingResolveInput = z.infer<typeof sisMappingResolveSchema>;
+
+export const sisWebhookRecordSchema = z.object({
+  event: z.string().default("upsert"),
+  entityType: z.string().min(1),
+  externalId: z.string().min(1),
+  data: z.record(z.string(), z.any()).optional().default({}),
+  timestamp: z.string().optional(),
+});
+export type SisWebhookRecord = z.infer<typeof sisWebhookRecordSchema>;
+
+export const sisWebhookPayloadSchema = z.union([
+  sisWebhookRecordSchema,
+  z.object({
+    events: z.array(sisWebhookRecordSchema).min(1),
+  }),
+]);
+export type SisWebhookPayload = z.infer<typeof sisWebhookPayloadSchema>;
+
+export const resourcePoolCreateSchema = z.object({
+  regionalGroupId: z.string().min(1).max(64),
+  resourceType: z.enum(["lab", "hall", "bus", "exam_venue", "equipment"]),
+  name: z.string().min(1).max(128),
+  capacity: z.number().int().positive().default(1),
+  description: z.string().max(512).optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+});
+export type ResourcePoolCreateInput = z.input<typeof resourcePoolCreateSchema>;
+export type ResourcePoolCreateOutput = z.output<typeof resourcePoolCreateSchema>;
+
+export const resourcePoolUpdateSchema = z.object({
+  regionalGroupId: z.string().min(1).max(64).optional(),
+  resourceType: z.enum(["lab", "hall", "bus", "exam_venue", "equipment"]).optional(),
+  name: z.string().min(1).max(128).optional(),
+  capacity: z.number().int().positive().optional(),
+  description: z.string().max(512).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+export type ResourcePoolUpdateInput = z.infer<typeof resourcePoolUpdateSchema>;
+
+export const crossCampusBookingRequestSchema = z.object({
+  poolId: z.string().min(1).max(64),
+  hostInstitutionId: z.string().min(1).max(64),
+  title: z.string().min(1).max(256),
+  startsAt: z.string().min(1),
+  endsAt: z.string().min(1),
+  expiresAt: z.string().optional().nullable(),
+}).refine((data) => {
+  const start = new Date(data.startsAt).getTime();
+  const end = new Date(data.endsAt).getTime();
+  return !isNaN(start) && !isNaN(end) && end > start;
+}, {
+  message: "endsAt must be a valid date after startsAt",
+  path: ["endsAt"],
+});
+export type CrossCampusBookingRequestInput = z.infer<typeof crossCampusBookingRequestSchema>;
+
+export const crossCampusBookingDecisionSchema = z.object({
+  decisionReason: z.string().max(512).optional().nullable(),
+});
+export type CrossCampusBookingDecisionInput = z.infer<typeof crossCampusBookingDecisionSchema>;
+
+
 
 
 

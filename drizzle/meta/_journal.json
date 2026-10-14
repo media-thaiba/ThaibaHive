@@ -267,6 +267,13 @@
       "when": 1791720769590,
       "tag": "0037_gigantic_phil_sheldon",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1791955254484,
+      "tag": "0038_equal_shiver_man",
+      "breakpoints": true
     }
   ]
 }
