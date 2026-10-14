@@ -490,8 +490,10 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
               final query = state.recentSearches[index];
               return ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 48),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                   leading: const Icon(Icons.history_rounded, size: 20),
                   title: Text(
                     query,
@@ -512,7 +514,8 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
                     setState(() {});
                   },
                 ),
-              );
+              ),
+            );
             },
           ),
         ),
@@ -551,8 +554,10 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
                   )
                 : null,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             leading: _buildAvatar(result, isDark),
             title: Row(
               children: [
@@ -621,6 +626,7 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
           ),
         ),
       ),
+    ),
     );
   }
 

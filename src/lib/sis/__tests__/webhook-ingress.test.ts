@@ -1,4 +1,5 @@
-import { POST as handleWebhook, clearWebhookNonceCache } from "@/app/api/sis/webhooks/[connectorId]/route";
+import { POST as handleWebhook } from "@/app/api/sis/webhooks/[connectorId]/route";
+import { clearWebhookNonceCache } from "../webhook-nonce-store";
 import { ConnectorRegistry } from "../connector-registry";
 import { CredentialVault } from "../credential-vault";
 import { EgressGuard } from "../egress-guard";

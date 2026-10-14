@@ -6,6 +6,10 @@ import { CredentialVault } from "@/lib/sis/credential-vault";
 import { RecordMapper } from "@/lib/sis/record-mapper";
 import { isSisSyncEnabled } from "@/lib/features";
 import {
+  hasWebhookNonce,
+  recordWebhookNonce,
+} from "@/lib/sis/webhook-nonce-store";
+import {
   sisWebhookPayloadSchema,
   type SisWebhookRecord,
 } from "@/lib/validation/schemas";
@@ -18,22 +22,6 @@ const MAX_BODY_BYTES = 1024 * 1024; // 1MB body limit
 const TIMESTAMP_TOLERANCE_SECONDS = 300; // ±300s
 const NONCE_TTL_SECONDS = 600; // 600s TTL (2x window)
 
-// Bounded in-memory nonce replay store: key = `${connectorId}:${nonce}`, value = expiry timestamp ms
-const nonceCache = new Map<string, number>();
-
-export function clearWebhookNonceCache(): void {
-  nonceCache.clear();
-}
-
-function cleanExpiredNonces(): void {
-  const now = Date.now();
-  for (const [key, expiresAt] of nonceCache.entries()) {
-    if (expiresAt <= now) {
-      nonceCache.delete(key);
-    }
-  }
-}
-
 /**
  * POST /api/sis/webhooks/[connectorId]
  * Authenticated public webhook callback for external SIS changes.
@@ -42,10 +30,9 @@ function cleanExpiredNonces(): void {
  */
 export const POST = withPublicApm(async function POST(
   request: Request,
-  context?: { params?: Promise<{ connectorId?: string }> }
+  context: { params: Promise<Record<string, string>> }
 ) {
-  const params = await context?.params;
-  const connectorId = params?.connectorId;
+  const { connectorId } = await context.params;
 
   if (!connectorId) {
     return NextResponse.json({ error: "Connector ID required" }, { status: 400 });
@@ -102,9 +89,8 @@ export const POST = withPublicApm(async function POST(
   }
 
   // 5. Nonce replay defense (TTL 600s)
-  cleanExpiredNonces();
   const nonceKey = `${connectorId}:${nonce}`;
-  if (nonceCache.has(nonceKey)) {
+  if (hasWebhookNonce(nonceKey)) {
     return NextResponse.json(
       { error: "Webhook replay detected: nonce already used" },
       { status: 401 }
@@ -149,7 +135,7 @@ export const POST = withPublicApm(async function POST(
   }
 
   // 9. Mark nonce as used
-  nonceCache.set(nonceKey, Date.now() + NONCE_TTL_SECONDS * 1000);
+  recordWebhookNonce(nonceKey, NONCE_TTL_SECONDS);
 
   // 10. Only now that signature is verified, parse JSON
   let bodyJson: any;

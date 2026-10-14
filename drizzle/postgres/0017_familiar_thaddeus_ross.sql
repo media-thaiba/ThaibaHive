@@ -63,9 +63,9 @@ CREATE INDEX "idx_pg_chat_members_staff" ON "chat_members" USING btree ("staff_i
 CREATE INDEX "idx_pg_chat_members_channel" ON "chat_members" USING btree ("channel_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_pg_chat_receipts_msg_staff" ON "chat_receipts" USING btree ("message_id","staff_id");--> statement-breakpoint
 CREATE INDEX "idx_pg_chat_receipts_staff" ON "chat_receipts" USING btree ("staff_id");--> statement-breakpoint
-CREATE INDEX "idx_pg_announcements_title" ON "announcements" USING btree ("title");--> statement-breakpoint
-CREATE INDEX "idx_pg_events_title" ON "events" USING btree ("title");--> statement-breakpoint
-CREATE INDEX "idx_pg_staff_name" ON "staff" USING btree ("first_name","last_name");--> statement-breakpoint
-CREATE INDEX "idx_pg_students_name" ON "students" USING btree ("first_name","last_name");--> statement-breakpoint
-CREATE INDEX "idx_pg_students_email" ON "students" USING btree ("email");--> statement-breakpoint
-CREATE INDEX "idx_pg_tasks_title" ON "tasks" USING btree ("title");
+CREATE INDEX IF NOT EXISTS "idx_pg_announcements_title" ON "announcements" USING btree ("title");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_pg_events_title" ON "events" USING btree ("title");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_pg_staff_name" ON "staff" USING btree ("first_name","last_name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_pg_students_name" ON "students" USING btree ("first_name","last_name");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_pg_students_email" ON "students" USING btree ("email");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_pg_tasks_title" ON "tasks" USING btree ("title");
