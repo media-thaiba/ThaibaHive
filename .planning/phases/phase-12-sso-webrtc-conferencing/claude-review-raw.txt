@@ -1,0 +1,132 @@
+### Security Vulnerabilities
+
+#### Q1: SAML XML Signature Validation & Canonicalization
+- **Severity**: HIGH
+- **Specific Risk & Description**: The SAML engine does not canonicalize XML documents before signature validation, which can lead to signature forgery attacks.
+- **Concrete Actionable Recommendation**: Implement XML canonicalization before signature validation using a library like `xml-crypto` or `saml2-js`.
+
+#### Q2: XML External Entity (XXE) Attacks
+- **Severity**: HIGH
+- **Specific Risk & Description**: The SAML engine does not prevent XXE attacks, which can lead to information disclosure or denial of service.
+- **Concrete Actionable Recommendation**: Disable XXE processing in the XML parser. Use a library that supports XXE prevention, such as `xml-crypto`.
+
+#### Q3: Assertion Replay Defense
+- **Severity**: HIGH
+- **Specific Risk & Description**: The SAML engine does not have a robust replay protection mechanism, which can lead to replay attacks.
+- **Concrete Actionable Recommendation**: Implement a replay cache that stores assertion IDs with a TTL of 600 seconds. Check the cache before processing assertions.
+
+#### Q4: Clock Skew
+- **Severity**: HIGH
+- **Specific Risk & Description**: The SAML engine does not enforce strict clock skew validation, which can lead to authentication failures.
+- **Concrete Actionable Recommendation**: Enforce a strict clock skew of ±300 seconds on `NotBefore` and `NotOnOrAfter` timestamps.
+
+#### Q5: Destination/Audience Matching
+- **Severity**: HIGH
+- **Specific Risk & Description**: The SAML engine does not validate the `Destination` attribute, which can lead to security vulnerabilities.
+- **Concrete Actionable Recommendation**: Validate the `Destination` attribute against the ACS callback URL.
+
+#### Q6: OIDC PKCE Code Challenge Verification
+- **Severity**: HIGH
+- **Specific Risk & Description**: The OIDC engine does not verify the `code_challenge` parameter, which can lead to authorization code interception.
+- **Concrete Actionable Recommendation**: Verify the `code_challenge` parameter using the `code_verifier` and `code_challenge_method`.
+
+#### Q7: ID Token Signature Verification via JWKS
+- **Severity**: HIGH
+- **Specific Risk & Description**: The OIDC engine does not verify the ID token signature using the JWKS, which can lead to token forgery.
+- **Concrete Actionable Recommendation**: Fetch the JWKS from `jwks_uri` and verify the ID token signature using `jose.jwtVerify`.
+
+#### Q8: CSRF State/Nonce Validation
+- **Severity**: HIGH
+- **Specific Risk & Description**: The OIDC engine does not validate the `state` and `nonce` parameters, which can lead to CSRF attacks.
+- **Concrete Actionable Recommendation**: Validate the `state` and `nonce` parameters using an encrypted/signed token containing a timestamp and session nonce with a 10-minute expiry.
+
+#### Q9: JIT Auto-Provisioning Role Escalation
+- **Severity**: HIGH
+- **Specific Risk & Description**: The federated user provisioning engine does not prevent role escalation during JIT provisioning, which can lead to unauthorized access.
+- **Concrete Actionable Recommendation**: Implement role escalation protection during JIT provisioning.
+
+#### Q10: Tenant IDOR Leaks
+- **Severity**: HIGH
+- **Specific Risk & Description**: The federated user provisioning engine does not prevent IDOR leaks, which can lead to unauthorized access.
+- **Concrete Actionable Recommendation**: Implement strict access controls and validation to prevent IDOR leaks.
+
+### WebRTC & Conferencing Invariants
+
+#### O1: Signaling Race Conditions
+- **Severity**: HIGH
+- **Specific Risk & Description**: The WebRTC signaling engine does not handle signaling race conditions, which can lead to signaling failures.
+- **Concrete Actionable Recommendation**: Implement a signaling queue to handle signaling messages in order.
+
+#### O2: Room Capacity Enforcement
+- **Severity**: HIGH
+- **Specific Risk & Description**: The room state machine does not enforce room capacity, which can lead to room overflow.
+- **Concrete Actionable Recommendation**: Implement strict enforcement of `maxParticipants` and handle room overflow gracefully.
+
+#### O3: Peer State Machine
+- **Severity**: HIGH
+- **Specific Risk & Description**: The room state machine does not manage peer states correctly, which can lead to session management issues.
+- **Concrete Actionable Recommendation**: Implement a peer state machine to manage peer states, including connection, disconnection, and error handling.
+
+#### O4: TURN/STUN Credential Leakage
+- **Severity**: HIGH
+- **Specific Risk & Description**: The WebRTC signaling engine does not handle TURN/STUN credentials securely, which can lead to credential leakage.
+- **Concrete Actionable Recommendation**: Implement secure credential handling and rotation mechanisms.
+
+#### O5: SFrame/MLS E2EE Key Agreement Forward Secrecy and Post-Compromise Security
+- **Severity**: HIGH
+- **Specific Risk & Description**: The E2EE key exchange does not provide forward secrecy and post-compromise security, which can lead to security vulnerabilities.
+- **Concrete Actionable Recommendation**: Implement ephemeral ECDH (P-256) key agreement for each session and rotate keys when participants join or leave.
+
+#### O6: Participant Removal Key Rotation
+- **Severity**: HIGH
+- **Specific Risk & Description**: The E2EE key exchange does not handle participant removal gracefully, which can lead to security vulnerabilities.
+- **Concrete Actionable Recommendation**: Implement key rotation when participants leave the room to maintain forward secrecy and post-compromise security.
+
+### Database Parity & Multi-Tenancy
+
+#### C1: SQLite vs PostgreSQL Types
+- **Severity**: HIGH
+- **Specific Risk & Description**: The database schema uses different types for SQLite and PostgreSQL, which can lead to data type mismatches.
+- **Concrete Actionable Recommendation**: Ensure consistent data types across SQLite and PostgreSQL.
+
+#### C2: Exclusion Constraints
+- **Severity**: HIGH
+- **Specific Risk & Description**: The database schema does not enforce exclusion constraints, which can lead to data integrity issues.
+- **Concrete Actionable Recommendation**: Implement exclusion constraints to ensure data integrity.
+
+#### C3: Unique Indexes
+- **Severity**: HIGH
+- **Specific Risk & Description**: The database schema does not enforce unique indexes, which can lead to data duplication.
+- **Concrete Actionable Recommendation**: Implement unique indexes to ensure data uniqueness.
+
+#### C4: Foreign Key Cascades
+- **Severity**: HIGH
+- **Specific Risk & Description**: The database schema does not enforce foreign key cascades, which can lead to data inconsistencies.
+- **Concrete Actionable Recommendation**: Implement foreign key cascades to ensure data consistency.
+
+#### C5: Tenant Column Indexing
+- **Severity**: HIGH
+- **Specific Risk & Description**: The database schema does not index the `institutionId` column, which can lead to performance issues.
+- **Concrete Actionable Recommendation**: Index the `institutionId` column to improve query performance.
+
+#### C6: Audit Ledger Retention
+- **Severity**: HIGH
+- **Specific Risk & Description**: The audit ledger does not enforce retention policies, which can lead to storage issues.
+- **Concrete Actionable Recommendation**: Implement retention policies to manage audit ledger storage.
+
+### Next.js 16 & Serverless/Edge Runtime Compatibility
+
+#### R1: SSE Connection Holding
+- **Severity**: HIGH
+- **Specific Risk & Description**: The Next.js 16 serverless/edge runtime does not handle SSE connections efficiently, which can lead to connection holding issues.
+- **Concrete Actionable Recommendation**: Implement efficient SSE connection handling mechanisms.
+
+#### R2: WebCrypto vs Node Crypto
+- **Severity**: HIGH
+- **Specific Risk & Description**: The Next.js 16 serverless/edge runtime uses Node crypto instead of WebCrypto, which can lead to compatibility issues.
+- **Concrete Actionable Recommendation**: Use WebCrypto for cryptographic operations in the Next.js 16 serverless/edge runtime.
+
+#### R3: Route Handler Concurrency
+- **Severity**: HIGH
+- **Specific Risk & Description**: The Next.js 16 serverless/edge runtime does not handle route handler concurrency efficiently, which can lead to performance issues.
+- **Concrete Actionable Recommendation**: Implement efficient route handler concurrency mechanisms.
