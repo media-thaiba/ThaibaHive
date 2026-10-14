@@ -30,9 +30,10 @@ export class EgressGuard {
    * Pre-DNS static check to block known cloud metadata and internal hostnames.
    */
   public static isBlockedHostname(hostname: string): boolean {
-    const lower = hostname.toLowerCase();
+    const raw = hostname.toLowerCase();
+    const lower = raw.startsWith("[") && raw.endsWith("]") ? raw.slice(1, -1) : raw;
 
-    if (this.METADATA_HOSTNAMES.has(lower)) {
+    if (this.METADATA_HOSTNAMES.has(lower) || this.METADATA_HOSTNAMES.has(raw)) {
       return true;
     }
 
@@ -56,9 +57,12 @@ export class EgressGuard {
    * Checks whether an IPv4 or IPv6 address belongs to private, loopback, link-local, or reserved ranges.
    */
   public static isPrivateOrReservedIp(ip: string): boolean {
+    const raw = ip.toLowerCase();
+    const lower = raw.startsWith("[") && raw.endsWith("]") ? raw.slice(1, -1) : raw;
+
     // IPv4 Checks
     const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-    const match = ip.match(ipv4Regex);
+    const match = lower.match(ipv4Regex);
     if (match) {
       const [, o1, o2] = match.map(Number);
       if (
@@ -81,7 +85,6 @@ export class EgressGuard {
     }
 
     // IPv6 Checks
-    const lower = ip.toLowerCase();
     if (
       lower === "::1" ||
       lower === "::" ||
@@ -115,13 +118,16 @@ export class EgressGuard {
       };
     }
 
-    const hostname = parsed.hostname.toLowerCase();
+    const rawHostname = parsed.hostname.toLowerCase();
+    const hostname = rawHostname.startsWith("[") && rawHostname.endsWith("]")
+      ? rawHostname.slice(1, -1)
+      : rawHostname;
 
     // 1. Pre-DNS hostname check
-    if (this.isBlockedHostname(hostname)) {
+    if (this.isBlockedHostname(rawHostname) || this.isBlockedHostname(hostname)) {
       return {
         allowed: false,
-        reason: `Blocked destination hostname '${hostname}' (SSRF metadata/loopback protection).`,
+        reason: `Blocked destination hostname '${rawHostname}' (SSRF metadata/loopback protection).`,
       };
     }
 
@@ -129,7 +135,7 @@ export class EgressGuard {
     if (this.isPrivateOrReservedIp(hostname)) {
       return {
         allowed: false,
-        reason: `Target IP '${hostname}' is a private or reserved address (SSRF defense).`,
+        reason: `Target IP '${rawHostname}' is a private or reserved address (SSRF defense).`,
       };
     }
 
@@ -137,8 +143,8 @@ export class EgressGuard {
     try {
       let resolvedIps: string[] = [];
 
-      if (dnsMocks.has(hostname)) {
-        resolvedIps = dnsMocks.get(hostname)!;
+      if (dnsMocks.has(hostname) || dnsMocks.has(rawHostname)) {
+        resolvedIps = (dnsMocks.get(hostname) || dnsMocks.get(rawHostname))!;
       } else {
         const records = await dns.lookup(hostname, { all: true });
         resolvedIps = records.map((r) => r.address);
@@ -221,10 +227,14 @@ export class EgressGuard {
    * Test helper to register mocked DNS resolutions.
    */
   public static setDnsMock(hostname: string, ips: string[] | null): void {
+    const raw = hostname.toLowerCase();
+    const clean = raw.startsWith("[") && raw.endsWith("]") ? raw.slice(1, -1) : raw;
     if (ips === null) {
-      dnsMocks.delete(hostname.toLowerCase());
+      dnsMocks.delete(raw);
+      dnsMocks.delete(clean);
     } else {
-      dnsMocks.set(hostname.toLowerCase(), ips);
+      dnsMocks.set(raw, ips);
+      dnsMocks.set(clean, ips);
     }
   }
 
