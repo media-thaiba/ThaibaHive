@@ -2,6 +2,22 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.41.0] - 2026-10-14
+### Phase 12 (Track 3A): Unified Campus Identity (SAML/OIDC SSO) & Real-Time E2EE WebRTC Conferencing
+#### Added
+- **Hardened SAML 2.0 Engine & SP Metadata**: Enterprise identity federation engine with Exclusive XML Canonicalization (C14N `http://www.w3.org/2001/10/xml-exc-c14n#`), fail-closed XXE attack defense, RSA-SHA256/RSA-SHA1 digital signature validation, 600s bounded assertion replay cache, $\pm 300\text{s}$ clock skew verification, and standard SP metadata XML generation (`GET /api/auth/saml/metadata`).
+- **Hardened OIDC Engine**: RFC 7636 PKCE S256 code challenge generation and validation, timing-safe HMAC-SHA256 CSRF state tokens, and cryptographic JWKS ID token validation via `jose`.
+- **JIT User Provisioning & Escalation Guard**: Automated staff account provisioning with strict negative role boundary enforcement (unilaterally preventing external IdP assertions from escalating to `super_admin` or `system` by clamping to `admin` with security alerts), auto-association of `staffInstitutions` and `staffDepartments`, automated verified email timestamping (`emailVerifiedAt`), and regional mobile auth handoff.
+- **Append-Only Merkle Audit Ledger**: Chained SHA-256 Merkle audit trail (`sso_audit_logs`) with sequential integrity verification (`SsoAuditLedger.verifyChain`) for all federated logins, test probes, and JIT provisioning events.
+- **Real-Time WebRTC Conferencing & Perfect Negotiation**: WebRTC signaling manager with deterministic Perfect Negotiation politeness resolution, sequence-numbered message queuing in `conferenceSignals`, and dual transport via Server-Sent Events (`GET /api/streaming/rooms/[id]/events`) and HTTP POST (`POST /api/streaming/rooms/[id]/signal`). Includes RFC 5766 time-limited HMAC-SHA1 ephemeral TURN credentials with 24-hour expiration.
+- **Room State Machine & Atomic Admission Gate**: Room manager enforcing transactional capacity gating (`maxParticipants`), SHA-256 hashed passcode protection, host moderation controls (kick participant, lock room, end meeting), and 30-second heartbeat orphan sweeper.
+- **SFrame / Insertable Streams P-256 ECDH Key Agreement**: Per-room ephemeral ECDH key agreement with HKDF-SHA256 deriving 256-bit AES-GCM encryption keys and automated forward-secrecy epoch key rotation on participant join, departure, or eviction.
+- **Web Admin & Operations Cockpits**: Campus Identity & SSO Federation cockpit (`/admin/sso`) with SAML/OIDC configuration, SP metadata XML export, and live diagnostic probe runner; Real-time conferencing room cockpit (`/operations/conferencing/[id]`) with video tile grid, media controls, E2EE verification fingerprint dialog, and SSE signaling integration.
+- **Flutter Mobile Conferencing Companion**: Riverpod-managed `ConferenceRoomScreen` (`/conferencing/:id`) with on-device E2EE fingerprint modal, audio/video toggle controls, and seamless native auth handoff.
+- **Dual-Dialect Database Parity & Migrations**: 8 new multi-tenant tables (`saml_providers`, `oidc_providers`, `streaming_rooms`, `streaming_sessions`, `stream_recordings`, `conference_signals`, `sso_audit_logs`, and extended `federated_identity_mappings`) across SQLite and PostgreSQL schemas with non-destructive migrations `0040_magical_vertigo.sql` and `0024_tranquil_proteus.sql`.
+- **7-Key Granular RBAC Matrix & Feature Flags**: Added `sso:read`, `sso:manage`, `sso:test`, `conference:create`, `conference:join`, `conference:record`, and `conference:manage` across all 16 roles in `packages/auth/roles.ts`, protected by `sso_federation` and `webrtc_conferencing` feature flags.
+- **8-Stage End-to-End Simulation CLI**: Verified 100% completion across all 8 zero-egress stages via `pnpm conference:simulate`.
+
 ## [3.40.0] - 2026-10-14
 ### Phase 11: Multi-Campus Federation & SIS/LMS Standards Sync
 #### Added
