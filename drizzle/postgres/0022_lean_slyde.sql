@@ -161,5 +161,23 @@ CREATE INDEX "idx_pg_sis_sync_runs_inst_started" ON "sis_sync_runs" USING btree 
 CREATE INDEX "idx_pg_sis_sync_runs_conn_status" ON "sis_sync_runs" USING btree ("connector_id","status");--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_pg_sis_sync_runs_conn_running" ON "sis_sync_runs" USING btree ("connector_id") WHERE status = 'running';--> statement-breakpoint
 CREATE EXTENSION IF NOT EXISTS btree_gist;--> statement-breakpoint
-ALTER TABLE "cross_campus_bookings" ADD CONSTRAINT "cross_campus_bookings_no_overlap" EXCLUDE USING gist (pool_id WITH =, tsrange(starts_at::timestamp, ends_at::timestamp) WITH &&) WHERE (status IN ('approved', 'confirmed'));--> statement-breakpoint
-ALTER TABLE "cross_campus_bookings" ADD CONSTRAINT "cross_campus_bookings_time_order" CHECK (ends_at > starts_at);
+CREATE OR REPLACE FUNCTION immutable_tsrange(t1 text, t2 text)
+RETURNS tsrange AS $$
+  SELECT tsrange(t1::timestamp, t2::timestamp);
+$$ LANGUAGE sql IMMUTABLE;--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'cross_campus_bookings_no_overlap'
+  ) THEN
+    ALTER TABLE "cross_campus_bookings" ADD CONSTRAINT "cross_campus_bookings_no_overlap" EXCLUDE USING gist (pool_id WITH =, immutable_tsrange(starts_at, ends_at) WITH &&) WHERE (status IN ('approved', 'confirmed'));
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'cross_campus_bookings_time_order'
+  ) THEN
+    ALTER TABLE "cross_campus_bookings" ADD CONSTRAINT "cross_campus_bookings_time_order" CHECK (ends_at > starts_at);
+  END IF;
+END $$;
