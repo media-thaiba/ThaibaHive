@@ -89,3 +89,7 @@ build_history.json
 
 
 
+
+# Ruflo local secrets and runtime data
+.claude-flow/
+.swarm/

@@ -19,9 +19,11 @@ The following skills are available for this project. Use them when relevant:
 
 3. **gsd-core** (Get Shit Done) — Meta-prompting and context engineering framework. Commands: `/gsd-new-project`, `/gsd-help`. Install: `npx @opengsd/gsd-core@latest` (already installed).
 
-4. **ecc** (Everything Claude Code) — 180+ community skills including code review, accessibility audits, testing, security scanning, and specialized agents. Install: already in `~/.claude/skills/ecc/`. Sub-skills include: `code-reviewer`, `e2e-testing`, `tdd-workflow`, `security-auditor`, `impeccable`, and more.
+4. **ecc** (Everything Claude Code) v2.2.3 — 293 skills + 71 agents (`full` profile, hooks declined) covering code review, accessibility audits, TDD, testing, security scanning, and specialized workflows. Installed flat in `~/.claude/skills/` (state: `~/.claude/ecc/install-state.json`, verified by `npx ecc-universal@2.2.3 doctor`). **Use ECC skills proactively in future sessions** — load via the skill tool (e.g. `code-reviewer`, `e2e-testing`, `tdd-workflow`, `security-auditor`, `impeccable`, `verification-loop`). Update: `npx ecc-universal@2.2.3 install --profile full --target claude --no-hooks`.
 
 5. **ui-ux-pro-max** — Design intelligence skill with 57 UI styles, 95 color palettes, 56 font pairings, and 99 UX guidelines. Install: project-local at `.opencode/skills/ui-ux-pro-max/`. Run design system generation via Python scripts in its `scripts/` directory.
+
+6. **ruflo** (agent meta-harness) v3.56.9 — initialized in this project (2026-10-14). MCP server `claude-flow` registered via `.mcp.json` (bare tools: `memory_store`, `memory_search`, `swarm_init`, `agent_spawn`, `hooks_route`). 30 skills, 16 commands, 17 agents in project `.claude/`; mods `ruflo-mods`/`ruflo-swarm`/`ruflo-console` enabled in `.claude/settings.json`; runtime in `.claude-flow/` (gitignored). **Use proactively on multi-file/complex features** — swarm coordination, agent memory, background workers. Optional: `ruflo daemon start`, `ruflo swarm init`, `npx ruflo tui` for the console.
 <!-- END:thaibahive-skills -->
 
 <!-- BEGIN:plan-review-rule -->
