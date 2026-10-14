@@ -29,6 +29,13 @@ export class CredentialVault {
   }
 
   /**
+   * Alias for resolveCredential.
+   */
+  public static async resolveSecret(credentialRef: string): Promise<string | null> {
+    return this.resolveCredential(credentialRef);
+  }
+
+  /**
    * Masks a credential reference key for API DTO responses.
    * Returns a redacted string such as '***-ref' or '***-KEY'.
    */

@@ -1836,6 +1836,23 @@ export const sisMappingResolveSchema = z.object({
 });
 export type SisMappingResolveInput = z.infer<typeof sisMappingResolveSchema>;
 
+export const sisWebhookRecordSchema = z.object({
+  event: z.string().default("upsert"),
+  entityType: z.string().min(1),
+  externalId: z.string().min(1),
+  data: z.record(z.string(), z.any()).optional().default({}),
+  timestamp: z.string().optional(),
+});
+export type SisWebhookRecord = z.infer<typeof sisWebhookRecordSchema>;
+
+export const sisWebhookPayloadSchema = z.union([
+  sisWebhookRecordSchema,
+  z.object({
+    events: z.array(sisWebhookRecordSchema).min(1),
+  }),
+]);
+export type SisWebhookPayload = z.infer<typeof sisWebhookPayloadSchema>;
+
 export const resourcePoolCreateSchema = z.object({
   regionalGroupId: z.string().min(1).max(64),
   resourceType: z.enum(["lab", "hall", "bus", "exam_venue", "equipment"]),

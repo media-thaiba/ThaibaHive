@@ -11,6 +11,8 @@ import { sisSyncRuns, sisConnectors } from "@/db/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { ConnectorRegistry } from "./connector-registry";
+import { getSisAdapter } from "./adapters";
+import { RecordMapper } from "./record-mapper";
 import type { SisSyncTriggerInput } from "@/lib/validation/schemas";
 
 export class ConnectorRunConflictError extends Error {
@@ -351,4 +353,63 @@ export class SyncRunEngine {
       return updated;
     }
   }
+
+  /**
+   * Executes a sync run through its registered adapter and record mapper.
+   */
+  public static async executeSync(
+    institutionId: string,
+    runId: string
+  ): Promise<SisSyncRunRecord> {
+    const run = await this.getRun(institutionId, runId);
+    if (!run) throw new Error(`Run not found: ${runId}`);
+
+    const connector = await ConnectorRegistry.getConnector(institutionId, run.connectorId);
+    if (!connector) throw new Error(`Connector not found: ${run.connectorId}`);
+
+    try {
+      const adapter = getSisAdapter(connector.standard);
+      const result = await adapter.sync(connector, {
+        mode: run.mode as any,
+        checkpoint: run.checkpointJson,
+      });
+
+      let createdCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+      let failedCount = 0;
+
+      for (const rec of result.records) {
+        try {
+          const outcome = await RecordMapper.processRecord(
+            institutionId,
+            connector.id,
+            rec,
+            run.id
+          );
+          if (outcome.action === "create") createdCount++;
+          else if (outcome.action === "update") updatedCount++;
+          else if (outcome.action === "skip") skippedCount++;
+          else failedCount++;
+        } catch {
+          failedCount++;
+        }
+      }
+
+      const completed = await this.completeRun(institutionId, run.id, {
+        readCount: result.records.length,
+        createdCount,
+        updatedCount,
+        skippedCount,
+        failedCount,
+        checkpointJson: result.nextCheckpoint,
+      });
+
+      return completed!;
+    } catch (err: any) {
+      await this.failRun(institutionId, run.id, err.message || "Sync execution failed");
+      throw err;
+    }
+  }
 }
+

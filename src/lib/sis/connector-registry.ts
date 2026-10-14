@@ -158,6 +158,33 @@ export class ConnectorRegistry {
   }
 
   /**
+   * Retrieves a connector by ID across institutions (used by webhooks and background jobs).
+   */
+  public static async getConnectorById(id: string): Promise<SisConnectorRecord | null> {
+    if (this.useMemory || process.env.NODE_ENV === "test") {
+      return inMemoryStore.get(id) || null;
+    }
+
+    try {
+      const rows = await db
+        .select()
+        .from(sisConnectors)
+        .where(eq(sisConnectors.id, id))
+        .limit(1);
+
+      if (rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        ...r,
+        standard: r.standard as "edfi" | "oneroster" | "csv",
+        enabled: Boolean(r.enabled),
+      };
+    } catch {
+      return inMemoryStore.get(id) || null;
+    }
+  }
+
+  /**
    * Lists all connectors for an institution.
    */
   public static async listConnectors(institutionId: string): Promise<SisConnectorRecord[]> {
