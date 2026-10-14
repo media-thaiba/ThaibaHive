@@ -60,6 +60,7 @@ import '../features/events/presentation/event_detail_screen.dart';
 import '../features/reports/presentation/daily_reports_screen.dart';
 import '../features/reports/presentation/report_create_screen.dart';
 import '../features/approvals/presentation/approvals_screen.dart';
+import '../features/conferencing/screens/conference_room_screen.dart';
 import '../features/checklists/presentation/checklists_screen.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/availability/presentation/availability_screen.dart';
@@ -891,6 +892,20 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/operations/finance',
         redirect: (context, state) => '/finance',
+      ),
+      GoRoute(
+        path: '/conferencing/:id',
+        pageBuilder: (context, state) {
+          final roomId = state.pathParameters['id'] ?? '';
+          final roomName = state.uri.queryParameters['name'] ?? 'Campus Conference Room';
+          return AppTransitions.slide(
+            state: state,
+            child: ConferenceRoomScreen(
+              roomId: roomId,
+              roomName: roomName,
+            ),
+          );
+        },
       ),
 
       // ─── Generic Dynamic Handoff Route ───
