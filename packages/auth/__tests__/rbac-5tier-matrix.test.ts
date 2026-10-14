@@ -343,6 +343,101 @@ describe("5-Tier RBAC & Tenant Boundary Deep Enforcement Test Suite", () => {
     });
   });
 
+  describe("Phase 12: Unified Campus Identity (SSO) & Real-Time WebRTC Conferencing (7 Keys x Roles)", () => {
+    const ssoKeys = ["sso:read", "sso:manage", "sso:test"] as const;
+    const confKeys = ["conference:create", "conference:join", "conference:record", "conference:manage"] as const;
+
+    it("super_admin has wildcard access to all SSO and conferencing permissions", () => {
+      [...ssoKeys, ...confKeys].forEach((perm) => {
+        expect(hasPermission("super_admin", perm)).toBe(true);
+      });
+    });
+
+    it("admin has all 7 SSO and conferencing permissions", () => {
+      [...ssoKeys, ...confKeys].forEach((perm) => {
+        expect(hasPermission("admin", perm)).toBe(true);
+      });
+    });
+
+    it("principal has sso:read and all conference permissions, but denied sso:manage and sso:test", () => {
+      expect(hasPermission("principal", "sso:read")).toBe(true);
+      confKeys.forEach((perm) => {
+        expect(hasPermission("principal", perm)).toBe(true);
+      });
+      // Negative boundaries
+      expect(hasPermission("principal", "sso:manage")).toBe(false);
+      expect(hasPermission("principal", "sso:test")).toBe(false);
+    });
+
+    it("hod has conference permissions, but strictly denied all SSO management/read permissions", () => {
+      confKeys.forEach((perm) => {
+        expect(hasPermission("hod", perm)).toBe(true);
+      });
+      // Negative boundaries
+      ssoKeys.forEach((perm) => {
+        expect(hasPermission("hod", perm)).toBe(false);
+      });
+    });
+
+    it("staff can create and join conferences, but cannot record, manage rooms, or touch SSO", () => {
+      expect(hasPermission("staff", "conference:create")).toBe(true);
+      expect(hasPermission("staff", "conference:join")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("staff", "conference:record")).toBe(false);
+      expect(hasPermission("staff", "conference:manage")).toBe(false);
+      ssoKeys.forEach((perm) => {
+        expect(hasPermission("staff", perm)).toBe(false);
+      });
+    });
+
+    it("teacher has conference host/record capabilities, but denied SSO permissions", () => {
+      confKeys.forEach((perm) => {
+        expect(hasPermission("teacher", perm)).toBe(true);
+      });
+      // Negative boundaries
+      ssoKeys.forEach((perm) => {
+        expect(hasPermission("teacher", perm)).toBe(false);
+      });
+    });
+
+    it("specialized accounts and purchase roles can join conferences, but cannot create or manage them", () => {
+      expect(hasPermission("accounts", "conference:join")).toBe(true);
+      expect(hasPermission("purchase", "conference:join")).toBe(true);
+
+      // Negative boundaries
+      expect(hasPermission("accounts", "conference:create")).toBe(false);
+      expect(hasPermission("accounts", "conference:record")).toBe(false);
+      expect(hasPermission("accounts", "conference:manage")).toBe(false);
+      expect(hasPermission("accounts", "sso:read")).toBe(false);
+
+      expect(hasPermission("purchase", "conference:create")).toBe(false);
+      expect(hasPermission("purchase", "conference:record")).toBe(false);
+      expect(hasPermission("purchase", "conference:manage")).toBe(false);
+      expect(hasPermission("purchase", "sso:read")).toBe(false);
+    });
+
+    it("regional_admin has sso:read and conference manage capabilities, but denied sso:manage", () => {
+      expect(hasPermission("regional_admin", "sso:read")).toBe(true);
+      confKeys.forEach((perm) => {
+        expect(hasPermission("regional_admin", perm)).toBe(true);
+      });
+      // Negative boundaries
+      expect(hasPermission("regional_admin", "sso:manage")).toBe(false);
+      expect(hasPermission("regional_admin", "sso:test")).toBe(false);
+    });
+
+    it("regional_auditor has sso:read and conference:join, but denied create, record, manage, sso:manage", () => {
+      expect(hasPermission("regional_auditor", "sso:read")).toBe(true);
+      expect(hasPermission("regional_auditor", "conference:join")).toBe(true);
+      // Negative boundaries
+      expect(hasPermission("regional_auditor", "conference:create")).toBe(false);
+      expect(hasPermission("regional_auditor", "conference:record")).toBe(false);
+      expect(hasPermission("regional_auditor", "conference:manage")).toBe(false);
+      expect(hasPermission("regional_auditor", "sso:manage")).toBe(false);
+      expect(hasPermission("regional_auditor", "sso:test")).toBe(false);
+    });
+  });
+
   describe("Role Validation & Anti-Tampering Security Guardrails", () => {
     it("should validate all declared valid staff roles", () => {
       expect(VALID_STAFF_ROLES).toContain("super_admin");

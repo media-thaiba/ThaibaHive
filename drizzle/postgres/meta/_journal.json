@@ -169,6 +169,13 @@
       "when": 1791993892575,
       "tag": "0023_thin_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791997872729,
+      "tag": "0024_tranquil_proteus",
+      "breakpoints": true
     }
   ]
 }

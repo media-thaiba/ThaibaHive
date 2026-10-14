@@ -2397,39 +2397,82 @@ export const dataLakehousePartitions = sqliteTable("data_lakehouse_partitions", 
 export const samlProviders = sqliteTable("saml_providers", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   idpEntityId: text("idp_entity_id").notNull(),
   ssoUrl: text("sso_url").notNull(),
+  sloUrl: text("slo_url"),
   x509Certificate: text("x509_certificate").notNull(),
+  certExpiresAt: text("cert_expires_at"),
+  binding: text("binding").notNull().default("HTTP-POST"),
+  wantAssertionsSigned: boolean("want_assertions_signed").notNull().default(true),
+  attributeMappingJson: text("attribute_mapping_json"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_saml_providers_inst_id").on(t.institutionId),
+}));
 
 export const oidcProviders = sqliteTable("oidc_providers", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   clientId: text("client_id").notNull(),
   clientSecret: text("client_secret").notNull(),
   issuerUrl: text("issuer_url").notNull(),
   discoveryUrl: text("discovery_url").notNull(),
+  authorizationEndpoint: text("authorization_endpoint"),
+  tokenEndpoint: text("token_endpoint"),
+  userinfoEndpoint: text("userinfo_endpoint"),
+  jwksUri: text("jwks_uri"),
+  scopes: text("scopes").notNull().default("openid email profile"),
+  discoveryCacheJson: text("discovery_cache_json"),
+  jwksCacheJson: text("jwks_cache_json"),
+  cacheExpiresAt: text("cache_expires_at"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_oidc_providers_inst_id").on(t.institutionId),
+}));
 
 export const federatedIdentityMappings = sqliteTable("federated_identity_mappings", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),
-  userId: text("user_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
   providerType: text("provider_type").notNull(),
+  providerId: text("provider_id"),
   externalSubjectId: text("external_subject_id").notNull(),
+  externalEmail: text("external_email"),
+  externalGroupsJson: text("external_groups_json"),
   mappedRole: text("mapped_role").notNull().default("staff"),
   attributesJson: text("attributes_json"),
+  jitProvisioned: boolean("jit_provisioned").notNull().default(false),
   lastLoginAt: text("last_login_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_fim_inst_id").on(t.institutionId),
+  uniqueSubjectIdx: uniqueIndex("idx_fim_unique_sub").on(t.institutionId, t.providerType, t.externalSubjectId),
+}));
+
+export const ssoAuditLogs = sqliteTable("sso_audit_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  providerId: text("provider_id"),
+  providerType: text("provider_type").notNull(), // SAML | OIDC
+  eventType: text("event_type").notNull(), // login_success | login_failure | jit_provision | idp_created | idp_updated
+  subjectId: text("subject_id"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  prevHash: text("prev_hash"),
+  merkleHash: text("merkle_hash").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  instIdx: index("idx_sso_audit_inst_id").on(t.institutionId),
+}));
 
 // ─── Sprint-016: Index Auto-Tuner ───
 
@@ -2554,34 +2597,73 @@ export const learningPathRecommendations = sqliteTable("learning_path_recommenda
 export const streamingRooms = sqliteTable("streaming_rooms", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
   roomName: text("room_name").notNull(),
   hostUserId: text("host_user_id").notNull(),
   maxParticipants: integer("max_participants").notNull().default(250),
+  passcodeHash: text("passcode_hash"),
+  isE2eeEnabled: boolean("is_e2ee_enabled").notNull().default(true),
+  roomType: text("room_type").notNull().default("conference"), // classroom | conference | incident_room
+  recordingEnabled: boolean("recording_enabled").notNull().default(false),
+  expiresAt: text("expires_at"),
   status: text("status").notNull().default("ACTIVE"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_streaming_rooms_inst_id").on(t.institutionId),
+}));
 
 export const streamingSessions = sqliteTable("streaming_sessions", {
   id: text("id").primaryKey(),
-  roomId: text("room_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  roomId: text("room_id").notNull().references(() => streamingRooms.id, { onDelete: "cascade" }),
   participantUserId: text("participant_user_id").notNull(),
+  peerId: text("peer_id"),
   role: text("role").notNull().default("ATTENDEE"),
   audioMuted: boolean("audio_muted").notNull().default(true),
   videoMuted: boolean("video_muted").notNull().default(false),
+  e2eePublicKey: text("e2ee_public_key"),
+  connectionQuality: text("connection_quality").default("good"),
+  isScreenSharing: boolean("is_screen_sharing").notNull().default(false),
   joinedAt: text("joined_at").notNull().default(sql`(current_timestamp)`),
   leftAt: text("left_at"),
-});
+}, (t) => ({
+  instIdx: index("idx_streaming_sessions_inst_id").on(t.institutionId),
+  roomPeerIdx: index("idx_streaming_sessions_room_peer").on(t.roomId, t.peerId),
+}));
 
 export const streamRecordings = sqliteTable("stream_recordings", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),
-  roomId: text("room_id").notNull(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  roomId: text("room_id").notNull().references(() => streamingRooms.id, { onDelete: "cascade" }),
   streamId: text("stream_id").notNull(),
   durationSeconds: integer("duration_seconds").notNull().default(0),
   fileSizeBytes: integer("file_size_bytes").notNull().default(0),
   recordingUrl: text("recording_url").notNull(),
+  checksumSha256: text("checksum_sha256"),
+  isEncrypted: boolean("is_encrypted").notNull().default(false),
+  retentionDays: integer("retention_days").notNull().default(90),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdx: index("idx_stream_recordings_inst_id").on(t.institutionId),
+}));
+
+export const conferenceSignals = sqliteTable("conference_signals", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+  roomId: text("room_id").notNull().references(() => streamingRooms.id, { onDelete: "cascade" }),
+  senderPeerId: text("sender_peer_id").notNull(),
+  recipientPeerId: text("recipient_peer_id").notNull(), // target peer ID or '*' for broadcast
+  signalType: text("signal_type").notNull(), // offer | answer | ice_candidate | peer_joined | peer_left | key_exchange | room_lock
+  payloadJson: text("payload_json").notNull(),
+  sequenceNum: integer("sequence_num").notNull().default(1),
+  delivered: boolean("delivered").notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  instIdx: index("idx_conference_signals_inst_id").on(t.institutionId),
+  roomRecipIdx: index("idx_conference_signals_room_recip").on(t.roomId, t.recipientPeerId),
+  createdIdx: index("idx_conference_signals_created").on(t.createdAt),
+}));
 
 // ─── Sprint-017: PostgreSQL Multi-Node Cluster Certification ───
 

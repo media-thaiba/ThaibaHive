@@ -281,6 +281,13 @@
       "when": 1791993890780,
       "tag": "0039_real_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1791997858383,
+      "tag": "0040_magical_vertigo",
+      "breakpoints": true
     }
   ]
 }

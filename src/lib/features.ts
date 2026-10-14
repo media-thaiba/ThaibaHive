@@ -12,7 +12,9 @@ export type FeatureFlag =
   | 'live_streaming'
   | 'today_hub'
   | 'media_queue'
-  | 'sis_sync';
+  | 'sis_sync'
+  | 'sso_federation'
+  | 'webrtc_conferencing';
 
 // In production, agentic workflows require explicit enablement (process.env.FEATURE_AGENTIC_WORKFLOWS === 'true').
 // In development/test, it defaults to enabled unless explicitly set to 'false'.
@@ -27,6 +29,12 @@ const defaultLiveStreamingFlag = isProd
   ? process.env.FEATURE_LIVE_STREAMING === 'true'
   : process.env.FEATURE_LIVE_STREAMING !== 'false';
 const defaultSisSyncFlag = process.env.FEATURE_SIS_SYNC === 'true';
+const defaultSsoFederationFlag = isProd
+  ? process.env.FEATURE_SSO_FEDERATION === 'true'
+  : process.env.FEATURE_SSO_FEDERATION !== 'false';
+const defaultWebRtcConferencingFlag = isProd
+  ? process.env.FEATURE_WEBRTC_CONFERENCING === 'true'
+  : process.env.FEATURE_WEBRTC_CONFERENCING !== 'false';
 
 export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   nfc_enrollment: true,
@@ -42,6 +50,8 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   today_hub: true,
   media_queue: true,
   sis_sync: defaultSisSyncFlag,
+  sso_federation: defaultSsoFederationFlag,
+  webrtc_conferencing: defaultWebRtcConferencingFlag,
 };
 
 // In-memory per-institution override registry for staged/canary tenant rollouts (D13)
@@ -97,5 +107,13 @@ export function isMediaQueueEnabled(institutionId?: string): boolean {
 
 export function isSisSyncEnabled(institutionId?: string): boolean {
   return isFeatureEnabled('sis_sync', institutionId);
+}
+
+export function isSsoFederationEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('sso_federation', institutionId);
+}
+
+export function isWebRtcConferencingEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('webrtc_conferencing', institutionId);
 }
 

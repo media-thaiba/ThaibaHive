@@ -64,6 +64,7 @@ const basePermissions = {
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "crosscampus:read", "crosscampus:request",
+    "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   institutional_head: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -92,6 +93,7 @@ const basePermissions = {
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:documents:confirm", "ai:rag:query", "ai:rag:manage", "ai:remediation:trigger", "ai:remediation:approve", "ai:audit:view", "ai:usage:view",
     "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
+    "sso:read", "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   academic_coordinator: [
     "academic.grade.create", "academic.classes.manage", "academic.classes.manage", "academic.classes.manage",
@@ -104,6 +106,7 @@ const basePermissions = {
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "workflow_studio:read", "workflow_studio:design",
+    "conference:create", "conference:join",
   ],
   exam_coordinator: [
     "exam:create", "exam:read", "exam:publish_results", "exam:enter_marks", "exam:approve_marks",
@@ -114,6 +117,7 @@ const basePermissions = {
     "chat:channels:create", "chat:channels:view", "chat:messages:send", "chat:messages:read", "chat:messages:delete_own", "chat:presence:read",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "workflow_studio:read", "workflow_studio:design",
+    "conference:create", "conference:join",
   ],
   teacher: [
     "exam.marks.enter", "exam.marks.enter", "exam:enter_marks", "exam:read",
@@ -128,6 +132,7 @@ const basePermissions = {
     "search:global",
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design",
+    "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   inspector: [
     "reports:read", "reports:review", "staff:read", "attendance:read", "student_attendance:read",
@@ -137,6 +142,7 @@ const basePermissions = {
     "chat:channels:view", "chat:messages:read", "chat:presence:read",
     "ai:rag:query", "ai:audit:view",
     "marketplace:plugins:read", "workflow_studio:read", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
+    "conference:join",
   ],
 };
 
@@ -181,6 +187,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view", "hardware:gates:lockdown",
     "marketplace:plugins:read", "workflow_studio:read", "live_stream:view",
     "sis:read", "sis:manage", "sis:sync", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
+    "sso:read", "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   regional_auditor: [
     "regional:view", "warehouse:export", "reports:read", "reports:review", "staff:read",
@@ -205,6 +212,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "crosscampus:read",
+    "sso:read", "conference:join",
   ],
   admin: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -276,6 +284,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view", "hardware:gates:lockdown",
     "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:plugins:approve", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "sis:manage", "sis:sync", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
+    "sso:read", "sso:manage", "sso:test", "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   principal: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -346,6 +355,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:manage", "hardware:devices:read", "hardware:badges:manage", "hardware:badges:read", "hardware:access:manage", "hardware:access:read", "hardware:biometrics:manage", "hardware:biometrics:read", "hardware:telemetry:read", "hardware:zones:manage", "hardware:zones:read", "hardware:radar:view", "hardware:gates:lockdown",
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
+    "sso:read", "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   hod: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -398,6 +408,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "crosscampus:read", "crosscampus:request",
+    "conference:create", "conference:join", "conference:record", "conference:manage",
   ],
   staff: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -446,6 +457,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "live_stream:view", "live_stream:snippets:read",
     "crosscampus:read", "crosscampus:request",
+    "conference:create", "conference:join",
   ],
   accounts: [
     "staff:read",
@@ -483,6 +495,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
     "marketplace:plugins:read", "workflow_studio:read",
     "sis:read", "crosscampus:read",
+    "conference:join",
   ],
   purchase: [
     "staff:read",
@@ -516,6 +529,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "hardware:devices:read", "hardware:badges:read", "hardware:access:read", "hardware:telemetry:read", "hardware:zones:read", "hardware:radar:view",
     "marketplace:plugins:read", "workflow_studio:read",
     "crosscampus:read", "crosscampus:request",
+    "conference:join",
   ],
 };
 

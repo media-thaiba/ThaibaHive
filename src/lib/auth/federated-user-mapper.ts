@@ -5,7 +5,9 @@ import { eq, and } from 'drizzle-orm';
 
 export interface FederatedIdentityPayload {
   tenantId: string;
+  institutionId?: string;
   providerType: 'SAML' | 'OIDC';
+  providerId?: string;
   externalSubjectId: string;
   email: string;
   name?: string;
@@ -18,6 +20,8 @@ export class FederatedUserMapper {
    * Maps external identity to a local staff user record, auto-provisioning via JIT if necessary.
    */
   public static async mapOrCreateUser(payload: FederatedIdentityPayload): Promise<{ userId: string; role: string; email: string }> {
+    const institutionId = payload.institutionId || payload.tenantId;
+
     // Check if mapping exists
     const [existingMapping] = await db
       .select()
@@ -85,11 +89,15 @@ export class FederatedUserMapper {
     await db.insert(federatedIdentityMappings).values({
       id: `map_${crypto.randomUUID()}`,
       tenantId: payload.tenantId,
+      institutionId,
       userId: targetUserId,
       providerType: payload.providerType,
+      providerId: payload.providerId,
       externalSubjectId: payload.externalSubjectId,
+      externalEmail: payload.email,
       mappedRole,
       attributesJson: JSON.stringify(payload.attributes || {}),
+      jitProvisioned: !existingStaff,
       lastLoginAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     });
