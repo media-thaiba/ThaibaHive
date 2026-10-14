@@ -1807,7 +1807,8 @@ export const sisConnectorCreateSchema = z.object({
   scheduleCron: z.string().max(64).optional().nullable(),
   fieldMappingJson: z.string().optional().nullable(),
 });
-export type SisConnectorCreateInput = z.infer<typeof sisConnectorCreateSchema>;
+export type SisConnectorCreateInput = z.input<typeof sisConnectorCreateSchema>;
+export type SisConnectorCreateOutput = z.output<typeof sisConnectorCreateSchema>;
 
 export const sisConnectorUpdateSchema = z.object({
   name: z.string().min(1).max(128).optional(),
@@ -1825,7 +1826,8 @@ export const sisSyncTriggerSchema = z.object({
   mode: z.enum(["dry_run", "full", "delta"]).default("full"),
   checkpoint: z.string().optional().nullable(),
 });
-export type SisSyncTriggerInput = z.infer<typeof sisSyncTriggerSchema>;
+export type SisSyncTriggerInput = z.input<typeof sisSyncTriggerSchema>;
+export type SisSyncTriggerOutput = z.output<typeof sisSyncTriggerSchema>;
 
 export const sisMappingResolveSchema = z.object({
   action: z.enum(["map", "create", "ignore"]),
