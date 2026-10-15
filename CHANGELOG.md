@@ -2,6 +2,19 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.42.0] - 2026-10-15
+### NFC Presence Verification — Server-First Enforcement Core
+#### Added
+- **Server-Side Presence Enforcement Engine** (`presence-enforcement-engine.ts`): deterministic fail-closed recomputation of geofence distance (Haversine against active `attendance_locations`), mock-location heuristics, and WiFi-SSID corroboration; client-provided `isWithinGeofence`/`isMockLocation` claims are discarded while `presence_tracking` is enforcing. Effective settings resolve institution row → global row → safe defaults (shadow mode ON), with `enforceable = flag && isEnabled && !shadowMode` and `enforcePresence` guaranteed never to throw into request handlers.
+- **NFC Anti-Replay with Two-Tier Nonce Enforcement**: live taps consume a 5-minute single-use Redis/JTI nonce (`nfc:{staffId}:{nonce}`, ±2-minute future slack) while offline outbox entries bind to a content-hash key (`nfc-offline:{sha256(staff|tag|tapAt|deviceSequence)}`) with a 48-hour window, always-on double-flush guard, and flag-gated age/future/shift-window bounds (6h pre-shift, 12h post-shift). Validation is precheck-first so failed taps never burn a nonce; `requireAntiReplay` follows `isPresenceTrackingEnabled()` per tenant.
+- **Presence-Log Ingestion Rewrite**: full Zod validation (`presenceLogEntrySchema`), institution scoping via `resolveRequestInstitution`, bulk `{ logs: [...] }` batched transactions, and automatic `enforcePresence` evaluation on every ingestion while the flag is ON — stored client geofence flags are overwritten with server verdicts.
+- **Presence Staleness Sweep Cron** (`/api/cron/presence-sweep`): machine-secret-authorized sweep auto-checking-out staff whose last verification exceeded `checkIntervalMinutes + gracePeriodMinutes`, gated by shadow mode, capping timestamps at `min(now, shiftEnd, session-date 23:59)`; bounded by `CRON_SECRET_ROUTES` with the isolated `role: "system"` identity.
+- **Presence Violations Read API** (`GET /api/attendance/violations`): administrative violation read model (`attendance:manage`) listing attendance days with `geofenceViolations > 0`, staff identity join, date/staff filters, and cursor-safe pagination, tenant-scoped through `resolveRequestInstitution` with the sanctioned global-admin bypass.
+- **Feature Flag `presence_tracking`**: default-OFF, fail-closed per-tenant gate wired into check-in, presence-log, check-out, cron, and NFC anti-replay paths; per-tenant enablement via `setTenantFeatureFlag`.
+- **Dual-Dialect Schema Foundation**: `institution_id` + `source` columns with tenant indexes on `attendance_logs` and `presence_logs` across SQLite and PostgreSQL (`0041_loving_romulus.sql`, `0025_chilly_warlock.sql`), plus a deterministic chunked institution backfill script with ambiguity tracking.
+- **Flutter Mobile Presence Pipeline**: background `performCheck` ticks now verified in the main isolate (reentrancy-guarded), presence settings fetched with a 5-minute cache honoring server `isEnabled`, offline buffer flush after each tick, `staffId` persisted through `startTracking`/`resumeTracking`, presence-log uploads fixed for the double `/api` prefix, and presence models aligned to the camelCase server contract; `GET /api/attendance/settings` is readable by any tenant member (`attendance:read`) while writes remain `attendance:manage`.
+- **Tests**: 58 new Jest tests across the engine (24), cron sweep (8), NFC anti-replay (20), and violations API (6); Jest `TZ=UTC` pinned via `jest.global-setup.ts` for deterministic shift-window arithmetic.
+
 ## [3.41.0] - 2026-10-14
 ### Phase 12 (Track 3A): Unified Campus Identity (SAML/OIDC SSO) & Real-Time E2EE WebRTC Conferencing
 #### Added
