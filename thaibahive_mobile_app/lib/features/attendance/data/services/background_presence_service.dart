@@ -15,6 +15,7 @@ import 'package:thaibahive_mobile/models/presence_verification_settings.dart';
 import 'package:thaibahive_mobile/models/presence_log.dart';
 import 'package:thaibahive_mobile/core/services/mock_location_detector.dart';
 import 'presence_verification_service.dart';
+import 'presence_enforcement_timing.dart';
 
 // ── Background isolate entry points ──────────────────────────────────────────
 // These MUST be top-level functions (not static class methods).
@@ -39,7 +40,8 @@ void backgroundServiceOnStart(ServiceInstance service) async {
     }
   });
 
-  // 1-minute ticker for presence checks
+  // 1-minute wake ticker — actual GPS sampling / uploads are throttled to
+  // the server-configured checkIntervalMinutes inside _onPerformCheck.
   Timer.periodic(const Duration(minutes: 1), (timer) async {
     if (service is AndroidServiceInstance) {
       if (await service.isForegroundService()) {
@@ -93,11 +95,12 @@ class BackgroundPresenceService {
   double? _officeLongitude;
   double? _geofenceRadius;
   bool _lastWithinGeofence = true;
-  int _graceCount = 0;
+  final GraceTracker _graceTracker = GraceTracker();
   List<Map<String, dynamic>> _offlineBuffer = [];
 
   // performCheck wiring (v3.42.0)
   bool _checkInFlight = false;
+  final PresenceCheckThrottle _checkThrottle = PresenceCheckThrottle();
   PresenceVerificationSettings? _settingsCache;
   DateTime? _settingsFetchedAt;
 
@@ -160,10 +163,12 @@ class BackgroundPresenceService {
 
   /// Handle a `performCheck` tick from the background isolate.
   ///
-  /// Resolves tracking state from memory (or secure storage after an app
-  /// restart), fetches presence-verification settings (cached), skips ticks
-  /// while verification is disabled server-side, then runs the full
-  /// verify → upload pipeline and flushes any offline buffer.
+  /// The background isolate ticks every minute, but GPS sampling and presence
+  /// uploads are throttled to the server-configured `checkIntervalMinutes`
+  /// (v3.42.1 — cuts ~1440 uploads/staff/day down to one per interval while
+  /// offline buffer flushes still run every tick for fast recovery). Grace
+  /// violations use wall-clock time (GraceTracker), so throttling does not
+  /// dilate the grace window.
   Future<void> _onPerformCheck() async {
     if (_checkInFlight) return;
     _checkInFlight = true;
@@ -187,6 +192,14 @@ class BackgroundPresenceService {
       final settings = await _fetchSettings();
       // Server-side verification disabled → do not upload presence ticks.
       if (settings != null && !settings.isEnabled) return;
+
+      // Throttle GPS + upload to the configured check interval; the offline
+      // buffer still flushes every tick so connectivity recovery is prompt.
+      final intervalMinutes = (settings?.checkIntervalMinutes ?? 10).clamp(1, 180).toInt();
+      if (!_checkThrottle.shouldRun(interval: Duration(minutes: intervalMinutes))) {
+        await flushOfflineBuffer();
+        return;
+      }
 
       await verifyPresence(
         staffId: staffId,
@@ -218,7 +231,8 @@ class BackgroundPresenceService {
     _geofenceRadius = geofenceRadius;
     _isTracking = true;
     _lastWithinGeofence = true;
-    _graceCount = 0;
+    _graceTracker.markWithin();
+    _checkThrottle.reset();
 
     // Store tracking state for resume on restart
     await _secureStorage.write(key: 'tracking_attendance_id', value: attendanceId);
@@ -318,12 +332,11 @@ class BackgroundPresenceService {
       // Update hysteresis state
       _lastWithinGeofence = withinGeofence;
 
-      // Handle grace period
+      // Grace period (wall-clock based — independent of check cadence)
       if (!withinGeofence) {
-        _graceCount++;
-        final graceMinutes = settings?.gracePeriodMinutes ?? 5;
+        final graceMinutes = (settings?.gracePeriodMinutes ?? 5).clamp(1, 60).toInt();
 
-        if (_graceCount >= graceMinutes) {
+        if (_graceTracker.markOutside(DateTime.now(), graceMinutes: graceMinutes)) {
           // Grace period exceeded - handle violation
           await _handleGeofenceViolation(
             staffId: staffId,
@@ -333,7 +346,7 @@ class BackgroundPresenceService {
           );
         }
       } else {
-        _graceCount = 0;
+        _graceTracker.markWithin();
       }
 
       // Get battery level

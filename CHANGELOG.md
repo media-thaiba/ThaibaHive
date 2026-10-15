@@ -2,6 +2,17 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.42.1] - 2026-10-15
+### Presence Verification — Operations Cockpit & Mobile Check Throttling
+#### Added
+- **Violations Cockpit UI** (`/admin/attendance-locations?tab=violations`): third Violations tab with violation-days / staff-affected / total-occurrences stat cards, 30-day default date range, staff name/employee-ID search, status and presence-status badges (`late`/`absent`, `verified`/`unverified`/`field_work`), enforcement-context chips (verification on/off, shadow mode, `presence_tracking` flag — degrading gracefully on 403), pagination, skeleton loading, and empty states; tabs are deep-linkable via `?tab=` for shareable review links.
+- **Violations API Search & Aggregates**: `GET /api/attendance/violations` accepts a `search` parameter (case-insensitive `LIKE` across staff first/last name and employee ID) and returns `stats` (`violationDays`, `staffAffected`, `totalOccurrences`) computed under the identical tenant/search/date scoping as the row set.
+- **Mobile Presence Check Throttling**: background `performCheck` GPS sampling and presence-log uploads now throttle to the server-configured `checkIntervalMinutes` (clamped 1–180) via `PresenceCheckThrottle` — cutting ~1,440 uploads/staff/day down to one per interval (~93% DB and battery-usage reduction) while the offline buffer still flushes every minute tick for prompt connectivity recovery; tracking restarts always run an immediate check.
+- **Wall-Clock Grace Tracking**: geofence grace migrated from tick-counting to `GraceTracker` wall-clock windows (`outsideSince` → `gracePeriodMinutes` elapsed), so grace semantics stay in real minutes regardless of check cadence; auto-checkout-on-violation timing unchanged.
+- **Tests**: 8 new Dart unit tests covering throttle first-run/block/elapsed/reset semantics and grace window start/fire/reset/zero-grace behaviour.
+#### Changed
+- `attendance-locations` tab bar now persists the active tab into the URL via `history.replaceState` without full navigation.
+
 ## [3.42.0] - 2026-10-15
 ### NFC Presence Verification — Server-First Enforcement Core
 #### Added
