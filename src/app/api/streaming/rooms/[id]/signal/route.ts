@@ -59,7 +59,7 @@ export const POST = requireAuth(async (request, session, context) => {
   const senderPeerId = activeSession.peerId;
 
   // Rate limit signal dispatch per peer
-  const rl = await checkDistributedRateLimit(`streaming:signal:${senderPeerId}`, 'general');
+  const rl = await checkDistributedRateLimit(`streaming:signal:${senderPeerId}`, 'write');
   if (!rl.allowed) {
     return rateLimitResponse(rl.resetMs);
   }

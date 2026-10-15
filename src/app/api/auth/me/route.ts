@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { verifySession } from "@/lib/auth";
 import { verifyPassword, hashPassword } from "@/lib/auth";
+import { getStaffInstitutionMemberships } from "@thaiba/auth";
 import { passwordChangeSchema, profileUpdateSchema } from "@/lib/auth/schemas";
 import { eq, sql } from "drizzle-orm";
 
@@ -19,6 +20,10 @@ export async function GET() {
   if (!staffMember) {
     return NextResponse.json({ error: "Staff not found" }, { status: 404 });
   }
+  const institutionId =
+    session.institutionId && session.institutionId !== "global"
+      ? session.institutionId
+      : ((await getStaffInstitutionMemberships(session.staffId))[0] ?? null);
   return NextResponse.json({
     staff: {
       id: staffMember.id,
@@ -33,6 +38,7 @@ export async function GET() {
       isActive: staffMember.isActive,
       isFirstLogin: staffMember.isFirstLogin,
       nfcTagId: staffMember.nfcTagId,
+      institutionId,
     },
   });
 }

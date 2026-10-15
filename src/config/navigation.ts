@@ -10,7 +10,7 @@ import {
   Receipt, CalendarClock, AlertTriangle, Banknote, FileSearch,
   Inbox, UserCheck, Image as ImageIcon, CalendarRange,
   Store, Boxes, BookOpen, Workflow,
-  Puzzle, Radio, Network, Share2,
+  Puzzle, Radio, Network, Share2, Video,
   type LucideIcon,
 } from "lucide-react";
 
@@ -148,6 +148,7 @@ const operationsItems: NavItem[] = [
   { href: "/operations/media-library", label: "Media Library", desc: "Shared institutional photos, videos & documents", icon: ImageIcon, workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff"] },
   { href: "/operations/workflow-studio", label: "Workflow Studio", desc: "Design & publish visual DAG workflows for the agentic engine", icon: Workflow, permission: "workflow_studio:read", workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff", "teacher", "accounts", "purchase", "coordinator", "exam_coordinator", "regional_admin", "regional_auditor"] },
   { href: "/operations/live-sessions", label: "Live Sessions", desc: "Duplex multimodal streaming cockpit: transcripts, hazard alerts & session controls", icon: Radio, permission: "live_stream:view", workspace: "operations", roles: ["admin", "super_admin", "principal", "hod"] },
+  { href: "/operations/conferencing", label: "Conferencing", desc: "WebRTC conference rooms, E2EE key verification & live participant management", icon: Video, permission: "conference:join", workspace: "operations", roles: ["admin", "super_admin", "principal", "hod", "staff"] },
 ];
 
 // --- Administration ---
