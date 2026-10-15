@@ -94,13 +94,14 @@ describe("GET /api/attendance/violations", () => {
   it("lists violation rows for an authorized admin", async () => {
     mockVerifySession.mockResolvedValueOnce({ staffId: "admin-1", role: "admin" });
     mockHasPermission.mockReturnValueOnce(true);
-    mockGet.mockResolvedValueOnce({ count: 2 });
+    mockGet.mockResolvedValueOnce({ violationDays: 2, staffAffected: 1, totalOccurrences: 4 });
     mockAll.mockResolvedValueOnce([violationRow, { ...violationRow, id: "log-2", geofenceViolations: 1 }]);
 
     const res = await GET(new Request("http://localhost/api/attendance/violations"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.total).toBe(2);
+    expect(data.stats).toEqual({ violationDays: 2, staffAffected: 1, totalOccurrences: 4 });
     expect(data.page).toBe(1);
     expect(data.limit).toBe(50);
     expect(data.violations).toHaveLength(2);
@@ -111,7 +112,7 @@ describe("GET /api/attendance/violations", () => {
   it("scopes non-admin callers to their resolved institution", async () => {
     mockVerifySession.mockResolvedValueOnce({ staffId: "principal-1", role: "principal" });
     mockHasPermission.mockReturnValueOnce(true);
-    mockGet.mockResolvedValueOnce({ count: 1 });
+    mockGet.mockResolvedValueOnce({ violationDays: 1, staffAffected: 1, totalOccurrences: 3 });
     mockAll.mockResolvedValueOnce([violationRow]);
 
     const res = await GET(new Request("http://localhost/api/attendance/violations"));
@@ -125,7 +126,7 @@ describe("GET /api/attendance/violations", () => {
   it("clamps limit and supports pagination params", async () => {
     mockVerifySession.mockResolvedValueOnce({ staffId: "admin-1", role: "admin" });
     mockHasPermission.mockReturnValueOnce(true);
-    mockGet.mockResolvedValueOnce({ count: 10 });
+    mockGet.mockResolvedValueOnce({ violationDays: 10, staffAffected: 3, totalOccurrences: 12 });
     mockAll.mockResolvedValueOnce([violationRow]);
 
     const res = await GET(
@@ -151,5 +152,21 @@ describe("GET /api/attendance/violations", () => {
     const data = await res.json();
     expect(data.violations).toEqual([]);
     expect(data.total).toBe(0);
+    expect(data.stats).toEqual({ violationDays: 0, staffAffected: 0, totalOccurrences: 0 });
+  });
+
+  it("supports staff search filtering", async () => {
+    mockVerifySession.mockResolvedValueOnce({ staffId: "admin-1", role: "admin" });
+    mockHasPermission.mockReturnValueOnce(true);
+    mockGet.mockResolvedValueOnce({ violationDays: 1, staffAffected: 1, totalOccurrences: 3 });
+    mockAll.mockResolvedValueOnce([violationRow]);
+
+    const res = await GET(
+      new Request("http://localhost/api/attendance/violations?search=jane")
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.violations).toHaveLength(1);
+    expect(mockChain.where).toHaveBeenCalled();
   });
 });

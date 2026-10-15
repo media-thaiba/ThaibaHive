@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, staff } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
-import { eq, gt, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, gt, and, gte, lte, desc, sql, or, like } from "drizzle-orm";
 
 /**
  * GET /api/attendance/violations — administrative read model for presence
@@ -24,6 +24,7 @@ export const GET = requireAuth(async (request, session) => {
   const startDate = searchParams.get("from") || searchParams.get("startDate");
   const endDate = searchParams.get("to") || searchParams.get("endDate");
   const staffId = searchParams.get("staffId");
+  const search = searchParams.get("search");
 
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
   const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50));
@@ -36,13 +37,34 @@ export const GET = requireAuth(async (request, session) => {
   if (staffId) conditions.push(eq(attendanceLogs.staffId, staffId));
   if (startDate) conditions.push(gte(attendanceLogs.date, startDate));
   if (endDate) conditions.push(lte(attendanceLogs.date, endDate));
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(
+      or(
+        like(staff.firstName, pattern),
+        like(staff.lastName, pattern),
+        like(staff.employeeId, pattern)
+      )!
+    );
+  }
 
-  const countResult = await db
-    .select({ count: sql<number>`count(*)` })
+  // Aggregate stats share the exact same scoping/search conditions so the
+  // header counters always match the filtered row set.
+  const statsResult = await db
+    .select({
+      violationDays: sql<number>`count(*)`,
+      staffAffected: sql<number>`count(distinct ${attendanceLogs.staffId})`,
+      totalOccurrences: sql<number>`coalesce(sum(${attendanceLogs.geofenceViolations}), 0)`,
+    })
     .from(attendanceLogs)
+    .leftJoin(staff, eq(attendanceLogs.staffId, staff.id))
     .where(and(...conditions))
     .get();
-  const total = countResult?.count ?? 0;
+  const stats = {
+    violationDays: statsResult?.violationDays ?? 0,
+    staffAffected: statsResult?.staffAffected ?? 0,
+    totalOccurrences: statsResult?.totalOccurrences ?? 0,
+  };
 
   const violations = await db
     .select({
@@ -68,5 +90,11 @@ export const GET = requireAuth(async (request, session) => {
     .offset(offset)
     .all();
 
-  return NextResponse.json({ violations, total, page, limit });
+  return NextResponse.json({
+    violations,
+    total: stats.violationDays,
+    stats,
+    page,
+    limit,
+  });
 }, "attendance:manage");

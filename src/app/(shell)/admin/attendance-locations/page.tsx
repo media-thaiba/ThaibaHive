@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import VerificationSettingsForm from "./verification-settings-form";
+import ViolationsPanel from "./violations-panel";
 
 type Location = {
   id: string;
@@ -51,11 +52,26 @@ export default function AttendanceLocationsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"locations" | "settings">("locations");
+  const [activeTab, setActiveTab] = useState<"locations" | "settings" | "violations">("locations");
   const [userRole, setUserRole] = useState<string>("staff");
   const [userInstitutionId, setUserInstitutionId] = useState<string | undefined>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Deep-link support: /admin/attendance-locations?tab=violations
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "settings" || tab === "violations" || tab === "locations") {
+      setActiveTab(tab);
+    }
+  }, []);
+
+  function changeTab(tab: "locations" | "settings" | "violations") {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url);
+  }
 
   const fetchLocations = useCallback(async () => {
     const url = showDeleted
@@ -250,17 +266,24 @@ export default function AttendanceLocationsPage() {
       <div className="mb-4 flex gap-2 border-b">
         <Button
           variant={activeTab === "locations" ? "default" : "ghost"}
-          onClick={() => setActiveTab("locations")}
+          onClick={() => changeTab("locations")}
           className="rounded-b-none"
         >
           Locations
         </Button>
         <Button
           variant={activeTab === "settings" ? "default" : "ghost"}
-          onClick={() => setActiveTab("settings")}
+          onClick={() => changeTab("settings")}
           className="rounded-b-none"
         >
           Verification Settings
+        </Button>
+        <Button
+          variant={activeTab === "violations" ? "default" : "ghost"}
+          onClick={() => changeTab("violations")}
+          className="rounded-b-none"
+        >
+          Violations
         </Button>
       </div>
 
@@ -365,6 +388,8 @@ export default function AttendanceLocationsPage() {
           />
         </div>
       )}
+
+      {activeTab === "violations" && <ViolationsPanel />}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
