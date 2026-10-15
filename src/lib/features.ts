@@ -14,7 +14,8 @@ export type FeatureFlag =
   | 'media_queue'
   | 'sis_sync'
   | 'sso_federation'
-  | 'webrtc_conferencing';
+  | 'webrtc_conferencing'
+  | 'presence_tracking';
 
 // In production, agentic workflows require explicit enablement (process.env.FEATURE_AGENTIC_WORKFLOWS === 'true').
 // In development/test, it defaults to enabled unless explicitly set to 'false'.
@@ -35,6 +36,7 @@ const defaultSsoFederationFlag = isProd
 const defaultWebRtcConferencingFlag = isProd
   ? process.env.FEATURE_WEBRTC_CONFERENCING === 'true'
   : process.env.FEATURE_WEBRTC_CONFERENCING !== 'false';
+const defaultPresenceTrackingFlag = process.env.FEATURE_PRESENCE_TRACKING === 'true';
 
 export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   nfc_enrollment: true,
@@ -52,6 +54,7 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
   sis_sync: defaultSisSyncFlag,
   sso_federation: defaultSsoFederationFlag,
   webrtc_conferencing: defaultWebRtcConferencingFlag,
+  presence_tracking: defaultPresenceTrackingFlag,
 };
 
 // In-memory per-institution override registry for staged/canary tenant rollouts (D13)
@@ -115,5 +118,9 @@ export function isSsoFederationEnabled(institutionId?: string): boolean {
 
 export function isWebRtcConferencingEnabled(institutionId?: string): boolean {
   return isFeatureEnabled('webrtc_conferencing', institutionId);
+}
+
+export function isPresenceTrackingEnabled(institutionId?: string): boolean {
+  return isFeatureEnabled('presence_tracking', institutionId);
 }
 

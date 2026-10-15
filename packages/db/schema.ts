@@ -296,12 +296,14 @@ export const attendanceLogs = sqliteTable("attendance_logs", {
   staffId: text("staff_id")
     .notNull()
     .references(() => staff.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
   date: text("date").notNull(),
   checkIn: text("check_in"),
   checkOut: text("check_out"),
   method: text("method").notNull().default("manual"),
   nfcTagId: text("nfc_tag_id"),
   qrCode: text("qr_code"),
+  source: text("source").notNull().default("self"),
   status: text("status").notNull().default("present"),
   workedMinutes: integer("worked_minutes"),
   lateMinutes: integer("late_minutes").default(0),
@@ -316,6 +318,7 @@ export const attendanceLogs = sqliteTable("attendance_logs", {
   dateIdx: index("idx_attendance_date").on(t.date),
   statusIdx: index("idx_attendance_status").on(t.status),
   methodIdx: index("idx_attendance_method").on(t.method),
+  instIdIdx: index("idx_attendance_inst").on(t.institutionId),
 }));
 
 export const attendanceLocations = sqliteTable("attendance_locations", {
@@ -1126,6 +1129,7 @@ export const presenceLogs = sqliteTable("presence_logs", {
   id: text("id").primaryKey(),
   attendanceId: text("attendance_id").notNull().references(() => attendanceLogs.id),
   staffId: text("staff_id").notNull().references(() => staff.id),
+  institutionId: text("institution_id").references(() => institutions.id, { onDelete: "cascade" }),
   latitude: real("latitude").notNull(),
   longitude: real("longitude").notNull(),
   accuracy: real("accuracy"),
@@ -1137,7 +1141,10 @@ export const presenceLogs = sqliteTable("presence_logs", {
   networkState: text("network_state").default("online"),
   batteryLevel: integer("battery_level"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instIdIdx: index("idx_presence_logs_inst").on(t.institutionId),
+  staffCreatedIdx: index("idx_presence_logs_staff_created").on(t.staffId, t.createdAt),
+}));
 
 export const presenceVerificationSettings = sqliteTable("presence_verification_settings", {
   id: text("id").primaryKey(),

@@ -176,6 +176,13 @@
       "when": 1791997872729,
       "tag": "0024_tranquil_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792052843780,
+      "tag": "0025_chilly_warlock",
+      "breakpoints": true
     }
   ]
 }

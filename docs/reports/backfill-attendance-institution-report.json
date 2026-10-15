@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-10-15T09:24:09.522Z",
+  "dialect": "sqlite",
+  "dryRun": false,
+  "totalUpdated": 2,
+  "totalSkipped": 0,
+  "tableStats": [
+    {
+      "table": "attendance_logs",
+      "updatedViaLocation": 0,
+      "updatedViaSingleMembership": 2,
+      "updatedViaAttendance": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "presence_logs",
+      "updatedViaLocation": 0,
+      "updatedViaSingleMembership": 0,
+      "updatedViaAttendance": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    }
+  ]
+}

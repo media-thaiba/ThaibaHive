@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "cross-env NODE_OPTIONS=\"--max-old-space-size=6144\" tsc --noEmit",
     "test": "jest --passWithNoTests --forceExit",
+    "test:mutation": "stryker run",
     "codemod:permissions": "tsx scripts/codemod/canonical-permissions.ts",
     "test:permissions-snapshot": "jest packages/auth/__tests__/permissions-snapshot.test.ts --forceExit",
     "test:e2e": "playwright test",
@@ -73,7 +74,8 @@
     "marketplace:simulate": "tsx scripts/marketplace-simulate.ts",
     "sis:simulate": "tsx scripts/sis-simulate.ts",
     "conference:simulate": "tsx scripts/conference-simulate.ts",
-    "aios:validate": "node scripts/aios-validate.js"
+    "aios:validate": "node scripts/aios-validate.js",
+    "db:backfill:attendance": "tsx scripts/db/backfill-attendance-institution-ids.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -150,6 +152,8 @@
     "@jest/globals": "^30.5.2",
     "@next/bundle-analyzer": "^16.3.8",
     "@playwright/test": "^1.61.1",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/jest-runner": "9.6.1",
     "@swc/jest": "^0.2.39",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -170,6 +174,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "fast-check": "^4.10.2",
     "jest": "^30.4.2",
     "jest-axe": "^11.0.0",
     "jest-environment-jsdom": "^30.4.1",
