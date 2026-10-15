@@ -170,10 +170,12 @@ export class SamlService {
     const allowedSkew = options?.allowedClockSkewSeconds ?? 300;
     this.validateClockSkew(assertionBlock, allowedSkew);
 
-    // 5. Digital Signature Verification
-    const shouldVerify =
-      options?.enforceSignature ??
-      (config.wantAssertionsSigned ?? (!!config.x509Certificate && config.x509Certificate.length > 50));
+    // 5. Digital Signature Verification (fail-closed). Verification is
+    // mandatory by default: an IdP with no trusted certificate configured can
+    // never satisfy it, and `wantAssertionsSigned=false` no longer downgrades
+    // security. Only an explicit `enforceSignature: false` caller opt-out
+    // (internal tests/fixtures) may skip it.
+    const shouldVerify = options?.enforceSignature ?? true;
 
     if (shouldVerify) {
       this.verifyDigitalSignature(xmlContent, assertionBlock, config);
@@ -254,10 +256,7 @@ export class SamlService {
       fullXml.match(/<(?:\w+:)?Signature[\s\S]*?<\/(?:\w+:)?Signature>/i);
 
     if (!sigMatch) {
-      if (config.wantAssertionsSigned) {
-        throw new Error('Security Violation: Unsigned SAML assertion rejected by policy');
-      }
-      return;
+      throw new Error('Security Violation: Unsigned SAML assertion rejected by policy');
     }
 
     const sigXml = sigMatch[0];
@@ -319,17 +318,13 @@ export class SamlService {
     // 2. Verify SignedInfo Signature
     const canonicalSignedInfo = exclusiveC14N(signedInfoXml);
 
-    // Resolve Certificate: use configured certificate or extract from KeyInfo
-    let certToUse = config.x509Certificate;
-    if (!certToUse || certToUse.length < 50) {
-      const keyInfoCertMatch = sigXml.match(/<(?:\w+:)?X509Certificate[^>]*>([\s\S]*?)<\/(?:\w+:)?X509Certificate>/i);
-      if (keyInfoCertMatch) {
-        certToUse = keyInfoCertMatch[1].trim();
-      }
-    }
+    // Resolve Certificate: ONLY the provider's pre-pinned certificate is
+    // trusted. The assertion's own KeyInfo is attacker-controlled and must
+    // never be used as a fallback (QA-08).
+    const certToUse = config.x509Certificate;
 
     if (!certToUse || certToUse.length < 50) {
-      throw new Error('Security Violation: Missing valid X.509 certificate for SAML signature validation');
+      throw new Error('Security Violation: No trusted X.509 certificate configured for the IdP');
     }
 
     const pemCert = formatX509Certificate(certToUse);

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { db } from '@/db';
 import { conferenceSignals } from '@/db/schema';
-import { eq, and, or, gt, asc } from 'drizzle-orm';
+import { eq, and, or, gt, lt, asc } from 'drizzle-orm';
 import { SignalingMessage, WebRtcSdpOffer, IceCandidateInit } from './types';
 
 export interface TurnCredentials {
@@ -27,6 +27,16 @@ export class WebRtcSignalingManager {
   private static instance: WebRtcSignalingManager;
   private listeners: Map<string, Set<SignalListener>> = new Map();
 
+  // QA-09: hardcoded dev-only fallback secret; production must set TURN_SHARED_SECRET.
+  private static readonly DEV_TURN_SECRET = 'thaibahive_webrtc_turn_secret_dev_2026';
+  // QA-16: queued signals older than 7 days are purged opportunistically.
+  private static readonly SIGNAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  private static readonly PURGE_INTERVAL_MS = 60 * 60 * 1000;
+  // QA-16: '*' broadcasts are only replayed within this window on reconnect.
+  private static readonly BROADCAST_REPLAY_WINDOW_MS = 10 * 60 * 1000;
+  private static readonly PENDING_FETCH_LIMIT = 200;
+  private lastPurgeAt = 0;
+
   private stunTurnServers = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:global.turn.thaibahive.org:3478' },
@@ -48,15 +58,29 @@ export class WebRtcSignalingManager {
 
   /**
    * Generates RFC 5766 time-limited HMAC-SHA1 ephemeral TURN credentials (24-hour expiration).
+   * QA-09: fails closed in production when TURN_SHARED_SECRET is unset; the
+   * hardcoded development literal is never used outside non-production modes.
    */
   public generateTurnCredentials(
     username: string,
-    secret: string = process.env.TURN_SHARED_SECRET || 'thaibahive_webrtc_turn_secret_dev_2026',
+    secret?: string,
     ttlSeconds: number = 86400
   ): TurnCredentials {
+    const resolvedSecret = secret ?? process.env.TURN_SHARED_SECRET;
+    if (!resolvedSecret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('TURN_SHARED_SECRET is not configured');
+      }
+      // Non-production (dev/test) convenience fallback only.
+      if (!['development', 'test'].includes(process.env.NODE_ENV || '')) {
+        throw new Error('TURN_SHARED_SECRET is not configured');
+      }
+    }
+    const hmacSecret = resolvedSecret || WebRtcSignalingManager.DEV_TURN_SECRET;
+
     const expiryTimestamp = Math.floor(Date.now() / 1000) + ttlSeconds;
     const ephemeralUsername = `${expiryTimestamp}:${username}`;
-    const hmac = crypto.createHmac('sha1', secret);
+    const hmac = crypto.createHmac('sha1', hmacSecret);
     hmac.update(ephemeralUsername);
     const credential = hmac.digest('base64');
 
@@ -102,6 +126,12 @@ export class WebRtcSignalingManager {
     // 1. Insert into persistent queue
     await db.insert(conferenceSignals).values(record);
 
+    // Opportunistic TTL purge (QA-16): at most once per hour per instance.
+    if (Date.now() - this.lastPurgeAt > WebRtcSignalingManager.PURGE_INTERVAL_MS) {
+      this.lastPurgeAt = Date.now();
+      this.purgeExpiredSignals().catch(() => {});
+    }
+
     // 2. Broadcast to live SSE subscribers for (roomId:recipientPeerId) and (roomId:*)
     this.emitSignal(params.roomId, params.recipientPeerId, record);
     if (params.recipientPeerId !== '*') {
@@ -112,7 +142,22 @@ export class WebRtcSignalingManager {
   }
 
   /**
-   * Fetches pending/undelivered signals for a peer in a room.
+   * Deletes signals older than the retention window (QA-16 TTL purge).
+   */
+  public async purgeExpiredSignals(maxAgeMs: number = WebRtcSignalingManager.SIGNAL_TTL_MS): Promise<number> {
+    const cutoff = new Date(Date.now() - maxAgeMs).toISOString();
+    const result = await db
+      .delete(conferenceSignals)
+      .where(lt(conferenceSignals.createdAt, cutoff));
+    return (result as any)?.rowsAffected ?? (result as any)?.rowCount ?? (result as any)?.changes ?? 0;
+  }
+
+  /**
+   * Fetches pending signals for a peer in a room (QA-16):
+   * - Point-to-point rows: only undelivered ones (exactly-once redelivery).
+   * - '*' broadcast rows: only those within the replay window (bounded
+   *   history — never the whole room's log).
+   * - Hard row limit so a reconnect cannot flood the client.
    */
   public async getPendingSignals(
     institutionId: string,
@@ -120,12 +165,22 @@ export class WebRtcSignalingManager {
     recipientPeerId: string,
     minSequenceNum: number = 0
   ) {
+    const broadcastWindowStart = new Date(
+      Date.now() - WebRtcSignalingManager.BROADCAST_REPLAY_WINDOW_MS
+    ).toISOString();
+
     const conditions = [
       eq(conferenceSignals.institutionId, institutionId),
       eq(conferenceSignals.roomId, roomId),
       or(
-        eq(conferenceSignals.recipientPeerId, recipientPeerId),
-        eq(conferenceSignals.recipientPeerId, '*')
+        and(
+          eq(conferenceSignals.recipientPeerId, recipientPeerId),
+          eq(conferenceSignals.delivered, false)
+        ),
+        and(
+          eq(conferenceSignals.recipientPeerId, '*'),
+          gt(conferenceSignals.createdAt, broadcastWindowStart)
+        )
       ),
     ];
 
@@ -137,7 +192,8 @@ export class WebRtcSignalingManager {
       .select()
       .from(conferenceSignals)
       .where(and(...conditions))
-      .orderBy(asc(conferenceSignals.sequenceNum), asc(conferenceSignals.createdAt));
+      .orderBy(asc(conferenceSignals.sequenceNum), asc(conferenceSignals.createdAt))
+      .limit(WebRtcSignalingManager.PENDING_FETCH_LIMIT);
 
     return signals;
   }

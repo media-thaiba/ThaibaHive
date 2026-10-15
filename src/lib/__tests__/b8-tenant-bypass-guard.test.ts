@@ -20,7 +20,7 @@ describe("B8 Tenant Parameter Isolation Regression Guard (AST Handler-Level Call
     }
 
     expect(violations).toHaveLength(0);
-    expect(allowlistCount).toBe(4);
+    expect(allowlistCount).toBe(5);
   });
 
   it("detects unshielded tenant parameter in separated function declaration", () => {

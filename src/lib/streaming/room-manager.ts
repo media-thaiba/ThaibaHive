@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { db } from '@/db';
 import { streamingRooms, streamingSessions, streamRecordings } from '@/db/schema';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, desc } from 'drizzle-orm';
 import { signalingManager } from './webrtc-signaling';
 import { ConferenceRoomCreateInput, ConferenceJoinInput, ConferenceManageInput, ConferenceRecordInput } from '@/lib/validation/schemas';
 
@@ -14,6 +14,16 @@ export interface EpochKeyInfo {
   epoch: number;
   epochKeyHex?: string;
   keyFingerprint: string;
+}
+
+/**
+ * QA-03: strips the unsalted passcode hash before any room row crosses the
+ * API boundary. Never serialize raw `streamingRooms` rows to clients.
+ */
+export function toPublicRoom<T extends { passcodeHash?: string | null }>(room: T): Omit<T, 'passcodeHash'> {
+  const { passcodeHash, ...rest } = room;
+  void passcodeHash;
+  return rest;
 }
 
 export class RoomManager {
@@ -117,13 +127,25 @@ export class RoomManager {
     this.roomEpochs.set(roomId, 1);
     this.roomLocks.set(roomId, false);
 
-    return record;
+    return this.sanitizeRoom(record);
   }
 
   /**
-   * Retrieves room by ID scoped to institution.
+   * Sanitizes room object to prevent passcodeHash leakage (QA-03).
    */
-  public async getRoom(institutionId: string, roomId: string) {
+  public sanitizeRoom(room: any) {
+    if (!room) return null;
+    const { passcodeHash, ...safeRoom } = room;
+    return {
+      ...safeRoom,
+      hasPasscode: Boolean(passcodeHash),
+    };
+  }
+
+  /**
+   * Retrieves raw room row including internal cryptographic hashes.
+   */
+  public async getRoomRaw(institutionId: string, roomId: string) {
     const [room] = await db
       .select()
       .from(streamingRooms)
@@ -133,13 +155,23 @@ export class RoomManager {
   }
 
   /**
-   * Lists active rooms for an institution.
+   * Retrieves room by ID scoped to institution (passcodeHash omitted).
+   */
+  public async getRoom(institutionId: string, roomId: string) {
+    const raw = await this.getRoomRaw(institutionId, roomId);
+    return this.sanitizeRoom(raw);
+  }
+
+  /**
+   * Lists active rooms for an institution (passcodeHash omitted).
    */
   public async listRooms(institutionId: string, status: string = 'ACTIVE') {
-    return db
+    const rows = await db
       .select()
       .from(streamingRooms)
       .where(and(eq(streamingRooms.institutionId, institutionId), eq(streamingRooms.status, status)));
+
+    return rows.map((r) => this.sanitizeRoom(r));
   }
 
   /**
@@ -153,7 +185,7 @@ export class RoomManager {
     peerId?: string,
     role: 'HOST' | 'PRESENTER' | 'ATTENDEE' = 'ATTENDEE'
   ) {
-    const room = await this.getRoom(institutionId, roomId);
+    const room = await this.getRoomRaw(institutionId, roomId);
     if (!room) {
       throw new Error(`Room '${roomId}' not found or access denied`);
     }
@@ -166,13 +198,17 @@ export class RoomManager {
       throw new Error(`Room '${roomId}' is locked by moderator`);
     }
 
-    // Verify Passcode if required
+    // Verify Passcode if required (QA-19: constant-time digest comparison)
     if (room.passcodeHash) {
       if (!input.passcode) {
         throw new Error('Room requires passcode');
       }
       const providedHash = crypto.createHash('sha256').update(input.passcode).digest('hex');
-      if (providedHash !== room.passcodeHash) {
+      const providedBuf = Buffer.from(providedHash, 'utf8');
+      const expectedBuf = Buffer.from(room.passcodeHash, 'utf8');
+      const passcodeMatches =
+        providedBuf.length === expectedBuf.length && crypto.timingSafeEqual(providedBuf, expectedBuf);
+      if (!passcodeMatches) {
         throw new Error('Invalid room passcode');
       }
     }
@@ -182,60 +218,93 @@ export class RoomManager {
       throw new Error('Room has expired');
     }
 
-    // Atomic Capacity Gate: count active sessions
-    const activeSessions = await db
-      .select()
-      .from(streamingSessions)
-      .where(
-        and(
-          eq(streamingSessions.institutionId, institutionId),
-          eq(streamingSessions.roomId, roomId),
-          isNull(streamingSessions.leftAt)
-        )
-      );
-
-    if (activeSessions.length >= room.maxParticipants) {
-      throw new Error(`Room has reached maximum capacity of ${room.maxParticipants} participants`);
-    }
-
+    // QA-15: capacity check + single active session per user per room are
+    // enforced atomically inside a transaction so concurrent joins cannot
+    // overshoot maxParticipants or create duplicate seats.
     const assignedPeerId = peerId || `peer_${crypto.randomUUID().slice(0, 8)}`;
     const sessionId = `ses_${crypto.randomUUID()}`;
+    const nowIso = new Date().toISOString();
 
-    // Insert new session
-    const sessionRecord = {
-      id: sessionId,
-      institutionId,
-      roomId,
-      participantUserId,
-      peerId: assignedPeerId,
-      role,
-      audioMuted: true,
-      videoMuted: false,
-      e2eePublicKey: input.e2eePublicKey || null,
-      connectionQuality: 'good',
-      isScreenSharing: false,
-      joinedAt: new Date().toISOString(),
-      leftAt: null,
-    };
+    const txExecutor = typeof (db as any).transaction === 'function'
+      ? (cb: any) => (db as any).transaction(cb)
+      : (cb: any) => cb(db);
 
-    await db.insert(streamingSessions).values(sessionRecord);
+    const sessionRecord = await txExecutor(async (tx: any) => {
+      const activeSessions = await tx
+        .select()
+        .from(streamingSessions)
+        .where(
+          and(
+            eq(streamingSessions.institutionId, institutionId),
+            eq(streamingSessions.roomId, roomId),
+            isNull(streamingSessions.leftAt)
+          )
+        );
+
+      const existing = activeSessions.find(
+        (s: any) => s.participantUserId === participantUserId
+      );
+
+      if (existing) {
+        // Rejoin: reuse the existing seat and peerId; refresh key material and heartbeat.
+        await tx
+          .update(streamingSessions)
+          .set({
+            e2eePublicKey: input.e2eePublicKey || existing.e2eePublicKey,
+            joinedAt: nowIso,
+            connectionQuality: 'good',
+          })
+          .where(eq(streamingSessions.id, existing.id));
+        const [refreshed] = await tx
+          .select()
+          .from(streamingSessions)
+          .where(eq(streamingSessions.id, existing.id));
+        return refreshed ?? existing;
+      }
+
+      if (activeSessions.length >= room.maxParticipants) {
+        throw new Error(`Room has reached maximum capacity of ${room.maxParticipants} participants`);
+      }
+
+      const newSessionRecord = {
+        id: sessionId,
+        institutionId,
+        roomId,
+        participantUserId,
+        peerId: assignedPeerId,
+        role: room.hostUserId === participantUserId ? 'HOST' : role,
+        audioMuted: true,
+        videoMuted: false,
+        e2eePublicKey: input.e2eePublicKey || null,
+        connectionQuality: 'good',
+        isScreenSharing: false,
+        joinedAt: nowIso,
+        leftAt: null,
+      };
+
+      await tx.insert(streamingSessions).values(newSessionRecord);
+      return newSessionRecord;
+    });
+
+    const effectivePeerId = sessionRecord.peerId || assignedPeerId;
+    const effectiveKey = sessionRecord.e2eePublicKey || input.e2eePublicKey || null;
 
     // E2EE Forward Secrecy: Rotate room epoch on join
     const epoch = this.rotateRoomEpoch(roomId);
-    const fingerprint = this.computeFingerprint(input.e2eePublicKey || assignedPeerId);
+    const fingerprint = this.computeFingerprint(effectiveKey || effectivePeerId);
 
     // Notify existing peers
     await signalingManager.dispatchSignal({
       institutionId,
       roomId,
-      senderPeerId: assignedPeerId,
+      senderPeerId: effectivePeerId,
       recipientPeerId: '*',
       signalType: 'peer_joined',
       payloadJson: JSON.stringify({
-        peerId: assignedPeerId,
+        peerId: effectivePeerId,
         participantUserId,
         role,
-        e2eePublicKey: input.e2eePublicKey,
+        e2eePublicKey: effectiveKey,
         epoch,
         fingerprint,
       }),
@@ -435,6 +504,11 @@ export class RoomManager {
     const streamId = input.streamId || `stream_${Date.now()}`;
 
     if (input.action === 'start') {
+      const room = await this.getRoomRaw(institutionId, roomId);
+      if (!room) {
+        throw new Error(`Room '${roomId}' not found`);
+      }
+
       const recordingId = `rec_${crypto.randomUUID()}`;
       await db.insert(streamRecordings).values({
         id: recordingId,
@@ -462,15 +536,20 @@ export class RoomManager {
           eq(streamRecordings.institutionId, institutionId),
           eq(streamRecordings.roomId, roomId)
         )
-      );
+      )
+      .orderBy(desc(streamRecordings.createdAt))
+      .limit(1);
 
     if (recording) {
-      const checksum = crypto.createHash('sha256').update(recording.id + streamId).digest('hex');
+      const createdTime = new Date(recording.createdAt).getTime();
+      const durationSeconds = Math.max(1, Math.round((Date.now() - createdTime) / 1000));
+      const approxSizeBytes = durationSeconds * 50 * 1024;
+      const checksum = crypto.createHash('sha256').update(recording.id + streamId + durationSeconds).digest('hex');
       await db
         .update(streamRecordings)
         .set({
-          durationSeconds: 300,
-          fileSizeBytes: 1024 * 1024 * 15,
+          durationSeconds,
+          fileSizeBytes: approxSizeBytes,
           checksumSha256: checksum,
         })
         .where(eq(streamRecordings.id, recording.id));

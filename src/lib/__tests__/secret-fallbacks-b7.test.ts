@@ -189,4 +189,26 @@ describe("R3-1 / Blocker B7: Hardcoded Secret Fallback Elimination & Fail-Closed
       }).toThrow(/PAYMENT_ENCRYPTION_KEY must be configured/);
     });
   });
+
+  describe("WebRTC TURN Shared Secret (QA-09)", () => {
+    it("generateTurnCredentials throws in production when TURN_SHARED_SECRET is missing", () => {
+      delete process.env.TURN_SHARED_SECRET;
+      Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true, configurable: true });
+
+      const { signalingManager } = require("@/lib/streaming/webrtc-signaling");
+      expect(() => {
+        signalingManager.generateTurnCredentials("peer-123");
+      }).toThrow(/TURN_SHARED_SECRET is not configured/);
+    });
+
+    it("generateTurnCredentials succeeds when TURN_SHARED_SECRET is configured", () => {
+      process.env.TURN_SHARED_SECRET = "production_turn_secret_32bytes_long";
+      Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true, configurable: true });
+
+      const { signalingManager } = require("@/lib/streaming/webrtc-signaling");
+      const creds = signalingManager.generateTurnCredentials("peer-123");
+      expect(creds.username).toContain("peer-123");
+      expect(creds.credential).toBeTruthy();
+    });
+  });
 });

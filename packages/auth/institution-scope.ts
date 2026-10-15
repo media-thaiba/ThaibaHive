@@ -103,7 +103,11 @@ export async function resolveRequestInstitution(
   requested?: string | null
 ): Promise<string> {
   if (session.role === "super_admin" || session.role === "admin" || session.role === "system") {
-    return requested || session.institutionId || "global";
+    if (requested) return requested;
+    if (session.institutionId && session.institutionId !== "global") return session.institutionId;
+    const memberships = await getStaffInstitutionMemberships(session.staffId);
+    if (memberships.length > 0) return memberships[0];
+    return "global";
   }
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);

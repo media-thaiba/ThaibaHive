@@ -8,6 +8,10 @@ export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
   const institutionId = await resolveRequestInstitution(session, url.searchParams.get('institutionId'));
 
+  if (!institutionId || institutionId === 'global') {
+    return NextResponse.json({ error: 'Institution context required' }, { status: 400 });
+  }
+
   if (!isWebRtcConferencingEnabled(institutionId)) {
     return NextResponse.json({ error: 'WebRTC conferencing is disabled for this institution' }, { status: 403 });
   }
@@ -25,6 +29,10 @@ export const POST = requireAuth(async (request, session) => {
 
   const url = new URL(request.url);
   const institutionId = await resolveRequestInstitution(session, url.searchParams.get('institutionId'));
+
+  if (!institutionId || institutionId === 'global') {
+    return NextResponse.json({ error: 'Institution context required' }, { status: 400 });
+  }
 
   if (!isWebRtcConferencingEnabled(institutionId)) {
     return NextResponse.json({ error: 'WebRTC conferencing is disabled for this institution' }, { status: 403 });

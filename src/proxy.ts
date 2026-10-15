@@ -24,6 +24,14 @@ const exactPublicPaths = new Set([
   "/api/auth/signup",
   "/api/auth/google",
   "/api/auth/mobile-handoff",
+  // SSO: IdP-initiated callbacks arrive unauthenticated with no session
+  // cookie (SAML POST binding) or non-JSON content types. Rate limiting
+  // and signature checks are enforced inside the routes themselves.
+  "/api/auth/saml/acs",
+  "/api/auth/saml/metadata",
+  "/api/auth/saml/sso",
+  "/api/auth/oidc/login",
+  "/api/auth/oidc/callback",
   "/api/finance/fees/webhooks",
   "/api/webhooks/edge-security",
   "/api/engage/voice",
@@ -192,9 +200,16 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      // Block non-JSON/non-multipart content types on non-upload write API routes
+      // Block non-JSON/non-multipart content types on non-upload write API routes (allow urlencoded for SAML ACS)
+      const isSamlAcsRoute = pathname === "/api/auth/saml/acs";
       const contentType = request.headers.get("content-type");
-      if (contentType && !isUploadRoute && !contentType.includes("application/json") && !contentType.includes("multipart/form-data")) {
+      if (
+        contentType &&
+        !isUploadRoute &&
+        !contentType.includes("application/json") &&
+        !contentType.includes("multipart/form-data") &&
+        !(isSamlAcsRoute && contentType.includes("application/x-www-form-urlencoded"))
+      ) {
         return addSecurityHeaders(
           request,
           NextResponse.json({ error: "Invalid content type." }, { status: 415 }),

@@ -123,6 +123,7 @@ export const ALLOW_LIST: Record<string, string> = {
   "src/app/api/auth/switch-institution/route.ts:POST": "Dedicated institution switcher validates membership against staffInstitutions and reissues scoped JWT session",
   "src/app/api/auth/oidc/login/route.ts:GET": "Public SSO entry; tenantId selects the IdP, no data returned",
   "src/app/api/auth/saml/sso/route.ts:GET": "Public SSO entry; tenantId selects the IdP, no data returned",
+  "src/app/api/auth/saml/metadata/route.ts:GET": "Public SP SAML metadata export; institutionId used only for tenant-specific feature flag toggle check, returns static XML",
 };
 
 export function runScan(dir: string = 'src/app/api'): ScanFinding[] {

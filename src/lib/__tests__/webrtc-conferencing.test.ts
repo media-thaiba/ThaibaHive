@@ -4,14 +4,16 @@ import { WebRtcSignalingManager, signalingManager } from '../streaming/webrtc-si
 import { db } from '@/db';
 import { streamingRooms, streamingSessions, streamRecordings, conferenceSignals } from '@/db/schema';
 
-jest.mock('@/db', () => ({
-  db: {
+jest.mock('@/db', () => {
+  const mockDb: any = {
     select: jest.fn(),
     insert: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
-  },
-}));
+  };
+  mockDb.transaction = jest.fn(async (cb: any) => cb(mockDb));
+  return { db: mockDb };
+});
 
 describe('WebRTC E2EE Conferencing Engine & Perfect Negotiation (Phase 12 / Track 3A)', () => {
   beforeEach(() => {
@@ -106,8 +108,14 @@ describe('WebRTC E2EE Conferencing Engine & Perfect Negotiation (Phase 12 / Trac
 
       expect(room.id).toMatch(/^room_/);
       expect(room.status).toBe('ACTIVE');
-      expect(room.passcodeHash).toBe(crypto.createHash('sha256').update('SafePass123').digest('hex'));
+      expect((room as any).hasPasscode).toBe(true);
+      expect((room as any).passcodeHash).toBeUndefined();
       expect(db.insert).toHaveBeenCalledWith(streamingRooms);
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          passcodeHash: crypto.createHash('sha256').update('SafePass123').digest('hex'),
+        })
+      );
     });
 
     it('should block admission when invalid passcode is provided', async () => {

@@ -21,7 +21,8 @@ Phase 12 Scope Breakdown
 ├── Wave 3: JIT User Provisioning, Cross-Campus Regional Role Mapping & Mobile Auth Handoff
 ├── Wave 4: WebRTC Signaling Engine, Room State Machine & E2EE Key Exchange
 ├── Wave 5: Web Admin/Operations Cockpits & Mobile Flutter Video Screen
-└── Wave 6: 8-Stage E2E Simulation Runner (`pnpm conference:simulate`), Docs & Release Notes
+├── Wave 6: 8-Stage E2E Simulation Runner (`pnpm conference:simulate`), Docs & Release Notes
+└── Wave 7: Exploratory QA Audit Remediation (QA-01 through QA-20 Hardening & Invariant Fixes)
 ```
 
 ---
@@ -152,3 +153,33 @@ Phase 12 Scope Breakdown
      - Document release in `CHANGELOG.md` under `[3.41.0]`.
      - Update operations runbook in `docs/operations/enterprise-sso-webrtc-runbook.md`.
 * **Verification**: `pnpm conference:simulate` exits 0 (all 8 stages green), full gate pass (`tsc`, `lint`, `security:tenants`, `security:rbac`, `security:requireauth`).
+
+---
+
+### 🌊 Wave 7: Exploratory QA Audit Remediation (QA-01 through QA-20 Hardening)
+* **Goal**: Close and verify all 20 findings (`QA-01` through `QA-20`) identified in `docs/reports/exploratory-qa-report.md`.
+* **Deliverables**:
+  1. **Public SSO & Proxy Whitelisting (QA-01, QA-08, QA-11, QA-18)**:
+     - `src/proxy.ts`: Allowed `application/x-www-form-urlencoded` exclusively for `POST /api/auth/saml/acs`. Exposed public paths for SAML/OIDC.
+     - `src/app/api/auth/saml/acs/route.ts`: Fail-closed signature verification against IdP X.509 certificate (rejection of unconfigured IdPs / untrusted KeyInfo), sanitized RelayState via `isSafeInternalPath`, sanitized error responses.
+  2. **Multi-Tenant Scoping & Room Identity (QA-02)**:
+     - `packages/auth/institution-scope.ts`: Admins without explicit tenant fall back to primary assigned institution before default.
+     - `src/app/api/streaming/rooms/route.ts`: Disallows `"global"` on GET and POST.
+     - Subresource routes discover concrete `institutionId` when caller holds `"global"`.
+  3. **Passcode Sanitization & Constant-Time Verification (QA-03, QA-17)**:
+     - `src/lib/streaming/room-manager.ts`: `sanitizeRoom` projects `passcodeHash` out of public returns (`createRoom`, `getRoom`, `listRooms`), exposing only `hasPasscode: Boolean(passcodeHash)`. Constant-time comparison using `crypto.timingSafeEqual` for passcode verification.
+  4. **Admin SSO Cockpit Diagnostics (QA-04)**:
+     - Fixed payload property mismatch (`data.diagnostic` -> flat diagnostics).
+  5. **Signaling & Session Security (QA-05, QA-06, QA-07, QA-19)**:
+     - Strict session peer validation in SSE `events`, `signal`, and `leave` endpoints. Disallowed evicting other peers via leave endpoint.
+     - Added distributed rate limiting on signal dispatch.
+  6. **TURN Secret Fail-Closed & SSRF Egress Defense (QA-09, QA-10)**:
+     - `signalingManager.generateTurnCredentials` fails closed if `TURN_SHARED_SECRET` is unset in non-test environments.
+     - Protected `/api/auth/sso/test` with `EgressGuard.validateEgressUrl` against SSRF.
+  7. **Tenant AST Parity & Allowlist Audit (QA-12, QA-14)**:
+     - Replaced non-standard `resolveInstitutionContext` with standard `resolveRequestInstitution`. Added `/api/auth/saml/metadata` to scanner allowlist.
+  8. **Real Room Participants & Operations Directory UI (QA-13, QA-20)**:
+     - Replaced participant mock with database join of `streamingSessions` and `staff`.
+     - Built conferencing directory and management interface at `src/app/(shell)/operations/conferencing/page.tsx`.
+* **Verification**: `pnpm typecheck` (0 errors), `pnpm lint` (0 errors), 37/37 Jest tests pass, 8/8 simulation stages pass, 100% tenant isolation, 0 naked handlers, 100% RBAC coverage, 691/691 shielded routes.
+

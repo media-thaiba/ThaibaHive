@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { ensureArray } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ParticipantSession {
   id: string;
@@ -34,6 +35,8 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
   const resolvedParams = use(params);
   const roomId = resolvedParams.id;
   const router = useRouter();
+  const { staff } = useAuth();
+  const instId = staff?.institutionId;
 
   const [room, setRoom] = useState<RoomDetails | null>(null);
   const [participants, setParticipants] = useState<ParticipantSession[]>([]);
@@ -45,14 +48,15 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [currentEpoch, setCurrentEpoch] = useState<number>(1);
-  const [fingerprint, setFingerprint] = useState<string>("B82F-1A4C-99E0-442D");
+  const [fingerprint, setFingerprint] = useState<string>("");
   const [isFingerprintModalOpen, setIsFingerprintModalOpen] = useState(false);
   const [myPeerId, setMyPeerId] = useState<string>("");
   const [isLocked, setIsLocked] = useState(false);
 
   // Load initial room data
   const loadRoom = useCallback(() => {
-    fetch(`/api/streaming/rooms/${roomId}`)
+    const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+    fetch(`/api/streaming/rooms/${roomId}${qs}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -68,7 +72,7 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
         setError(err instanceof Error ? err.message : "Failed to load conference room");
         setLoading(false);
       });
-  }, [roomId]);
+  }, [roomId, instId]);
 
   useEffect(() => {
     loadRoom();
@@ -79,9 +83,10 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
     if (!roomId) return;
 
     let eventSource: EventSource | null = null;
+    const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
 
     // Join room endpoint
-    fetch(`/api/streaming/rooms/${roomId}/join`, {
+    fetch(`/api/streaming/rooms/${roomId}/join${qs}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -94,7 +99,8 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
           if (data.fingerprint) setFingerprint(data.fingerprint);
 
           // Establish SSE connection for real-time signaling
-          eventSource = new EventSource(`/api/streaming/rooms/${roomId}/events?peerId=${data.session.peerId}`);
+          const sseQs = `peerId=${encodeURIComponent(data.session.peerId)}${instId ? `&institutionId=${encodeURIComponent(instId)}` : ""}`;
+          eventSource = new EventSource(`/api/streaming/rooms/${roomId}/events?${sseQs}`);
 
           eventSource.addEventListener("signal", (e) => {
             try {
@@ -106,7 +112,7 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
               } else if (signal.signalType === "peer_left") {
                 const payload = JSON.parse(signal.payloadJson || "{}");
                 if (payload.action === "meeting_ended") {
-                  router.push("/operations");
+                  router.push("/operations/conferencing");
                 }
                 loadRoom();
               } else if (signal.signalType === "room_lock") {
@@ -126,11 +132,12 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
         eventSource.close();
       }
     };
-  }, [roomId, loadRoom, router]);
+  }, [roomId, loadRoom, router, instId]);
 
   const handleLeave = async () => {
     try {
-      await fetch(`/api/streaming/rooms/${roomId}/leave`, {
+      const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+      await fetch(`/api/streaming/rooms/${roomId}/leave${qs}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ peerId: myPeerId }),
@@ -138,12 +145,13 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
     } catch {
       // Ignore leave errors
     }
-    router.push("/operations");
+    router.push("/operations/conferencing");
   };
 
   const handleModerate = async (action: "lock_room" | "unlock_room" | "end_room", targetPeerId?: string) => {
     try {
-      await fetch(`/api/streaming/rooms/${roomId}/manage`, {
+      const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+      await fetch(`/api/streaming/rooms/${roomId}/manage${qs}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, targetPeerId }),

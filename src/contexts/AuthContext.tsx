@@ -23,6 +23,7 @@ type StaffUser = {
   avatarUrl: string | null;
   isFirstLogin: boolean;
   nfcTagId: string | null;
+  institutionId?: string | null;
 };
 
 type AuthContextType = {

@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { ensureArray } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SamlProvider {
   id: string;
@@ -44,6 +45,8 @@ interface TestProbeResult {
 }
 
 export default function SsoAdminPage() {
+  const { staff } = useAuth();
+  const instId = staff?.institutionId;
   const [samlProviders, setSamlProviders] = useState<SamlProvider[]>([]);
   const [oidcProviders, setOidcProviders] = useState<OidcProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +76,10 @@ export default function SsoAdminPage() {
 
   const loadProviders = useCallback(() => {
     setLoading(true);
-    fetch("/api/auth/sso/providers")
+    const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+    fetch(`/api/auth/sso/providers${qs}`, {
+      headers: instId ? { "x-institution-id": instId } : undefined,
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -88,7 +94,7 @@ export default function SsoAdminPage() {
         setError(err instanceof Error ? err.message : "Failed to load SSO providers");
         setLoading(false);
       });
-  }, []);
+  }, [instId]);
 
   useEffect(() => {
     loadProviders();
@@ -96,9 +102,13 @@ export default function SsoAdminPage() {
 
   const handleCreateSaml = async () => {
     try {
-      const res = await fetch("/api/auth/sso/providers", {
+      const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+      const res = await fetch(`/api/auth/sso/providers${qs}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(instId ? { "x-institution-id": instId } : {}),
+        },
         body: JSON.stringify({ type: "SAML", ...samlForm }),
       });
       if (!res.ok) {
@@ -115,9 +125,13 @@ export default function SsoAdminPage() {
 
   const handleCreateOidc = async () => {
     try {
-      const res = await fetch("/api/auth/sso/providers", {
+      const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+      const res = await fetch(`/api/auth/sso/providers${qs}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(instId ? { "x-institution-id": instId } : {}),
+        },
         body: JSON.stringify({ type: "OIDC", ...oidcForm }),
       });
       if (!res.ok) {
@@ -132,29 +146,53 @@ export default function SsoAdminPage() {
     }
   };
 
-  const runTestProbe = async (providerType: "SAML" | "OIDC", providerId: string) => {
-    setIsTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch("/api/auth/sso/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ providerType, providerId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Probe failed");
-      setTestResult(data.diagnostic);
-    } catch (err: any) {
-      setTestResult({
-        providerType,
-        status: "unreachable",
-        latencyMs: 0,
-        message: err.message,
-      });
-    } finally {
-      setIsTesting(false);
-    }
-  };
+  const handleTestProbe = useCallback(
+    async (providerType: "SAML" | "OIDC", providerId: string) => {
+      setIsTesting(true);
+      setTestResult(null);
+      try {
+        const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
+        const res = await fetch(`/api/auth/sso/test${qs}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(instId ? { "x-institution-id": instId } : {}),
+          },
+          body: JSON.stringify({ providerType, providerId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Probe failed");
+        // QA-04: the API returns a flat diagnostic payload (not data.diagnostic).
+        const findings = ensureArray<string>(data.findings);
+        const certDaysRemaining =
+          typeof data.certExpiresAt === "string"
+            ? Math.max(0, Math.round((new Date(data.certExpiresAt).getTime() - Date.now()) / 86_400_000))
+            : null;
+        setTestResult({
+          providerType: data.providerType ?? providerType,
+          status: data.success
+            ? "reachable"
+            : data.certValid === false || data.discoveryReachable === false
+              ? "unreachable"
+              : "degraded",
+          latencyMs: data.latencyMs ?? 0,
+          certExpiresAt: data.certExpiresAt ?? null,
+          certDaysRemaining,
+          message: findings.length > 0 ? findings.join(" · ") : undefined,
+        });
+      } catch (err: any) {
+        setTestResult({
+          providerType,
+          status: "unreachable",
+          latencyMs: 0,
+          message: err.message,
+        });
+      } finally {
+        setIsTesting(false);
+      }
+    },
+    [instId]
+  );
 
   return (
     <div className="container mx-auto p-6 space-y-6 max-w-7xl">
@@ -258,7 +296,7 @@ export default function SsoAdminPage() {
                             size="sm"
                             variant="outline"
                             disabled={isTesting}
-                            onClick={() => runTestProbe("SAML", prov.id)}
+                            onClick={() => handleTestProbe("SAML", prov.id)}
                           >
                             Test Probe
                           </Button>
@@ -325,7 +363,7 @@ export default function SsoAdminPage() {
                             size="sm"
                             variant="outline"
                             disabled={isTesting}
-                            onClick={() => runTestProbe("OIDC", prov.id)}
+                            onClick={() => handleTestProbe("OIDC", prov.id)}
                           >
                             Test Probe
                           </Button>

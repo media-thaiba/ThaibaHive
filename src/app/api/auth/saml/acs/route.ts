@@ -9,6 +9,7 @@ import { createSession } from '@/lib/auth';
 import { createMobileNonce } from '@/lib/auth/mobile-nonce-service';
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 import { isSsoFederationEnabled } from '@/lib/features';
+import { isSafeInternalPath } from '@/lib/security/safe-redirect';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     return rateLimitResponse(rateLimit.resetMs);
   }
 
-  let institutionId = 'inst-001';
+  let institutionId = '';
 
   try {
     const formData = await request.formData();
@@ -43,7 +44,9 @@ export async function POST(request: Request) {
       // Fallback
     }
 
-    // Lookup provider in DB
+    // Fail-closed provider resolution: an unsigned/unverified Issuer that
+    // does not match an active, configured IdP must be rejected outright
+    // (QA-08). Never fall back to a default institution.
     let provider: any = null;
     if (issuer) {
       provider = await db
@@ -53,24 +56,26 @@ export async function POST(request: Request) {
         .get();
     }
 
-    if (provider) {
-      institutionId = provider.institutionId;
+    if (!provider) {
+      return NextResponse.json({ error: 'Unknown or inactive SAML identity provider' }, { status: 401 });
     }
+
+    institutionId = provider.institutionId;
 
     if (!isSsoFederationEnabled(institutionId)) {
       return NextResponse.json({ error: 'SSO federation is disabled for this tenant' }, { status: 403 });
     }
 
     const providerConfig = {
-      id: provider?.id || 'provider-default',
+      id: provider.id,
       institutionId,
-      name: provider?.name || 'Enterprise IdP',
-      entityId: provider?.idpEntityId || issuer || 'https://idp.enterprise.org',
-      ssoUrl: provider?.ssoUrl || 'https://idp.enterprise.org/sso',
-      x509Certificate: provider?.x509Certificate || '',
-      binding: provider?.binding || 'HTTP-POST',
-      wantAssertionsSigned: provider?.wantAssertionsSigned ?? false,
-      attributeMappingJson: provider?.attributeMappingJson || null,
+      name: provider.name,
+      entityId: provider.idpEntityId || issuer,
+      ssoUrl: provider.ssoUrl,
+      x509Certificate: provider.x509Certificate || '',
+      binding: provider.binding || 'HTTP-POST',
+      wantAssertionsSigned: provider.wantAssertionsSigned ?? true,
+      attributeMappingJson: provider.attributeMappingJson || null,
       isActive: true,
     };
 
@@ -136,13 +141,15 @@ export async function POST(request: Request) {
       return NextResponse.redirect(`thaibahive://auth/callback?nonce=${nonce}&token=${token}`);
     }
 
-    const redirectTarget = relayState && relayState.startsWith('/') ? relayState : '/dashboard';
+    // QA-11: only allow same-site path redirects (blocks `//evil` and `/\evil`).
+    const redirectTarget =
+      relayState && isSafeInternalPath(relayState) ? relayState : '/dashboard';
     return NextResponse.redirect(new URL(redirectTarget, request.url));
   } catch (err: unknown) {
     console.error('[SAML ACS Error]:', err instanceof Error ? err.stack : err);
 
     await SsoAuditLedger.recordEvent({
-      institutionId,
+      institutionId: institutionId || 'unknown',
       providerType: 'SAML',
       eventType: 'login_failure',
       subjectId: 'anonymous',
@@ -150,9 +157,7 @@ export async function POST(request: Request) {
       userAgent: request.headers.get('user-agent'),
     }).catch(() => {});
 
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'SAML authentication failed' },
-      { status: 400 }
-    );
+    // QA-18: never echo raw internal error messages to the client.
+    return NextResponse.json({ error: 'SAML authentication failed' }, { status: 400 });
   }
 }

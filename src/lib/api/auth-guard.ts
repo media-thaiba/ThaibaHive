@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySession, resolveInstitutionScopeForSession, type SessionPayload, hasPermission } from "@thaiba/auth";
+import { verifySession, resolveInstitutionScopeForSession, resolveRequestInstitution, getStaffInstitutionMemberships, type SessionPayload, hasPermission } from "@thaiba/auth";
 import type { StaffRole } from "@/types";
 import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
@@ -234,4 +234,30 @@ export function requireAuth(
 }
 
 export { resolveRequestInstitution, resolveScopedInstitutions, resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";
+
+/**
+ * Resolves a concrete (never "global") institution context for routes that
+ * operate on tenant-owned rows (SSO providers, streaming rooms, diagnostics).
+ *
+ * - Non-admin callers: membership-verified via `resolveRequestInstitution`
+ *   (throws TenantMismatchError on cross-tenant attempts).
+ * - Admin/super_admin/system with no explicit requested tenant: falls back to
+ *   the actor's first verified institution membership, so cockpit/room
+ *   operations land on a real `institutions` row instead of the virtual
+ *   "global" scope (which has no row and breaks FK constraints — QA-02/QA-04).
+ *
+ * Returns null when no concrete context can be determined. Callers must fail
+ * closed with a structured 400.
+ */
+export async function resolveInstitutionContext(
+  session: SessionPayload,
+  requested?: string | null
+): Promise<string | null> {
+  const resolved = await resolveRequestInstitution(session, requested ?? undefined);
+  if (resolved && resolved !== "global") {
+    return resolved;
+  }
+  const memberships = await getStaffInstitutionMemberships(session.staffId);
+  return memberships[0] ?? null;
+}
 

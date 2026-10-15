@@ -10,6 +10,7 @@ import { createSession } from '@/lib/auth';
 import { createMobileNonce } from '@/lib/auth/mobile-nonce-service';
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 import { isSsoFederationEnabled } from '@/lib/features';
+import { isSafeInternalPath } from '@/lib/security/safe-redirect';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,11 +41,8 @@ export async function GET(request: Request) {
       try {
         statePayload = oidcService.verifyState(stateParam);
         institutionId = statePayload.institutionId || institutionId;
-      } catch (err: unknown) {
-        return NextResponse.json(
-          { error: err instanceof Error ? err.message : 'Invalid state token' },
-          { status: 403 }
-        );
+      } catch {
+        return NextResponse.json({ error: 'Invalid state token' }, { status: 403 });
       }
     }
 
@@ -145,7 +143,7 @@ export async function GET(request: Request) {
       return res;
     }
 
-    const redirectTarget = statePayload?.returnUrl && statePayload.returnUrl.startsWith('/')
+    const redirectTarget = isSafeInternalPath(statePayload?.returnUrl)
       ? statePayload.returnUrl
       : '/dashboard';
 
@@ -164,9 +162,6 @@ export async function GET(request: Request) {
       userAgent: request.headers.get('user-agent'),
     }).catch(() => {});
 
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'OIDC callback processing failed' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'OIDC callback processing failed' }, { status: 400 });
   }
 }

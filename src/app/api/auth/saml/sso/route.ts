@@ -41,8 +41,17 @@ export async function GET(request: Request) {
       .get();
   }
 
-  const ssoUrl = provider?.ssoUrl || url.searchParams.get('ssoUrl') || 'https://idp.enterprise.org/saml2/sso';
-  const idpEntityId = provider?.idpEntityId || 'https://idp.enterprise.org';
+  // QA-11: never fall back to a caller-supplied `ssoUrl` query param — that
+  // was an unauthenticated open redirect. Only configured IdP URLs are used.
+  if (!provider) {
+    return NextResponse.json(
+      { error: 'No active SAML identity provider configured' },
+      { status: 404 }
+    );
+  }
+
+  const ssoUrl = provider.ssoUrl;
+  const idpEntityId = provider.idpEntityId;
 
   const samlService = new SamlService();
   const requestId = `req_${crypto.randomUUID()}`;
@@ -50,12 +59,12 @@ export async function GET(request: Request) {
 
   const { redirectUrl } = samlService.generateAuthnRequest(
     {
-      id: provider?.id || 'provider-default',
+      id: provider.id,
       institutionId,
-      name: provider?.name || 'Enterprise IdP',
+      name: provider.name,
       entityId: idpEntityId,
       ssoUrl,
-      x509Certificate: provider?.x509Certificate || '',
+      x509Certificate: provider.x509Certificate || '',
       isActive: true,
     },
     {

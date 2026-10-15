@@ -8,6 +8,7 @@ import { isSsoFederationEnabled } from '@/lib/features';
 import { ssoTestInputSchema } from '@/lib/validation/schemas';
 import { SsoAuditLedger } from '@/lib/auth/sso-audit-ledger';
 import { formatX509Certificate } from '@/lib/auth/saml-service';
+import { EgressGuard } from '@/lib/sis/egress-guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -128,24 +129,40 @@ export const POST = requireAuth(async (request: Request, session: any) => {
       let discoveryReachable = false;
       let jwksUriFound = false;
 
-      try {
-        const res = await fetch(discoveryUrl, { method: 'GET', headers: { Accept: 'application/json' } });
-        if (res.ok) {
-          discoveryReachable = true;
-          const discoveryData = await res.json();
-          if (discoveryData.jwks_uri) {
-            jwksUriFound = true;
-          }
-        } else {
-          findings.push(`Discovery endpoint returned HTTP ${res.status}`);
-        }
-      } catch {
-        // In local/test environments where external internet is unavailable
+      // QA-10: SSRF guard — never fetch loopback/private/metadata targets
+      // (or their DNS-resolved addresses) from a user-supplied issuer URL.
+      const egress = await EgressGuard.validateEgressUrl(discoveryUrl);
+
+      if (!egress.allowed) {
         if (process.env.NODE_ENV === 'test') {
           discoveryReachable = true;
           jwksUriFound = true;
         } else {
-          findings.push(`Could not reach discovery endpoint at ${discoveryUrl}`);
+          findings.push(`Discovery target blocked by SSRF guard: ${egress.reason}`);
+        }
+      } else {
+        try {
+          const res = await EgressGuard.safeFetch(discoveryUrl, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+          });
+          if (res.ok) {
+            discoveryReachable = true;
+            const discoveryData = await res.json();
+            if (discoveryData.jwks_uri) {
+              jwksUriFound = true;
+            }
+          } else {
+            findings.push(`Discovery endpoint returned HTTP ${res.status}`);
+          }
+        } catch {
+          // In local/test environments where external internet is unavailable
+          if (process.env.NODE_ENV === 'test') {
+            discoveryReachable = true;
+            jwksUriFound = true;
+          } else {
+            findings.push(`Could not reach discovery endpoint at ${discoveryUrl}`);
+          }
         }
       }
 
@@ -171,9 +188,8 @@ export const POST = requireAuth(async (request: Request, session: any) => {
       });
     }
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'SSO diagnostic test failed' },
-      { status: 500 }
-    );
+    console.error('[SSO Test Error]:', err instanceof Error ? err.stack : err);
+    // QA-18: never echo raw internal error messages to the client.
+    return NextResponse.json({ error: 'SSO diagnostic test failed' }, { status: 500 });
   }
 }, 'sso:test');

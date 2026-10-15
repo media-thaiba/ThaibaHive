@@ -78,10 +78,9 @@ export const GET = requireAuth(async (request: Request, session: any) => {
       oidcProviders: oidcList,
     });
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to list SSO providers' },
-      { status: 500 }
-    );
+    console.error('[SSO Providers GET]:', err instanceof Error ? err.stack : err);
+    // QA-18: never echo raw internal error messages to the client.
+    return NextResponse.json({ error: 'Failed to list SSO providers' }, { status: 500 });
   }
 }, 'sso:read');
 
@@ -186,9 +185,8 @@ export const POST = requireAuth(async (request: Request, session: any) => {
       return NextResponse.json({ error: "Invalid provider type. Must be 'SAML' or 'OIDC'" }, { status: 400 });
     }
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to create SSO provider' },
-      { status: 500 }
-    );
+    console.error('[SSO Providers POST]:', err instanceof Error ? err.stack : err);
+    // QA-18: never echo raw internal error messages to the client.
+    return NextResponse.json({ error: 'Failed to create SSO provider' }, { status: 500 });
   }
 }, 'sso:manage');

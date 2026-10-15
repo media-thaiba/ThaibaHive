@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { OidcService } from '@/lib/auth/oidc-service';
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from '@/lib/api/rate-limit';
 import { isSsoFederationEnabled } from '@/lib/features';
+import { isSafeInternalPath } from '@/lib/security/safe-redirect';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,10 +59,12 @@ export async function GET(request: Request) {
   const oidcService = new OidcService();
   const { codeVerifier, codeChallenge } = oidcService.generatePkce();
 
+  // QA-11: only carry same-site path return targets through the state token.
+  const rawReturnUrl = url.searchParams.get('returnUrl');
   const state = oidcService.generateState({
     institutionId,
     providerId: oidcConfig.id,
-    returnUrl: url.searchParams.get('returnUrl') || undefined,
+    returnUrl: isSafeInternalPath(rawReturnUrl) ? rawReturnUrl : undefined,
   });
 
   const redirectUri = `${url.origin}/api/auth/oidc/callback`;
