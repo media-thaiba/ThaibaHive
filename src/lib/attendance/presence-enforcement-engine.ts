@@ -378,19 +378,28 @@ export function decidePresence(
 /**
  * Full enforcement pass for one presence tick. Recomputes claims server-side
  * and applies tenant settings. Never throws — fails closed to `unverified`.
+ *
+ * Pass `context` to reuse settings/locations across a batch of ticks
+ * (loaded once per request instead of once per log).
  */
 export async function enforcePresence(options: {
   claims: PresenceClaims;
   institutionId: string | null | undefined;
   featureEnabled: boolean;
+  context?: {
+    settings: ResolvedPresenceSettings;
+    locations: GeofenceLocationInput[];
+  };
 }): Promise<EnforcementOutcome> {
-  const { claims, institutionId, featureEnabled } = options;
+  const { claims, institutionId, featureEnabled, context } = options;
 
   try {
-    const [settings, locations] = await Promise.all([
-      resolvePresenceSettings(institutionId),
-      loadGeofenceLocations(institutionId),
-    ]);
+    const [settings, locations] = context
+      ? [context.settings, context.locations]
+      : await Promise.all([
+          resolvePresenceSettings(institutionId),
+          loadGeofenceLocations(institutionId),
+        ]);
 
     const evaluation = evaluatePresence(claims, locations, settings);
     const decision = decidePresence(evaluation, settings, featureEnabled);

@@ -1986,6 +1986,36 @@ export const conferenceRecordSchema = z.object({
 });
 export type ConferenceRecordInput = z.infer<typeof conferenceRecordSchema>;
 
+// ─── Presence Verification (v3.42.0) ───
+
+export const presenceLogEntrySchema = z.object({
+  attendanceId: z.string().min(1),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().min(0).optional().nullable(),
+  // Untrusted client claims — recorded for audit but recomputed server-side.
+  isWithinGeofence: z.boolean().optional(),
+  isMockLocation: z.boolean().optional(),
+  wifiSsid: z.string().max(32).optional().nullable(),
+  verificationMethod: z.string().max(32).optional(),
+  distanceFromOffice: z.number().min(0).optional().nullable(),
+  networkState: z.string().max(16).optional(),
+  batteryLevel: z.number().int().min(0).max(100).optional().nullable(),
+});
+export type PresenceLogEntryInput = z.infer<typeof presenceLogEntrySchema>;
+
+export const checkoutPresenceSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().min(0).optional().nullable(),
+  isMockLocation: z.boolean().optional(),
+  wifiSsid: z.string().max(32).optional().nullable(),
+  verificationMethod: z.string().max(32).optional(),
+  networkState: z.string().max(16).optional(),
+  batteryLevel: z.number().int().min(0).max(100).optional().nullable(),
+});
+export type CheckoutPresenceInput = z.infer<typeof checkoutPresenceSchema>;
+
 
 
 

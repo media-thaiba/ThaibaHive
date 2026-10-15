@@ -4,9 +4,37 @@ import { attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveShift } from "@/lib/attendance/shifts";
 import { eq, and } from "drizzle-orm";
+import { checkoutPresenceSchema } from "@/lib/validation/schemas";
+import { isPresenceTrackingEnabled } from "@/lib/features";
+import { enforcePresence } from "@/lib/attendance/presence-enforcement-engine";
 
-export const POST = requireAuth(async (_request, session) => {
+export const POST = requireAuth(async (request, session) => {
   try {
+    // Optional presence payload — validated, then recomputed server-side.
+    let presencePayload: ReturnType<typeof checkoutPresenceSchema.parse> | null =
+      null;
+    try {
+      const raw = await request.text();
+      if (raw && raw.trim().length > 0) {
+        const parsed = checkoutPresenceSchema.safeParse(JSON.parse(raw));
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0];
+          return NextResponse.json(
+            {
+              error: `Invalid presence payload: ${issue.path.join(".") || "payload"} — ${issue.message}`,
+            },
+            { status: 400 }
+          );
+        }
+        presencePayload = parsed.data;
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body." },
+        { status: 400 }
+      );
+    }
+
     const today = new Date().toISOString().split("T")[0];
     const now = new Date();
 
@@ -35,6 +63,41 @@ export const POST = requireAuth(async (_request, session) => {
       );
     }
 
+    // ─── Server-side presence enforcement (flag-gated) ───
+    const presenceUpdate: Record<string, unknown> = {};
+    if (presencePayload) {
+      const institutionId =
+        log.institutionId ??
+        (session.institutionId && session.institutionId !== "global"
+          ? session.institutionId
+          : null);
+
+      if (isPresenceTrackingEnabled(institutionId ?? undefined)) {
+        const outcome = await enforcePresence({
+          claims: presencePayload,
+          institutionId,
+          featureEnabled: true,
+        });
+
+        // Hard rejection only for deterministic mock detection when the
+        // feature is live (flag on, enabled, shadow mode off).
+        if (outcome.evaluation.mockSuspected && outcome.enforceable) {
+          return NextResponse.json(
+            { error: "Presence verification failed: mock location detected." },
+            { status: 403 }
+          );
+        }
+
+        presenceUpdate.presenceStatus = outcome.presenceStatus;
+        presenceUpdate.lastVerifiedAt = now.toISOString();
+        if (outcome.violationsIncrement) {
+          presenceUpdate.geofenceViolations =
+            (log.geofenceViolations ?? 0) + 1;
+        }
+      }
+      // Flag off: payload is validated but not enforced (rollout safety).
+    }
+
     const checkIn = new Date(log.checkIn!);
     const workedMinutes = Math.round((now.getTime() - checkIn.getTime()) / 60000);
 
@@ -55,6 +118,8 @@ export const POST = requireAuth(async (_request, session) => {
         checkOut: now.toISOString(),
         workedMinutes,
         earlyExitMinutes,
+        source: "self",
+        ...presenceUpdate,
       })
       .where(eq(attendanceLogs.id, log.id))
       .returning()

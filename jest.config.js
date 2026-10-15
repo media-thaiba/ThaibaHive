@@ -14,8 +14,12 @@ const customJestConfig = {
     "^@thaiba/db/(.*)$": "<rootDir>/packages/db/$1",
     "^@thaiba/db$": "<rootDir>/packages/db/index.ts",
   },
-  testPathIgnorePatterns: ["/node_modules/", "<rootDir>/e2e/"],
-  modulePathIgnorePatterns: ["<rootDir>/.next/"],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/e2e/",
+    "<rootDir>/.stryker-tmp/",
+  ],
+  modulePathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/.stryker-tmp/"],
   maxWorkers: 1,
   coverageThreshold: {
     global: {

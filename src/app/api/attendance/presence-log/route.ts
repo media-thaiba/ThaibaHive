@@ -2,97 +2,193 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { presenceLogs, attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
+import { presenceLogEntrySchema, type PresenceLogEntryInput } from "@/lib/validation/schemas";
+import { isPresenceTrackingEnabled } from "@/lib/features";
+import {
+  enforcePresence,
+  resolvePresenceSettings,
+  loadGeofenceLocations,
+  type ResolvedPresenceSettings,
+  type GeofenceLocationInput,
+} from "@/lib/attendance/presence-enforcement-engine";
+
+function scopeInstitution(
+  sessionInstitutionId: string | null | undefined,
+  attendanceInstitutionId: string | null | undefined
+): string | null {
+  // Attendance row's institution (backfilled/tenant-owned) wins; else session scope.
+  if (attendanceInstitutionId) return attendanceInstitutionId;
+  if (sessionInstitutionId && sessionInstitutionId !== "global") {
+    return sessionInstitutionId;
+  }
+  return null;
+}
 
 export const POST = requireAuth(async (request, session) => {
   try {
     const body = await request.json();
 
     // Support single log or bulk upload
-    const logs = Array.isArray(body.logs) ? body.logs : [body];
+    const rawLogs = Array.isArray(body.logs) ? body.logs : [body];
 
-    if (logs.length === 0) {
+    if (rawLogs.length === 0) {
       return NextResponse.json({ error: "No logs provided" }, { status: 400 });
     }
 
-    const insertedLogs = [];
-
-    for (const log of logs) {
-      const {
-        attendanceId,
-        latitude,
-        longitude,
-        accuracy,
-        isWithinGeofence = true,
-        isMockLocation = false,
-        wifiSsid,
-        verificationMethod = "gps",
-        distanceFromOffice,
-        networkState = "online",
-        batteryLevel,
-      } = log;
-
-      // Verify attendance log exists and belongs to this staff
-      const attendanceLog = await db
-        .select()
-        .from(attendanceLogs)
-        .where(
-          and(
-            eq(attendanceLogs.id, attendanceId),
-            eq(attendanceLogs.staffId, session.staffId)
-          )
-        )
-        .get();
-
-      if (!attendanceLog) {
-        continue; // Skip invalid logs
+    // ── Validate every entry up-front (Zod) — malformed payloads are rejected. ──
+    const entries: PresenceLogEntryInput[] = [];
+    for (const raw of rawLogs) {
+      const parsed = presenceLogEntrySchema.safeParse(raw);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        return NextResponse.json(
+          {
+            error: `Invalid presence log entry: ${issue.path.join(".") || "payload"} — ${issue.message}`,
+          },
+          { status: 400 }
+        );
       }
-
-      // Insert presence log
-      const logId = crypto.randomUUID();
-      const newLog = await db
-        .insert(presenceLogs)
-        .values({
-          id: logId,
-          attendanceId,
-          staffId: session.staffId,
-          latitude,
-          longitude,
-          accuracy: accuracy ?? null,
-          isWithinGeofence,
-          isMockLocation,
-          wifiSsid: wifiSsid ?? null,
-          verificationMethod,
-          distanceFromOffice: distanceFromOffice ?? null,
-          networkState,
-          batteryLevel: batteryLevel ?? null,
-        })
-        .returning()
-        .get();
-
-      insertedLogs.push(newLog);
-
-      // Update attendance log with presence status
-      let presenceStatus = "verified";
-      if (isMockLocation) {
-        presenceStatus = "unverified";
-      } else if (!isWithinGeofence) {
-        presenceStatus = "field_work";
-      }
-
-      const currentViolations = attendanceLog.geofenceViolations ?? 0;
-      const newViolations = !isWithinGeofence ? currentViolations + 1 : currentViolations;
-
-      await db
-        .update(attendanceLogs)
-        .set({
-          presenceStatus,
-          lastVerifiedAt: new Date().toISOString(),
-          geofenceViolations: newViolations,
-        })
-        .where(eq(attendanceLogs.id, attendanceId))
-        .run();
+      entries.push(parsed.data);
     }
+
+    // ── Resolve attendance rows; entries referencing missing/foreign rows are skipped. ──
+    const attendanceIds = [...new Set(entries.map((e) => e.attendanceId))];
+    const attendanceRows = await db
+      .select()
+      .from(attendanceLogs)
+      .where(
+        and(
+          inArray(attendanceLogs.id, attendanceIds),
+          eq(attendanceLogs.staffId, session.staffId)
+        )
+      )
+      .all();
+    const attendanceById = new Map(attendanceRows.map((row) => [row.id, row]));
+
+    // ── Feature flag + enforcement context, loaded once per institution. ──
+    const contextCache = new Map<
+      string,
+      {
+        featureEnabled: boolean;
+        settings: ResolvedPresenceSettings | null;
+        locations: GeofenceLocationInput[] | null;
+      }
+    >();
+
+    async function getContext(institutionId: string | null) {
+      const key = institutionId ?? "__global__";
+      let entry = contextCache.get(key);
+      if (!entry) {
+        const featureEnabled = isPresenceTrackingEnabled(
+          institutionId ?? undefined
+        );
+        entry = {
+          featureEnabled,
+          settings: null,
+          locations: null,
+        };
+        if (featureEnabled) {
+          const [settings, locations] = await Promise.all([
+            resolvePresenceSettings(institutionId),
+            loadGeofenceLocations(institutionId),
+          ]);
+          entry.settings = settings;
+          entry.locations = locations;
+        }
+        contextCache.set(key, entry);
+      }
+      return entry;
+    }
+
+    const insertedLogs: unknown[] = [];
+
+    // One transaction for the whole batch — presence flushes are frequent and
+    // small; a single commit keeps write amplification down.
+    await db.transaction(async (tx) => {
+      for (const entry of entries) {
+        const attendanceLog = attendanceById.get(entry.attendanceId);
+        if (!attendanceLog) {
+          continue; // Skip invalid logs (missing or not owned by this staff)
+        }
+
+        const institutionId = scopeInstitution(
+          session.institutionId,
+          attendanceLog.institutionId
+        );
+        const ctx = await getContext(institutionId);
+
+        let storedWithin: boolean;
+        let storedMock: boolean;
+        let storedDistance: number | null;
+        let presenceStatus: "verified" | "unverified" | "field_work";
+        let addViolation: boolean;
+
+        if (ctx.featureEnabled && ctx.settings && ctx.locations) {
+          // Server-side enforcement — client claims are recomputed, not trusted.
+          const outcome = await enforcePresence({
+            claims: entry,
+            institutionId,
+            featureEnabled: true,
+            context: { settings: ctx.settings, locations: ctx.locations },
+          });
+          // within=null only when no geofence is configured — vacuous pass.
+          storedWithin = outcome.evaluation.withinGeofence !== false;
+          storedMock = outcome.evaluation.mockSuspected;
+          storedDistance = outcome.evaluation.distanceMeters;
+          presenceStatus = outcome.presenceStatus;
+          addViolation = outcome.violationsIncrement;
+        } else {
+          // Flag off: legacy behavior (client claims accepted) for rollout safety.
+          storedWithin = entry.isWithinGeofence ?? true;
+          storedMock = entry.isMockLocation ?? false;
+          storedDistance = entry.distanceFromOffice ?? null;
+          presenceStatus = storedMock
+            ? "unverified"
+            : !storedWithin
+              ? "field_work"
+              : "verified";
+          addViolation = !storedWithin;
+        }
+
+        const logId = crypto.randomUUID();
+        const newLog = await tx
+          .insert(presenceLogs)
+          .values({
+            id: logId,
+            attendanceId: entry.attendanceId,
+            staffId: session.staffId,
+            institutionId,
+            latitude: entry.latitude,
+            longitude: entry.longitude,
+            accuracy: entry.accuracy ?? null,
+            isWithinGeofence: storedWithin,
+            isMockLocation: storedMock,
+            wifiSsid: entry.wifiSsid ?? null,
+            verificationMethod: entry.verificationMethod ?? "gps",
+            distanceFromOffice: storedDistance,
+            networkState: entry.networkState ?? "online",
+            batteryLevel: entry.batteryLevel ?? null,
+          })
+          .returning()
+          .get();
+
+        insertedLogs.push(newLog);
+
+        const currentViolations = attendanceLog.geofenceViolations ?? 0;
+        await tx
+          .update(attendanceLogs)
+          .set({
+            presenceStatus,
+            lastVerifiedAt: new Date().toISOString(),
+            geofenceViolations: addViolation
+              ? currentViolations + 1
+              : currentViolations,
+          })
+          .where(eq(attendanceLogs.id, entry.attendanceId))
+          .run();
+      }
+    });
 
     return NextResponse.json({ logs: insertedLogs }, { status: 201 });
   } catch (error) {
@@ -135,4 +231,3 @@ export const GET = requireAuth(async (request, session) => {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }, "attendance:read");
-
