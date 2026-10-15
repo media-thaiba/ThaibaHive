@@ -185,7 +185,21 @@ describe("applySyncMutation", () => {
       longitude: 2.2,
     });
 
-    expect(validateNfcCheckIn).toHaveBeenCalledWith("staff_1", "tag_abc", 1.1, 2.2, undefined, undefined);
+    expect(validateNfcCheckIn).toHaveBeenCalledWith(
+      "staff_1",
+      "tag_abc",
+      1.1,
+      2.2,
+      undefined,
+      undefined,
+      {
+        nonce: undefined,
+        tapAt: "2026-09-27T08:00:00.000Z",
+        offline: true,
+        deviceSequence: undefined,
+        requireAntiReplay: false,
+      }
+    );
     const row = (insertChain.values as jest.Mock).mock.calls[0][0];
     expect(row).toMatchObject({ staffId: "staff_1", method: "nfc", nfcTagId: "tag_abc" });
 

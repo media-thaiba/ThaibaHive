@@ -21,6 +21,7 @@ import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import { purchaseApprovalEngine } from "@/lib/finance/purchases/purchase-approval-engine";
 import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
 import { resolveShift } from "@/lib/attendance/shifts";
+import { isPresenceTrackingEnabled } from "@/lib/features";
 import type { Role } from "@/lib/finance/models/approval-state";
 import {
   validateNfcCheckIn,
@@ -320,15 +321,32 @@ async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<st
   const latitude = typeof payload.latitude === "number" ? payload.latitude : undefined;
   const longitude = typeof payload.longitude === "number" ? payload.longitude : undefined;
 
+  const timestamp =
+    typeof payload.timestamp === "string" && payload.timestamp ? payload.timestamp : new Date().toISOString();
+
+  const requireAntiReplay = isPresenceTrackingEnabled(
+    ctx.institutionId && ctx.institutionId !== "global"
+      ? ctx.institutionId
+      : undefined
+  );
+
   try {
-    await validateNfcCheckIn(ctx.staffId, nfcTagId, latitude, longitude, undefined, undefined);
+    await validateNfcCheckIn(ctx.staffId, nfcTagId, latitude, longitude, undefined, undefined, {
+      nonce: typeof payload.nfcNonce === "string" ? payload.nfcNonce : undefined,
+      tapAt: timestamp,
+      offline: true,
+      deviceSequence:
+        typeof payload.deviceSequence === "number" ||
+        typeof payload.deviceSequence === "string"
+          ? payload.deviceSequence
+          : undefined,
+      requireAntiReplay,
+    });
   } catch (error: unknown) {
     if (error instanceof AttendanceValidationError) throw new Error(error.message);
     throw error;
   }
 
-  const timestamp =
-    typeof payload.timestamp === "string" && payload.timestamp ? payload.timestamp : new Date().toISOString();
   const date = timestamp.split("T")[0] || new Date().toISOString().split("T")[0];
 
   try {

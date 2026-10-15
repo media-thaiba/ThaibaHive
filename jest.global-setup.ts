@@ -5,6 +5,11 @@ import { createClient } from "@libsql/client";
 const SNAPSHOT_MARKER = "__JEST_DB_SNAPSHOT";
 
 export default async function globalSetup(): Promise<void> {
+  // Pin the timezone for every worker before any test runs so date-sensitive
+  // suites behave identically on local (non-UTC) machines and CI (UTC).
+  // Runtime process.env.TZ switches do not propagate from the Jest sandbox.
+  process.env.TZ = "UTC";
+
   const configured = process.env.DATABASE_URL;
 
   // CI and postgres jobs already point at ephemeral databases (file:./test.db

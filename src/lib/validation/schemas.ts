@@ -213,6 +213,9 @@ export const checkInSchema = z
     wifiSsid: z.string().optional(),
     nfcTagId: z.string().optional(),
     qrCode: z.string().optional(),
+    // NFC anti-replay (v3.42.0): client tap nonce + physical tap time.
+    nfcNonce: z.string().min(8).max(128).optional(),
+    tapAt: z.string().max(40).optional(),
   })
   .refine(
     (data) => {

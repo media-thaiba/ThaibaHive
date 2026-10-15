@@ -10,6 +10,7 @@ import {
 } from "@/lib/attendance/validation";
 import { resolveShift } from "@/lib/attendance/shifts";
 import { calculateLateMinutes } from "@/lib/attendance/calculations";
+import { isPresenceTrackingEnabled } from "@/lib/features";
 import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request, session) => {
@@ -23,7 +24,17 @@ export const POST = requireAuth(async (request, session) => {
       );
     }
 
-    const { method, latitude, longitude, accuracy, wifiSsid, nfcTagId, qrCode } = result.data;
+    const {
+      method,
+      latitude,
+      longitude,
+      accuracy,
+      wifiSsid,
+      nfcTagId,
+      qrCode,
+      nfcNonce,
+      tapAt,
+    } = result.data;
     const today = new Date().toISOString().split("T")[0];
     const now = new Date();
 
@@ -36,7 +47,20 @@ export const POST = requireAuth(async (request, session) => {
           { status: 400 }
         );
       }
-      await validateNfcCheckIn(session.staffId, nfcTagId, latitude, longitude, accuracy, wifiSsid);
+      const requireAntiReplay = isPresenceTrackingEnabled(
+        session.institutionId && session.institutionId !== "global"
+          ? session.institutionId
+          : undefined
+      );
+      await validateNfcCheckIn(
+        session.staffId,
+        nfcTagId,
+        latitude,
+        longitude,
+        accuracy,
+        wifiSsid,
+        { nonce: nfcNonce, tapAt, requireAntiReplay }
+      );
       // Look up location by NFC tag to get geofence info
       const location = await db
         .select()
