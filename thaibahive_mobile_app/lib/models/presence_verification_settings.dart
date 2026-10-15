@@ -24,30 +24,41 @@ class PresenceVerificationSettings {
   });
 
   factory PresenceVerificationSettings.fromJson(Map<String, dynamic> json) {
+    // The settings API serializes camelCase (drizzle row properties);
+    // snake_case keys are accepted as a fallback for raw-row payloads.
+    bool readBool(String camel, String snake, bool fallback) =>
+        (json[camel] ?? json[snake]) as bool? ?? fallback;
+    int readInt(String camel, String snake, int fallback) =>
+        (json[camel] ?? json[snake]) as int? ?? fallback;
+
     return PresenceVerificationSettings(
       id: json['id'] as String?,
-      institutionId: json['institution_id'] as String?,
-      isEnabled: json['is_enabled'] as bool? ?? true,
-      shadowMode: json['shadow_mode'] as bool? ?? true,
-      checkIntervalMinutes: json['check_interval_minutes'] as int? ?? 10,
-      gracePeriodMinutes: json['grace_period_minutes'] as int? ?? 5,
-      autoCheckoutOnViolation: json['auto_checkout_on_violation'] as bool? ?? false,
-      geofenceRadiusMeters: json['geofence_radius_meters'] as int? ?? 150,
-      lowBatteryIntervalMinutes: json['low_battery_interval_minutes'] as int? ?? 15,
-      criticalBatterySuspend: json['critical_battery_suspend'] as bool? ?? true,
+      institutionId: (json['institutionId'] ?? json['institution_id']) as String?,
+      isEnabled: readBool('isEnabled', 'is_enabled', true),
+      shadowMode: readBool('shadowMode', 'shadow_mode', true),
+      checkIntervalMinutes: readInt('checkIntervalMinutes', 'check_interval_minutes', 10),
+      gracePeriodMinutes: readInt('gracePeriodMinutes', 'grace_period_minutes', 5),
+      autoCheckoutOnViolation:
+          readBool('autoCheckoutOnViolation', 'auto_checkout_on_violation', false),
+      geofenceRadiusMeters:
+          readInt('geofenceRadiusMeters', 'geofence_radius_meters', 150),
+      lowBatteryIntervalMinutes:
+          readInt('lowBatteryIntervalMinutes', 'low_battery_interval_minutes', 15),
+      criticalBatterySuspend:
+          readBool('criticalBatterySuspend', 'critical_battery_suspend', true),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'institution_id': institutionId,
-    'is_enabled': isEnabled,
-    'shadow_mode': shadowMode,
-    'check_interval_minutes': checkIntervalMinutes,
-    'grace_period_minutes': gracePeriodMinutes,
-    'auto_checkout_on_violation': autoCheckoutOnViolation,
-    'geofence_radius_meters': geofenceRadiusMeters,
-    'low_battery_interval_minutes': lowBatteryIntervalMinutes,
-    'critical_battery_suspend': criticalBatterySuspend,
-  };
+        'id': id,
+        'institutionId': institutionId,
+        'isEnabled': isEnabled,
+        'shadowMode': shadowMode,
+        'checkIntervalMinutes': checkIntervalMinutes,
+        'gracePeriodMinutes': gracePeriodMinutes,
+        'autoCheckoutOnViolation': autoCheckoutOnViolation,
+        'geofenceRadiusMeters': geofenceRadiusMeters,
+        'lowBatteryIntervalMinutes': lowBatteryIntervalMinutes,
+        'criticalBatterySuspend': criticalBatterySuspend,
+      };
 }

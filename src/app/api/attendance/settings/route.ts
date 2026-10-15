@@ -60,17 +60,13 @@ export const GET = requireAuth(async (request, session) => {
     const rawInst = url.searchParams.get("institutionId");
     const institutionId = rawInst ? await resolveRequestInstitution(session, rawInst) : (isGlobalAdmin(session) ? null : await resolveRequestInstitution(session, null));
 
-    // Authorization check
-    if (institutionId) {
-      // Accessing campus-specific settings
-      if (!isGlobalAdmin(session) && !(await isInstitutionPrincipal(session, institutionId))) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    } else {
-      // Accessing global settings
-      if (!isGlobalAdmin(session)) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    // Authorization check — reads are allowed for any tenant member: clients
+    // (e.g. the mobile presence ticker) need grace/interval/radius flags for
+    // enforcement UX. resolveRequestInstitution already verifies membership for
+    // non-admins (throws TenantMismatchError cross-tenant), and global settings
+    // stay admin-only. Writes keep `attendance:manage` (PUT/POST below).
+    if (!institutionId && !isGlobalAdmin(session)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Try to get institution-specific settings
@@ -114,7 +110,7 @@ export const GET = requireAuth(async (request, session) => {
     const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}, "attendance:manage");
+}, "attendance:read");
 
 
 export const PUT = requireAuth(async (request, session) => {

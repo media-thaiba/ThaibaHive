@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:thaibahive_mobile/models/attendance_model.dart';
 import 'package:thaibahive_mobile/features/attendance/data/services/background_presence_service.dart';
+import 'package:thaibahive_mobile/features/settings/data/settings_provider.dart';
 import 'package:thaibahive_mobile/core/services/network_service.dart';
 import 'package:thaibahive_mobile/core/services/offline_queue.dart';
 import 'package:thaibahive_mobile/core/services/sync_coordinator.dart';
@@ -181,6 +182,7 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
           officeLatitude: geofenceConfig.latitude,
           officeLongitude: geofenceConfig.longitude,
           geofenceRadius: geofenceConfig.radius,
+          staffId: _ref?.read(currentUserProvider)?.id,
         );
       }
     } catch (e) {

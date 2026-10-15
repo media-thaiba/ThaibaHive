@@ -88,12 +88,18 @@ class BackgroundPresenceService {
   // State
   bool _isTracking = false;
   String? _currentAttendanceId;
+  String? _currentStaffId;
   double? _officeLatitude;
   double? _officeLongitude;
   double? _geofenceRadius;
   bool _lastWithinGeofence = true;
   int _graceCount = 0;
   List<Map<String, dynamic>> _offlineBuffer = [];
+
+  // performCheck wiring (v3.42.0)
+  bool _checkInFlight = false;
+  PresenceVerificationSettings? _settingsCache;
+  DateTime? _settingsFetchedAt;
 
   /// Initialize the background service
   Future<void> init() async {
@@ -113,6 +119,88 @@ class BackgroundPresenceService {
         onBackground: backgroundServiceOnIosBackground,
       ),
     );
+
+    // The background isolate emits a 1-minute `performCheck` tick while the
+    // foreground service runs — this listener runs in the MAIN isolate and
+    // performs the actual presence verification + log upload.
+    _service.on('performCheck').listen((event) {
+      unawaited(_onPerformCheck());
+    });
+  }
+
+  /// Settings are cached for 5 minutes so the per-minute tick does not
+  /// hammer GET /attendance/settings. Falls back to the last known cache
+  /// (or const defaults) when the network is unavailable.
+  Future<PresenceVerificationSettings?> _fetchSettings({bool force = false}) async {
+    if (!force &&
+        _settingsCache != null &&
+        _settingsFetchedAt != null &&
+        DateTime.now().difference(_settingsFetchedAt!) < const Duration(minutes: 5)) {
+      return _settingsCache;
+    }
+
+    try {
+      final token = await _secureStorage.read(key: 'auth_token');
+      if (token == null) return _settingsCache;
+
+      final dio = _getDio();
+      dio.options.headers['Authorization'] = 'Bearer $token';
+
+      final res = await dio.get('/attendance/settings');
+      final raw = res.data is Map<String, dynamic> ? (res.data as Map<String, dynamic>)['settings'] : null;
+      if (raw is Map<String, dynamic>) {
+        _settingsCache = PresenceVerificationSettings.fromJson(raw);
+        _settingsFetchedAt = DateTime.now();
+      }
+    } catch (e) {
+      debugPrint('[BackgroundPresence] Settings fetch failed, using cache: $e');
+    }
+    return _settingsCache;
+  }
+
+  /// Handle a `performCheck` tick from the background isolate.
+  ///
+  /// Resolves tracking state from memory (or secure storage after an app
+  /// restart), fetches presence-verification settings (cached), skips ticks
+  /// while verification is disabled server-side, then runs the full
+  /// verify → upload pipeline and flushes any offline buffer.
+  Future<void> _onPerformCheck() async {
+    if (_checkInFlight) return;
+    _checkInFlight = true;
+    try {
+      final attendanceId = _currentAttendanceId ??
+          await _secureStorage.read(key: 'tracking_attendance_id');
+      if (attendanceId == null) return;
+
+      final officeLat = _officeLatitude ??
+          double.tryParse(await _secureStorage.read(key: 'tracking_office_lat') ?? '');
+      final officeLon = _officeLongitude ??
+          double.tryParse(await _secureStorage.read(key: 'tracking_office_lon') ?? '');
+      final radius = _geofenceRadius ??
+          double.tryParse(await _secureStorage.read(key: 'tracking_radius') ?? '');
+      if (officeLat == null || officeLon == null || radius == null) return;
+
+      final staffId = _currentStaffId ??
+          await _secureStorage.read(key: 'tracking_staff_id') ??
+          'unknown';
+
+      final settings = await _fetchSettings();
+      // Server-side verification disabled → do not upload presence ticks.
+      if (settings != null && !settings.isEnabled) return;
+
+      await verifyPresence(
+        staffId: staffId,
+        attendanceId: attendanceId,
+        officeLatitude: officeLat,
+        officeLongitude: officeLon,
+        geofenceRadius: radius,
+        settings: settings,
+      );
+
+      await flushOfflineBuffer();
+    } finally {
+      _checkInFlight = false;
+    }
   }
 
   /// Start tracking presence
@@ -121,8 +209,10 @@ class BackgroundPresenceService {
     required double officeLatitude,
     required double officeLongitude,
     required double geofenceRadius,
+    String? staffId,
   }) async {
     _currentAttendanceId = attendanceId;
+    _currentStaffId = staffId ?? _currentStaffId;
     _officeLatitude = officeLatitude;
     _officeLongitude = officeLongitude;
     _geofenceRadius = geofenceRadius;
@@ -135,6 +225,9 @@ class BackgroundPresenceService {
     await _secureStorage.write(key: 'tracking_office_lat', value: officeLatitude.toString());
     await _secureStorage.write(key: 'tracking_office_lon', value: officeLongitude.toString());
     await _secureStorage.write(key: 'tracking_radius', value: geofenceRadius.toString());
+    if (staffId != null) {
+      await _secureStorage.write(key: 'tracking_staff_id', value: staffId);
+    }
 
     // Update service notification
     _service.invoke('updateNotification', {
@@ -155,6 +248,7 @@ class BackgroundPresenceService {
     await _secureStorage.delete(key: 'tracking_office_lat');
     await _secureStorage.delete(key: 'tracking_office_lon');
     await _secureStorage.delete(key: 'tracking_radius');
+    await _secureStorage.delete(key: 'tracking_staff_id');
 
     // Stop the service
     final service = FlutterBackgroundService();
@@ -167,6 +261,7 @@ class BackgroundPresenceService {
     final officeLat = await _secureStorage.read(key: 'tracking_office_lat');
     final officeLon = await _secureStorage.read(key: 'tracking_office_lon');
     final radius = await _secureStorage.read(key: 'tracking_radius');
+    final staffId = await _secureStorage.read(key: 'tracking_staff_id');
 
     if (attendanceId != null && officeLat != null && officeLon != null && radius != null) {
       await startTracking(
@@ -174,6 +269,7 @@ class BackgroundPresenceService {
         officeLatitude: double.parse(officeLat),
         officeLongitude: double.parse(officeLon),
         geofenceRadius: double.parse(radius),
+        staffId: staffId,
       );
     }
   }
@@ -316,8 +412,9 @@ class BackgroundPresenceService {
       dio.options.headers['Authorization'] = 'Bearer $token';
       dio.options.headers['Content-Type'] = 'application/json';
 
+      // AppConstants.apiBaseUrl already ends in /api — no second prefix (D8*).
       await dio.post(
-        '/api/attendance/presence-log',
+        '/attendance/presence-log',
         data: log.toJson(),
       );
     } on DioException {
@@ -346,8 +443,9 @@ class BackgroundPresenceService {
       dio.options.headers['Authorization'] = 'Bearer $token';
       dio.options.headers['Content-Type'] = 'application/json';
 
+      // AppConstants.apiBaseUrl already ends in /api — no second prefix (D8*).
       await dio.post(
-        '/api/attendance/presence-log',
+        '/attendance/presence-log',
         data: {'logs': _offlineBuffer},
       );
 

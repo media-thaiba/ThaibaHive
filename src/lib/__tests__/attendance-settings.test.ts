@@ -111,12 +111,28 @@ describe("Attendance Verification Settings Endpoints", () => {
       expect(res.status).toBe(401);
     });
 
-    it("should return 403 if not authorized (staff role)", async () => {
+    it("should return 403 if the caller lacks the required permission", async () => {
       mockVerifySession.mockResolvedValueOnce({ staffId: "staff-1", role: "staff" });
       mockHasPermission.mockReturnValueOnce(false);
       const req = new Request("http://localhost/api/attendance/settings");
       const res = await GET(req);
       expect(res.status).toBe(403);
+    });
+
+    it("should allow staff to read presence settings for their own institution (mobile enforcement)", async () => {
+      mockVerifySession.mockResolvedValueOnce({ staffId: "staff-1", role: "staff" });
+      mockHasPermission.mockReturnValueOnce(true); // staff holds attendance:read
+
+      // Scope resolution uses the real (seeded) membership table; the mocked
+      // chain serves the institution-scoped settings row.
+      const mockSettings = { id: "settings-1", institutionId: "campus-1", geofenceRadiusMeters: 100 };
+      mockGet.mockResolvedValueOnce(mockSettings);
+
+      const req = new Request("http://localhost/api/attendance/settings?institutionId=campus-1");
+      const res = await GET(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.settings).toEqual(mockSettings);
     });
 
     it("should return global settings for global admin if no institutionId is passed", async () => {
@@ -148,11 +164,9 @@ describe("Attendance Verification Settings Endpoints", () => {
     it("should return campus settings for principal authorized for that campus", async () => {
       mockVerifySession.mockResolvedValueOnce({ staffId: "principal-1", role: "principal" });
       mockHasPermission.mockReturnValueOnce(true);
-      
-      // Mock isInstitutionPrincipal check
-      mockGet.mockResolvedValueOnce({ staffId: "principal-1", institutionId: "campus-1" }); // principal assignment query
-      
-      // Mock settings query
+
+      // Membership is verified inside resolveRequestInstitution against the
+      // real scoped table — the only mocked query is the settings row.
       const mockSettings = { id: "settings-1", institutionId: "campus-1", geofenceRadiusMeters: 100 };
       mockGet.mockResolvedValueOnce(mockSettings);
 
@@ -166,9 +180,9 @@ describe("Attendance Verification Settings Endpoints", () => {
     it("should reject principal with 403 if querying a different campus (cross-campus spoofing)", async () => {
       mockVerifySession.mockResolvedValueOnce({ staffId: "principal-1", role: "principal" });
       mockHasPermission.mockReturnValueOnce(true);
-      
-      // Mock isInstitutionPrincipal check returning undefined (not assigned to campus-2)
-      mockGet.mockResolvedValueOnce(undefined);
+
+      // resolveRequestInstitution throws TenantMismatchError (no mock needed);
+      // principal-1 is not a member of campus-2.
 
       const req = new Request("http://localhost/api/attendance/settings?institutionId=campus-2");
       const res = await GET(req);
