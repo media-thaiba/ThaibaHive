@@ -60,6 +60,24 @@ export const DEFAULT_FLAGS: Record<FeatureFlag, boolean> = {
 // In-memory per-institution override registry for staged/canary tenant rollouts (D13)
 const tenantOverrides: Map<string, Partial<Record<FeatureFlag, boolean>>> = new Map();
 
+// Durable per-tenant rollout lists read from environment variables
+// (comma-separated institution IDs, or `*` for every tenant). Unlike the
+// in-memory registry above, these survive process restarts, which makes
+// them the persistence layer for tenant pilots — e.g. the TPS-MAJHI
+// presence-verification shadow pilot driven by
+// FEATURE_PRESENCE_TRACKING_TENANTS. Extend this map as new tenant-scoped
+// pilots ship.
+const ENV_TENANT_ROLLOUTS: Partial<Record<FeatureFlag, string>> = {
+  presence_tracking: process.env.FEATURE_PRESENCE_TRACKING_TENANTS ?? "",
+};
+
+function envRolloutEnabled(flag: FeatureFlag, institutionId: string): boolean {
+  const raw = ENV_TENANT_ROLLOUTS[flag];
+  if (!raw) return false;
+  const entries = raw.split(",").map((entry) => entry.trim()).filter(Boolean);
+  return entries.length > 0 && (entries.includes("*") || entries.includes(institutionId));
+}
+
 export function setTenantFeatureFlag(institutionId: string, flag: FeatureFlag, enabled: boolean): void {
   const current = tenantOverrides.get(institutionId) || {};
   current[flag] = enabled;
@@ -76,9 +94,16 @@ export function clearTenantFeatureOverrides(institutionId?: string): void {
 
 export function getFeatureFlags(institutionId?: string): Record<FeatureFlag, boolean> {
   const base = { ...DEFAULT_FLAGS };
-  if (institutionId && tenantOverrides.has(institutionId)) {
-    const overrides = tenantOverrides.get(institutionId)!;
-    return { ...base, ...overrides };
+  if (institutionId) {
+    for (const flag of Object.keys(ENV_TENANT_ROLLOUTS) as FeatureFlag[]) {
+      if (envRolloutEnabled(flag, institutionId)) {
+        base[flag] = true;
+      }
+    }
+    if (tenantOverrides.has(institutionId)) {
+      const overrides = tenantOverrides.get(institutionId)!;
+      return { ...base, ...overrides };
+    }
   }
   return base;
 }

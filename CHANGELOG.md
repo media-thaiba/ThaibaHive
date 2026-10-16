@@ -10,6 +10,8 @@ All notable changes to the **ThaibaHive** enterprise autonomous platform will be
 - **Mobile Presence Check Throttling**: background `performCheck` GPS sampling and presence-log uploads now throttle to the server-configured `checkIntervalMinutes` (clamped 1–180) via `PresenceCheckThrottle` — cutting ~1,440 uploads/staff/day down to one per interval (~93% DB and battery-usage reduction) while the offline buffer still flushes every minute tick for prompt connectivity recovery; tracking restarts always run an immediate check.
 - **Wall-Clock Grace Tracking**: geofence grace migrated from tick-counting to `GraceTracker` wall-clock windows (`outsideSince` → `gracePeriodMinutes` elapsed), so grace semantics stay in real minutes regardless of check cadence; auto-checkout-on-violation timing unchanged.
 - **Tests**: 8 new Dart unit tests covering throttle first-run/block/elapsed/reset semantics and grace window start/fire/reset/zero-grace behaviour.
+- **Durable Per-Tenant Flag Rollouts** (`FEATURE_PRESENCE_TRACKING_TENANTS`): env-driven comma-separated institution-ID allowlist (or `*`) that enables `presence_tracking` per tenant across restarts — the previous per-tenant registry was in-memory only; in-memory overrides still win for test scoping.
+- **TPS-MAJHI Shadow Pilot**: `presence_tracking` enabled for institution `inst-tps-majhi` with `isEnabled=true`, `shadowMode=true`, and auto-checkout OFF — violations are recorded and observable in the cockpit before hard enforcement.
 #### Changed
 - `attendance-locations` tab bar now persists the active tab into the URL via `history.replaceState` without full navigation.
 
