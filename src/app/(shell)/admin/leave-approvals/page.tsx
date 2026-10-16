@@ -6,13 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -224,6 +222,7 @@ export default function LeaveApprovalsPage() {
             <DialogTitle>
               {actionDialog.action === "approved" ? "Approve Leave" : "Reject Leave"}
             </DialogTitle>
+              <DialogDescription className="sr-only">Dialog dialog details and actions.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {actionDialog.leave && (

@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { ensureArray } from "@/lib/utils";
 
 type TemplateItem = {
   id: string;
@@ -37,13 +39,20 @@ export default function TemplateDetailPage() {
   const [newItemDesc, setNewItemDesc] = useState("");
 
   const fetchData = useCallback(async () => {
-    const res = await fetch(`/api/checklists/${id}`);
-    const d = await res.json();
-    setTemplate(d.template);
-    setItems(Array.isArray(d.items) ? d.items : []);
-    setName(d.template.name);
-    setDescription(d.template.description || "");
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/checklists/${id}`);
+      const d = await res.json();
+      if (d?.template) {
+        setTemplate(d.template);
+        setName(d.template.name || "");
+        setDescription(d.template.description || "");
+      }
+      setItems(ensureArray(d?.items));
+    } catch {
+      // handled via null template state
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -106,7 +115,7 @@ export default function TemplateDetailPage() {
     fetchData();
   }
 
-  if (loading) return <div className="flex-1 p-6"><div className="h-8 w-48 animate-pulse rounded bg-muted" /></div>;
+  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
   if (!template) return <div className="flex-1 p-6 text-muted-foreground">Template not found</div>;
 
   return (

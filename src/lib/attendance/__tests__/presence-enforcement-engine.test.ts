@@ -310,7 +310,7 @@ describe("enforcePresence (fail-closed)", () => {
     });
     expect(outcome.presenceStatus).toBe("unverified");
     expect(outcome.enforceable).toBe(false);
-    expect(outcome.violationsIncrement).toBe(true);
+    expect(outcome.violationsIncrement).toBe(false);
     expect(outcome.error).toBe("db_unavailable");
     expect(outcome.evaluation.unverifiableReasons).toContain("evaluation_error");
   });

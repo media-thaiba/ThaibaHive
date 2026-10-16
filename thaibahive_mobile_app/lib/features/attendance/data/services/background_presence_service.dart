@@ -389,8 +389,8 @@ class BackgroundPresenceService {
     required double distance,
     PresenceVerificationSettings? settings,
   }) async {
-    if (settings?.autoCheckoutOnViolation == true) {
-      // Auto checkout on violation
+    if (settings?.autoCheckoutOnViolation == true && settings?.shadowMode != true) {
+      // Auto checkout on violation (disabled in shadow mode)
       await _performAutoCheckout(attendanceId);
     }
   }
@@ -430,17 +430,25 @@ class BackgroundPresenceService {
         '/attendance/presence-log',
         data: log.toJson(),
       );
-    } on DioException {
-      // Network error - buffer for later
-      _addToOfflineBuffer(log);
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      // Only buffer network failures, timeouts, rate limits, or 5xx server errors; drop 4xx validation errors.
+      if (status == null || status >= 500 || status == 408 || status == 429) {
+        _addToOfflineBuffer(log);
+      } else {
+        debugPrint('[BackgroundPresence] Dropping rejected presence log (HTTP $status)');
+      }
     } catch (e) {
       debugPrint('[BackgroundPresence] Failed to send log: $e');
       _addToOfflineBuffer(log);
     }
   }
 
-  /// Add log to offline buffer
+  /// Add log to offline buffer (capped at 500 entries to prevent unbounded memory growth)
   void _addToOfflineBuffer(PresenceLog log) {
+    if (_offlineBuffer.length >= 500) {
+      _offlineBuffer.removeAt(0);
+    }
     _offlineBuffer.add(log.toJson());
   }
 
@@ -463,6 +471,14 @@ class BackgroundPresenceService {
       );
 
       _offlineBuffer.clear();
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status != null && status >= 400 && status < 500 && status != 408 && status != 429) {
+        debugPrint('[BackgroundPresence] Clearing poisoned offline buffer (HTTP $status)');
+        _offlineBuffer.clear();
+      } else {
+        debugPrint('[BackgroundPresence] Failed to flush buffer: $e');
+      }
     } catch (e) {
       debugPrint('[BackgroundPresence] Failed to flush buffer: $e');
     }

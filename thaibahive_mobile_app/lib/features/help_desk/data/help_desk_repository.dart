@@ -39,9 +39,13 @@ class HelpDeskRepository {
     final response = await _apiClient.get('/help-desk/$id');
     // API returns { ticket: {...}, comments: [...] }
     final map = response as Map<String, dynamic>;
-    return HelpDeskTicketModel.fromJson(
+    final ticketMap = Map<String, dynamic>.from(
       (map['ticket'] ?? map) as Map<String, dynamic>,
     );
+    if (map['comments'] is List && !ticketMap.containsKey('comments')) {
+      ticketMap['comments'] = map['comments'];
+    }
+    return HelpDeskTicketModel.fromJson(ticketMap);
   }
 
   Future<HelpDeskTicketModel> createTicket(Map<String, dynamic> data) async {

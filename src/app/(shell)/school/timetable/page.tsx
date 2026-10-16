@@ -6,7 +6,7 @@ import { TeacherSubstitutionModal } from "@/components/academic/TeacherSubstitut
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -327,6 +327,7 @@ export default function TimetablePage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Assign Timetable Period</DialogTitle>
+              <DialogDescription className="sr-only">Assign Timetable Period dialog details and actions.</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveEntry} className="space-y-4 pt-2">
@@ -385,6 +386,7 @@ export default function TimetablePage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Configure Period Slot</DialogTitle>
+              <DialogDescription className="sr-only">Configure Period Slot dialog details and actions.</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateSlot} className="space-y-4 pt-2">

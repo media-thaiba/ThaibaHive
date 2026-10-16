@@ -220,7 +220,7 @@ export default function SsoAdminPage() {
       )}
 
       {testResult && (
-        <Card className="border-l-4 border-l-blue-600 bg-blue-50/20 dark:bg-blue-950/20">
+        <Card className="border-blue-500/30 bg-blue-50/20 dark:bg-blue-950/20">
           <CardHeader className="py-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-md font-semibold">Diagnostic Probe Result ({testResult.providerType})</CardTitle>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface OpenApiSpec {
@@ -104,17 +106,17 @@ export default function ApiDocsPage() {
 
       <main className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row gap-4">
-          <input
+          <Input
             type="text"
             placeholder="Search endpoints, summaries, or keywords..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 bg-slate-900 border-slate-800 text-slate-200 placeholder:text-slate-500"
           />
-          <select
+          <Select
             value={selectedTag}
             onChange={(e) => setSelectedTag(e.target.value)}
-            className="bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="md:w-64 bg-slate-900 border-slate-800 text-slate-200"
           >
             <option value="all">All Categories ({allTags.length})</option>
             {allTags.map((tag) => (
@@ -122,7 +124,7 @@ export default function ApiDocsPage() {
                 {tag}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {loading ? (

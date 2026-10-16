@@ -42,6 +42,7 @@ const PerformanceRadarChart = dynamic(
 
 import { ShieldAlert, Calendar, Building, BarChart2, Filter, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ReportBuilder } from '@/components/reports/report-builder';
 
 export default function WorkspaceAnalyticsPage() {
@@ -219,34 +220,31 @@ export default function WorkspaceAnalyticsPage() {
               <label className="text-xs font-semibold text-slate-500 flex items-center">
                 <Building className="h-3.5 w-3.5 mr-1" /> Campus ID
               </label>
-              <input
+              <Input
                 type="text"
                 placeholder="All Campuses"
                 value={institutionId}
                 onChange={(e) => setInstitutionId(e.target.value)}
-                className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:border-slate-800 dark:bg-slate-950"
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-500 flex items-center">
                 <Calendar className="h-3.5 w-3.5 mr-1" /> Start Date
               </label>
-              <input
+              <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:border-slate-800 dark:bg-slate-950"
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-500 flex items-center">
                 <Calendar className="h-3.5 w-3.5 mr-1" /> End Date
               </label>
-              <input
+              <Input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:border-slate-800 dark:bg-slate-950"
               />
             </div>
           </div>

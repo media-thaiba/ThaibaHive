@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
 type ApprovalItem = {
@@ -278,6 +278,7 @@ export default function ApprovalsPage() {
               {dialog?.action === "approve" ? "Approve" : "Reject"}{" "}
               {dialog?.item.type}
             </DialogTitle>
+              <DialogDescription className="sr-only">Dialog dialog details and actions.</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             {dialog?.item.title} &mdash; {dialog?.item.submittedBy}

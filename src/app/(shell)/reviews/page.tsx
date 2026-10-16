@@ -9,12 +9,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   ClipboardCheck,
   Eye,
@@ -240,6 +238,7 @@ export default function StaffReviewsPage() {
                 ? "Self-Evaluation"
                 : "Performance Review"}
             </DialogTitle>
+              <DialogDescription className="sr-only">Dialog dialog details and actions.</DialogDescription>
           </DialogHeader>
           {detailLoading ? (
             <div className="space-y-3">

@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ensureArray } from "@/lib/utils";
 
 type Task = {
   id: string;
@@ -46,11 +48,16 @@ export default function AssignmentDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const res = await fetch(`/api/checklists/assignments/${id}`);
-    const d = await res.json();
-    setAssignment(d.assignment);
-    setTasks(Array.isArray(d.tasks) ? d.tasks : []);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/checklists/assignments/${id}`);
+      const d = await res.json();
+      setAssignment(d?.assignment ?? null);
+      setTasks(ensureArray(d?.tasks));
+    } catch {
+      // handled via null assignment state
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -77,7 +84,7 @@ export default function AssignmentDetailPage() {
 
   const completedCount = tasks.filter((t) => t.isCompleted).length;
 
-  if (loading) return <div className="flex-1 p-6"><div className="h-8 w-48 animate-pulse rounded bg-muted" /></div>;
+  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
   if (!assignment) return <div className="flex-1 p-6 text-muted-foreground">Assignment not found</div>;
 
   return (

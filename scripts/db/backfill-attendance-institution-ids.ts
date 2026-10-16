@@ -43,10 +43,6 @@ export interface AttendanceBackfillOptions {
   customReportPath?: string;
 }
 
-function singleMembershipPredicate(): string {
-  return isPostgres ? "true" : "1";
-}
-
 export async function runAttendanceInstitutionBackfill(
   options?: AttendanceBackfillOptions
 ): Promise<AttendanceBackfillReport> {

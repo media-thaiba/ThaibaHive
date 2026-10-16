@@ -119,7 +119,7 @@ class PresenceVerificationService {
       verificationMethod: verificationMethod,
       distanceFromOffice: distanceFromOffice,
       networkState: networkState,
-      batteryLevel: batteryLevel,
+      batteryLevel: (batteryLevel != null && batteryLevel >= 0) ? batteryLevel : null,
       createdAt: DateTime.now().toIso8601String(),
     );
   }

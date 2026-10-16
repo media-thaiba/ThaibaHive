@@ -1991,6 +1991,11 @@ export type ConferenceRecordInput = z.infer<typeof conferenceRecordSchema>;
 
 // ─── Presence Verification (v3.42.0) ───
 
+const batteryLevelSchema = z.preprocess(
+  (val) => (typeof val === "number" && val < 0 ? null : val),
+  z.number().int().min(0).max(100).optional().nullable()
+);
+
 export const presenceLogEntrySchema = z.object({
   attendanceId: z.string().min(1),
   latitude: z.number().min(-90).max(90),
@@ -2003,7 +2008,7 @@ export const presenceLogEntrySchema = z.object({
   verificationMethod: z.string().max(32).optional(),
   distanceFromOffice: z.number().min(0).optional().nullable(),
   networkState: z.string().max(16).optional(),
-  batteryLevel: z.number().int().min(0).max(100).optional().nullable(),
+  batteryLevel: batteryLevelSchema,
 });
 export type PresenceLogEntryInput = z.infer<typeof presenceLogEntrySchema>;
 
@@ -2015,7 +2020,7 @@ export const checkoutPresenceSchema = z.object({
   wifiSsid: z.string().max(32).optional().nullable(),
   verificationMethod: z.string().max(32).optional(),
   networkState: z.string().max(16).optional(),
-  batteryLevel: z.number().int().min(0).max(100).optional().nullable(),
+  batteryLevel: batteryLevelSchema,
 });
 export type CheckoutPresenceInput = z.infer<typeof checkoutPresenceSchema>;
 

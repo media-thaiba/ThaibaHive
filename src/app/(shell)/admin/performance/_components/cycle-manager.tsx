@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ensureArray } from "@/lib/utils";
@@ -121,6 +121,7 @@ export function CycleManager() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Launch Performance Review Cycle</DialogTitle>
+              <DialogDescription className="sr-only">Launch Performance Review Cycle dialog details and actions.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div>

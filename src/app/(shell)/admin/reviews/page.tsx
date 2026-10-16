@@ -12,12 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   ClipboardCheck,
   Plus,
@@ -317,6 +315,7 @@ export default function AdminReviewsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create Performance Review</DialogTitle>
+              <DialogDescription className="sr-only">Create Performance Review dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 mt-2">
             <div className="space-y-1.5">
@@ -369,6 +368,7 @@ export default function AdminReviewsPage() {
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Performance Review</DialogTitle>
+              <DialogDescription className="sr-only">Performance Review dialog details and actions.</DialogDescription>
           </DialogHeader>
           {detailLoading ? (
             <div className="space-y-3">

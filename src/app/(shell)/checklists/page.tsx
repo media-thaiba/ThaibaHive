@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ensureArray } from "@/lib/utils";
 
 type Task = {
   id: string;
@@ -44,7 +45,10 @@ export default function MyChecklistsPage() {
     fetch("/api/checklists/assignments")
       .then((r) => r.json())
       .then((d) => {
-        setAssignments(Array.isArray(d.assignments) ? d.assignments : []);
+        setAssignments(ensureArray(d?.assignments));
+        setLoading(false);
+      })
+      .catch(() => {
         setLoading(false);
       });
   }, []);

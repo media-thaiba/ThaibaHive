@@ -18,12 +18,18 @@ export function CheckInPanel({ staff, onCheckInComplete }: CheckInPanelProps) {
   const [nfcOpen, setNfcOpen] = useState(false);
 
   async function handleNfcScan(tagId: string) {
-    // Submit check-in via NFC tag
+    // Submit check-in via NFC tag with anti-replay nonce & tap timestamp
     try {
       await fetch("/api/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ staffId: staff?.id, nfcTagId: tagId, method: "nfc" }),
+        body: JSON.stringify({
+          staffId: staff?.id,
+          nfcTagId: tagId,
+          method: "nfc",
+          nfcNonce: crypto.randomUUID(),
+          tapAt: new Date().toISOString(),
+        }),
       });
     } finally {
       setNfcOpen(false);

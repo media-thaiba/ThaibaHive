@@ -41,6 +41,8 @@ class _FakeAttendanceRepo extends AttendanceRepository {
     String? qrCode,
     double? latitude,
     double? longitude,
+    String? nfcNonce,
+    String? tapAt,
   }) async {
     checkInCalls++;
     if (shouldFail) throw DioException(requestOptions: RequestOptions(), error: 'Network fail');

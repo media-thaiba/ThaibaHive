@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { logActivity } from "@/lib/api/activity-log";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 /**
  * BLE BEACON SECURITY CLASSIFICATION:
@@ -26,8 +27,16 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Beacon UUID is required" }, { status: 400 });
   }
 
-  const location = await db.select().from(attendanceLocations).where(eq(attendanceLocations.id, id)).get();
+  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
+  const location = await db
+    .select()
+    .from(attendanceLocations)
+    .where(and(eq(attendanceLocations.id, id), isNull(attendanceLocations.deletedAt)))
+    .get();
   if (!location) {
+    return NextResponse.json({ error: "Attendance location not found" }, { status: 404 });
+  }
+  if (scopedInstId && scopedInstId !== "global" && location.institutionId !== scopedInstId) {
     return NextResponse.json({ error: "Attendance location not found" }, { status: 404 });
   }
 

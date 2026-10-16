@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ensureArray } from "@/lib/utils";
 
 type Assignment = {
   id: string;
@@ -47,12 +49,16 @@ export default function AssignmentsPage() {
       fetch("/api/checklists/assignments").then((r) => r.json()),
       fetch("/api/staff").then((r) => r.json()),
       fetch("/api/checklists").then((r) => r.json()),
-    ]).then(([a, s, t]) => {
-      setAssignments(Array.isArray(a.assignments) ? a.assignments : []);
-      setStaffList(Array.isArray(s.staff) ? s.staff : []);
-      setTemplates(Array.isArray(t.templates) ? t.templates : []);
-      setLoading(false);
-    });
+    ])
+      .then(([a, s, t]) => {
+        setAssignments(ensureArray(a?.assignments));
+        setStaffList(ensureArray(s?.staff));
+        setTemplates(ensureArray(t?.templates));
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, []);
 
   const filtered = assignments.filter((a) => {
@@ -72,10 +78,10 @@ export default function AssignmentsPage() {
     setForm({ staffId: "", templateId: "", type: "onboarding" });
     const res = await fetch("/api/checklists/assignments");
     const d = await res.json();
-    setAssignments(Array.isArray(d.assignments) ? d.assignments : []);
+    setAssignments(ensureArray(d?.assignments));
   }
 
-  if (loading) return <div className="flex-1 p-6"><div className="h-8 w-48 animate-pulse rounded bg-muted" /></div>;
+  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
 
   return (
     <div className="flex-1 space-y-6 p-6">

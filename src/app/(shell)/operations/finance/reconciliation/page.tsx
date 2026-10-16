@@ -7,13 +7,14 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { PermissionGate } from "@/components/ui/permission-gate";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Scale, Plus, RefreshCcw, ArrowLeft, CheckCircle2, AlertTriangle } from "lucide-react";
 import { ensureArray, formatDate } from "@/lib/utils";
@@ -416,6 +417,7 @@ export default function FinanceReconciliationPage() {
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
               <DialogTitle>Manual Match</DialogTitle>
+              <DialogDescription>Override or link this reconciliation item to a bank statement reference.</DialogDescription>
             </DialogHeader>
             {matchTarget && (
               <form onSubmit={handleMatch} className="space-y-4 pt-2">
@@ -425,9 +427,8 @@ export default function FinanceReconciliationPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="match-status">Match Status *</Label>
-                  <select
+                  <Select
                     id="match-status"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                     value={matchForm.matchStatus}
                     onChange={(e) => setMatchForm({ ...matchForm, matchStatus: e.target.value })}
                   >
@@ -435,7 +436,7 @@ export default function FinanceReconciliationPage() {
                     <option value="matched">Matched</option>
                     <option value="variance">Variance</option>
                     <option value="unmatched">Unmatched</option>
-                  </select>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -567,6 +568,7 @@ export default function FinanceReconciliationPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Run Reconciliation</DialogTitle>
+              <DialogDescription className="sr-only">Run Reconciliation dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">

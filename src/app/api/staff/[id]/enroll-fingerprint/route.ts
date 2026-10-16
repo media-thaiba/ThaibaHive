@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
 
-  if (session.staffId !== id && session.role !== "super_admin" && session.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.staffId !== id) {
+    const hasAccess = await canAccessStaff(session.staffId, session.role, id);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const body = await request.json().catch(() => ({}));

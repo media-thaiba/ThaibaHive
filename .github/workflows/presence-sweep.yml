@@ -1,0 +1,26 @@
+name: Presence Staleness Sweep
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  presence-sweep:
+    name: Run Server-Side Presence Staleness Sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/presence-sweep
+        env:
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Skipping presence sweep: APP_URL or CRON_SECRET not configured."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL%/}/api/cron/presence-sweep"

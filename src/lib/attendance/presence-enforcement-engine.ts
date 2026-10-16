@@ -415,7 +415,7 @@ export async function enforcePresence(options: {
     return {
       presenceStatus: "unverified",
       enforceable: false,
-      violationsIncrement: true,
+      violationsIncrement: false,
       settings,
       evaluation: {
         withinGeofence: null,

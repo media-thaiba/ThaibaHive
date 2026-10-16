@@ -2,6 +2,22 @@
 
 All notable changes to the **ThaibaHive** enterprise autonomous platform will be documented in this file.
 
+## [3.42.2] - 2026-10-16
+### Pre-Release Hardening — Presence Pilot Unblockers, Sub-Resource Tenant Guards & UI/A11y Polish
+#### Added
+- **Scheduled Presence Sweep** (`.github/workflows/presence-sweep.yml`): `*/15` cron + manual dispatch invoking `POST /api/cron/presence-sweep` with `x-cron-secret` — closes the gap where the staleness/auto-checkout sweep had no scheduler (self-skips until `APP_URL`/`CRON_SECRET` repository secrets are configured).
+- **NFC Anti-Replay Client Handshake**: web `CheckInPanel` and mobile `AttendanceRepository.checkIn` now generate `nfcNonce`/`tapAt` for live taps, satisfying the fail-closed `requireAntiReplay` gate that otherwise 403'd every live NFC check-in under the pilot flag.
+- **Sub-Resource Tenant Hardening**: existence + `resolveScopedInstitutionId` ownership checks, soft-delete filtering, and payload coercion guards across help-desk comments, attendance-location QR/beacon, poll voting, biometric enroll/verify, asset service, checklist template items, circular download, and announcement read routes (covered by `subresource-tenant-hardening.test.ts`).
+- **Mobile Companion Completeness**: live ticket comments wired end-to-end (repository no longer discards `comments`; detail screen replaces the "coming soon" placeholder), real `POST /auth/forgot-password` replaces the simulated delay, and Google Sign-In degrades gracefully when `GOOGLE_WEB_CLIENT_ID` is unconfigured.
+- **Web UI/A11y Sweep**: `DialogDescription` added to all 35 `DialogContent` blocks (27 files), `.catch()` + `<Skeleton>` loading states on 6 checklist/staff pages, raw `<input>`/`<select>` replaced with `Input`/`Select`, and `border-l-4` side-stripes removed.
+#### Fixed
+- **Presence Payload Poison-Pill (QA-01/02/27)**: battery `-1` sentinel clamped to `null` client-side and preprocessed server-side in both presence/checkout schemas; offline buffer queues only network/5xx failures (drops 4xx, clears poisoned flushes, caps at 500 entries); bulk ingestion caps at 200 logs and skips malformed entries individually instead of failing the whole batch.
+- **`attendance_logs.institution_id`** now populated on check-in (web + offline sync applier) so tenant-scoped sweeps/violations see them (QA-05).
+- **Shadow-mode client bypass (QA-06)**: mobile auto-checkout honors `shadowMode`; **flag-off client claims** no longer increment violations (QA-08); the engine fail-cached catch stops charging staff for infrastructure errors (QA-09); batch violation counters update atomically across multi-entry batches (QA-18).
+- **Legacy test/lint infrastructure**: hardware-scanning suite `@thaiba/auth` mock extended for the new `resolveScopedInstitutionId` re-exports; `.stryker-tmp` sandbox directories added to eslint ignores; dead `singleMembershipPredicate` and unsafe `Function` type removed.
+#### Verification
+- Full gates re-run post-merge: Jest 853/853 suites (5,498 tests), `tsc --noEmit` 0, `eslint .` 0, `flutter analyze` 0, Flutter 280/280, security scanners clean (requireAuth 0 naked, RBAC 100%, tenant isolation 100%, gateway 693/693 routes shielded).
+
 ## [3.42.1] - 2026-10-15
 ### Presence Verification — Operations Cockpit & Mobile Check Throttling
 #### Added

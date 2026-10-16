@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { circulars, circularDownloads } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -20,7 +21,7 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-export const GET = requireAuth(async (request, _session, context) => {
+export const GET = requireAuth(async (request, session, context) => {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || request.headers.get("x-real-ip")
     || "unknown";
@@ -33,6 +34,7 @@ export const GET = requireAuth(async (request, _session, context) => {
   }
 
   const { id } = await context!.params;
+  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
 
   const circular = await db
     .select({
@@ -40,23 +42,38 @@ export const GET = requireAuth(async (request, _session, context) => {
       fileUrl: circulars.fileUrl,
       title: circulars.title,
       fileType: circulars.fileType,
+      isActive: circulars.isActive,
+      targetInstitutionId: circulars.targetInstitutionId,
     })
     .from(circulars)
     .where(eq(circulars.id, id))
     .get();
 
-  if (!circular) {
+  if (
+    !circular ||
+    !circular.isActive ||
+    (circular.targetInstitutionId &&
+      scopedInstId &&
+      scopedInstId !== "global" &&
+      circular.targetInstitutionId !== scopedInstId)
+  ) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  const reqUrl = new URL(request.url);
+  const resolvedUrl = new URL(circular.fileUrl, request.url);
+  if (resolvedUrl.origin !== reqUrl.origin) {
+    return NextResponse.json({ error: "Invalid document URL origin" }, { status: 400 });
   }
 
   // Log the download
   await db.insert(circularDownloads).values({
     id: crypto.randomUUID(),
     circularId: circular.id,
-    staffId: _session.staffId,
+    staffId: session.staffId,
     downloadedAt: new Date().toISOString(),
   }).run();
 
   // Redirect to the actual file URL
-  return NextResponse.redirect(new URL(circular.fileUrl, request.url));
+  return NextResponse.redirect(resolvedUrl);
 }, "circulars:read");

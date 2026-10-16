@@ -1,16 +1,25 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { checklistTemplateItems } from "@/db/schema";
+import { checklistTemplates, checklistTemplateItems } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, _session, context) => {
   const { templateId } = await context!.params;
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const { title, description, order } = body;
 
-  if (!title) {
+  if (!title || typeof title !== "string" || !title.trim()) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+
+  const template = await db
+    .select()
+    .from(checklistTemplates)
+    .where(eq(checklistTemplates.id, templateId))
+    .get();
+  if (!template) {
+    return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
   const item = await db
@@ -18,7 +27,7 @@ export const POST = requireAuth(async (request: Request, _session, context) => {
     .values({
       id: crypto.randomUUID(),
       templateId,
-      title,
+      title: title.trim(),
       description,
       order: order ?? 0,
     })
@@ -28,8 +37,9 @@ export const POST = requireAuth(async (request: Request, _session, context) => {
   return NextResponse.json({ item }, { status: 201 });
 }, "org:manage");
 
-export const PATCH = requireAuth(async (request: Request, _session) => {
-  const body = await request.json();
+export const PATCH = requireAuth(async (request: Request, _session, context) => {
+  const { templateId } = await context!.params;
+  const body = await request.json().catch(() => ({}));
   const { id, title, description, order } = body;
 
   if (!id) {
@@ -44,7 +54,12 @@ export const PATCH = requireAuth(async (request: Request, _session) => {
   const item = await db
     .update(checklistTemplateItems)
     .set(updates)
-    .where(eq(checklistTemplateItems.id, id))
+    .where(
+      and(
+        eq(checklistTemplateItems.id, id),
+        eq(checklistTemplateItems.templateId, templateId)
+      )
+    )
     .returning()
     .get();
 
@@ -55,8 +70,9 @@ export const PATCH = requireAuth(async (request: Request, _session) => {
   return NextResponse.json({ item });
 }, "org:manage");
 
-export const DELETE = requireAuth(async (request: Request, _session) => {
-  const body = await request.json();
+export const DELETE = requireAuth(async (request: Request, _session, context) => {
+  const { templateId } = await context!.params;
+  const body = await request.json().catch(() => ({}));
   const { id } = body;
 
   if (!id) {
@@ -65,7 +81,12 @@ export const DELETE = requireAuth(async (request: Request, _session) => {
 
   const item = await db
     .delete(checklistTemplateItems)
-    .where(eq(checklistTemplateItems.id, id))
+    .where(
+      and(
+        eq(checklistTemplateItems.id, id),
+        eq(checklistTemplateItems.templateId, templateId)
+      )
+    )
     .returning()
     .get();
 

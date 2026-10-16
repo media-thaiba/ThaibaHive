@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type LeaveType = {
@@ -207,6 +205,7 @@ export default function LeaveTypesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Leave Type" : "New Leave Type"}</DialogTitle>
+              <DialogDescription className="sr-only">Dialog dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

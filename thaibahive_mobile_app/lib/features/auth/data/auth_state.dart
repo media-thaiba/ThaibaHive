@@ -227,6 +227,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
   void updateUser(UserModel user) {
     state = state.copyWith(user: user);
   }
+
+  Future<void> requestPasswordReset(String email) async {
+    try {
+      await _repository.requestPasswordReset(email);
+    } on AppException {
+      rethrow;
+    } on DioException catch (e) {
+      throw AppException.fromDioException(e);
+    }
+  }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

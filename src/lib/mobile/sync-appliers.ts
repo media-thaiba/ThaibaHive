@@ -348,6 +348,8 @@ async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<st
   }
 
   const date = timestamp.split("T")[0] || new Date().toISOString().split("T")[0];
+  const resolvedInstId =
+    ctx.institutionId && ctx.institutionId !== "global" ? ctx.institutionId : null;
 
   try {
     await db
@@ -355,6 +357,7 @@ async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<st
       .values({
         id: crypto.randomUUID(),
         staffId: ctx.staffId,
+        institutionId: resolvedInstId,
         date,
         checkIn: timestamp,
         method: "nfc",

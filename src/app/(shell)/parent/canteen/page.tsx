@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { CreditCard, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api/client";
@@ -33,7 +34,7 @@ export default function ParentCanteenPage() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-l-4 border-l-primary">
+        <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" /> Active Meal Pass Balance
@@ -55,11 +56,10 @@ export default function ParentCanteenPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <input
+            <Input
               type="text"
               value={dietary}
               onChange={(e) => setDietary(e.target.value)}
-              className="w-full px-3 py-1.5 text-sm border rounded-md"
               placeholder="e.g. Vegetarian, Nut Allergy"
             />
             <Button size="sm" onClick={handleUpdateDietary}>Save Dietary Controls</Button>

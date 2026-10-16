@@ -30,26 +30,41 @@ export const POST = requireAuth(async (request, session) => {
     const body = await request.json();
 
     // Support single log or bulk upload
-    const rawLogs = Array.isArray(body.logs) ? body.logs : [body];
+    const isBulk = Array.isArray(body.logs);
+    const rawLogs = isBulk ? body.logs : [body];
 
     if (rawLogs.length === 0) {
       return NextResponse.json({ error: "No logs provided" }, { status: 400 });
     }
 
-    // ── Validate every entry up-front (Zod) — malformed payloads are rejected. ──
+    if (rawLogs.length > 200) {
+      return NextResponse.json(
+        { error: "Batch size exceeds maximum of 200 logs" },
+        { status: 400 }
+      );
+    }
+
+    // ── Validate entries (Zod) — single malformed payload returns 400; bulk skips malformed items unless all fail. ──
     const entries: PresenceLogEntryInput[] = [];
+    let skipped = 0;
+    let firstErrorMsg = "Invalid presence log payload";
+
     for (const raw of rawLogs) {
       const parsed = presenceLogEntrySchema.safeParse(raw);
       if (!parsed.success) {
         const issue = parsed.error.issues[0];
-        return NextResponse.json(
-          {
-            error: `Invalid presence log entry: ${issue.path.join(".") || "payload"} — ${issue.message}`,
-          },
-          { status: 400 }
-        );
+        firstErrorMsg = `Invalid presence log entry: ${issue.path.join(".") || "payload"} — ${issue.message}`;
+        if (!isBulk) {
+          return NextResponse.json({ error: firstErrorMsg }, { status: 400 });
+        }
+        skipped++;
+        continue;
       }
       entries.push(parsed.data);
+    }
+
+    if (entries.length === 0) {
+      return NextResponse.json({ error: firstErrorMsg }, { status: 400 });
     }
 
     // ── Resolve attendance rows; entries referencing missing/foreign rows are skipped. ──
@@ -139,7 +154,7 @@ export const POST = requireAuth(async (request, session) => {
           presenceStatus = outcome.presenceStatus;
           addViolation = outcome.violationsIncrement;
         } else {
-          // Flag off: legacy behavior (client claims accepted) for rollout safety.
+          // Flag off: record telemetry without incrementing enforcement violation counters from unverified client claims.
           storedWithin = entry.isWithinGeofence ?? true;
           storedMock = entry.isMockLocation ?? false;
           storedDistance = entry.distanceFromOffice ?? null;
@@ -148,7 +163,7 @@ export const POST = requireAuth(async (request, session) => {
             : !storedWithin
               ? "field_work"
               : "verified";
-          addViolation = !storedWithin;
+          addViolation = false;
         }
 
         const logId = crypto.randomUUID();
@@ -176,21 +191,28 @@ export const POST = requireAuth(async (request, session) => {
         insertedLogs.push(newLog);
 
         const currentViolations = attendanceLog.geofenceViolations ?? 0;
+        const nextViolations = addViolation
+          ? currentViolations + 1
+          : currentViolations;
+        attendanceLog.geofenceViolations = nextViolations;
+        attendanceLog.presenceStatus = presenceStatus;
+
         await tx
           .update(attendanceLogs)
           .set({
             presenceStatus,
             lastVerifiedAt: new Date().toISOString(),
-            geofenceViolations: addViolation
-              ? currentViolations + 1
-              : currentViolations,
+            geofenceViolations: nextViolations,
           })
           .where(eq(attendanceLogs.id, entry.attendanceId))
           .run();
       }
     });
 
-    return NextResponse.json({ logs: insertedLogs }, { status: 201 });
+    return NextResponse.json(
+      isBulk && skipped > 0 ? { logs: insertedLogs, skipped } : { logs: insertedLogs },
+      { status: 201 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -6,13 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {  } from "@/components/ui/badge";
 import {  } from "@/components/ui/skeleton";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import NfcAdminTable, { type NfcCardRow } from "@/components/nfc/nfc-admin-table";
 
 export default function NfcCardsPage() {
@@ -181,6 +179,7 @@ export default function NfcCardsPage() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Register NFC Card</DialogTitle>
+              <DialogDescription className="sr-only">Register NFC Card dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">

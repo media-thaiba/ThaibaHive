@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { ensureArray } from "@/lib/utils";
 
 type Template = {
   id: string;
@@ -34,7 +36,10 @@ export default function ChecklistTemplatesPage() {
     fetch("/api/checklists")
       .then((r) => r.json())
       .then((d) => {
-        setTemplates(Array.isArray(d.templates) ? d.templates : []);
+        setTemplates(ensureArray(d?.templates));
+        setLoading(false);
+      })
+      .catch(() => {
         setLoading(false);
       });
   }, []);
@@ -50,7 +55,7 @@ export default function ChecklistTemplatesPage() {
     setForm({ name: "", type: "onboarding", description: "" });
     const res = await fetch("/api/checklists");
     const d = await res.json();
-    setTemplates(Array.isArray(d.templates) ? d.templates : []);
+    setTemplates(ensureArray(d?.templates));
   }
 
   async function handleDelete(id: string) {
@@ -59,7 +64,7 @@ export default function ChecklistTemplatesPage() {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   }
 
-  if (loading) return <div className="flex-1 p-6"><div className="h-8 w-48 animate-pulse rounded bg-muted" /></div>;
+  if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
 
   return (
     <div className="flex-1 space-y-6 p-6">

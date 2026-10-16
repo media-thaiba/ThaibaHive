@@ -2,14 +2,23 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and, isNull } from "drizzle-orm";
 import { createHmac, randomBytes } from "crypto";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
 
-  const location = await db.select().from(attendanceLocations).where(eq(attendanceLocations.id, id)).get();
+  const location = await db
+    .select()
+    .from(attendanceLocations)
+    .where(and(eq(attendanceLocations.id, id), isNull(attendanceLocations.deletedAt)))
+    .get();
   if (!location) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (scopedInstId && scopedInstId !== "global" && location.institutionId !== scopedInstId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   if (!location.isActive) return NextResponse.json({ error: "Location is inactive" }, { status: 400 });
 
   const nonce = randomBytes(32).toString("base64url");

@@ -9,9 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 type Institution = { id: string; name: string; code: string };
 type Department = {
@@ -159,7 +157,8 @@ export default function DepartmentsPage() {
       {/* ── Create Dialog ── */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New Department</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New Department</DialogTitle>
+              <DialogDescription className="sr-only">New Department dialog details and actions.</DialogDescription></DialogHeader>
           <form id="create-dept-form" onSubmit={handleCreate} className="space-y-3 py-2">
             <div className="grid grid-cols-2 gap-3">
               <Input id="create-dept-name" placeholder="Name" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} required />
@@ -181,7 +180,8 @@ export default function DepartmentsPage() {
       {/* ── Edit Dialog ── */}
       <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Edit Department</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit Department</DialogTitle>
+              <DialogDescription className="sr-only">Edit Department dialog details and actions.</DialogDescription></DialogHeader>
           <form id="edit-dept-form" onSubmit={handleEdit} className="space-y-3 py-2">
             <div className="grid grid-cols-2 gap-3">
               <Input id="edit-dept-name" placeholder="Name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />

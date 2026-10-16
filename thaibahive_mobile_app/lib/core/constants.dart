@@ -38,6 +38,10 @@ class AppConstants {
     return 'https://thaiba-hive.vercel.app';
   }
 
+  /// Whether GOOGLE_WEB_CLIENT_ID was provided via --dart-define at build time.
+  static bool get isGoogleSignInConfigured =>
+      const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID').isNotEmpty;
+
   /// Google Web Client ID for Google Sign-In on Android/iOS
   /// Must be provided via --dart-define=GOOGLE_WEB_CLIENT_ID=... at build time.
   static String get googleWebClientId {

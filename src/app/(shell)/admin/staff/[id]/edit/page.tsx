@@ -84,33 +84,38 @@ export default function EditStaffPage() {
     fetch(`/api/staff/${id}`)
       .then((r) => r.json())
       .then((data) => {
-        const s = data.staff;
-        setForm({
-          firstName: s.firstName || "",
-          lastName: s.lastName || "",
-          email: s.email || "",
-          phone: s.phone || "",
-          employeeId: s.employeeId || "",
-          designation: s.designation || "",
-          role: s.role || "staff",
-          dateOfBirth: s.dateOfBirth || "",
-          dateOfJoining: s.dateOfJoining || "",
-          qualifications: s.qualifications || "",
-          certificates: s.certificates || "",
-          experienceYears: s.experienceYears?.toString() || "",
-          skills: s.skills || "",
-          languages: s.languages || "",
-          emergencyContactName: s.emergencyContactName || "",
-          emergencyContactPhone: s.emergencyContactPhone || "",
-          aadhaar: s.aadhaar || "",
-          pan: s.pan || "",
-          bankAccount: s.bankAccount || "",
-          ifscCode: s.ifscCode || "",
-          contractEndDate: s.contractEndDate || "",
-          teachingSubjects: s.teachingSubjects || "",
-          biography: s.biography || "",
-          nfcTagId: s.nfcTagId || "",
-        });
+        const s = data?.staff;
+        if (s) {
+          setForm({
+            firstName: s.firstName || "",
+            lastName: s.lastName || "",
+            email: s.email || "",
+            phone: s.phone || "",
+            employeeId: s.employeeId || "",
+            designation: s.designation || "",
+            role: s.role || "staff",
+            dateOfBirth: s.dateOfBirth || "",
+            dateOfJoining: s.dateOfJoining || "",
+            qualifications: s.qualifications || "",
+            certificates: s.certificates || "",
+            experienceYears: s.experienceYears?.toString() || "",
+            skills: s.skills || "",
+            languages: s.languages || "",
+            emergencyContactName: s.emergencyContactName || "",
+            emergencyContactPhone: s.emergencyContactPhone || "",
+            aadhaar: s.aadhaar || "",
+            pan: s.pan || "",
+            bankAccount: s.bankAccount || "",
+            ifscCode: s.ifscCode || "",
+            contractEndDate: s.contractEndDate || "",
+            teachingSubjects: s.teachingSubjects || "",
+            biography: s.biography || "",
+            nfcTagId: s.nfcTagId || "",
+          });
+        }
+        setLoading(false);
+      })
+      .catch(() => {
         setLoading(false);
       });
   }, [id]);

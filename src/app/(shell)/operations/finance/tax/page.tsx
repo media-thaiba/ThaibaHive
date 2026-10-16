@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { PermissionGate } from "@/components/ui/permission-gate";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Landmark, Percent, Plus, Calculator } from "lucide-react";
 import { ensureArray, formatDate } from "@/lib/utils";
@@ -520,6 +520,7 @@ export default function FinanceTaxPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Tax Jurisdiction</DialogTitle>
+              <DialogDescription className="sr-only">New Tax Jurisdiction dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateJurisdiction} className="space-y-4 pt-2">
             <div className="grid grid-cols-3 gap-3">
@@ -604,6 +605,7 @@ export default function FinanceTaxPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Institution Rate Override</DialogTitle>
+              <DialogDescription className="sr-only">New Institution Rate Override dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateOverride} className="space-y-4 pt-2">
             <div className="space-y-1.5">

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -129,6 +130,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
+    if (!AppConstants.isGoogleSignInConfigured && !kDebugMode) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Google Sign-In is not configured for this build. Please sign in with your email and password.',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
     try {
       final clientId = AppConstants.googleWebClientId;
       final googleSignIn = GoogleSignIn(
@@ -158,19 +172,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  bool _isSubmittingReset = false;
+
   Future<void> _handleForgotPassword() async {
+    if (_isSubmittingReset) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _recoverySent = false);
-    // Simulate reset link dispatch
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (mounted) {
-      setState(() => _recoverySent = true);
+    setState(() {
+      _recoverySent = false;
+      _isSubmittingReset = true;
+    });
+    try {
+      await ref
+          .read(authProvider.notifier)
+          .requestPasswordReset(_emailForgotController.text.trim());
+      if (mounted) {
+        setState(() {
+          _recoverySent = true;
+          _isSubmittingReset = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmittingReset = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send reset link: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
   void _changeMode(AuthMode mode) {
-    if (ref.read(authProvider).status == AuthStatus.loading) return;
+    if (ref.read(authProvider).status == AuthStatus.loading || _isSubmittingReset) return;
     setState(() {
+      if (mode == AuthMode.forgotPassword &&
+          _emailForgotController.text.trim().isEmpty &&
+          _emailController.text.trim().isNotEmpty) {
+        _emailForgotController.text = _emailController.text.trim();
+      }
       _currentMode = mode;
       _recoverySent = false;
       _formKey.currentState?.reset();

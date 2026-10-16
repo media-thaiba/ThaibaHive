@@ -9,6 +9,9 @@ import { db } from "@/db";
 jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(() => true),
+  resolveScopedInstitutionId: jest.fn(async (requested?: string | null) => requested || "global"),
+  getUserInstitutionScope: jest.fn(async () => "global"),
+  resolveInstitutionScopeForSession: jest.fn(async () => "global"),
 }));
 
 

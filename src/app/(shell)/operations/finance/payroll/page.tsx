@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { PermissionGate } from "@/components/ui/permission-gate";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Wallet, Users, FileDown, Plus, PlayCircle, CheckCircle2, Ban } from "lucide-react";
 import { ensureArray, formatDate } from "@/lib/utils";
@@ -527,6 +527,7 @@ export default function FinancePayrollPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Salary Structure</DialogTitle>
+              <DialogDescription className="sr-only">Salary Structure dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateStructure} className="space-y-4 pt-2">
             <div className="space-y-1.5">
@@ -647,6 +648,7 @@ export default function FinancePayrollPage() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Disburse Payroll</DialogTitle>
+              <DialogDescription className="sr-only">Disburse Payroll dialog details and actions.</DialogDescription>
           </DialogHeader>
           {disburseTarget && (
             <form

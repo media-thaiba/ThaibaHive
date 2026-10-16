@@ -67,4 +67,10 @@ class AuthRepository {
     });
     return response.data['nonce'] as String;
   }
+
+  Future<void> requestPasswordReset(String email) async {
+    await client.post('/auth/forgot-password', data: {
+      'email': email,
+    });
+  }
 }

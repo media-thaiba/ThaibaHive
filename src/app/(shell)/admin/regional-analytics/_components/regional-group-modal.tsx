@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -63,6 +61,7 @@ export function RegionalGroupModal({ open, onOpenChange, onGroupCreated }: Regio
       <DialogContent className="sm:max-w-md bg-white p-6 rounded-xl border border-slate-200">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900">Create Regional Group Cluster</DialogTitle>
+              <DialogDescription className="sr-only">Create Regional Group Cluster dialog details and actions.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">

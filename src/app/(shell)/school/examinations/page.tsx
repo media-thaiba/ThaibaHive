@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ExamDashboard } from "@/components/examinations/ExamDashboard";
 import { ExamSessionItem } from "@/components/examinations/ExamQueue";
 import { ExamSetupWizard } from "@/components/examinations/ExamSetupWizard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MarkEntryPortal } from "@/components/examinations/MarkEntryPortal";
 
 export default function ExaminationsPage() {
@@ -46,6 +46,7 @@ export default function ExaminationsPage() {
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Mark Entry: {selectedExam.title}</DialogTitle>
+              <DialogDescription className="sr-only">Mark Entry: dialog details and actions.</DialogDescription>
             </DialogHeader>
             <MarkEntryPortal
               examScheduleId="sched_100_math"

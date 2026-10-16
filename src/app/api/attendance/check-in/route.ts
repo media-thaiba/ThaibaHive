@@ -40,6 +40,7 @@ export const POST = requireAuth(async (request, session) => {
 
     // ─── Perform check-in validation ───
     let locationId: string | null = null;
+    let matchedLocation: typeof attendanceLocations.$inferSelect | undefined;
     if (method === "nfc") {
       if (!nfcTagId) {
         return NextResponse.json(
@@ -70,7 +71,10 @@ export const POST = requireAuth(async (request, session) => {
           eq(attendanceLocations.isActive, true)
         ))
         .get();
-      if (location) locationId = location.id;
+      if (location) {
+        locationId = location.id;
+        matchedLocation = location;
+      }
     } else if (method === "qr") {
       if (!qrCode) {
         return NextResponse.json(
@@ -86,6 +90,13 @@ export const POST = requireAuth(async (request, session) => {
         locationId = payload.locationId;
       } catch {
         // Ignore parsing errors - location lookup will fail gracefully
+      }
+      if (locationId) {
+        matchedLocation = await db
+          .select()
+          .from(attendanceLocations)
+          .where(eq(attendanceLocations.id, locationId))
+          .get();
       }
     }
 
@@ -112,6 +123,12 @@ export const POST = requireAuth(async (request, session) => {
     const shift = await resolveShift(session.staffId, today);
     const { lateMinutes, status } = calculateLateMinutes(now, shift.startTime, shift.gracePeriodMinutes);
 
+    const resolvedInstitutionId =
+      matchedLocation?.institutionId ??
+      (session.institutionId && session.institutionId !== "global"
+        ? session.institutionId
+        : null);
+
     const logId = crypto.randomUUID();
     let newLog;
     try {
@@ -120,6 +137,7 @@ export const POST = requireAuth(async (request, session) => {
         .values({
           id: logId,
           staffId: session.staffId,
+          institutionId: resolvedInstitutionId,
           date: today,
           checkIn: now.toISOString(),
           method,
@@ -147,20 +165,13 @@ export const POST = requireAuth(async (request, session) => {
 
     // ─── Fetch geofence config for the location ───
     let geofenceConfig = null;
-    if (locationId) {
-      const location = await db
-        .select()
-        .from(attendanceLocations)
-        .where(eq(attendanceLocations.id, locationId))
-        .get();
-      if (location && location.latitude && location.longitude) {
-        geofenceConfig = {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          radius: location.radius || 150,
-          locationName: location.name,
-        };
-      }
+    if (matchedLocation && matchedLocation.latitude && matchedLocation.longitude) {
+      geofenceConfig = {
+        latitude: matchedLocation.latitude,
+        longitude: matchedLocation.longitude,
+        radius: matchedLocation.radius || 150,
+        locationName: matchedLocation.name,
+      };
     }
 
     return NextResponse.json({ log: newLog, geofence: geofenceConfig }, { status: 201 });

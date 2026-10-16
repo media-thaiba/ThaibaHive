@@ -53,8 +53,10 @@ class HelpDeskNotifier extends StateNotifier<HelpDeskState> {
     }
   }
 
-  Future<void> loadTicketDetail(String id) async {
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> loadTicketDetail(String id, {bool silent = false}) async {
+    if (!silent) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
     try {
       final ticket = await _repository.getTicket(id);
       state = state.copyWith(selectedTicket: ticket, isLoading: false);
@@ -88,7 +90,7 @@ class HelpDeskNotifier extends StateNotifier<HelpDeskState> {
   Future<void> addComment(String ticketId, String comment) async {
     try {
       await _repository.addComment(ticketId, comment);
-      await loadTicketDetail(ticketId);
+      await loadTicketDetail(ticketId, silent: true);
     } catch (e) {
       state = state.copyWith(error: e.toString());
       rethrow;

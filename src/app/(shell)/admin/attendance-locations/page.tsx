@@ -4,13 +4,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -395,6 +393,7 @@ export default function AttendanceLocationsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add Attendance Location</DialogTitle>
+              <DialogDescription className="sr-only">Add Attendance Location dialog details and actions.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -501,6 +500,7 @@ export default function AttendanceLocationsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>QR Code — {qrLocation?.name}</DialogTitle>
+              <DialogDescription className="sr-only">QR Code — dialog details and actions.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4">
             <canvas

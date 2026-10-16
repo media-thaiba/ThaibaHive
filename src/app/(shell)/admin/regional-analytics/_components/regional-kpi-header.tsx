@@ -20,7 +20,7 @@ export function RegionalKpiHeader({
 }: RegionalKpiProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <Card className="border-l-4 border-l-blue-600 shadow-sm">
+      <Card className="border-blue-500/20 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Total Regional Campuses
@@ -34,7 +34,7 @@ export function RegionalKpiHeader({
         </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-emerald-600 shadow-sm">
+      <Card className="border-emerald-500/20 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Network Attendance Rate
@@ -50,7 +50,7 @@ export function RegionalKpiHeader({
         </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-indigo-600 shadow-sm">
+      <Card className="border-indigo-500/20 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Fee Realization Rate
@@ -66,7 +66,7 @@ export function RegionalKpiHeader({
         </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-rose-600 shadow-sm">
+      <Card className="border-rose-500/20 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Active AI Anomalies

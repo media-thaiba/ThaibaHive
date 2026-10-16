@@ -8,13 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
+import { Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type Shift = {
@@ -330,6 +328,7 @@ export default function ShiftsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Shift</DialogTitle>
+              <DialogDescription className="sr-only">Assign Shift dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAssignShift} className="space-y-4">
             <div className="space-y-2">

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ensureArray } from '@/lib/utils';
 import { PermissionGate } from '@/components/ui/permission-gate';
 
@@ -137,6 +137,7 @@ return (
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{selectedDoc.title}</DialogTitle>
+              <DialogDescription className="sr-only">Dialog dialog details and actions.</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-4 text-sm">
               <div><strong>Serial Number:</strong> {selectedDoc.serialNumber}</div>

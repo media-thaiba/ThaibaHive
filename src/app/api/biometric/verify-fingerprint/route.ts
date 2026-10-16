@@ -3,14 +3,22 @@ import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { canAccessStaff } from "@/lib/auth/department-scope";
 import crypto from "crypto";
 
-export const POST = requireAuth(async (request: Request) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json().catch(() => ({}));
   const { staffId, templateHash } = body as { staffId?: string; templateHash?: string };
 
   if (!staffId || !templateHash) {
     return NextResponse.json({ error: "staffId and templateHash are required" }, { status: 400 });
+  }
+
+  if (session.staffId !== staffId) {
+    const hasAccess = await canAccessStaff(session.staffId, session.role, staffId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const user = await db.select().from(staff).where(eq(staff.id, staffId)).get();

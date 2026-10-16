@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { PermissionGate } from "@/components/ui/permission-gate";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Inbox, Layers, ShieldCheck, Plus, Check, X, RefreshCw } from "lucide-react";
 import { ensureArray, formatDate, formatDateTime } from "@/lib/utils";
@@ -545,6 +545,7 @@ export default function FinancePurchasesPage() {
             <DialogTitle>
               {actionForm.action === "rejected" ? "Reject" : "Approve"} Purchase Request
             </DialogTitle>
+              <DialogDescription className="sr-only">Purchase Request dialog details and actions.</DialogDescription>
           </DialogHeader>
           {actionTarget && (
             <form onSubmit={handleApprovalAction} className="space-y-4 pt-2">
@@ -611,6 +612,7 @@ export default function FinancePurchasesPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Approval Tier</DialogTitle>
+              <DialogDescription className="sr-only">New Approval Tier dialog details and actions.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateTier} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">

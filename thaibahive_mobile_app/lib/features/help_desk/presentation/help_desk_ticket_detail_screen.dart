@@ -101,8 +101,10 @@ class _HelpDeskTicketDetailScreenState
                                       'Submitted by', ticket.submitter?.fullName ?? ticket.submittedById),
                                   _infoRow(Icons.calendar_today_rounded,
                                       'Created', ticket.createdAt.toDisplayDate()),
-                                  _infoRow(Icons.chat_bubble_outline_rounded,
-                                      'Comments', '${ticket.commentCount ?? 0}'),
+                                  _infoRow(
+                                      Icons.chat_bubble_outline_rounded,
+                                      'Comments',
+                                      '${ticket.commentCount ?? ticket.comments.length}'),
                                   const SizedBox(height: 12),
                                   Text('Description',
                                       style: theme.textTheme.titleSmall),
@@ -113,17 +115,57 @@ class _HelpDeskTicketDetailScreenState
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Text('Comments',
+                          Text('Comments (${ticket.comments.length})',
                               style: theme.textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 8),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Text('Comment system coming soon',
-                                  style: TextStyle(color: Colors.grey[600])),
+                          if (ticket.comments.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  'No comments yet. Start the conversation below.',
+                                  style: TextStyle(color: Colors.grey[600]),
+                                ),
+                              ),
+                            )
+                          else
+                            ...ticket.comments.map(
+                              (c) => Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            c.fullAuthorName,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            c.createdAt.toDisplayDate(),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(c.content),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -154,12 +196,25 @@ class _HelpDeskTicketDetailScreenState
                               icon: const Icon(Icons.send_rounded),
                               color: theme.colorScheme.primary,
                               onPressed: () async {
-                                if (_commentCtrl.text.isEmpty) return;
-                                await ref
-                                    .read(helpDeskProvider.notifier)
-                                    .addComment(
-                                        widget.ticketId, _commentCtrl.text);
-                                _commentCtrl.clear();
+                                final text = _commentCtrl.text.trim();
+                                if (text.isEmpty) return;
+                                try {
+                                  await ref
+                                      .read(helpDeskProvider.notifier)
+                                      .addComment(widget.ticketId, text);
+                                  _commentCtrl.clear();
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Failed to post comment: $e'),
+                                        backgroundColor:
+                                            theme.colorScheme.error,
+                                      ),
+                                    );
+                                  }
+                                }
                               },
                             ),
                           ],

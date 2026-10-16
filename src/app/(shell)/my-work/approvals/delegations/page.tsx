@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 type Delegation = {
   id: string;
@@ -289,6 +289,7 @@ export default function DelegationsPage() {
         <DialogContent className="sm:max-w-md space-y-4">
           <DialogHeader>
             <DialogTitle>New Delegation</DialogTitle>
+              <DialogDescription className="sr-only">New Delegation dialog details and actions.</DialogDescription>
           </DialogHeader>
  
           <div className="space-y-1.5">

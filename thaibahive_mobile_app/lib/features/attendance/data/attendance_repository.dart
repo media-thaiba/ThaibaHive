@@ -38,13 +38,20 @@ class AttendanceRepository {
     String? qrCode,
     double? latitude,
     double? longitude,
+    String? nfcNonce,
+    String? tapAt,
   }) async {
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+    final generatedNonce =
+        'nfc_${DateTime.now().microsecondsSinceEpoch}_${nfcTagId ?? "tag"}';
     final response = await _client.post('/attendance/check-in', data: {
       'method': method,
       if (nfcTagId != null) 'nfcTagId': nfcTagId,
       if (qrCode != null) 'qrCode': qrCode,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (method == 'nfc') 'nfcNonce': nfcNonce ?? generatedNonce,
+      if (method == 'nfc') 'tapAt': tapAt ?? nowIso,
     });
 
     // Extract geofence config from response

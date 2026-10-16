@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { assets, staff, assetServiceHistory } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, desc, sql } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
 
   const asset = await db
     .select({
@@ -33,7 +35,13 @@ export const GET = requireAuth(async (_request, _session, context) => {
     .where(eq(assets.id, id))
     .get();
 
-  if (!asset) {
+  if (
+    !asset ||
+    (asset.institutionId &&
+      scopedInstId &&
+      scopedInstId !== "global" &&
+      asset.institutionId !== scopedInstId)
+  ) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 
@@ -45,13 +53,20 @@ export const GET = requireAuth(async (_request, _session, context) => {
     .all();
 
   return NextResponse.json({ asset, serviceHistory });
-}, "assets:create");
+}, "assets:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
 
   const existing = await db.select().from(assets).where(eq(assets.id, id)).get();
-  if (!existing) {
+  if (
+    !existing ||
+    (existing.institutionId &&
+      scopedInstId &&
+      scopedInstId !== "global" &&
+      existing.institutionId !== scopedInstId)
+  ) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 
@@ -83,11 +98,18 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   return NextResponse.json({ asset: updated });
 }, "assets:update");
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
+export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
 
   const existing = await db.select().from(assets).where(eq(assets.id, id)).get();
-  if (!existing) {
+  if (
+    !existing ||
+    (existing.institutionId &&
+      scopedInstId &&
+      scopedInstId !== "global" &&
+      existing.institutionId !== scopedInstId)
+  ) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -51,6 +51,7 @@ export function FormTemplateModal({ open, onOpenChange, onSuccess, frameworkId =
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create Evaluation Form Template</DialogTitle>
+              <DialogDescription className="sr-only">Create Evaluation Form Template dialog details and actions.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>

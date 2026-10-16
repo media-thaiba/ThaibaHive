@@ -104,6 +104,7 @@ const eslintConfig = defineConfig([
     ".opencode/**",
     ".claude/**",
     ".claude-flow/**",
+    ".stryker-tmp/**",
   ]),
 ]);
 
