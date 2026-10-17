@@ -3,11 +3,21 @@ import { db } from "@/db";
 import { attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveShift } from "@/lib/attendance/shifts";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { checkoutPresenceSchema } from "@/lib/validation/schemas";
 import { isPresenceTrackingEnabled } from "@/lib/features";
 import { enforcePresence } from "@/lib/attendance/presence-enforcement-engine";
 import { localDateISO } from "@/lib/attendance/local-date";
+
+function minutesOfDay(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function localMidnight(isoDate: string): Date {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
 
 export const POST = requireAuth(async (request, session) => {
   try {
@@ -39,7 +49,7 @@ export const POST = requireAuth(async (request, session) => {
     const today = localDateISO();
     const now = new Date();
 
-    const log = await db
+    let log = await db
       .select()
       .from(attendanceLogs)
       .where(
@@ -49,6 +59,39 @@ export const POST = requireAuth(async (request, session) => {
         )
       )
       .get();
+
+    if (!log) {
+      // Overnight cross-day shifts: a shift that started yesterday (endTime <
+      // startTime) must be closable today. Only yesterday's UNCLOSED log whose
+      // resolved shift is overnight qualifies; forgotten normal-shift
+      // check-outs remain an administrative correction, not a self-checkout.
+      const [ty, tm, td] = today.split("-").map(Number);
+      const yesterday = localDateISO(new Date(ty, tm - 1, td - 1));
+      const candidate = await db
+        .select()
+        .from(attendanceLogs)
+        .where(
+          and(
+            eq(attendanceLogs.staffId, session.staffId),
+            eq(attendanceLogs.date, yesterday),
+            isNull(attendanceLogs.checkOut)
+          )
+        )
+        .get();
+
+      if (candidate) {
+        const candidateShift = await resolveShift(
+          session.staffId,
+          candidate.date
+        );
+        if (
+          minutesOfDay(candidateShift.endTime) <
+          minutesOfDay(candidateShift.startTime)
+        ) {
+          log = candidate;
+        }
+      }
+    }
 
     if (!log) {
       return NextResponse.json(
@@ -100,17 +143,30 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     const checkIn = new Date(log.checkIn!);
-    const workedMinutes = Math.round((now.getTime() - checkIn.getTime()) / 60000);
+    const workedMinutes = Math.max(
+      0,
+      Math.round((now.getTime() - checkIn.getTime()) / 60000)
+    );
 
-    // ─── Resolve Shift & Calculate Early Exit minutes ───
-    const shift = await resolveShift(session.staffId, today);
+    // ─── Resolve Shift (anchored to the log's own date) & early exit ───
+    const shift = await resolveShift(session.staffId, log.date);
+    const isOvernight =
+      minutesOfDay(shift.endTime) < minutesOfDay(shift.startTime);
+
     const [endH, endM] = shift.endTime.split(":").map(Number);
-    const shiftEnd = new Date(now);
+    const shiftEnd = localMidnight(log.date);
     shiftEnd.setHours(endH, endM, 0, 0);
+    if (isOvernight) {
+      // Overnight shift: end lands the NEXT calendar day after the check-in.
+      shiftEnd.setDate(shiftEnd.getDate() + 1);
+    }
 
     let earlyExitMinutes = 0;
     if (now.getTime() < shiftEnd.getTime()) {
-      earlyExitMinutes = Math.floor((shiftEnd.getTime() - now.getTime()) / 60000);
+      earlyExitMinutes = Math.max(
+        0,
+        Math.floor((shiftEnd.getTime() - now.getTime()) / 60000)
+      );
     }
 
     const updated = await db
@@ -122,9 +178,22 @@ export const POST = requireAuth(async (request, session) => {
         source: "self",
         ...presenceUpdate,
       })
-      .where(eq(attendanceLogs.id, log.id))
+      .where(
+        and(
+          eq(attendanceLogs.id, log.id),
+          isNull(attendanceLogs.checkOut)
+        )
+      )
       .returning()
       .get();
+
+    if (!updated) {
+      // A concurrent request closed this log first — atomic guard lost the race.
+      return NextResponse.json(
+        { error: "Already checked out today." },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json({ log: updated });
   } catch (error) {

@@ -12,7 +12,12 @@ import { resolveShift } from "@/lib/attendance/shifts";
 import { calculateLateMinutes } from "@/lib/attendance/calculations";
 import { localDateISO } from "@/lib/attendance/local-date";
 import { isPresenceTrackingEnabled } from "@/lib/features";
+import { isUniqueConstraintViolation } from "@/lib/api/sqlite-errors";
 import { eq, and } from "drizzle-orm";
+
+/** Accidental double-tap window: a re-punch within this window returns the
+ * active check-in idempotently (200 + duplicate flag) instead of a 400 toast. */
+const CHECK_IN_DEBOUNCE_MS = 60_000;
 
 export const POST = requireAuth(async (request, session) => {
   try {
@@ -101,7 +106,7 @@ export const POST = requireAuth(async (request, session) => {
       }
     }
 
-    // ─── Check duplicate check-in ───
+    // ─── Check duplicate check-in (debounced & idempotent) ───
     const existingLog = await db
       .select()
       .from(attendanceLogs)
@@ -114,6 +119,20 @@ export const POST = requireAuth(async (request, session) => {
       .get();
 
     if (existingLog) {
+      const withinDebounce =
+        !existingLog.checkOut &&
+        existingLog.checkIn !== null &&
+        now.getTime() - new Date(existingLog.checkIn).getTime() <=
+          CHECK_IN_DEBOUNCE_MS;
+
+      if (withinDebounce) {
+        // Accidental rapid double-tap: return the active check-in record
+        // idempotently so the client shows a success state, not an error.
+        return NextResponse.json(
+          { log: existingLog, duplicate: true },
+          { status: 200 }
+        );
+      }
       return NextResponse.json(
         { error: "Already checked in today." },
         { status: 400 }
@@ -150,12 +169,32 @@ export const POST = requireAuth(async (request, session) => {
         .returning()
         .get();
     } catch (error: unknown) {
-      if (
-        error instanceof Error && (
-          error.message.includes("UNIQUE constraint failed") ||
-          error.message.includes("constraint failed")
-        )
-      ) {
+      if (isUniqueConstraintViolation(error, "attendance_logs")) {
+        // Concurrent double-tap raced past the pre-check; the unique
+        // (staff_id, date) index rejected the second insert. Apply the same
+        // debounce rule against the now-persisted row.
+        const raced = await db
+          .select()
+          .from(attendanceLogs)
+          .where(
+            and(
+              eq(attendanceLogs.staffId, session.staffId),
+              eq(attendanceLogs.date, today)
+            )
+          )
+          .get();
+        if (
+          raced &&
+          !raced.checkOut &&
+          raced.checkIn !== null &&
+          now.getTime() - new Date(raced.checkIn).getTime() <=
+            CHECK_IN_DEBOUNCE_MS
+        ) {
+          return NextResponse.json(
+            { log: raced, duplicate: true },
+            { status: 200 }
+          );
+        }
         return NextResponse.json(
           { error: "Already checked in today." },
           { status: 400 }
