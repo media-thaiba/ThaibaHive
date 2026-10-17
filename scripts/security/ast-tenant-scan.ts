@@ -68,7 +68,7 @@ export function scanRouteSource(filePath: string, code: string): ScanFinding[] {
     const readsSearchInst = tenantParamRegex.test(handlerText);
     const readsBodyInst = tenantBodyRegex.test(handlerText) || tenantKeyRegex.test(handlerText) || tenantDestructRegex.test(handlerText) || tenantZodDefaultRegex.test(handlerText);
     
-    const callsResolver = /resolve(?:Request|Scoped)Institution(?:s)?\(/.test(handlerText) ||
+    const callsResolver = /resolve(?:Request|Scoped)?Institution(?:s|Context)?\(/.test(handlerText) ||
                           /resolveScopedInstitutionId\(/.test(handlerText);
 
     const reasons: string[] = [];

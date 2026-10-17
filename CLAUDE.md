@@ -1,5 +1,12 @@
 # CLAUDE.md — ThaibaHive
 
+## ⛔ OPERATIONAL FREEZE — NO GIT PUSH
+
+**Do NOT run `git push` (to any remote: `origin`, `prod`, or otherwise) until November 2026.**
+- Ordered by user on 2026-10-17: pushing to git will not work; must wait till next month.
+- Commits may continue locally; only the **push** is frozen.
+- Re-check with the user before any push once November 2026 arrives. Do not auto-push.
+
 Read `AGENTS.md` for project conventions, tech stack, coding rules, and architecture decisions.
 
 ## Quick Reference
