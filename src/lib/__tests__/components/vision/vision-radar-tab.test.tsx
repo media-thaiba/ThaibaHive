@@ -47,6 +47,14 @@ describe('VisionRadarTab UI Component Tests', () => {
     expect(await screen.findByText('TWIN-OPS Spatial Vision Radar (3D FOV Frustums)')).toBeInTheDocument();
     expect(await screen.findByText('Active IP Cameras')).toBeInTheDocument();
     expect(await screen.findByText('3D Frustum Coverage')).toBeInTheDocument();
-    expect(await screen.findByText('Main Campus Gate')).toBeInTheDocument();
+    // Camera name renders in both the Live CCTV Matrix and the 3D radar grid.
+    expect((await screen.findAllByText('Main Campus Gate')).length).toBeGreaterThan(0);
+  });
+
+  it('should render the live CCTV matrix grid with connection status', async () => {
+    render(<VisionRadarTab />);
+
+    expect(await screen.findByText(/Live CCTV Matrix/i)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Focus camera Main Campus Gate/i })).toBeInTheDocument();
   });
 });

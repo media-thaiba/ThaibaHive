@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Camera, ShieldCheck, Eye, ShieldAlert, Radio, RefreshCw } from 'lucide-react';
+import { Camera, ShieldCheck, Eye, ShieldAlert, Radio, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 import { PermissionGate } from '@/components/ui/permission-gate';
+import { useVisionStream } from '@/lib/hooks/use-vision-stream';
+import { CctvMatrixCard, type CctvAlertInput, type CctvCameraInput } from './cctv-matrix-card';
+import { ensureArray } from '@/lib/utils';
 
 interface VisionRadarTabProps {
   onTriggerLockdownClick?: () => void;
@@ -14,9 +17,19 @@ interface VisionRadarTabProps {
 
 export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) {
   const [loading, setLoading] = useState(true);
-  const [cameras, setCameras] = useState<any[]>([]);
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [activeLockdown, setActiveLockdown] = useState<any | null>(null);
+  const [restCameras, setRestCameras] = useState<CctvCameraInput[]>([]);
+  const [restAlerts, setRestAlerts] = useState<CctvAlertInput[]>([]);
+  const [restLockdown, setRestLockdown] = useState<any | null>(null);
+
+  const {
+    connectionStatus,
+    liveAlerts,
+    liveCameras,
+    activeLockdown,
+    audioMuted,
+    toggleAudioMute,
+    publishEvent,
+  } = useVisionStream();
 
   const fetchRadarData = () => {
     setLoading(true);
@@ -26,21 +39,21 @@ export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) 
       fetch('/api/vision/lockdown').then((r) => r.json()),
     ])
       .then(([camData, altData, lckData]) => {
-        setCameras(camData.cameras || []);
-        setAlerts(altData.alerts || []);
-        const active = (lckData.lockdowns || []).find((l: any) => l.status === 'active');
-        setActiveLockdown(active || null);
+        setRestCameras(ensureArray<CctvCameraInput>(camData.cameras));
+        setRestAlerts(ensureArray<CctvAlertInput>(altData.alerts));
+        const active = ensureArray<any>(lckData.lockdowns).find((l: any) => l.status === 'active');
+        setRestLockdown(active || null);
         setLoading(false);
       })
       .catch(() => {
         // Fallback demo data
-        setCameras([
+        setRestCameras([
           { cameraId: 'cam_gate_01', name: 'Main Campus Gate', status: 'online', zoneType: 'entrance', fps: 30 },
           { cameraId: 'cam_quad_02', name: 'Central Science Quad', status: 'online', zoneType: 'common_area', fps: 30 },
           { cameraId: 'cam_dorm_03', name: 'West Residence Perimeter', status: 'online', zoneType: 'perimeter', fps: 30 },
           { cameraId: 'cam_park_04', name: 'South Faculty Parking', status: 'online', zoneType: 'parking', fps: 30 },
         ]);
-        setAlerts([
+        setRestAlerts([
           { alertId: 'alt_01', threatType: 'crowd_surge', severity: 'medium', cameraId: 'cam_quad_02', detectedAt: new Date().toISOString() },
         ]);
         setLoading(false);
@@ -50,6 +63,68 @@ export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) 
   useEffect(() => {
     fetchRadarData();
   }, []);
+
+  // Merge REST bootstrap with live SSE camera telemetry (live wins per cameraId).
+  const cameras = useMemo(() => {
+    const map = new Map<string, CctvCameraInput>();
+    for (const c of restCameras) {
+      if (c?.cameraId) map.set(c.cameraId, c);
+    }
+    for (const c of liveCameras) {
+      if (c?.cameraId) {
+        const base = map.get(c.cameraId);
+        map.set(c.cameraId, { ...base, ...c });
+      }
+    }
+    return Array.from(map.values());
+  }, [restCameras, liveCameras]);
+
+  const alerts = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: CctvAlertInput[] = [];
+    for (const a of [...liveAlerts, ...restAlerts]) {
+      const key = (a.alertId as string) || `${a.threatType}:${a.cameraId}:${a.detectedAt}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(a);
+    }
+    return merged;
+  }, [liveAlerts, restAlerts]);
+
+  const effectiveLockdown = activeLockdown ?? restLockdown;
+
+  const handleZoneLockdown = useCallback(
+    async (camera: CctvCameraInput) => {
+      const res = await fetch('/api/vision/lockdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: 'zone',
+          targetFacilityId: camera.facilityId,
+          targetZoneId: camera.zoneType ? `zone_${camera.zoneType}` : camera.cameraId,
+          reason: `Zone lockdown triggered from CCTV matrix focus view (${camera.cameraId} — ${camera.name || 'Unnamed'})`,
+          triggerEcoMeshIslanding: false,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Lockdown request failed' }));
+        throw new Error(data.error || 'Failed to trigger zone lockdown');
+      }
+      // Optimistically surface the lockdown on the live stream state.
+      publishEvent('lockdown', {
+        lockdownId: `lck_local_${Date.now()}`,
+        status: 'active',
+        scope: 'zone',
+        triggerReason: `Zone lockdown — ${camera.name || camera.cameraId}`,
+        doorsLockedCount: 1,
+        doorsTotalCount: 1,
+        ecoMeshIslanded: false,
+        activatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    [publishEvent]
+  );
 
   if (loading) {
     return (
@@ -67,19 +142,19 @@ export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) 
 
   return (
     <div className="space-y-6">
-      {activeLockdown && (
+      {effectiveLockdown && (
         <div className="p-4 bg-rose-600 text-white rounded-lg flex items-center justify-between shadow-lg animate-pulse">
           <div className="flex items-center gap-3">
             <ShieldAlert className="h-6 w-6" />
             <div>
               <div className="font-bold text-lg">EMERGENCY LOCKDOWN ACTIVE</div>
               <div className="text-sm text-rose-100">
-                Scope: {activeLockdown.scope} | Reason: {activeLockdown.triggerReason}
+                Scope: {effectiveLockdown.scope} | Reason: {effectiveLockdown.triggerReason}
               </div>
             </div>
           </div>
           <Badge variant="secondary" className="bg-white text-rose-800 font-bold">
-            {activeLockdown.doorsLockedCount} DOORS SECURED
+            {effectiveLockdown.doorsLockedCount} DOORS SECURED
           </Badge>
         </div>
       )}
@@ -133,6 +208,16 @@ export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) 
         </Card>
       </div>
 
+      {/* Live Multi-Camera CCTV Matrix with Edge AI Overlays */}
+      <CctvMatrixCard
+        cameras={cameras}
+        alerts={alerts}
+        connectionStatus={connectionStatus}
+        audioMuted={audioMuted}
+        onToggleAudioMute={toggleAudioMute}
+        onTriggerZoneLockdown={handleZoneLockdown}
+      />
+
       {/* 3D Radar Frustum View Simulation */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -154,26 +239,39 @@ export function VisionRadarTab({ onTriggerLockdownClick }: VisionRadarTabProps) 
         <CardContent>
           <div className="relative h-72 w-full bg-slate-950 rounded-lg border border-slate-800 overflow-hidden flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
-            
+
             {/* Grid overlay */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full z-10">
               {cameras.map((c, i) => (
                 <div key={c.cameraId || i} className="bg-slate-900/80 border border-slate-700 p-3 rounded-md text-white backdrop-blur">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono text-emerald-400">{c.cameraId}</span>
-                    <Badge variant="success" className="text-[10px] py-0">LIVE</Badge>
+                    <Badge variant={c.status === 'offline' ? 'destructive' : c.status === 'degraded' ? 'warning' : 'success'} className="text-[10px] py-0">
+                      {c.status === 'offline' ? 'OFFLINE' : c.status === 'degraded' ? 'DEGRADED' : 'LIVE'}
+                    </Badge>
                   </div>
                   <div className="text-sm font-semibold truncate">{c.name}</div>
                   <div className="text-xs text-slate-400 mt-1 flex justify-between">
                     <span>Zone: {c.zoneType}</span>
-                    <span>30 FPS</span>
+                    <span>{c.fps ?? 30} FPS</span>
                   </div>
                   <div className="mt-2 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 w-full animate-pulse"></div>
+                    <div
+                      className={`h-full rounded-full ${c.status === 'offline' ? 'bg-rose-600 w-full' : c.status === 'degraded' ? 'bg-amber-500 w-1/3' : 'bg-emerald-500 w-full animate-pulse'}`}
+                    ></div>
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            <span className="flex items-center gap-1">
+              <Radio className="h-3 w-3" /> Stream: {connectionStatus.toUpperCase()} · SSE /api/vision/stream
+            </span>
+            <Button variant="ghost" size="sm" onClick={toggleAudioMute} aria-label={audioMuted ? 'Unmute alert chimes' : 'Mute alert chimes'}>
+              {audioMuted ? <VolumeX className="h-3.5 w-3.5 mr-1" /> : <Volume2 className="h-3.5 w-3.5 mr-1" />}
+              {audioMuted ? 'Chimes muted' : 'Chimes on'}
+            </Button>
           </div>
         </CardContent>
       </Card>

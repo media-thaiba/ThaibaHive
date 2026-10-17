@@ -31,6 +31,21 @@ The following skills are available for this project. Use them when relevant:
 Always ask Qwen (via `ask_qwen`), OpenCode (via `chat-with-local-ollama` / routing), and Claude Code to review and suggest improvements to any implementation plan or other plans created, then update the plan accordingly. This must be done after creating any plan.
 <!-- END:plan-review-rule -->
 
+<!-- BEGIN:feature-freeze-perfection-rule -->
+# STRICT RULE: FEATURE FREEZE & APP PERFECTION PROTOCOL
+
+1. **NO MORE NEW FEATURES**: Absolutely NO new features are to be started, proposed, or architected. Once the current CCTV component finishes, immediately halt all feature expansion.
+2. **CURRENT APP PERFECTION FIRST**: All engineering efforts must focus strictly on:
+   - Ensuring already-implemented features work properly and reliably end-to-end.
+   - Finding and fixing bugs, resolving edge cases, and closing loopholes and security/data gaps.
+   - Fixing UI and UX: visual polish, responsive behavior, intuitive flows, clean feedback, and no stuck states.
+   - Performance tuning, error handling, and zero-defect stability.
+3. **MANDATORY CHALLENGE GATE**:
+   - Do NOT begin or propose any new feature unless the user explicitly commands it.
+   - **Even if the user asks for a new feature, ALWAYS QUESTION AND CONFIRM WITH THEM FIRST**: ask if it is really needed right now, whether it risks scope creep, or if perfecting existing functionality should take priority.
+   - This prevents accidental feature sprawl. No unsolicited features allowed.
+<!-- END:feature-freeze-perfection-rule -->
+
 <!-- BEGIN:thaibahive-conventions -->
 # ThaibaHive Conventions
 
