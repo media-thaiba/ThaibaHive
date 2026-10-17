@@ -11,7 +11,12 @@ const bundleAnalyzer = withBundleAnalyzer({
 
 const nextConfig: NextConfig = {
   output: process.env.VERCEL ? undefined : "standalone",
-  allowedDevOrigins: process.env.DEV_ORIGINS?.split(",") || [],
+  allowedDevOrigins: [
+    "192.168.0.57",
+    "localhost",
+    "127.0.0.1",
+    ...(process.env.DEV_ORIGINS?.split(",") || []),
+  ],
   serverExternalPackages: ["pdfkit"],
 
   webpack: (config, { dev, isServer }) => {
@@ -85,12 +90,25 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "private, no-store" },
         ],
       },
-      {
-        source: "/_next/static/:path*",
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
-      },
+      ...(process.env.NODE_ENV === "production"
+        ? [
+            {
+              source: "/_next/static/:path*",
+              headers: [
+                { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+              ],
+            },
+          ]
+        : [
+            {
+              source: "/_next/static/:path*",
+              headers: [
+                { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
+                { key: "Pragma", value: "no-cache" },
+                { key: "Expires", value: "0" },
+              ],
+            },
+          ]),
       {
         source: "/(.*)",
         headers: securityHeaderPairs(),

@@ -101,3 +101,6 @@ test.db-shm
 
 # Stryker mutation testing temp sandboxes
 .stryker-tmp/
+
+# Local agent tooling
+.kilo/

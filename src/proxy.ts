@@ -122,14 +122,6 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
           nonce
         );
       }
-      if (pathname === "/" || pathname === "") {
-        return addSecurityHeaders(
-          request,
-          NextResponse.redirect(new URL("/portal/tgcis", request.url)),
-          pathname,
-          nonce
-        );
-      }
       return addSecurityHeaders(
         request,
         NextResponse.redirect(new URL("/auth/login", request.url)),

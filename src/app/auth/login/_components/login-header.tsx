@@ -16,10 +16,10 @@ type LoginHeaderProps = {
 
 export function LoginHeader({ mode, activeTheme }: LoginHeaderProps) {
   const svgCircles = [
-    { id: "signin", color: "hsl(var(--primary))", baseR: 90, activeR: 98 },
-    { id: "signup", color: "hsl(var(--success, 142 76% 36%))", baseR: 70, activeR: 82 },
-    { id: "google", color: "hsl(var(--info, 217 91% 60%))", baseR: 50, activeR: 62 },
-    { id: "forgot", color: "hsl(var(--warning, 38 92% 50%))", baseR: 30, activeR: 42 },
+    { id: "signin", color: "#10b981", baseR: 90, activeR: 98 },
+    { id: "signup", color: "#16a34a", baseR: 70, activeR: 82 },
+    { id: "google", color: "#3b82f6", baseR: 50, activeR: 62 },
+    { id: "forgot", color: "#f59e0b", baseR: 30, activeR: 42 },
   ];
 
   return (
@@ -38,6 +38,10 @@ export function LoginHeader({ mode, activeTheme }: LoginHeaderProps) {
                 key={circle.id}
                 cx="100"
                 cy="0"
+                initial={{
+                  r: circle.baseR,
+                  opacity: 0.45,
+                }}
                 animate={{
                   r: isActive ? circle.activeR : circle.baseR,
                   opacity: isActive ? 1.0 : 0.45,

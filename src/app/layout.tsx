@@ -10,7 +10,8 @@ import { PwaRegistrar } from "@/components/pwa-registrar";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#030305",
+  colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -47,6 +48,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <head>
+        <meta name="color-scheme" content="dark" />
         {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">

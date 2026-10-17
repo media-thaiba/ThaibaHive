@@ -15,61 +15,62 @@
   }
 
   :root {
-    /* Background & Foreground */
-    --background: 150 10% 97%;
-    --foreground: 210 12% 23%;
+    color-scheme: light dark;
+    /* Background & Foreground - Slate Canvas (MediaHive parity: #ffffff) */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     /* Card & Popover */
     --card: 0 0% 100%;
-    --card-foreground: 210 12% 23%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 210 12% 23%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary - Deep Green (Brand) */
-    --primary: 152 68% 28%;
+    /* Primary - Jewel Emerald (Brand) */
+    --primary: 160 84% 28%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Chartreuse */
-    --secondary: 80 50% 46%;
-    --secondary-foreground: 210 12% 23%;
+    /* Secondary - Slate Ice */
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 47% 11%;
 
     /* Muted */
-    --muted: 150 8% 95%;
-    --muted-foreground: 210 12% 32%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
 
     /* Accent */
-    --accent: 150 30% 88%;
-    --accent-foreground: 152 68% 20%;
+    --accent: 160 84% 94%;
+    --accent-foreground: 160 84% 20%;
 
     /* Destructive */
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* Borders & Inputs */
-    --border: 150 8% 88%;
-    --input: 150 8% 88%;
-    --ring: 152 68% 28%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 160 84% 36%;
 
-    /* Radius */
-    --radius: 0.625rem;
+    /* Radius - Standardized 12px panel radius */
+    --radius: 0.75rem;
 
     /* Brand Surfaces */
-    --brand-surface: 150 30% 93%;
-    --brand-border: 150 30% 82%;
+    --brand-surface: 160 84% 96%;
+    --brand-border: 160 84% 86%;
 
     /* Semantic Status Colors */
-    --success: 152 80% 22%;
+    --success: 160 84% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 30%;
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
     /* Named Colors */
-    --color-slate: 210 12% 23%;
-    --color-green-bright: 142 71% 45%;
-    --color-green-dark: 152 68% 28%;
-    --color-green-light: 150 30% 88%;
+    --color-slate: 222 47% 11%;
+    --color-green-bright: 160 84% 39%;
+    --color-green-dark: 160 84% 24%;
+    --color-green-light: 160 84% 94%;
     --color-chartreuse: 80 50% 46%;
 
     /* Shadow Scale */
@@ -79,9 +80,6 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.07), 0 8px 10px -6px rgb(0 0 0 / 0.04);
 
-    /* Spacing Scale (reference) */
-    /* 0.5=2px, 1=4px, 1.5=6px, 2=8px, 3=12px, 4=16px, 5=20px, 6=24px, 8=32px, 10=40px, 12=48px, 16=64px */
-
     /* Z-index Scale */
     --z-dropdown: 50;
     --z-sticky: 60;
@@ -89,69 +87,77 @@
     --z-modal: 80;
     --z-toast: 90;
     --z-tooltip: 100;
+
+    /* Shell Layout (MediaHive parity) */
+    --content-max-width: 80rem;
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 76px;
+    --current-sidebar-width: var(--sidebar-width);
+    --header-height: 3.5rem;
   }
 
   .dark {
-    /* Background & Foreground */
-    --background: 210 14% 10%;
-    --foreground: 150 5% 88%;
+    color-scheme: dark;
+    /* Background & Foreground - Deep Obsidian Canvas (MediaHive parity: #070b14) */
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
 
-    /* Card & Popover */
-    --card: 210 14% 13%;
-    --card-foreground: 150 5% 88%;
-    --popover: 210 14% 13%;
-    --popover-foreground: 150 5% 88%;
+    /* Card & Popover - Frosted Obsidian Surface (MediaHive parity: #0d131f) */
+    --card: 222 40% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 40% 9%;
+    --popover-foreground: 210 40% 98%;
 
-    /* Primary - Brighter green for dark bg */
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary - Radiant Jewel Emerald (ThaibaHive brand) */
+    --primary: 160 84% 39%;
+    --primary-foreground: 222 47% 5%;
 
-    /* Secondary */
-    --secondary: 80 40% 38%;
-    --secondary-foreground: 150 5% 88%;
+    /* Secondary - Dark Slate Panel */
+    --secondary: 215 28% 22%;
+    --secondary-foreground: 210 40% 96%;
 
-    /* Muted */
-    --muted: 210 14% 17%;
-    --muted-foreground: 150 5% 52%;
+    /* Muted - Clean Slate (MediaHive parity: slate-600/700 range) */
+    --muted: 215 25% 22%;
+    --muted-foreground: 215 20% 65%;
 
     /* Accent */
-    --accent: 150 25% 20%;
-    --accent-foreground: 150 30% 70%;
+    --accent: 160 84% 12%;
+    --accent-foreground: 160 84% 65%;
 
     /* Destructive */
-    --destructive: 0 65% 48%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs */
-    --border: 210 14% 20%;
-    --input: 210 14% 20%;
-    --ring: 142 71% 45%;
+    /* Borders & Inputs - Obsidian Glass Rim (MediaHive parity: #1c2433) */
+    --border: 222 25% 18%;
+    --input: 222 25% 18%;
+    --ring: 160 84% 39%;
 
     /* Brand Surfaces */
-    --brand-surface: 150 25% 15%;
-    --brand-border: 150 25% 23%;
+    --brand-surface: 160 84% 8%;
+    --brand-border: 160 84% 18%;
 
     /* Semantic Status Colors */
-    --success: 142 71% 55%;
+    --success: 160 84% 45%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 90% 55%;
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 217 80% 60%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
     /* Named Colors */
-    --color-slate: 150 5% 88%;
-    --color-green-bright: 142 71% 45%;
-    --color-green-dark: 142 71% 55%;
-    --color-green-light: 150 25% 23%;
-    --color-chartreuse: 80 40% 38%;
+    --color-slate: 210 40% 98%;
+    --color-green-bright: 160 84% 45%;
+    --color-green-dark: 160 84% 28%;
+    --color-green-light: 160 84% 15%;
+    --color-chartreuse: 80 40% 45%;
 
-    /* Shadow Scale (darker for dark mode) */
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.12);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.12);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.15);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.15);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.15);
+    /* Shadow Scale */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.25);
+    --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 30px -5px rgb(0 0 0 / 0.6), 0 8px 12px -6px rgb(0 0 0 / 0.3);
   }
 }
 
@@ -262,7 +268,42 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -30px) scale(1.06); }
+  66% { transform: translate(-30px, 25px) scale(0.94); }
+}
+
 @layer utilities {
+  .animate-drift {
+    animation: drift 45s ease-in-out infinite;
+  }
+
+  /* MediaHive micro-typography: section/eyebrow labels */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .micro-label {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  @media (min-width: 640px) {
+    .micro-label {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+    }
+  }
+
   .animate-fade-in {
     animation: fade-in 200ms ease-out;
   }
@@ -413,5 +454,52 @@
   }
   .skip-link:focus {
     @apply fixed top-4 left-4 z-[200] bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium not-sr-only;
+  }
+}
+
+/* ─── MediaHive-Inspired Glassmorphism & Ambient Lighting ─── */
+@layer utilities {
+  .glass-panel {
+    background-color: hsl(var(--card) / 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.7);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .glass-panel {
+    background-color: hsl(var(--card) / 0.6);
+    border-color: hsl(var(--border) / 0.4);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 8px 32px -8px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-header {
+    background-color: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.02);
+  }
+
+  .emerald-glow-sm {
+    box-shadow: 0 0 16px -2px rgba(16, 185, 129, 0.2);
+  }
+
+  .emerald-glow-md {
+    box-shadow: 0 0 28px -4px rgba(16, 185, 129, 0.28);
+  }
+
+  .ambient-canvas-mesh {
+    background-image: 
+      radial-gradient(at 10% 10%, rgba(16, 185, 129, 0.035) 0px, transparent 50%),
+      radial-gradient(at 90% 0%, rgba(5, 150, 105, 0.03) 0px, transparent 40%),
+      radial-gradient(at 80% 50%, rgba(16, 185, 129, 0.02) 0px, transparent 50%);
+  }
+
+  .dark .ambient-canvas-mesh {
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 45%),
+      radial-gradient(at 100% 10%, rgba(6, 78, 59, 0.08) 0px, transparent 50%),
+      radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
   }
 }
