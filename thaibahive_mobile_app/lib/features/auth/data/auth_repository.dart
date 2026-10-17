@@ -17,7 +17,7 @@ class AuthRepository {
       'email': email,
       'password': password,
       'rememberMe': rememberMe,
-    });
+    }, options: Options(headers: {'X-Client-Platform': 'mobile'}));
     return AuthResponseModel.fromJson(response.data);
   }
 
@@ -56,7 +56,7 @@ class AuthRepository {
   Future<AuthResponseModel> loginWithGoogle(String idToken) async {
     final response = await client.post('/auth/google', data: {
       'idToken': idToken,
-    });
+    }, options: Options(headers: {'X-Client-Platform': 'mobile'}));
     return AuthResponseModel.fromJson(response.data);
   }
 

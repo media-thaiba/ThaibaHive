@@ -296,6 +296,7 @@ async function applyExpenseCreate(ctx: SyncApplierContext, raw: Record<string, u
     .values({
       id: crypto.randomUUID(),
       staffId: ctx.staffId,
+      institutionId: actorScope(ctx),
       amount: parsed.data.amount,
       category: parsed.data.category,
       description: parsed.data.description,
@@ -566,7 +567,15 @@ async function applyApprovalDecision(
   }
 
   if (type === "expense") {
-    const claim = await db.select().from(expenseClaims).where(eq(expenseClaims.id, id)).get();
+    const claim = await db
+      .select()
+      .from(expenseClaims)
+      .where(
+        scope
+          ? and(eq(expenseClaims.id, id), eq(expenseClaims.institutionId, scope))
+          : eq(expenseClaims.id, id)
+      )
+      .get();
     if (!claim) throw new Error("Expense claim not found");
     if (!elevated && claim.staffId === ctx.staffId) {
       throw new Error("Requesters cannot review their own expense claims.");
@@ -588,7 +597,13 @@ async function applyApprovalDecision(
     const updated = await db
       .update(expenseClaims)
       .set({ status: nextStatus, reviewedById: ctx.staffId, reviewedAt: now, reviewNotes: notes, updatedAt: now })
-      .where(and(eq(expenseClaims.id, id), eq(expenseClaims.status, claim.status)))
+      .where(
+        and(
+          eq(expenseClaims.id, id),
+          eq(expenseClaims.status, claim.status),
+          scope ? eq(expenseClaims.institutionId, scope) : undefined
+        )
+      )
       .returning()
       .get();
     if (!updated) throw new Error("Expense claim status changed by a concurrent request");
@@ -599,7 +614,11 @@ async function applyApprovalDecision(
     const purchase = await db
       .select()
       .from(purchaseRequests)
-      .where(eq(purchaseRequests.id, id))
+      .where(
+        scope
+          ? and(eq(purchaseRequests.id, id), eq(purchaseRequests.institutionId, scope))
+          : eq(purchaseRequests.id, id)
+      )
       .get();
     if (!purchase) throw new Error("Purchase request not found");
     if (!elevated && purchase.requesterId === ctx.staffId) {
@@ -610,7 +629,13 @@ async function applyApprovalDecision(
       const updated = await db
         .update(purchaseRequests)
         .set({ status: "rejected", notes: notes, updatedAt: now })
-        .where(and(eq(purchaseRequests.id, id), ne(purchaseRequests.status, "rejected")))
+        .where(
+          and(
+            eq(purchaseRequests.id, id),
+            ne(purchaseRequests.status, "rejected"),
+            scope ? eq(purchaseRequests.institutionId, scope) : undefined
+          )
+        )
         .returning()
         .get();
       if (!updated) throw new Error("Purchase request is already rejected");
@@ -640,7 +665,13 @@ async function applyApprovalDecision(
     const updated = await db
       .update(purchaseRequests)
       .set(updates)
-      .where(and(eq(purchaseRequests.id, id), eq(purchaseRequests.status, purchase.status)))
+      .where(
+        and(
+          eq(purchaseRequests.id, id),
+          eq(purchaseRequests.status, purchase.status),
+          scope ? eq(purchaseRequests.institutionId, scope) : undefined
+        )
+      )
       .returning()
       .get();
     if (!updated) throw new Error("Purchase request status changed by a concurrent request");

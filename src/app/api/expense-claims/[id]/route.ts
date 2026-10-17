@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims, activityLogs, financialTransactions, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isManagedBy } from "@/lib/auth/department-scope";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { expenseClaimReviewSchema } from "@/lib/validation/schemas";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
@@ -26,7 +27,13 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const existing = await db.select().from(expenseClaims).where(eq(expenseClaims.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopeWhere =
+    scopedInstitutionId !== "global"
+      ? and(eq(expenseClaims.id, id), eq(expenseClaims.institutionId, scopedInstitutionId))
+      : eq(expenseClaims.id, id);
+
+  const existing = await db.select().from(expenseClaims).where(scopeWhere).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Anti-Self-Approval Enforcement: Requesters cannot approve/review their own expense claims
@@ -89,18 +96,20 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       reviewNotes: reviewNotes || null,
       updatedAt: now,
     })
-    .where(eq(expenseClaims.id, id))
+    .where(scopeWhere)
     .returning()
     .get();
 
   // If transitioned to disbursed, create corresponding general ledger entry in financialTransactions
   if (status === "disbursed") {
     try {
-      const instRecord = await db
-        .select({ institutionId: staffInstitutions.institutionId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.staffId, existing.staffId))
-        .get();
+      const instRecord = existing.institutionId
+        ? { institutionId: existing.institutionId }
+        : await db
+            .select({ institutionId: staffInstitutions.institutionId })
+            .from(staffInstitutions)
+            .where(eq(staffInstitutions.staffId, existing.staffId))
+            .get();
 
       if (instRecord?.institutionId) {
         await db.insert(financialTransactions).values({

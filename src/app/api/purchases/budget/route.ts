@@ -52,6 +52,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     .from(purchaseRequests)
     .where(
       and(
+        eq(purchaseRequests.institutionId, institutionId),
         inArray(purchaseRequests.requesterId, staffIds),
         eq(purchaseRequests.status, "approved")
       )
@@ -63,6 +64,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     .from(purchaseRequests)
     .where(
       and(
+        eq(purchaseRequests.institutionId, institutionId),
         inArray(purchaseRequests.requesterId, staffIds),
         inArray(purchaseRequests.status, ["pending_hod", "pending_accounts", "pending_purchase"])
       )

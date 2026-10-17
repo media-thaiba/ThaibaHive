@@ -28,7 +28,11 @@ export const POST = requireAuth(async (request: Request, session: any) => {
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("[Purchase Approval Process Error]:", error instanceof Error ? error.stack : error);
-    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden")
+      ? 403
+      : errorMsg.includes("not found")
+        ? 404
+        : 500;
     return NextResponse.json({ error: "Failed to process purchase approval" }, { status });
   }
 }, "finance:purchases:approve:tier1");

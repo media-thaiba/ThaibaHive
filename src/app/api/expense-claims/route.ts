@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { expenseClaimCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
@@ -20,6 +21,11 @@ export const GET = requireAuth(async (request: Request, session) => {
   const offset = (page - 1) * limit;
 
   const conditions = [];
+
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  if (scopedInstitutionId !== "global") {
+    conditions.push(eq(expenseClaims.institutionId, scopedInstitutionId));
+  }
 
   if (viewAll === "true") {
     const managedIds = await getManagedStaffIds(session.staffId, session.role);
@@ -78,6 +84,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+
   const claim = await db
     .insert(expenseClaims)
     .values({
@@ -88,6 +96,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       description,
       receiptUrl: receiptUrl || null,
       status: "pending",
+      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
     })
     .returning()
     .get();

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { purchaseRequests, auditLog } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isManagedBy } from "@/lib/auth/department-scope";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 type Transition = {
@@ -46,7 +47,13 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   const body = await request.json();
   const { status, notes } = body;
 
-  const existing = await db.select().from(purchaseRequests).where(eq(purchaseRequests.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopeWhere =
+    scopedInstitutionId !== "global"
+      ? and(eq(purchaseRequests.id, id), eq(purchaseRequests.institutionId, scopedInstitutionId))
+      : eq(purchaseRequests.id, id);
+
+  const existing = await db.select().from(purchaseRequests).where(scopeWhere).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Anti-Self-Approval Enforcement: Requesters cannot approve or reject their own purchase requests
@@ -81,7 +88,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
         approvedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(purchaseRequests.id, id))
+      .where(scopeWhere)
       .returning()
       .get();
 
@@ -125,7 +132,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   const updated = await db
     .update(purchaseRequests)
     .set(updateData)
-    .where(eq(purchaseRequests.id, id))
+    .where(scopeWhere)
     .returning()
     .get();
 

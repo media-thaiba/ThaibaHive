@@ -80,6 +80,7 @@ describe("POST /api/finance/approve Route Integration", () => {
     await db.insert(expenseClaims).values({
       id: expenseId,
       staffId: requesterId,
+      institutionId: "inst_alpha",
       amount: 1500,
       category: "travel",
       description: "Inter-campus travel",
@@ -91,6 +92,7 @@ describe("POST /api/finance/approve Route Integration", () => {
     await db.insert(purchaseRequests).values({
       id: purchaseReqId,
       requesterId,
+      institutionId: "inst_alpha",
       itemName: "Lab Hardware",
       estimatedCost: 2400,
       status: "pending_purchase",

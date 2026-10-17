@@ -127,6 +127,7 @@ describe("Operational Expense Claims Multi-Stage Approval Engine", () => {
     await db.insert(expenseClaims).values({
       id: claimId,
       staffId,
+      institutionId: instId,
       amount: 1500,
       category: "travel",
       description: "Inter-campus visit",

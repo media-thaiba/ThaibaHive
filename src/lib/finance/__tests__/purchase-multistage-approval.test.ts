@@ -138,6 +138,7 @@ describe("Purchase Requisitions Multi-Stage Approval Engine", () => {
     await db.insert(purchaseRequests).values({
       id: purchaseId,
       requesterId,
+      institutionId: instId,
       itemName: "Laboratory Microscopes x 5",
       quantity: 5,
       estimatedCost: 75000,

@@ -4,6 +4,7 @@ import {
   purchaseApprovalTiers,
   purchaseApprovalLogs,
   eq,
+  and,
   asc,
   desc,
 } from "@/db";
@@ -89,11 +90,18 @@ export class PurchaseApprovalEngine {
    * Process a purchase approval action with cryptographic Merkle chain verification
    */
   async processApproval(payload: ApprovalActionPayload) {
-    // 1. Fetch purchase request
+    // 1. Fetch purchase request (tenant-scoped when a concrete institution is active)
     const [request] = await db
       .select()
       .from(purchaseRequests)
-      .where(eq(purchaseRequests.id, payload.purchaseRequestId));
+      .where(
+        payload.institutionId && payload.institutionId !== "global"
+          ? and(
+              eq(purchaseRequests.id, payload.purchaseRequestId),
+              eq(purchaseRequests.institutionId, payload.institutionId)
+            )
+          : eq(purchaseRequests.id, payload.purchaseRequestId)
+      );
 
     if (!request) {
       throw new Error(`Purchase request not found: ${payload.purchaseRequestId}`);
@@ -174,7 +182,14 @@ export class PurchaseApprovalEngine {
         approvedAt: nextStatus === "approved" ? timestamp : undefined,
         updatedAt: timestamp,
       })
-      .where(eq(purchaseRequests.id, payload.purchaseRequestId))
+      .where(
+        payload.institutionId && payload.institutionId !== "global"
+          ? and(
+              eq(purchaseRequests.id, payload.purchaseRequestId),
+              eq(purchaseRequests.institutionId, payload.institutionId)
+            )
+          : eq(purchaseRequests.id, payload.purchaseRequestId)
+      )
       .returning();
 
     return {

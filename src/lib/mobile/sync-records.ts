@@ -146,7 +146,11 @@ export async function fetchSyncServerRecord(
       const row = await db
         .select()
         .from(expenseClaims)
-        .where(eq(expenseClaims.id, entityId))
+        .where(
+          scope
+            ? and(eq(expenseClaims.id, entityId), eq(expenseClaims.institutionId, scope))
+            : eq(expenseClaims.id, entityId)
+        )
         .get();
       if (!row || row.staffId !== ctx.staffId) return undefined;
       return toRecord("expense", entityId, scope, row as unknown as Row);
@@ -155,7 +159,11 @@ export async function fetchSyncServerRecord(
       const row = await db
         .select()
         .from(purchaseRequests)
-        .where(eq(purchaseRequests.id, entityId))
+        .where(
+          scope
+            ? and(eq(purchaseRequests.id, entityId), eq(purchaseRequests.institutionId, scope))
+            : eq(purchaseRequests.id, entityId)
+        )
         .get();
       return row ? toRecord("purchase", entityId, scope, row as unknown as Row) : undefined;
     }

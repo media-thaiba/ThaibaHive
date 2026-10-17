@@ -92,7 +92,15 @@ async function applyResolutionFields(
       return;
     case "purchase":
       values.updatedAt = new Date().toISOString();
-      await db.update(purchaseRequests).set(values).where(eq(purchaseRequests.id, entityId)).run();
+      await db
+        .update(purchaseRequests)
+        .set(values)
+        .where(
+          scope
+            ? and(eq(purchaseRequests.id, entityId), eq(purchaseRequests.institutionId, scope))
+            : eq(purchaseRequests.id, entityId)
+        )
+        .run();
       return;
     case "reconciliation_item":
       await db

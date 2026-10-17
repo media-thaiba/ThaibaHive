@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { purchaseRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { purchaseCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
 import { eq, desc, and, inArray, sql } from "drizzle-orm";
@@ -18,6 +19,11 @@ export const GET = requireAuth(async (request: Request, session) => {
   const offset = (page - 1) * limit;
 
   const conditions = [];
+
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  if (scopedInstitutionId !== "global") {
+    conditions.push(eq(purchaseRequests.institutionId, scopedInstitutionId));
+  }
 
   if (viewAll === "true") {
     const managedIds = await getManagedStaffIds(session.staffId, session.role);
@@ -66,6 +72,8 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const { itemName, quantity, estimatedCost, justification } = parsed.data;
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+
   const purchase = await db
     .insert(purchaseRequests)
     .values({
@@ -76,6 +84,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       estimatedCost,
       justification: justification || null,
       status: "pending_hod",
+      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
     })
     .returning()
     .get();

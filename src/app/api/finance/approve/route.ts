@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims, purchaseRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import { Role } from "@/lib/finance/models/approval-state";
 import { eq, and } from "drizzle-orm";
@@ -37,13 +38,18 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const now = new Date().toISOString();
   const userRole = session.role as Role;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   try {
     if (requestType === "expense") {
       const claim = await db
         .select()
         .from(expenseClaims)
-        .where(eq(expenseClaims.id, requestId))
+        .where(
+          scopedInstitutionId !== "global"
+            ? and(eq(expenseClaims.id, requestId), eq(expenseClaims.institutionId, scopedInstitutionId))
+            : eq(expenseClaims.id, requestId)
+        )
         .get();
 
       if (!claim) {
@@ -81,7 +87,13 @@ export const POST = requireAuth(async (request: Request, session) => {
           reviewNotes: notes || null,
           updatedAt: now,
         })
-        .where(and(eq(expenseClaims.id, requestId), eq(expenseClaims.status, claim.status)))
+        .where(
+          and(
+            eq(expenseClaims.id, requestId),
+            eq(expenseClaims.status, claim.status),
+            ...(scopedInstitutionId !== "global" ? [eq(expenseClaims.institutionId, scopedInstitutionId)] : [])
+          )
+        )
         .returning()
         .get();
 
@@ -104,7 +116,11 @@ export const POST = requireAuth(async (request: Request, session) => {
       const purchase = await db
         .select()
         .from(purchaseRequests)
-        .where(eq(purchaseRequests.id, requestId))
+        .where(
+          scopedInstitutionId !== "global"
+            ? and(eq(purchaseRequests.id, requestId), eq(purchaseRequests.institutionId, scopedInstitutionId))
+            : eq(purchaseRequests.id, requestId)
+        )
         .get();
 
       if (!purchase) {
@@ -139,7 +155,13 @@ export const POST = requireAuth(async (request: Request, session) => {
           notes: notes || purchase.notes,
           updatedAt: now,
         })
-        .where(and(eq(purchaseRequests.id, requestId), eq(purchaseRequests.status, purchase.status)))
+        .where(
+          and(
+            eq(purchaseRequests.id, requestId),
+            eq(purchaseRequests.status, purchase.status),
+            ...(scopedInstitutionId !== "global" ? [eq(purchaseRequests.institutionId, scopedInstitutionId)] : [])
+          )
+        )
         .returning()
         .get();
 
