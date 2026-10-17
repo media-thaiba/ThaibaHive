@@ -7,33 +7,40 @@ import { Badge } from "@/components/ui/badge";
 import { QrScannerModal } from "./qr-scanner-modal";
 import NfcScannerModal from "@/components/nfc/nfc-scanner-modal";
 import { ScanLineIcon, NfcIcon } from "lucide-react";
+import { toast } from "sonner";
 
 type CheckInPanelProps = {
-  staff?: { id: string; nfcTagId?: string | null; role?: string } | null;
   onCheckInComplete: () => void;
 };
 
-export function CheckInPanel({ staff, onCheckInComplete }: CheckInPanelProps) {
+export function CheckInPanel({ onCheckInComplete }: CheckInPanelProps) {
   const [qrOpen, setQrOpen] = useState(false);
   const [nfcOpen, setNfcOpen] = useState(false);
 
   async function handleNfcScan(tagId: string) {
     // Submit check-in via NFC tag with anti-replay nonce & tap timestamp
     try {
-      await fetch("/api/attendance/check-in", {
+      const res = await fetch("/api/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          staffId: staff?.id,
           nfcTagId: tagId,
           method: "nfc",
           nfcNonce: crypto.randomUUID(),
           tapAt: new Date().toISOString(),
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "NFC check-in failed. Please try again.");
+        return;
+      }
+      toast.success("Checked in successfully!");
+      onCheckInComplete();
+    } catch {
+      toast.error("NFC check-in failed. Check your connection and try again.");
     } finally {
       setNfcOpen(false);
-      onCheckInComplete();
     }
   }
 

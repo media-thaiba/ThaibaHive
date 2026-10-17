@@ -304,7 +304,7 @@ export default function TasksPage() {
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-64 rounded-xl bg-muted/20 animate-pulse" />
+            <Skeleton key={i} className="h-64 rounded-xl" />
           ))}
         </div>
       </div>

@@ -247,7 +247,6 @@ export default function AttendancePage() {
 
           {!todayLog && (
             <CheckInPanel
-              staff={staff}
               onCheckInComplete={() => { refetchToday(); refetchMy(); }}
             />
           )}

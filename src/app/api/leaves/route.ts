@@ -61,7 +61,15 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  const { leaveTypeId, startDate, endDate, daysCount, reason } = parsed.data;
+  const { leaveTypeId, startDate, endDate, reason } = parsed.data;
+  // Defense-in-depth: derive daysCount from the actual date range so a stale
+  // or tampered client value cannot bypass the balance check or corrupt records.
+  const startMs = Date.parse(`${startDate}T00:00:00Z`);
+  const endMs = Date.parse(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+    return NextResponse.json({ error: "Invalid leave date range." }, { status: 400 });
+  }
+  const daysCount = Math.round((endMs - startMs) / 86_400_000) + 1;
   const year = new Date().getFullYear();
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 

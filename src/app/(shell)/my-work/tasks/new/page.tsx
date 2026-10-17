@@ -30,6 +30,7 @@ export default function NewTaskPage() {
   const [staffList, setStaffList] = useState<
     { id: string; firstName: string; lastName: string }[]
   >([]);
+  const [staffLoadFailed, setStaffLoadFailed] = useState(false);
   const [tomorrow] = useState(
     () => new Date(Date.now() + 86400000).toISOString().split("T")[0]
   );
@@ -45,7 +46,10 @@ export default function NewTaskPage() {
 
   useEffect(() => {
     fetch("/api/staff")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Staff list request failed (${r.status})`);
+        return r.json();
+      })
       .then((d) => {
         setStaffList(Array.isArray(d.staff) ? d.staff : []);
         if (staff?.id) {
@@ -58,7 +62,7 @@ export default function NewTaskPage() {
         }
       })
       .catch((e) => {
-        setError("Failed to load staff list");
+        setStaffLoadFailed(true);
         console.error(e);
       });
   }, [staff]);
@@ -217,9 +221,11 @@ export default function NewTaskPage() {
                   ))}
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {staffList.length > 0
-                    ? `${staffList.length} team members available`
-                    : "Loading team members..."}
+                  {staffLoadFailed
+                    ? "Couldn't load team members — you can still create the task unassigned."
+                    : staffList.length > 0
+                      ? `${staffList.length} team members available`
+                      : "Loading team members..."}
                 </p>
               </div>
 

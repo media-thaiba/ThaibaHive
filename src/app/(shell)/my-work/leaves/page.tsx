@@ -5,7 +5,7 @@
  * Migrated to TanStack Query (P2-46) and Central API Client (P2-47).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,10 +63,12 @@ export default function LeavesPage() {
 
   const loading = loadingLeaves || loadingTypes;
 
-  // Auto-select first leave type if form doesn't have one selected
-  if (leaveTypes.length > 0 && !form.leaveTypeId) {
-    setForm((prev) => ({ ...prev, leaveTypeId: leaveTypes[0].id }));
-  }
+  // Auto-select first leave type once types load (never setState during render)
+  useEffect(() => {
+    if (leaveTypes.length > 0 && !form.leaveTypeId) {
+      setForm((prev) => ({ ...prev, leaveTypeId: leaveTypes[0].id }));
+    }
+  }, [leaveTypes, form.leaveTypeId]);
 
   function calcDays(start: string, end: string) {
     if (!start || !end) return 0;
@@ -76,8 +78,9 @@ export default function LeavesPage() {
 
   async function applyLeave(e: React.FormEvent) {
     e.preventDefault();
+    const daysCount = calcDays(form.startDate, form.endDate);
     try {
-      await createMutation.mutateAsync(form);
+      await createMutation.mutateAsync({ ...form, daysCount });
       setShowForm(false);
       setForm({ leaveTypeId: form.leaveTypeId, startDate: today, endDate: today, daysCount: 1, reason: "" });
       toast.success("Leave application submitted successfully. Your HOD will review it.");
@@ -98,7 +101,9 @@ export default function LeavesPage() {
 
   const days = calcDays(form.startDate, form.endDate);
   const selectedType = leaveTypes.find((lt) => lt.id === form.leaveTypeId);
-  const approvedDays = leaves.filter((l) => l.status === "approved").reduce((sum, l) => sum + l.daysCount, 0);
+  const approvedDays = leaves
+    .filter((l) => l.status === "approved" && l.leaveTypeId === form.leaveTypeId)
+    .reduce((sum, l) => sum + l.daysCount, 0);
   const totalAllowed = selectedType?.daysAllowed || 0;
   const remaining = totalAllowed - approvedDays;
 
@@ -120,9 +125,29 @@ export default function LeavesPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
-          <span className="text-muted-foreground text-xs">to</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+          <label htmlFor="leaves-date-from" className="sr-only">
+            Start date
+          </label>
+          <Input
+            id="leaves-date-from"
+            type="date"
+            aria-label="Leave history start date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-auto max-w-[160px]"
+          />
+          <span className="text-muted-foreground text-xs" aria-hidden="true">to</span>
+          <label htmlFor="leaves-date-to" className="sr-only">
+            End date
+          </label>
+          <Input
+            id="leaves-date-to"
+            type="date"
+            aria-label="Leave history end date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-auto max-w-[160px]"
+          />
         </div>
         <ExportButton type="leaves" params={{ dateFrom, dateTo }} />
       </div>
@@ -167,18 +192,21 @@ export default function LeavesPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={applyLeave} className="space-y-3">
-              <Select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
-                <option value="">Select leave type...</option>
-                {leaveTypes.map((lt) => <option key={lt.id} value={lt.id}>{lt.name} ({lt.daysAllowed} days)</option>)}
-              </Select>
+              <div className="space-y-1.5">
+                <label htmlFor="leave-type" className="text-xs font-medium text-muted-foreground">Leave Type</label>
+                <Select id="leave-type" value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
+                  <option value="">Select leave type...</option>
+                  {leaveTypes.map((lt) => <option key={lt.id} value={lt.id}>{lt.name} ({lt.daysAllowed} days)</option>)}
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Start Date</label>
-                  <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: e.target.value > form.endDate ? e.target.value : form.endDate })} required />
+                  <label htmlFor="leave-start-date" className="text-xs font-medium text-muted-foreground">Start Date</label>
+                  <Input id="leave-start-date" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: e.target.value > form.endDate ? e.target.value : form.endDate })} required />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">End Date</label>
-                  <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
+                  <label htmlFor="leave-end-date" className="text-xs font-medium text-muted-foreground">End Date</label>
+                  <Input id="leave-end-date" type="date" min={form.startDate} value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
                 </div>
               </div>
               {form.startDate && form.endDate && (
@@ -188,8 +216,8 @@ export default function LeavesPage() {
                 </p>
               )}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Reason (optional)</label>
-                <Textarea placeholder="Reason for leave" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} />
+                <label htmlFor="leave-reason" className="text-xs font-medium text-muted-foreground">Reason (optional)</label>
+                <Textarea id="leave-reason" placeholder="Reason for leave" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} />
               </div>
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Submitting..." : `Apply for ${days} day${days > 1 ? "s" : ""}`}

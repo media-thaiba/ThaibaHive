@@ -26,37 +26,63 @@ export default function TaskDetailPage() {
   const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`/api/tasks/${id}`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error("Failed to load task");
+        return r.json();
+      })
       .then(data => {
+        if (cancelled) return;
         setTask(data.task);
         setComments(data.comments || []);
-        setLoading(false);
       })
-      .catch(() => toast.error("Failed to load task"));
+      .catch(() => {
+        if (!cancelled) toast.error("Failed to load task");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [id]);
 
   async function addComment() {
     if (!newComment.trim()) return;
-    const res = await fetch(`/api/tasks/${id}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: newComment }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/tasks/${id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newComment }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to add comment. Please try again.");
+        return;
+      }
       const data = await res.json();
-      setComments([...comments, data.comment]);
+      setComments(prev => [...prev, data.comment]);
       setNewComment("");
+    } catch {
+      toast.error("Failed to add comment. Check your connection and try again.");
     }
   }
 
   async function updateStatus(status: string) {
-    await fetch(`/api/tasks/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setTask({ ...(task as TaskData), status });
+    if (!task) return;
+    const previousStatus = task.status;
+    setTask({ ...task, status });
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        throw new Error("update failed");
+      }
+    } catch {
+      setTask({ ...task, status: previousStatus });
+      toast.error("Couldn't update task status — reverted");
+    }
   }
 
   if (loading) {
@@ -154,7 +180,7 @@ export default function TaskDetailPage() {
           {comments.length === 0 && <p className="text-sm text-muted-foreground">No comments yet</p>}
         </div>
         <div className="flex gap-2">
-          <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment..." onKeyDown={(e) => e.key === "Enter" && addComment()} />
+          <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment..." onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) addComment(); }} />
           <Button onClick={addComment}>Send</Button>
         </div>
       </div>
