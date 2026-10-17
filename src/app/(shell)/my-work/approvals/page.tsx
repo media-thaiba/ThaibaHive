@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ApprovalItem = {
   id: string;
@@ -76,7 +77,10 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     fetch("/api/approvals")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load approvals");
+        return r.json();
+      })
       .then((data) => setApprovals(data.approvals || []))
       .catch(() => toast.error("Failed to load approvals"))
       .finally(() => setLoading(false));
@@ -127,14 +131,14 @@ export default function ApprovalsPage() {
   if (loading) {
     return (
       <div className="flex-1 space-y-4 p-6">
-        <div className="h-8 w-56 animate-pulse rounded bg-muted" />
+        <Skeleton className="h-8 w-56" />
         <div className="flex gap-2">
           {tabs.map((t) => (
-            <div key={t.key} className="h-8 w-20 animate-pulse rounded bg-muted" />
+            <Skeleton key={t.key} className="h-8 w-20" />
           ))}
         </div>
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+          <Skeleton key={i} className="h-24 w-full" />
         ))}
       </div>
     );

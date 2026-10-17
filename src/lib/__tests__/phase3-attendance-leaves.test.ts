@@ -18,16 +18,14 @@ jest.mock("@thaiba/auth", () => {
 
 jest.mock("@/db", () => {
   const ok = (val: unknown) => ({ get: () => val, all: () => (val ? [val] : []), run: () => ({ changes: val ? 1 : 0 }) });
-  const chain = (val: unknown) => ({
-    where: () => ({ returning: () => ({ get: () => val }), ...ok(val) }),
-    set: () => ({ where: () => ({ returning: () => ({ get: () => val }), ...ok(val) }) }),
-  });
+  const dbMock: any = {
+    select: () => ({ from: () => ({ where: () => ok(null), get: () => null, innerJoin: () => ({ where: () => ({ get: () => null, all: () => [] }) }) }) }),
+    update: () => ({ set: () => ({ where: () => ({ returning: () => ({ get: () => null }), ...ok(null) }) }) }),
+    insert: () => ({ values: () => ({ onConflictDoUpdate: () => ({ run: () => ({ changes: 0 }) }), run: () => ({ changes: 0 }) }) }),
+    transaction: (fn: (tx: unknown) => unknown) => fn(dbMock),
+  };
   return {
-    db: {
-      select: () => ({ from: () => ({ where: () => ok(null), get: () => null, innerJoin: () => ({ where: () => ({ get: () => null, all: () => [] }) }) }) }),
-      update: () => ({ set: () => ({ where: () => ({ returning: () => ({ get: () => null }), ...ok(null) }) }) }),
-      insert: () => ({ values: () => ({ onConflictDoUpdate: () => ({ run: () => ({ changes: 0 }) }), run: () => ({ changes: 0 }) }) }),
-    },
+    db: dbMock,
     $with: () => ({}),
     eq: () => true,
     ne: () => true,
@@ -68,8 +66,14 @@ function mockDb(selectResult: unknown, updateResult: unknown) {
       }),
     }),
   };
-  (db as any).select = jest.fn().mockReturnValue(mockSelect);
-  (db as any).update = jest.fn().mockReturnValue(mockUpdate);
+  const mockDbInstance = {
+    select: jest.fn().mockReturnValue(mockSelect),
+    update: jest.fn().mockReturnValue(mockUpdate),
+    transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn(mockDbInstance)),
+  };
+  (db as any).select = mockDbInstance.select;
+  (db as any).update = mockDbInstance.update;
+  (db as any).transaction = mockDbInstance.transaction;
   return { mockSelect, mockUpdate };
 }
 
@@ -205,35 +209,24 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
       jest.clearAllMocks();
     });
 
-    it("should approve a pending leave request via the real PATCH handler and deduct leave balance (usedDays: 3 + 2 = 5)", async () => {
+    it("should approve a pending leave request via the real PATCH handler and deduct leave balance atomically", async () => {
       const { mockUpdate } = mockDb(
         { id: "leave-1", status: "pending", staffId: "s1", leaveTypeId: "lt1", daysCount: 2 },
         { id: "leave-1", status: "approved" }
       );
-      // leave balance SELECT returns existing record → triggers balance update
-      const origSelect = (db as any).select;
-      let callCount = 0;
-      (db as any).select = jest.fn().mockImplementation(() => {
-        callCount++;
-        if (callCount === 2) {
-          // second select: leave balance lookup
-          return {
-            from: () => ({
-              where: () => ({
-                get: () => Promise.resolve({ id: "bal-1", usedDays: 3 }),
-              }),
-            }),
-          };
-        }
-        return origSelect();
-      });
 
       const response = await PATCH(mockRequest({ type: "leave", id: "leave-1", action: "approve" }));
       const body = await response.json();
       expect(body).toEqual({ success: true });
       expect(response.status).toBe(200);
-      expect(mockUpdate.set).toHaveBeenCalledWith(
-        expect.objectContaining({ usedDays: 5 })
+      // First set: status transition; second set: atomic SQL balance increment
+      expect(mockUpdate.set).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ status: "approved" })
+      );
+      expect(mockUpdate.set).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ usedDays: expect.any(Object) })
       );
     });
 

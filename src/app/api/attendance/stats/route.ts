@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { localDateISO } from "@/lib/attendance/local-date";
 import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session) => {
   try {
     const { staffId } = session;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateISO();
 
     // Today's log
     const todayLog = await db

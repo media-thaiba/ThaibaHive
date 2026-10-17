@@ -10,6 +10,7 @@ import {
 } from "@/lib/attendance/validation";
 import { resolveShift } from "@/lib/attendance/shifts";
 import { calculateLateMinutes } from "@/lib/attendance/calculations";
+import { localDateISO } from "@/lib/attendance/local-date";
 import { isPresenceTrackingEnabled } from "@/lib/features";
 import { eq, and } from "drizzle-orm";
 
@@ -35,7 +36,7 @@ export const POST = requireAuth(async (request, session) => {
       nfcNonce,
       tapAt,
     } = result.data;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateISO();
     const now = new Date();
 
     // ─── Perform check-in validation ───

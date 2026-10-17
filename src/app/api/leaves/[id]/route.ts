@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
 import { sendPushNotification } from "@/lib/notifications/push-service";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -53,6 +53,26 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "You are not authorized to approve this leave request" }, { status: 403 });
   }
 
+  if (body.status !== undefined) {
+    if (body.status !== "approved" && body.status !== "rejected") {
+      return NextResponse.json(
+        { error: "status must be 'approved' or 'rejected'" },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (
+    body.reviewNotes !== undefined &&
+    body.reviewNotes !== null &&
+    (typeof body.reviewNotes !== "string" || body.reviewNotes.length > 2000)
+  ) {
+    return NextResponse.json(
+      { error: "reviewNotes must be a string of at most 2000 characters" },
+      { status: 400 }
+    );
+  }
+
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
 
   if (body.status) {
@@ -64,51 +84,53 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     updates.status = nextStatus;
     updates.reviewedById = session.staffId;
     updates.reviewedAt = new Date().toISOString();
-    updates.reviewNotes = body.reviewNotes || null;
+    updates.reviewNotes = (body.reviewNotes as string | undefined)?.trim() || null;
   }
 
-  // Atomic conditional update: only update if status is not already terminal (approved or rejected)
-  const updated = await db
-    .update(leaveRequests)
-    .set(updates)
-    .where(
-      and(
-        whereClause,
-        ne(leaveRequests.status, "approved"),
-        ne(leaveRequests.status, "rejected")
+  // Atomic: status transition + balance deduction commit together so a
+  // failure between them can't approve a leave without deducting days.
+  const updated = await db.transaction(async (tx) => {
+    const row = await tx
+      .update(leaveRequests)
+      .set(updates)
+      .where(
+        and(
+          whereClause,
+          ne(leaveRequests.status, "approved"),
+          ne(leaveRequests.status, "rejected")
+        )
       )
-    )
-    .returning()
-    .get();
+      .returning()
+      .get();
+
+    if (!row) return null;
+
+    // Deduct days ONLY after atomic transition to 'approved'.
+    // Atomic read-modify-write: safe against concurrent approvals.
+    if (row.status === "approved") {
+      await tx
+        .update(leaveBalances)
+        .set({
+          usedDays: sql`${leaveBalances.usedDays} + ${leave.daysCount}`,
+        })
+        .where(
+          and(
+            eq(leaveBalances.staffId, leave.staffId),
+            eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+            eq(leaveBalances.year, new Date().getFullYear())
+          )
+        )
+        .run();
+    }
+
+    return row;
+  });
 
   if (!updated) {
     return NextResponse.json(
       { error: "Leave request is already in a terminal state (approved or rejected)" },
       { status: 400 }
     );
-  }
-
-  // Execute leave balance deduction ONLY after atomic state transition to 'approved'
-  if (updated.status === "approved") {
-    const existing = await db
-      .select()
-      .from(leaveBalances)
-      .where(
-        and(
-          eq(leaveBalances.staffId, leave.staffId),
-          eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-          eq(leaveBalances.year, new Date().getFullYear())
-        )
-      )
-      .get();
-
-    if (existing) {
-      await db
-        .update(leaveBalances)
-        .set({ usedDays: existing.usedDays + leave.daysCount })
-        .where(eq(leaveBalances.id, existing.id))
-        .run();
-    }
   }
 
   if (updated && body.status) {

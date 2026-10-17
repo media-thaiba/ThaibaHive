@@ -7,6 +7,7 @@ import { eq, and } from "drizzle-orm";
 import { checkoutPresenceSchema } from "@/lib/validation/schemas";
 import { isPresenceTrackingEnabled } from "@/lib/features";
 import { enforcePresence } from "@/lib/attendance/presence-enforcement-engine";
+import { localDateISO } from "@/lib/attendance/local-date";
 
 export const POST = requireAuth(async (request, session) => {
   try {
@@ -35,7 +36,7 @@ export const POST = requireAuth(async (request, session) => {
       );
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateISO();
     const now = new Date();
 
     const log = await db

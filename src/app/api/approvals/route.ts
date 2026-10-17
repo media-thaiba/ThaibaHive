@@ -18,7 +18,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
 import { canAccessStaff } from "@/lib/auth/department-scope";
-import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
+import { eq, desc, or, and, inArray, ne, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { staffId, role } = session;
@@ -61,6 +61,31 @@ export const GET = requireAuth(async (request, session) => {
     actionUrl: string;
   }> = [];
 
+  // HOD department scope, shared by leave/expense/booking filtering below.
+  let hodDeptStaffIds: Set<string> | null = null;
+  if (role === "hod") {
+    const depts = await db
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.headUserId, staffId))
+      .all();
+    if (depts.length > 0) {
+      const deptStaff = await db
+        .select({ sid: staffDepartments.staffId })
+        .from(staffDepartments)
+        .where(
+          inArray(
+            staffDepartments.departmentId,
+            depts.map((d) => d.id)
+          )
+        )
+        .all();
+      hodDeptStaffIds = new Set(deptStaff.map((s) => s.sid));
+    } else {
+      hodDeptStaffIds = new Set();
+    }
+  }
+
   if (canApproveAll || role === "hod" || isPrincipal) {
     let leaves = await db
       .select({
@@ -88,27 +113,9 @@ export const GET = requireAuth(async (request, session) => {
       .all();
 
     if (role === "hod") {
-      const depts = await db
-        .select({ id: departments.id })
-        .from(departments)
-        .where(eq(departments.headUserId, staffId))
-        .all();
-      if (depts.length > 0) {
-        const deptStaff = await db
-          .select({ sid: staffDepartments.staffId })
-          .from(staffDepartments)
-          .where(
-            inArray(
-              staffDepartments.departmentId,
-              depts.map((d) => d.id)
-            )
-          )
-          .all();
-        const deptStaffIds = new Set(deptStaff.map((s) => s.sid));
-        leaves = leaves.filter((l) => deptStaffIds.has(l.staffId));
-      } else {
-        leaves = [];
-      }
+      leaves = hodDeptStaffIds
+        ? leaves.filter((l) => hodDeptStaffIds!.has(l.staffId))
+        : [];
     } else if (isPrincipal && principalStaffIds) {
       leaves = leaves.filter((l) => principalStaffIds!.has(l.staffId));
     }
@@ -154,10 +161,14 @@ export const GET = requireAuth(async (request, session) => {
       .orderBy(desc(expenseClaims.createdAt))
       .all();
 
-    const filteredClaims =
-      isPrincipal && principalStaffIds
-        ? claims.filter((c) => principalStaffIds!.has(c.staffId))
-        : claims;
+    let filteredClaims = claims;
+    if (role === "hod") {
+      filteredClaims = hodDeptStaffIds
+        ? claims.filter((c) => hodDeptStaffIds!.has(c.staffId))
+        : [];
+    } else if (isPrincipal && principalStaffIds) {
+      filteredClaims = claims.filter((c) => principalStaffIds!.has(c.staffId));
+    }
 
     for (const c of filteredClaims) {
       approvals.push({
@@ -284,10 +295,16 @@ export const GET = requireAuth(async (request, session) => {
       )
       .orderBy(desc(bookings.createdAt))
       .all();
-    const filteredBookings =
-      isPrincipal && principalStaffIds
-        ? bookItems.filter((b) => principalStaffIds!.has(b.staffId))
-        : bookItems;
+    let filteredBookings = bookItems;
+    if (role === "hod") {
+      filteredBookings = hodDeptStaffIds
+        ? bookItems.filter((b) => hodDeptStaffIds!.has(b.staffId))
+        : [];
+    } else if (isPrincipal && principalStaffIds) {
+      filteredBookings = bookItems.filter((b) =>
+        principalStaffIds!.has(b.staffId)
+      );
+    }
     for (const b of filteredBookings) {
       approvals.push({
         id: b.id,
@@ -727,6 +744,18 @@ export const PATCH = requireAuth(async (request, session) => {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
+  // Notes are stored verbatim in audit trails — must be a bounded string.
+  let reviewNotes: string | null = null;
+  if (notes !== undefined && notes !== null) {
+    if (typeof notes !== "string" || notes.length > 2000) {
+      return NextResponse.json(
+        { error: "notes must be a string of at most 2000 characters" },
+        { status: 400 }
+      );
+    }
+    reviewNotes = notes.trim() || null;
+  }
+
   const now = new Date().toISOString();
   const elevated = role === "super_admin" || role === "admin";
   const financeScopeId = await resolveScopedInstitutionId(session.institutionId);
@@ -776,49 +805,52 @@ export const PATCH = requireAuth(async (request, session) => {
         nextStatus = "hod_approved";
       }
 
-      const updated = await db
-        .update(leaveRequests)
-        .set({
-          status: nextStatus,
-          reviewedById: staffId,
-          reviewedAt: now,
-          reviewNotes: notes || null,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            leaveWhere,
-            ne(leaveRequests.status, "approved"),
-            ne(leaveRequests.status, "rejected")
-          )
-        )
-        .returning()
-        .get();
-
-      if (!updated) {
-        return NextResponse.json({ error: "Leave request is already in a terminal state" }, { status: 400 });
-      }
-
-      if (updated.status === "approved") {
-        const existing = await db
-          .select()
-          .from(leaveBalances)
+      // Atomic: status transition + balance deduction commit together so a
+      // failure between them can't approve a leave without deducting days.
+      const result = await db.transaction(async (tx) => {
+        const updated = await tx
+          .update(leaveRequests)
+          .set({
+            status: nextStatus,
+            reviewedById: staffId,
+            reviewedAt: now,
+            reviewNotes,
+            updatedAt: now,
+          })
           .where(
             and(
-              eq(leaveBalances.staffId, leave.staffId),
-              eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-              eq(leaveBalances.year, new Date().getFullYear())
+              leaveWhere,
+              ne(leaveRequests.status, "approved"),
+              ne(leaveRequests.status, "rejected")
             )
           )
+          .returning()
           .get();
 
-        if (existing) {
-          await db
+        if (!updated) return null;
+
+        if (updated.status === "approved") {
+          // Atomic read-modify-write: safe against concurrent approvals.
+          await tx
             .update(leaveBalances)
-            .set({ usedDays: existing.usedDays + leave.daysCount })
-            .where(eq(leaveBalances.id, existing.id))
+            .set({
+              usedDays: sql`${leaveBalances.usedDays} + ${leave.daysCount}`,
+            })
+            .where(
+              and(
+                eq(leaveBalances.staffId, leave.staffId),
+                eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
+                eq(leaveBalances.year, new Date().getFullYear())
+              )
+            )
             .run();
         }
+
+        return updated;
+      });
+
+      if (!result) {
+        return NextResponse.json({ error: "Leave request is already in a terminal state" }, { status: 400 });
       }
     } else if (type === "expense") {
       const claimWhere =
@@ -872,7 +904,7 @@ export const PATCH = requireAuth(async (request, session) => {
           status: nextStatus,
           reviewedById: staffId,
           reviewedAt: now,
-          reviewNotes: notes || null,
+          reviewNotes,
           updatedAt: now,
         })
         .where(and(claimWhere, eq(expenseClaims.status, claim.status)))
@@ -916,7 +948,7 @@ export const PATCH = requireAuth(async (request, session) => {
           .update(purchaseRequests)
           .set({
             status: "rejected",
-            notes: notes || null,
+            notes: reviewNotes,
             updatedAt: now,
           })
           .where(and(purchaseWhere, ne(purchaseRequests.status, "rejected")))
@@ -965,7 +997,7 @@ export const PATCH = requireAuth(async (request, session) => {
               { status: 400 }
             );
         }
-        if (notes) updates.notes = notes;
+        if (reviewNotes) updates.notes = reviewNotes;
 
         // Atomic optimistic concurrency guard: only update if status hasn't changed since select
         const updated = await db
@@ -1021,7 +1053,7 @@ export const PATCH = requireAuth(async (request, session) => {
         .set({
           status: action === "approve" ? "approved" : "rejected",
           approvedById: staffId,
-          notes: notes || null,
+          notes: reviewNotes,
           updatedAt: now,
         })
         .where(

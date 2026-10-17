@@ -61,15 +61,27 @@ export default function LeaveApprovalsPage() {
 
   const fetchLeaves = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (activeTab === "pending") params.set("status", "pending");
-    if (dateFrom) params.set("startDate", dateFrom);
-    if (dateTo) params.set("endDate", dateTo);
-    const qs = params.toString();
-    const res = await fetch(`/api/leaves/admin${qs ? `?${qs}` : ""}`);
-    const data = await res.json();
-    setLeaves(data.leaves || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (activeTab === "pending") params.set("status", "pending");
+      if (dateFrom) params.set("startDate", dateFrom);
+      if (dateTo) params.set("endDate", dateTo);
+      const qs = params.toString();
+      const res = await fetch(`/api/leaves/admin${qs ? `?${qs}` : ""}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to load leave requests");
+        setLeaves([]);
+        return;
+      }
+      const data = await res.json();
+      setLeaves(data.leaves || []);
+    } catch {
+      toast.error("Failed to load leave requests");
+      setLeaves([]);
+    } finally {
+      setLoading(false);
+    }
   }, [activeTab, dateFrom, dateTo]);
 
   useEffect(() => {
@@ -84,23 +96,28 @@ export default function LeaveApprovalsPage() {
   async function handleAction() {
     if (!actionDialog.leave) return;
     setSubmitting(true);
-    const res = await fetch(`/api/leaves/${actionDialog.leave.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status: actionDialog.action,
-        reviewNotes: reviewNotes || null,
-      }),
-    });
-    if (res.ok) {
-      toast.success(`Leave ${actionDialog.action}`);
-      setActionDialog({ open: false, leave: null, action: "approved" });
-      fetchLeaves();
-    } else {
-      const data = await res.json();
-      toast.error(data.error || "Failed to update");
+    try {
+      const res = await fetch(`/api/leaves/${actionDialog.leave.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: actionDialog.action,
+          reviewNotes: reviewNotes || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success(`Leave ${actionDialog.action}`);
+        setActionDialog({ open: false, leave: null, action: "approved" });
+        fetchLeaves();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to update");
+      }
+    } catch {
+      toast.error("Failed to update leave request");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   }
 
   const tabs: { key: Tab; label: string; count: number }[] = [
@@ -117,8 +134,10 @@ export default function LeaveApprovalsPage() {
       <h1 className="text-2xl font-bold">Leave Approvals</h1>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
-        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
+        <label htmlFor="leave-date-from" className="sr-only">From date</label>
+        <Input id="leave-date-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto max-w-[160px]" />
+        <label htmlFor="leave-date-to" className="sr-only">To date</label>
+        <Input id="leave-date-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto max-w-[160px]" />
       </div>
 
       <div className="flex gap-1 border-b">
@@ -233,8 +252,9 @@ export default function LeaveApprovalsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Notes (optional)</label>
+              <label htmlFor="review-notes" className="text-sm font-medium">Notes (optional)</label>
               <Textarea
+                id="review-notes"
                 value={reviewNotes}
                 onChange={(e) => setReviewNotes(e.target.value)}
                 placeholder="Add review notes..."

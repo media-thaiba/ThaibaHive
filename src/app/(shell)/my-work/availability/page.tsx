@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PresenceDot } from "@/components/ui/presence-dot";
 import { usePresence } from "@/hooks/usePresence";
+import { toast } from "sonner";
 import { Search, CircleDot } from "lucide-react";
 
 type StaffMember = {
@@ -57,13 +58,19 @@ export default function AvailabilityPage() {
   const handleSaveStatus = useCallback(async () => {
     setSaving(true);
     try {
-      await fetch("/api/presence/status", {
+      const res = await fetch("/api/presence/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: myStatus, statusText: myStatusText || undefined }),
       });
+      if (res.ok) {
+        toast.success("Status updated");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to update status");
+      }
     } catch {
-      // ignore
+      toast.error("Failed to update status");
     } finally {
       setSaving(false);
     }

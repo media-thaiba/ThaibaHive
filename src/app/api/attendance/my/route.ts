@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { localDateISO } from "@/lib/attendance/local-date";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -38,7 +39,7 @@ export const GET = requireAuth(async (request, session) => {
     .all();
 
   // Query today's log separately to ensure it is always returned correctly regardless of page/limit offset
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateISO();
   const todayLog = await db
     .select()
     .from(attendanceLogs)
