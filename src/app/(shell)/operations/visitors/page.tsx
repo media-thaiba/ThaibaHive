@@ -71,15 +71,23 @@ export default function VisitorsPage() {
   const [filter, setFilter] = useState<FilterTab>("all");
   const [registerOpen, setRegisterOpen] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [checkingOutId, setCheckingOutId] = useState<string | null>(null);
   const [passVisitor, setPassVisitor] = useState<Visitor | null>(null);
 
   const debouncedSearch = useDebounce(search, 150);
 
   const fetchVisitors = useCallback(async () => {
     try {
+      setLoading(true);
       const params: Record<string, string> = {};
-      if (filter !== "all") params.status = filter;
-      if (filter === "today") params.date = new Date().toISOString().split("T")[0];
+      if (filter === "today") {
+        // Local calendar date — the API matches date(checkIn) = <date>
+        const now = new Date();
+        const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        params.date = localDate;
+      } else if (filter !== "all") {
+        params.status = filter;
+      }
 
       const res = await api.get<{ visitors: Visitor[] }>("/api/visitors", { params });
       if (res.ok && res.data) {
@@ -116,12 +124,6 @@ export default function VisitorsPage() {
     fetchStaff();
   }, [fetchVisitors, fetchStats, fetchStaff]);
 
-  useEffect(() => {
-    if (debouncedSearch) {
-      // Search is handled client-side for now
-    }
-  }, [debouncedSearch]);
-
   const filteredVisitors = visitors.filter((v) => {
     const matchesSearch =
       v.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -138,7 +140,7 @@ export default function VisitorsPage() {
     hostStaffId: string;
     purpose: string;
     notes: string;
-  }) => {
+  }): Promise<boolean> => {
     setRegisterLoading(true);
     try {
       const res = await api.post<{ visitor: Visitor }>("/api/visitors", {
@@ -153,24 +155,26 @@ export default function VisitorsPage() {
 
       if (res.ok && res.data) {
         toast.success("Visitor registered and checked in");
-        setVisitors((prev) => [res.data!.visitor, ...prev]);
-        setStats((prev) => ({
-          ...prev,
-          checkedIn: prev.checkedIn + 1,
-          todayVisitors: prev.todayVisitors + 1,
-        }));
+        // Re-sync list and stats from the server so counts never drift
+        fetchVisitors();
+        fetchStats();
+        return true;
       } else {
         toast.error((res.data as { error?: string })?.error || "Failed to register visitor");
+        return false;
       }
     } catch (err) {
       console.error("Register visitor error:", err);
       toast.error("Failed to register visitor");
+      return false;
     } finally {
       setRegisterLoading(false);
     }
   };
 
   const handleCheckOut = async (id: string) => {
+    if (checkingOutId) return;
+    setCheckingOutId(id);
     try {
       const res = await api.patch<{ visitor: Visitor }>(`/api/visitors/${id}`, {
         checkOut: new Date().toISOString(),
@@ -179,20 +183,17 @@ export default function VisitorsPage() {
 
       if (res.ok && res.data) {
         toast.success("Visitor checked out");
-        setVisitors((prev) =>
-          prev.map((v) => (v.id === id ? res.data!.visitor : v))
-        );
-        setStats((prev) => ({
-          ...prev,
-          checkedIn: Math.max(0, prev.checkedIn - 1),
-          checkedOut: prev.checkedOut + 1,
-        }));
+        // Re-sync list and stats from the server so counts never drift
+        fetchVisitors();
+        fetchStats();
       } else {
         toast.error((res.data as { error?: string })?.error || "Failed to check out visitor");
       }
     } catch (err) {
       console.error("Check out error:", err);
       toast.error("Failed to check out visitor");
+    } finally {
+      setCheckingOutId(null);
     }
   };
 
@@ -207,7 +208,7 @@ export default function VisitorsPage() {
         description="Manage visitor check-ins, passes, and campus access"
         actions={
           <div className="flex items-center gap-2">
-            <ExportButton type="staff" />
+            <ExportButton type="visitors" />
             <Button onClick={() => setRegisterOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Register Visitor
@@ -253,6 +254,7 @@ export default function VisitorsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name or host..."
+                aria-label="Search visitors by name or host"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 w-64"
@@ -286,6 +288,7 @@ export default function VisitorsPage() {
             onCheckOut={handleCheckOut}
             onViewPass={handleViewPass}
             loading={loading}
+            checkingOutId={checkingOutId}
           />
         </CardContent>
       </Card>

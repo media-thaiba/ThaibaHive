@@ -32,11 +32,13 @@ export function VisitorTable({
   onCheckOut,
   onViewPass,
   loading,
+  checkingOutId = null,
 }: {
   visitors: Visitor[];
   onCheckOut: (id: string) => void;
   onViewPass: (visitor: Visitor) => void;
   loading: boolean;
+  checkingOutId?: string | null;
 }) {
   if (loading) {
     return (
@@ -63,12 +65,12 @@ export function VisitorTable({
       <table className="w-full">
         <thead>
           <tr className="border-b bg-muted/50">
-            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Visitor</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Host</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Purpose</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Check-in</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Visitor</th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Host</th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Purpose</th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Check-in</th>
+            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+            <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -126,6 +128,7 @@ export function VisitorTable({
                         variant="destructive"
                         size="icon-sm"
                         onClick={() => onCheckOut(visitor.id)}
+                        disabled={checkingOutId !== null}
                         className="h-8 w-8"
                         aria-label="Check out visitor"
                       >

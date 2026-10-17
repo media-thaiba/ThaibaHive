@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitors, staff } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution, resolveInstitutionContext } from "@/lib/api/auth-guard";
 import { visitorCreateSchema } from "@/lib/validation/schemas";
-import { resolveScopedInstitutionId } from "@/lib/auth";
+import { validateHostStaff } from "@/lib/visitors/host-validation";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -48,7 +48,10 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "visitors:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const parsed = visitorCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -58,7 +61,23 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { name, contact, idType, idNumber, hostStaffId, purpose, notes } = parsed.data;
-  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  // Concrete (never "global") tenant context so the visitor row always belongs
+  // to a real institution — admins fall back to their first membership.
+  const institutionId = await resolveInstitutionContext(session, null);
+  if (!institutionId) {
+    return NextResponse.json(
+      { error: "Unable to resolve institution scope for visitor registration" },
+      { status: 400 }
+    );
+  }
+
+  // Host must reference an active staff member inside the tenant scope
+  if (hostStaffId) {
+    const hostCheck = await validateHostStaff(hostStaffId, institutionId);
+    if (!hostCheck.ok) {
+      return NextResponse.json({ error: hostCheck.error }, { status: hostCheck.status });
+    }
+  }
 
   const visitor = await db
     .insert(visitors)
@@ -71,7 +90,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       hostStaffId: hostStaffId || null,
       purpose,
       notes: notes || null,
-      institutionId: institutionId !== "global" ? institutionId : null,
+      institutionId,
       checkIn: new Date().toISOString(),
       status: "checked_in",
     })

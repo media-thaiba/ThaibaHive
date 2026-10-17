@@ -56,13 +56,34 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   const existing = await db.select().from(visitors).where(whereClause).get();
   if (!existing) return NextResponse.json({ error: "Visitor not found" }, { status: 404 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   const { checkOut, status, notes } = body;
+
+  if (status !== undefined && !["checked_in", "checked_out"].includes(status)) {
+    return NextResponse.json(
+      { error: "status must be 'checked_in' or 'checked_out'" },
+      { status: 400 }
+    );
+  }
+  if (checkOut !== undefined && checkOut !== null && Number.isNaN(Date.parse(checkOut))) {
+    return NextResponse.json({ error: "checkOut must be a valid datetime" }, { status: 400 });
+  }
 
   const updateData: Record<string, string | null> = {};
   if (checkOut !== undefined) updateData.checkOut = checkOut;
   if (status) updateData.status = status;
   if (notes !== undefined) updateData.notes = notes;
+
+  // Checked-out is terminal for lifecycle transitions: reject status updates (including
+  // duplicate check-outs racing each other) so check-in/check-out metrics cannot drift
+  // from stored timestamps. Timestamp/note corrections without a status stay allowed.
+  if (existing.status === "checked_out" && status !== undefined) {
+    return NextResponse.json(
+      { error: "Visitor has already checked out" },
+      { status: 409 }
+    );
+  }
 
   const updated = await db.update(visitors).set(updateData).where(whereClause).returning().get();
   if (!updated) return NextResponse.json({ error: "Visitor not found" }, { status: 404 });

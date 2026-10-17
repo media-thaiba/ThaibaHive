@@ -113,6 +113,10 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Visitor pass has already expired/checked out" }, { status: 400 });
   }
 
+  if (action === "check_out" && visitor.status !== "checked_in") {
+    return NextResponse.json({ error: "Visitor has not checked in yet" }, { status: 400 });
+  }
+
   const now = new Date().toISOString();
   const newStatus = action === "check_in" ? "checked_in" : "checked_out";
 
@@ -120,6 +124,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     .update(visitors)
     .set({
       status: newStatus,
+      checkIn: action === "check_in" && !visitor.checkIn ? now : visitor.checkIn,
       checkOut: action === "check_out" ? now : visitor.checkOut,
     })
     .where(whereClause)

@@ -1,16 +1,19 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";import { getClientCspNonce } from "@/lib/csp-nonce";
-
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Printer } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { X, Printer, QrCode, AlertCircle } from "lucide-react";
+import QRCode from "qrcode";
 import { QRCodeSVG } from "./qr-code";
 import { escapeHtml } from "@/lib/utils";
 import type { Visitor } from "./types";
@@ -27,6 +30,8 @@ function formatDateTime(date: string | null | undefined): string {
   });
 }
 
+const PASS_VALIDITY_HOURS = 8;
+
 export function VisitorPassModal({
   visitor,
   onClose,
@@ -34,19 +39,90 @@ export function VisitorPassModal({
   visitor: Visitor | null;
   onClose: () => void;
 }) {
+  const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [issuing, setIssuing] = useState(false);
+  const [issueError, setIssueError] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
+
+  useEffect(() => {
+    // Only checked-in visitors get a fresh signed pass; checked-out visitors
+    // keep their historical details but no longer hold a valid QR pass.
+    if (!visitor || visitor.status !== "checked_in") {
+      setQrPayload(null);
+      setIssuing(false);
+      setIssueError(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setIssuing(true);
+      setIssueError(null);
+      setQrPayload(null);
+      try {
+        const validFrom =
+          visitor.checkIn && !Number.isNaN(Date.parse(visitor.checkIn))
+            ? visitor.checkIn
+            : new Date().toISOString();
+        const validUntil = new Date(
+          Date.now() + PASS_VALIDITY_HOURS * 60 * 60 * 1000
+        ).toISOString();
+
+        const res = await fetch("/api/visitors/pass/issue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            visitorName: visitor.name,
+            visitorPhone: visitor.contact || "",
+            hostStaffId: visitor.hostStaffId,
+            purpose: visitor.purpose,
+            validFrom,
+            validUntil,
+          }),
+        });
+
+        if (cancelled) return;
+
+        if (res.ok) {
+          const data = await res.json();
+          setQrPayload(data.qrPayload);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          setIssueError(data.error || "Failed to issue visitor pass");
+        }
+      } catch {
+        if (!cancelled) setIssueError("Failed to issue visitor pass");
+      } finally {
+        if (!cancelled) setIssuing(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visitor]);
+
   if (!visitor) return null;
 
-  const passId = `VIS-${visitor.id.slice(0, 8).toUpperCase()}`;
   const hostName = visitor.hostStaffName
     ? `${visitor.hostStaffName} ${visitor.hostStaffLastName || ""}`.trim()
     : "Not assigned";
-  const qrData = `VISITOR:${visitor.id}|NAME:${visitor.name}|PASS:${passId}|HOST:${hostName}|CHECKIN:${visitor.checkIn}`;
+  const passId = `VIS-${visitor.id.slice(0, 8).toUpperCase()}`;
 
-  const handlePrint = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+  const handlePrint = async () => {
+    if (!qrPayload || printing) return;
+    setPrinting(true);
+    try {
+      const qrSvg = await QRCode.toString(qrPayload, {
+        type: "svg",
+        margin: 1,
+        width: 160,
+      });
 
-    const styleContent = `
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) return;
+
+      const styleContent = `
       body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; }
       .pass { border: 2px solid #1f2937; border-radius: 12px; padding: 24px; max-width: 360px; margin: 0 auto; }
       .header { text-align: center; border-bottom: 2px solid #1f2937; padding-bottom: 16px; margin-bottom: 16px; }
@@ -62,7 +138,7 @@ export function VisitorPassModal({
       @media print { body { padding: 0; } .no-print { display: none; } }
     `;
 
-    const htmlContent = `
+      const htmlContent = `
       <div class="pass">
         <div class="header">
           <div class="logo">ThaibaHive</div>
@@ -77,7 +153,7 @@ export function VisitorPassModal({
         <div class="field"><span class="label">Purpose</span><span class="value">${escapeHtml(visitor.purpose)}</span></div>
         <div class="field"><span class="label">Check-in</span><span class="value">${escapeHtml(formatDateTime(visitor.checkIn))}</span></div>
         <div class="qr-section">
-          <div id="qr-code"></div>
+          ${qrSvg}
           <div class="qr-label">Scan to verify visitor identity</div>
         </div>
         <div class="footer">
@@ -86,41 +162,7 @@ export function VisitorPassModal({
       </div>
     `;
 
-    const scriptContent = `
-      (function() {
-        const data = ${JSON.stringify(qrData).replace(/</g, "\\u003c")};
-        const size = 160;
-        const modules = 25;
-        const moduleSize = size / modules;
-        let hash = 0;
-        for (let i = 0; i < data.length; i++) {
-          hash = ((hash << 5) - hash) + data.charCodeAt(i);
-          hash |= 0;
-        }
-        hash = Math.abs(hash);
-        let svg = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" xmlns="http://www.w3.org/2000/svg"><rect width="' + size + '" height="' + size + '" fill="#fff"/><g>';
-        for (let y = 0; y < modules; y++) {
-          for (let x = 0; x < modules; x++) {
-            const bit = (hash >> ((x * 7 + y * 13) % 32)) & 1;
-            const isFinder = (x < 7 && y < 7) || (x >= modules - 7 && y < 7) || (x < 7 && y >= modules - 7);
-            if (isFinder) {
-              const inBorder = x < 1 || y < 1 || x >= 6 || y >= 6;
-              const inInner = x > 1 && y > 1 && x < 5 && y < 5;
-              if (inBorder || inInner) {
-                svg += '<rect x="' + (x * moduleSize) + '" y="' + (y * moduleSize) + '" width="' + moduleSize + '" height="' + moduleSize + '" fill="#000"/>';
-              }
-            } else if (bit) {
-              svg += '<rect x="' + (x * moduleSize) + '" y="' + (y * moduleSize) + '" width="' + moduleSize + '" height="' + moduleSize + '" fill="#000"/>';
-            }
-          }
-        }
-        svg += '</g></svg>';
-        document.getElementById('qr-code').innerHTML = svg;
-        window.print();
-      })();
-    `;
-
-    const printContent = `<!DOCTYPE html>
+      const printContent = `<!DOCTYPE html>
 <html>
 <head>
 <title>Visitor Pass - ${escapeHtml(visitor.name)}</title>
@@ -128,12 +170,14 @@ export function VisitorPassModal({
 </head>
 <body>
 ${htmlContent}
-<script nonce="${getClientCspNonce()}">${scriptContent}<\/script>
 </body>
 </html>`;
 
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
@@ -156,8 +200,27 @@ ${htmlContent}
                 <p className="font-semibold text-lg">{visitor.name}</p>
                 <p className="text-xs text-muted-foreground">{passId}</p>
               </div>
-              <QRCodeSVG data={qrData} size={64} />
+              {qrPayload ? (
+                <QRCodeSVG data={qrPayload} size={96} />
+              ) : issuing ? (
+                <Skeleton className="h-24 w-24" />
+              ) : visitor.status === "checked_out" ? (
+                <div className="h-24 w-24 flex flex-col items-center justify-center text-muted-foreground border rounded-lg">
+                  <QrCode className="h-6 w-6 mb-1" />
+                  <span className="text-[9px] text-center leading-tight">Pass expired<br />(checked out)</span>
+                </div>
+              ) : (
+                <div className="h-24 w-24 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+              )}
             </div>
+
+            {issueError && (
+              <Alert variant="error" className="mb-3 text-xs">
+                {issueError}
+              </Alert>
+            )}
 
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
@@ -168,6 +231,12 @@ ${htmlContent}
                 <span className="text-muted-foreground">Check-in</span>
                 <span className="font-medium">{formatDateTime(visitor.checkIn)}</span>
               </div>
+              {visitor.checkOut && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Check-out</span>
+                  <span className="font-medium">{formatDateTime(visitor.checkOut)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Purpose</span>
                 <span className="font-medium text-right max-w-[60%]">{visitor.purpose}</span>
@@ -194,9 +263,14 @@ ${htmlContent}
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handlePrint} className="flex-1" variant="default">
+            <Button
+              onClick={handlePrint}
+              className="flex-1"
+              variant="default"
+              disabled={!qrPayload || issuing || printing}
+            >
               <Printer className="h-4 w-4 mr-2" />
-              Print Pass
+              {printing ? "Preparing..." : "Print Pass"}
             </Button>
             <Button onClick={onClose} variant="outline" className="flex-1">
               <X className="h-4 w-4 mr-2" />

@@ -34,7 +34,7 @@ export function RegisterVisitorModal({
     hostStaffId: string;
     purpose: string;
     notes: string;
-  }) => Promise<void>;
+  }) => Promise<boolean>;
   staffList: StaffMember[];
   loading: boolean;
 }) {
@@ -61,10 +61,12 @@ export function RegisterVisitorModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    await onSubmit(formData);
-    onClose();
-    setFormData({ name: "", contact: "", idType: "", idNumber: "", hostStaffId: "", purpose: "", notes: "" });
-    setErrors({});
+    const success = await onSubmit(formData);
+    if (success) {
+      onClose();
+      setFormData({ name: "", contact: "", idType: "", idNumber: "", hostStaffId: "", purpose: "", notes: "" });
+      setErrors({});
+    }
   };
 
   if (!open) return null;
@@ -81,8 +83,9 @@ export function RegisterVisitorModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 p-2">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Visitor Name <span className="text-destructive">*</span></label>
+            <label htmlFor="visitor-name" className="text-sm font-medium">Visitor Name <span className="text-destructive">*</span></label>
             <Input
+              id="visitor-name"
               placeholder="Full name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -92,8 +95,9 @@ export function RegisterVisitorModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Contact Number</label>
+            <label htmlFor="visitor-contact" className="text-sm font-medium">Contact Number</label>
             <Input
+              id="visitor-contact"
               type="tel"
               placeholder="+91 98765 43210"
               value={formData.contact}
@@ -103,8 +107,9 @@ export function RegisterVisitorModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">ID Type</label>
+              <label htmlFor="visitor-id-type" className="text-sm font-medium">ID Type</label>
               <Select
+                id="visitor-id-type"
                 value={formData.idType}
                 onChange={(e) => setFormData({ ...formData, idType: e.target.value })}
               >
@@ -118,8 +123,9 @@ export function RegisterVisitorModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">ID Number</label>
+              <label htmlFor="visitor-id-number" className="text-sm font-medium">ID Number</label>
               <Input
+                id="visitor-id-number"
                 placeholder="ID number"
                 value={formData.idNumber}
                 onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
@@ -128,8 +134,9 @@ export function RegisterVisitorModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Host Staff Member <span className="text-destructive">*</span></label>
+            <label htmlFor="visitor-host" className="text-sm font-medium">Host Staff Member <span className="text-destructive">*</span></label>
             <Select
+              id="visitor-host"
               value={formData.hostStaffId}
               onChange={(e) => setFormData({ ...formData, hostStaffId: e.target.value })}
               className={errors.hostStaffId ? "border-destructive" : ""}
@@ -145,8 +152,9 @@ export function RegisterVisitorModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Purpose of Visit <span className="text-destructive">*</span></label>
+            <label htmlFor="visitor-purpose" className="text-sm font-medium">Purpose of Visit <span className="text-destructive">*</span></label>
             <Input
+              id="visitor-purpose"
               placeholder="Meeting, delivery, interview, etc."
               value={formData.purpose}
               onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
@@ -156,8 +164,9 @@ export function RegisterVisitorModal({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Notes</label>
+            <label htmlFor="visitor-notes" className="text-sm font-medium">Notes</label>
             <Textarea
+              id="visitor-notes"
               placeholder="Additional notes (optional)"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

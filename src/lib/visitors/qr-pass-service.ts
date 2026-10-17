@@ -58,13 +58,27 @@ export class VisitorQrPassService {
     const rawString = `${institutionId}|${visitorId}|${hostId}|${validFrom}|${validUntil}|${nonce}`;
     const expectedSignature = this.generateSignature(rawString);
 
-    if (providedSignature !== expectedSignature) {
+    const providedBuf = Buffer.from(providedSignature, "hex");
+    const expectedBuf = Buffer.from(expectedSignature, "hex");
+    if (
+      providedBuf.length !== expectedBuf.length ||
+      !crypto.timingSafeEqual(providedBuf, expectedBuf)
+    ) {
       return { valid: false, reason: "Invalid cryptographic HMAC signature (tampered QR pass)" };
     }
 
     const now = new Date();
     const from = new Date(validFrom);
     const until = new Date(validUntil);
+
+    // Reject unparseable or inverted validity windows — a malformed window must never
+    // fall through the comparisons below and validate as "currently valid".
+    if (Number.isNaN(from.getTime()) || Number.isNaN(until.getTime())) {
+      return { valid: false, reason: "Visitor QR pass has an invalid validity window" };
+    }
+    if (until.getTime() <= from.getTime()) {
+      return { valid: false, reason: "Visitor QR pass validity window is inverted" };
+    }
 
     if (now < from || now > until) {
       return { valid: false, reason: "Visitor QR pass expired or not yet valid for entry" };
