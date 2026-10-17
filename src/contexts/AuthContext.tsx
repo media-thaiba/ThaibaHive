@@ -125,8 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    hardRedirect("/auth/login");
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Ignore network error to guarantee user can always sign out
+    } finally {
+      hardRedirect("/auth/login");
+    }
   }, []);
 
   return (

@@ -4,6 +4,8 @@ import { VisionStreamManager } from '@/lib/operations/vision/streaming/vision-st
 
 export const dynamic = 'force-dynamic';
 
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 20_000;
+
 export const GET = requireAuth(async (req: Request, session: any) => {
   const { searchParams } = new URL(req.url);
   const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
@@ -14,6 +16,7 @@ export const GET = requireAuth(async (req: Request, session: any) => {
   const streamManager = VisionStreamManager.getInstance();
   const encoder = new TextEncoder();
   let cleanup: (() => void) | null = null;
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
 
   if (req.signal?.aborted) {
     return new Response(new ReadableStream({ start(c) { c.close(); } }), {
@@ -28,6 +31,10 @@ export const GET = requireAuth(async (req: Request, session: any) => {
   const stream = new ReadableStream({
     start(controller) {
       cleanup = () => {
+        if (heartbeat) {
+          clearInterval(heartbeat);
+          heartbeat = null;
+        }
         streamManager.unsubscribe(clientId);
         try {
           controller.close();
@@ -52,6 +59,22 @@ export const GET = requireAuth(async (req: Request, session: any) => {
           streamManager.unsubscribe(clientId);
         }
       });
+
+      // Fulfill the client heartbeat contract so the useVisionStream watchdog
+      // does not force a reconnect cycle on an otherwise healthy idle stream.
+      const intervalMs = Number(process.env.VISION_SSE_HEARTBEAT_INTERVAL_MS) || DEFAULT_HEARTBEAT_INTERVAL_MS;
+      heartbeat = setInterval(() => {
+        try {
+          const frame = `event: heartbeat\ndata: ${JSON.stringify({
+            ts: new Date().toISOString(),
+            activeClients: streamManager.getActiveClientCount(),
+          })}\n\n`;
+          controller.enqueue(encoder.encode(frame));
+        } catch {
+          cleanup?.();
+          cleanup = null;
+        }
+      }, intervalMs);
 
       req.signal?.addEventListener('abort', () => {
         cleanup?.();

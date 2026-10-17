@@ -40,13 +40,13 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
       </Link>
 
       {/* Workspace Tabs - Segmented Pill Container */}
-      <div className="flex items-center gap-1 ml-2 sm:ml-4 mr-2 sm:mr-6 bg-muted/40 p-1 rounded-xl border border-border/50">
+      <div className="flex items-center gap-1 ml-2 sm:ml-4 mr-1 sm:mr-6 bg-muted/40 p-1 rounded-xl border border-border/50 max-w-[130px] xs:max-w-[180px] sm:max-w-none overflow-x-auto no-scrollbar shrink">
         {allWorkspaces.map((w) => (
           <button
             key={w.id}
             onClick={() => setWorkspace(w.id)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0",
+              "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0",
               w.id === currentWorkspace.id
                 ? "bg-primary text-primary-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -61,14 +61,14 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center gap-0.5 sm:gap-1 ml-auto shrink-0">
         {/* Search */}
         <button
           onClick={onSearchOpen}
           aria-label="Search"
-          className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
+          className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-2 sm:px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 shrink-0"
         >
-          <Search className="h-3.5 w-3.5" />
+          <Search className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden sm:inline">Search...</span>
         </button>
 
@@ -76,13 +76,15 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         <button
           onClick={() => setChatOpen(true)}
           aria-label="Open Chat (Cmd+Shift+M)"
-          className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
+          className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0"
         >
           <MessageSquare className="h-[18px] w-[18px]" />
         </button>
 
         {/* Notifications */}
-        <NotificationsMenu layout="header" />
+        <div className="shrink-0">
+          <NotificationsMenu layout="header" />
+        </div>
 
         {/* Theme Toggle */}
         <button
@@ -93,7 +95,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
             setTheme(nextTheme);
           }}
           aria-label={`Switch theme (current: ${theme})`}
-          className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] flex items-center justify-center"
+          className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0"
         >
           {theme === "light" && <Sun className="h-[18px] w-[18px]" />}
           {theme === "dark" && <Moon className="h-[18px] w-[18px]" />}
@@ -104,13 +106,15 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         <Link
           href="/my-work/settings"
           aria-label="Settings"
-          className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center"
+          className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center shrink-0"
         >
           <Settings className="h-[18px] w-[18px]" />
         </Link>
 
         {/* User menu */}
-        <UserAvatarDropdown />
+        <div className="shrink-0">
+          <UserAvatarDropdown />
+        </div>
       </div>
 
       <ChatDrawer open={chatOpen} onOpenChange={setChatOpen} />

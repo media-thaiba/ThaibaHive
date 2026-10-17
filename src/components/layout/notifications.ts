@@ -62,14 +62,27 @@ export function useNotifications() {
   }, [staff, fetchNotifications]);
 
   const markRead = useCallback(async (id?: string) => {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    const data = await fetch("/api/notifications").then((r) => r.json());
-    setNotifications(data.notifications || []);
-    setUnread(data.unreadCount || 0);
+    // Optimistic UI update
+    setNotifications((prev) =>
+      prev.map((n) => (!id || n.id === id ? { ...n, isRead: true } : n))
+    );
+    setUnread((prev) => (id ? Math.max(0, prev - 1) : 0));
+
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnread(data.unreadCount || 0);
+      }
+    } catch {
+      // Gracefully maintain optimistic state on network failure
+    }
   }, []);
 
   return { notifications, unread, markRead };

@@ -43,10 +43,14 @@ export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
     return matches.reduce((a, b) => (a.href.length >= b.href.length ? a : b)).href;
   }, [items, pathname]);
 
-  // Restore persisted collapse state after hydration
+  // Restore persisted collapse state after hydration (auto-collapse on smaller desktop viewports)
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
-    if (stored === "true") setSidebarCollapsed(true);
+    if (stored === "true") {
+      setSidebarCollapsed(true);
+    } else if (stored === null && typeof window !== "undefined" && window.innerWidth < 1280) {
+      setSidebarCollapsed(true);
+    }
   }, [setSidebarCollapsed]);
 
   // Keep layout padding in sync with sidebar width + persist choice

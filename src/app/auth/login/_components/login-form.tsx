@@ -60,6 +60,12 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailNotVerified, setEmailNotVerified] = useState(false);
+
+  useEffect(() => {
+    setError("");
+    setForgotError("");
+    setEmailNotVerified(false);
+  }, [mode]);
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
   const [resendError, setResendError] = useState("");
   const [signupSent, setSignupSent] = useState(false);

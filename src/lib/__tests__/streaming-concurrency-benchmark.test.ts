@@ -288,6 +288,38 @@ describe("Real-Time Streaming & Concurrency Benchmark Tests", () => {
     reader.releaseLock();
   });
 
+  it("receives and decodes vision stream heartbeat frames over SSE", async () => {
+    process.env.VISION_SSE_HEARTBEAT_INTERVAL_MS = "100";
+
+    const ac = new AbortController();
+    const req = new Request("http://localhost:3000/api/vision/stream?tenantId=global&topics=*", {
+      headers: { Accept: "text/event-stream", Authorization: "Bearer mock_token" },
+      signal: ac.signal,
+    });
+
+    const res = await visionStreamHandler(req);
+    expect(res.status).toBe(200);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+
+    // Initial connected frame
+    const firstChunk = await reader.read();
+    expect(firstChunk.done).toBe(false);
+    expect(decoder.decode(firstChunk.value)).toContain("connected");
+
+    // Wait for the heartbeat frame that keeps the client watchdog satisfied
+    await new Promise((r) => setTimeout(r, 150));
+    const pingChunk = await reader.read();
+    expect(pingChunk.done).toBe(false);
+    const pingText = decoder.decode(pingChunk.value);
+    expect(pingText).toContain("event: heartbeat");
+
+    ac.abort();
+    reader.releaseLock();
+    delete process.env.VISION_SSE_HEARTBEAT_INTERVAL_MS;
+  });
+
   it("emits session_invalidated frame and closes stream when tokenVersion changes", async () => {
     process.env.REALTIME_POLL_INTERVAL_MS = "50";
 

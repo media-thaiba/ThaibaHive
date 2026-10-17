@@ -83,11 +83,11 @@ export default function ShellLayout({
                 </ErrorBoundary>
               </main>
             </div>
-            <nav role="navigation" aria-label="Mobile navigation" className="lg:hidden">
+            <div className="lg:hidden">
               <ErrorBoundary>
                 <BottomNav />
               </ErrorBoundary>
-            </nav>
+            </div>
             <DiagnosticsButton />
             <Toaster position="top-right" richColors />
             <Suspense fallback={<CommandPaletteFallback />}>
