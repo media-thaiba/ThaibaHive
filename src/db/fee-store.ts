@@ -411,6 +411,143 @@ export class FeeDbStore {
     return payment;
   }
 
+  public async updatePaymentStatus(
+    id: string,
+    updates: Pick<FeePaymentItem, 'paymentStatus'> &
+      Partial<Pick<FeePaymentItem, 'gatewayPaymentId' | 'transactionReference' | 'receiptNumber' | 'updatedAt'>>
+  ): Promise<FeePaymentItem | null> {
+    const existing = this.memoryStore.payments.get(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...updates, updatedAt: updates.updatedAt || new Date().toISOString() };
+    this.memoryStore.payments.set(id, updated);
+
+    try {
+      if (db && !this.useMemoryOnly) {
+        await db.update(feePayments).set({
+          paymentStatus: updated.paymentStatus,
+          gatewayPaymentId: updated.gatewayPaymentId ?? null,
+          transactionReference: updated.transactionReference ?? null,
+          receiptNumber: updated.receiptNumber ?? null,
+          updatedAt: updated.updatedAt,
+        }).where(eq(feePayments.id, id));
+      }
+    } catch (err) {
+      this.handlePersistenceError('updatePaymentStatus', id, err);
+    }
+
+    return updated;
+  }
+
+  /**
+   * Applies a completed payment to the fee allocation and its installments
+   * (earliest due first waterfall). Idempotent: a feePaymentTransactions ledger
+   * row is written per applied payment, so redelivered webhooks or repeated
+   * counter calls can never double-credit a balance.
+   */
+  public async applyPaymentToAllocation(
+    payment: FeePaymentItem
+  ): Promise<{ applied: boolean; appliedAmount?: number; reason?: string }> {
+    if (payment.paymentStatus !== 'completed') {
+      return { applied: false, reason: 'payment_not_completed' };
+    }
+
+    const amount = Math.round((payment.netAmount || payment.amount || 0) * 100) / 100;
+    if (amount <= 0) {
+      return { applied: false, reason: 'non_positive_amount' };
+    }
+
+    const alreadyApplied = Array.from(this.memoryStore.paymentTransactions.values()).some(
+      (tx) => tx.paymentId === payment.id
+    );
+    if (alreadyApplied) {
+      return { applied: false, reason: 'already_applied' };
+    }
+
+    const allocation = this.memoryStore.allocations.get(payment.allocationId);
+    if (!allocation) {
+      return { applied: false, reason: 'allocation_not_found' };
+    }
+
+    const installments = Array.from(this.memoryStore.installments.values())
+      .filter((inst) => inst.allocationId === allocation.id)
+      .sort((a, b) => a.installmentNumber - b.installmentNumber);
+
+    let remaining = amount;
+    let firstAppliedInstallmentId: string | null = null;
+
+    for (const inst of installments) {
+      if (remaining <= 0) break;
+      if (inst.balanceAmount <= 0 || inst.status === 'waived') continue;
+
+      const toPay = Math.round(Math.min(remaining, inst.balanceAmount) * 100) / 100;
+      const newBal = Math.round((inst.balanceAmount - toPay) * 100) / 100;
+      const newPaid = Math.round((inst.paidAmount + toPay) * 100) / 100;
+
+      await this.updateInstallment(inst.id, {
+        paidAmount: newPaid,
+        balanceAmount: newBal,
+        status: newBal <= 0 ? 'paid' : 'partially_paid',
+        lastPaymentDate: payment.paidAt || new Date().toISOString(),
+      });
+
+      if (!firstAppliedInstallmentId) firstAppliedInstallmentId = inst.id;
+      remaining = Math.round((remaining - toPay) * 100) / 100;
+    }
+
+    const newAllocPaid = Math.round((allocation.paidAmount + amount) * 100) / 100;
+    const newAllocBal = Math.max(0, Math.round((allocation.netPayableAmount - newAllocPaid) * 100) / 100);
+    const newStatus: AllocationStatus =
+      allocation.status === 'waived'
+        ? 'waived'
+        : newAllocBal <= 0
+          ? 'paid'
+          : newAllocPaid > 0
+            ? 'partial'
+            : allocation.status;
+
+    await this.updateAllocation(
+      allocation.id,
+      {
+        paidAmount: newAllocPaid,
+        balanceAmount: newAllocBal,
+        status: newStatus,
+      },
+      allocation.institutionId
+    );
+
+    const markerId = `fpt_apply_${payment.id}`;
+    const marker: FeePaymentTransactionItem = {
+      id: markerId,
+      paymentId: payment.id,
+      installmentId: firstAppliedInstallmentId,
+      componentId: null,
+      allocatedAmount: amount,
+      glDebitAccount: 'GL:1100-BANK_CASH',
+      glCreditAccount: 'GL:1200-FEE_RECEIVABLE',
+      createdAt: new Date().toISOString(),
+    };
+    this.memoryStore.paymentTransactions.set(markerId, marker);
+
+    try {
+      if (db && !this.useMemoryOnly) {
+        await db.insert(feePaymentTransactions).values({
+          id: marker.id,
+          paymentId: marker.paymentId,
+          installmentId: marker.installmentId,
+          componentId: marker.componentId,
+          allocatedAmount: marker.allocatedAmount,
+          glDebitAccount: marker.glDebitAccount,
+          glCreditAccount: marker.glCreditAccount,
+          createdAt: marker.createdAt,
+        }).onConflictDoNothing();
+      }
+    } catch (err) {
+      this.handlePersistenceError('applyPaymentToAllocation', marker.id, err);
+    }
+
+    return { applied: true, appliedAmount: amount };
+  }
+
   public async getPaymentById(id: string, institutionId?: string): Promise<FeePaymentItem | null> {
     const pay = this.memoryStore.payments.get(id);
     if (!pay) return null;
@@ -688,6 +825,48 @@ export class FeeDbStore {
     if (!reg) return null;
     if (institutionId && reg.institutionId !== institutionId) return null;
     return reg;
+  }
+
+  /**
+   * Persist live shift collection totals. Without this, totals mutated on the
+   * in-memory reference were lost on restart and drifted from the DB row.
+   */
+  public async updateCounterRegisterTotals(
+    id: string,
+    totals: {
+      systemCashTotal: number;
+      systemPosTotal: number;
+      systemChequeTotal: number;
+      cashDropsTotal: number;
+      updatedAt: string;
+    },
+    institutionId?: string
+  ): Promise<FeeCounterRegisterItem | null> {
+    const existing = this.memoryStore.counterRegisters.get(id);
+    if (!existing) return null;
+    if (institutionId && existing.institutionId !== institutionId) return null;
+
+    const updated: FeeCounterRegisterItem = { ...existing, ...totals };
+    this.memoryStore.counterRegisters.set(id, updated);
+
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = institutionId
+          ? and(eq(feeCounterRegisters.id, id), eq(feeCounterRegisters.institutionId, institutionId))
+          : eq(feeCounterRegisters.id, id);
+        await db.update(feeCounterRegisters).set({
+          systemCashTotal: totals.systemCashTotal,
+          systemPosTotal: totals.systemPosTotal,
+          systemChequeTotal: totals.systemChequeTotal,
+          cashDropsTotal: totals.cashDropsTotal,
+          updatedAt: totals.updatedAt,
+        }).where(whereClause);
+      }
+    } catch (err) {
+      this.handlePersistenceError('updateCounterRegisterTotals', id, err);
+    }
+
+    return updated;
   }
 
   public async listCounterRegisters(institutionId: string, status?: CounterStatus): Promise<FeeCounterRegisterItem[]> {

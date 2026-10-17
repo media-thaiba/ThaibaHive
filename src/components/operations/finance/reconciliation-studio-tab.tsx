@@ -58,7 +58,15 @@ export function ReconciliationStudioTab({ batches }: ReconciliationStudioTabProp
                     {b.discrepancyAmount === 0 ? '₹0' : `₹${b.discrepancyAmount.toLocaleString('en-IN')}`}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={b.status === 'reconciled' ? 'success' : 'destructive'}>
+                    <Badge
+                      variant={
+                        b.status === 'reconciled'
+                          ? 'success'
+                          : b.status === 'discrepancy_flagged'
+                            ? 'destructive'
+                            : 'warning'
+                      }
+                    >
                       {b.status.toUpperCase()}
                     </Badge>
                   </TableCell>

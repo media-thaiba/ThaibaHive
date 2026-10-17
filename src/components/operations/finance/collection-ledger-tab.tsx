@@ -60,7 +60,17 @@ export function CollectionLedgerTab({ payments }: CollectionLedgerTabProps) {
                     ₹{p.netAmount.toLocaleString('en-IN')}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={p.paymentStatus === 'completed' ? 'success' : 'warning'}>
+                    <Badge
+                      variant={
+                        p.paymentStatus === 'completed'
+                          ? 'success'
+                          : p.paymentStatus === 'failed' || p.paymentStatus === 'chargeback'
+                            ? 'destructive'
+                            : p.paymentStatus === 'refunded'
+                              ? 'info'
+                              : 'warning'
+                      }
+                    >
                       {p.paymentStatus.toUpperCase()}
                     </Badge>
                   </TableCell>

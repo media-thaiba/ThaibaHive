@@ -47,17 +47,41 @@ export const POST = requireAuth(async (request, session) => {
 
     if (action === 'record_payment') {
       const parsed = recordCounterPaymentSchema.safeParse(body);
-  if (parsed.success && (parsed.data as any).institutionId) {
-    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
-  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
+      }
+
+      // Server-side allocation & amount guard: counter payments are validated
+      // against the tenant-scoped allocation, never against client claims.
+      const instFilter =
+        session.institutionId && session.institutionId !== 'global' ? session.institutionId : undefined;
+      const allocation = await store.getAllocationById(parsed.data.allocationId, instFilter);
+      if (!allocation) {
+        return NextResponse.json({ error: 'Fee allocation not found' }, { status: 404 });
+      }
+      if (allocation.studentId !== parsed.data.studentId) {
+        return NextResponse.json(
+          { error: 'Student does not match the fee allocation' },
+          { status: 400 }
+        );
+      }
+
+      const requestedAmount = Number(parsed.data.amount.toFixed(2));
+      if (allocation.balanceAmount <= 0) {
+        return NextResponse.json({ error: 'No outstanding balance to collect' }, { status: 409 });
+      }
+      if (requestedAmount > allocation.balanceAmount) {
+        return NextResponse.json(
+          { error: `Amount exceeds outstanding balance of ₹${allocation.balanceAmount.toFixed(2)}` },
+          { status: 400 }
+        );
       }
 
       const updatedShift = await engine.recordShiftTransaction(
         parsed.data.shiftId,
         parsed.data.paymentMethod,
-        parsed.data.amount
+        requestedAmount,
+        instFilter
       );
 
       const paymentId = `pay_counter_${Date.now()}`;
@@ -66,13 +90,13 @@ export const POST = requireAuth(async (request, session) => {
       const payment = await store.recordPayment({
         id: paymentId,
         paymentNumber,
-        institutionId: updatedShift.institutionId,
-        allocationId: parsed.data.allocationId,
-        studentId: parsed.data.studentId,
-        amount: parsed.data.amount,
+        institutionId: allocation.institutionId,
+        allocationId: allocation.id,
+        studentId: allocation.studentId,
+        amount: requestedAmount,
         fineAmount: 0,
         discountAmount: 0,
-        netAmount: parsed.data.amount,
+        netAmount: requestedAmount,
         currency: 'INR',
         paymentMethod: parsed.data.paymentMethod,
         paymentStatus: 'completed',
@@ -86,23 +110,27 @@ export const POST = requireAuth(async (request, session) => {
         updatedAt: new Date().toISOString(),
       });
 
+      // Reduce allocation/installment balances for the collected amount.
+      // Idempotent inside the store (ledger marker per payment).
+      await store.applyPaymentToAllocation(payment);
+
       return NextResponse.json({ success: true, payment, register: updatedShift }, { status: 201 });
     }
 
     if (action === 'close') {
       const parsed = closeCounterRegisterSchema.safeParse(body);
-  if (parsed.success && (parsed.data as any).institutionId) {
-    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
-  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }
+      const instFilter =
+        session.institutionId && session.institutionId !== 'global' ? session.institutionId : undefined;
 
       const summary = await engine.closeShift(
         parsed.data.shiftId,
         parsed.data.closingCashDeclared,
         session.staffId || (session as any).userId || 'staff',
-        parsed.data.supervisorNotes
+        parsed.data.supervisorNotes,
+        instFilter
       );
 
       return NextResponse.json({ success: true, summary });
@@ -111,6 +139,16 @@ export const POST = requireAuth(async (request, session) => {
     return NextResponse.json({ error: 'Invalid counter action' }, { status: 400 });
   } catch (err: unknown) {
     console.error("[Fees Counter Error]:", err instanceof Error ? err.stack : err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('not active or open')) {
+      return NextResponse.json({ error: 'Counter shift not found or already closed' }, { status: 404 });
+    }
+    if (msg.includes('exceeds current cash in drawer')) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    if (msg.includes('already has an active open shift')) {
+      return NextResponse.json({ error: msg }, { status: 409 });
+    }
     return NextResponse.json({ error: "Counter operation failed" }, { status: 500 });
   }
 }, 'finance:fees:collect');

@@ -40,6 +40,9 @@ export class ReconciliationEngine {
     notes?: string;
     reconciledById?: string;
   }) {
+    if (input.periodEnd < input.periodStart) {
+      throw new Error("periodEnd must not be before periodStart");
+    }
     const reconciliationId = `recon-${randomUUID()}`;
     const now = new Date().toISOString();
 
@@ -144,7 +147,7 @@ export class ReconciliationEngine {
         amount: tx.amount,
         matchStatus: isMatched ? "matched" : "unmatched",
         matchedWithId: isMatched ? bankEntries[matchIdx].referenceId : undefined,
-        varianceAmount: 0,
+        varianceAmount: isMatched ? 0 : tx.amount,
         createdAt: now,
       });
     }
@@ -172,7 +175,7 @@ export class ReconciliationEngine {
         amount: -tx.amount,
         matchStatus: isMatched ? "matched" : "unmatched",
         matchedWithId: isMatched ? bankEntries[matchIdx].referenceId : undefined,
-        varianceAmount: 0,
+        varianceAmount: isMatched ? 0 : -tx.amount,
         createdAt: now,
       });
     }
@@ -218,7 +221,9 @@ export class ReconciliationEngine {
   }
 
   /**
-   * Manual override / match an item
+   * Manual override / match an item.
+   * When `institutionId` is provided, the item's parent session must belong to
+   * that institution or the mutation is refused (returns null).
    */
   async manualMatchItem(input: {
     itemId: string;
@@ -226,7 +231,23 @@ export class ReconciliationEngine {
     matchedWithId?: string;
     varianceAmount?: number;
     resolutionNotes?: string;
+    institutionId?: string;
   }) {
+    const [itemRow] = await db
+      .select()
+      .from(financialReconciliationItems)
+      .where(eq(financialReconciliationItems.id, input.itemId));
+    if (!itemRow) return null;
+
+    if (input.institutionId) {
+      const [sessionRow] = await db
+        .select()
+        .from(financialReconciliations)
+        .where(eq(financialReconciliations.id, itemRow.reconciliationId));
+      if (!sessionRow || sessionRow.institutionId !== input.institutionId) return null;
+    }
+
+    const now = new Date().toISOString();
     const [updated] = await db
       .update(financialReconciliationItems)
       .set({
@@ -235,20 +256,51 @@ export class ReconciliationEngine {
         varianceAmount: input.varianceAmount ?? 0,
         resolutionNotes: input.resolutionNotes,
       })
-      .where(eq(financialReconciliationItems.id, input.itemId))
+      .where(
+        and(
+          eq(financialReconciliationItems.id, itemRow.id),
+          eq(financialReconciliationItems.reconciliationId, itemRow.reconciliationId)
+        )
+      )
       .returning();
+    if (!updated) return null;
+
+    // Keep the session's matched/unmatched counters truthful after an override
+    const allItems = await db
+      .select()
+      .from(financialReconciliationItems)
+      .where(eq(financialReconciliationItems.reconciliationId, itemRow.reconciliationId));
+    const matchedCount = allItems.filter(
+      (i) => i.matchStatus === "matched" || i.matchStatus === "manual_override"
+    ).length;
+    await db
+      .update(financialReconciliations)
+      .set({
+        matchedItemCount: matchedCount,
+        unmatchedItemCount: allItems.length - matchedCount,
+        updatedAt: now,
+      })
+      .where(eq(financialReconciliations.id, itemRow.reconciliationId));
 
     return updated;
   }
 
   /**
-   * Retrieve reconciliation report
+   * Retrieve reconciliation report (optionally tenant-scoped: a scoped caller
+   * never sees that another institution's session exists).
    */
-  async getReconciliation(reconciliationId: string) {
+  async getReconciliation(reconciliationId: string, institutionId?: string) {
     const [session] = await db
       .select()
       .from(financialReconciliations)
-      .where(eq(financialReconciliations.id, reconciliationId));
+      .where(
+        institutionId
+          ? and(
+              eq(financialReconciliations.id, reconciliationId),
+              eq(financialReconciliations.institutionId, institutionId)
+            )
+          : eq(financialReconciliations.id, reconciliationId)
+      );
 
     if (!session) return null;
 

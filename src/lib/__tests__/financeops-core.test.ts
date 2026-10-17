@@ -15,98 +15,107 @@ let mockPayrollDeductions: any[] = [];
 let mockTransactions: any[] = [];
 let mockReconciliations: any[] = [];
 let mockReconciliationItems: any[] = [];
+let mockStaff: any[] = [];
 
 jest.mock("@/db", () => {
-  return {
-    db: {
-      select: () => ({
-        from: (table: any) => ({
-          where: (condition: any) => {
-            let data: any[] = [];
-            if (table === "tax_jurisdictions") data = mockJurisdictions;
-            else if (table === "tax_rate_overrides") data = mockOverrides;
-            else if (table === "purchase_approval_tiers") data = mockTiers;
-            else if (table === "purchase_requests") data = mockPurchaseRequests;
-            else if (table === "purchase_approval_logs") data = mockApprovalLogs;
-            else if (table === "payroll_salary_structures") data = mockSalaryStructures;
-            else if (table === "payroll_records") data = mockPayrollRecords;
-            else if (table === "financial_transactions") {
-              if (condition?.args?.some((arg: any) => arg?.b === "income")) {
-                data = mockTransactions.filter((t) => t.type === "income");
-              } else if (condition?.args?.some((arg: any) => arg?.b === "expense")) {
-                data = mockTransactions.filter((t) => t.type === "expense");
-              } else {
-                data = mockTransactions;
-              }
+  const mockDb: any = {
+    select: () => ({
+      from: (table: any) => ({
+        where: (condition: any) => {
+          let data: any[] = [];
+          if (table === "tax_jurisdictions") data = mockJurisdictions;
+          else if (table === "tax_rate_overrides") data = mockOverrides;
+          else if (table === "purchase_approval_tiers") data = mockTiers;
+          else if (table === "purchase_requests") data = mockPurchaseRequests;
+          else if (table === "purchase_approval_logs") data = mockApprovalLogs;
+          else if (table === "payroll_salary_structures") data = mockSalaryStructures;
+          else if (table === "payroll_records") data = mockPayrollRecords;
+          else if (table === "staff") {
+            // eq(staff.isActive, true) arrives as { b: true } under this mock
+            data = condition?.b === true ? mockStaff.filter((s) => s.isActive === true) : mockStaff;
+          }
+          else if (table === "financial_transactions") {
+            if (condition?.args?.some((arg: any) => arg?.b === "income")) {
+              data = mockTransactions.filter((t) => t.type === "income");
+            } else if (condition?.args?.some((arg: any) => arg?.b === "expense")) {
+              data = mockTransactions.filter((t) => t.type === "expense");
+            } else {
+              data = mockTransactions;
             }
-            else if (table === "financial_reconciliations") data = mockReconciliations;
-            else if (table === "financial_reconciliation_items") data = mockReconciliationItems;
-            
-            return {
-              orderBy: () => data,
-              all: () => data,
-              then: (resolve: any) => resolve(data),
-            };
-          },
-          orderBy: () => {
-            if (table === "purchase_approval_tiers") return mockTiers;
-            return [];
-          },
-          then: (resolve: any) => {
-            if (table === "payroll_salary_structures") return resolve(mockSalaryStructures);
-            return resolve([]);
-          },
-        }),
-      }),
-      insert: (table: any) => ({
-        values: (vals: any) => {
-          const arr = Array.isArray(vals) ? vals : [vals];
-          if (table === "tax_jurisdictions") mockJurisdictions.push(...arr);
-          else if (table === "tax_rate_overrides") mockOverrides.push(...arr);
-          else if (table === "purchase_approval_tiers") mockTiers.push(...arr);
-          else if (table === "purchase_requests") mockPurchaseRequests.push(...arr);
-          else if (table === "purchase_approval_logs") mockApprovalLogs.push(...arr);
-          else if (table === "payroll_salary_structures") mockSalaryStructures.push(...arr);
-          else if (table === "payroll_records") mockPayrollRecords.push(...arr);
-          else if (table === "payroll_deductions") mockPayrollDeductions.push(...arr);
-          else if (table === "financial_reconciliations") mockReconciliations.push(...arr);
-          else if (table === "financial_reconciliation_items") mockReconciliationItems.push(...arr);
-
+          }
+          else if (table === "financial_reconciliations") data = mockReconciliations;
+          else if (table === "financial_reconciliation_items") data = mockReconciliationItems;
+          
           return {
+            orderBy: () => data,
+            all: () => data,
+            then: (resolve: any) => resolve(data),
+          };
+        },
+        orderBy: () => {
+          if (table === "purchase_approval_tiers") return mockTiers;
+          return [];
+        },
+        then: (resolve: any) => {
+          if (table === "payroll_salary_structures") return resolve(mockSalaryStructures);
+          return resolve([]);
+        },
+      }),
+    }),
+    insert: (table: any) => ({
+      values: (vals: any) => {
+        const arr = Array.isArray(vals) ? vals : [vals];
+        if (table === "tax_jurisdictions") mockJurisdictions.push(...arr);
+        else if (table === "tax_rate_overrides") mockOverrides.push(...arr);
+        else if (table === "purchase_approval_tiers") mockTiers.push(...arr);
+        else if (table === "purchase_requests") mockPurchaseRequests.push(...arr);
+        else if (table === "purchase_approval_logs") mockApprovalLogs.push(...arr);
+        else if (table === "payroll_salary_structures") mockSalaryStructures.push(...arr);
+        else if (table === "payroll_records") mockPayrollRecords.push(...arr);
+        else if (table === "payroll_deductions") mockPayrollDeductions.push(...arr);
+        else if (table === "financial_reconciliations") mockReconciliations.push(...arr);
+        else if (table === "financial_reconciliation_items") mockReconciliationItems.push(...arr);
+
+        return {
+          returning: () => arr,
+          onConflictDoUpdate: () => ({
             returning: () => arr,
-            onConflictDoUpdate: () => ({
-              returning: () => arr,
-            }),
-            get: () => arr[0],
-            then: (resolve: any) => resolve(arr),
+          }),
+          get: () => arr[0],
+          then: (resolve: any) => resolve(arr),
+        };
+      },
+    }),
+    update: (table: any) => ({
+      set: (vals: any) => ({
+        where: (_cond: any) => {
+          let updated: any[] = [];
+          if (table === "purchase_requests") {
+            mockPurchaseRequests = mockPurchaseRequests.map((r) => ({ ...r, ...vals }));
+            updated = mockPurchaseRequests;
+          } else if (table === "payroll_records") {
+            mockPayrollRecords = mockPayrollRecords.map((r) => ({ ...r, ...vals }));
+            updated = mockPayrollRecords;
+          } else if (table === "financial_reconciliations") {
+            mockReconciliations = mockReconciliations.map((r) => ({ ...r, ...vals }));
+            updated = mockReconciliations;
+          } else if (table === "financial_reconciliation_items") {
+            mockReconciliationItems = mockReconciliationItems.map((r) => ({ ...r, ...vals }));
+            updated = mockReconciliationItems;
+          }
+          return {
+            returning: () => updated,
+            then: (resolve: any) => resolve(updated),
           };
         },
       }),
-      update: (table: any) => ({
-        set: (vals: any) => ({
-          where: (_cond: any) => {
-            let updated: any[] = [];
-            if (table === "purchase_requests") {
-              mockPurchaseRequests = mockPurchaseRequests.map((r) => ({ ...r, ...vals }));
-              updated = mockPurchaseRequests;
-            } else if (table === "payroll_records") {
-              mockPayrollRecords = mockPayrollRecords.map((r) => ({ ...r, ...vals }));
-              updated = mockPayrollRecords;
-            } else if (table === "financial_reconciliations") {
-              mockReconciliations = mockReconciliations.map((r) => ({ ...r, ...vals }));
-              updated = mockReconciliations;
-            } else if (table === "financial_reconciliation_items") {
-              mockReconciliationItems = mockReconciliationItems.map((r) => ({ ...r, ...vals }));
-              updated = mockReconciliationItems;
-            }
-            return {
-              returning: () => updated,
-              then: (resolve: any) => resolve(updated),
-            };
-          },
-        }),
-      }),
-    },
+    }),
+  };
+  // Naive transaction emulation: the in-memory mock has no rollback, but the
+  // callback must receive the same db surface (engines use tx.* throughout).
+  mockDb.transaction = async (fn: any) => fn(mockDb);
+  return {
+    db: mockDb,
     taxJurisdictions: "tax_jurisdictions",
     taxRateOverrides: "tax_rate_overrides",
     purchaseApprovalTiers: "purchase_approval_tiers",
@@ -115,6 +124,7 @@ jest.mock("@/db", () => {
     payrollSalaryStructures: "payroll_salary_structures",
     payrollRecords: "payroll_records",
     payrollDeductions: "payroll_deductions",
+    staff: "staff",
     financialTransactions: "financial_transactions",
     financialReconciliations: "financial_reconciliations",
     financialReconciliationItems: "financial_reconciliation_items",
@@ -142,6 +152,7 @@ describe("Sprint-103: Finance Operations Consolidation Tests", () => {
     mockTransactions = [];
     mockReconciliations = [];
     mockReconciliationItems = [];
+    mockStaff = [];
   });
 
   describe("TaxRateEngine", () => {
@@ -292,6 +303,7 @@ describe("Sprint-103: Finance Operations Consolidation Tests", () => {
     it("should batch generate monthly payroll and disburse records", async () => {
       const engine = PayrollEngine.getInstance();
 
+      mockStaff.push({ id: "staff-1", isActive: true });
       mockSalaryStructures.push({
         id: "struct-1",
         institutionId: "inst-1",
@@ -303,8 +315,9 @@ describe("Sprint-103: Finance Operations Consolidation Tests", () => {
         pfDeductionRate: 0.12,
       });
 
-      const records = await engine.generateMonthlyPayroll("inst-1", 2026, 10);
+      const { records, skipped } = await engine.generateMonthlyPayroll("inst-1", 2026, 10);
       expect(records.length).toBe(1);
+      expect(skipped).toEqual([]);
       expect(records[0].status).toBe("draft");
       expect(records[0].auditHash).toBeDefined();
 
@@ -317,6 +330,50 @@ describe("Sprint-103: Finance Operations Consolidation Tests", () => {
 
       expect(disbursed.status).toBe("disbursed");
       expect(disbursed.paymentReference).toBe("NEFT-TX-20261001-9988");
+
+      // Idempotency: re-running the disbursed month returns the same final
+      // record untouched instead of overwriting it.
+      const rerun = await engine.generateMonthlyPayroll("inst-1", 2026, 10);
+      expect(rerun.records.length).toBe(1);
+      expect(rerun.records[0].id).toBe(records[0].id);
+      expect(rerun.records[0].status).toBe("disbursed");
+      expect(rerun.records[0].paymentReference).toBe("NEFT-TX-20261001-9988");
+    });
+
+    it("should exclude inactive staff and report staff missing a salary structure", async () => {
+      const engine = PayrollEngine.getInstance();
+
+      mockStaff.push({ id: "staff-active", isActive: true });
+      mockStaff.push({ id: "staff-inactive", isActive: false });
+      mockSalaryStructures.push({
+        id: "struct-active",
+        institutionId: "inst-1",
+        staffId: "staff-active",
+        baseSalary: 40000,
+        pfDeductionRate: 0.12,
+      });
+      mockSalaryStructures.push({
+        id: "struct-inactive",
+        institutionId: "inst-1",
+        staffId: "staff-inactive",
+        baseSalary: 30000,
+        pfDeductionRate: 0.12,
+      });
+
+      const { records, skipped } = await engine.generateMonthlyPayroll("inst-1", 2026, 11, [
+        "staff-active",
+        "staff-inactive",
+        "staff-no-structure",
+      ]);
+
+      expect(records.length).toBe(1);
+      expect(records[0].staffId).toBe("staff-active");
+      expect(skipped).toEqual(
+        expect.arrayContaining([
+          { staffId: "staff-inactive", reason: "inactive" },
+          { staffId: "staff-no-structure", reason: "missing_structure" },
+        ])
+      );
     });
   });
 

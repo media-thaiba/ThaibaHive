@@ -469,7 +469,7 @@ async function applyFinancePurchaseAction(
 }
 
 async function applyFinanceReconciliationMatch(
-  _ctx: SyncApplierContext,
+  ctx: SyncApplierContext,
   raw: Record<string, unknown>
 ): Promise<void> {
   const payload = asRecord(raw);
@@ -491,6 +491,7 @@ async function applyFinanceReconciliationMatch(
     matchedWithId: parsed.data.matchedWithId,
     varianceAmount: parsed.data.varianceAmount,
     resolutionNotes: parsed.data.resolutionNotes,
+    institutionId: actorScope(ctx) || undefined,
   });
 }
 

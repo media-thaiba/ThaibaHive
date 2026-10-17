@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { PaymentMethod } from '@/lib/operations/finance/types';
+import { toast } from 'sonner';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export function CheckoutModal({
   const [processing, setProcessing] = useState(false);
 
   const handleExecutePayment = async () => {
+    if (processing) return;
     setProcessing(true);
     try {
       const res = await fetch('/api/finance/fees/checkout', {
@@ -44,22 +46,41 @@ export function CheckoutModal({
           currency: 'INR',
           paymentMethod: selectedMethod,
         }),
-      }).then((r) => r.json());
+      });
 
-      const receiptNo = res?.payment?.receiptNumber || `RCPT-${Date.now().toString().slice(-6)}`;
+      let payload: { payment?: { receiptNumber?: string }; error?: string } | null = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!res.ok || !payload?.payment) {
+        // Never fabricate a receipt: a failed checkout keeps the modal open.
+        toast.error(
+          payload?.error || 'Payment could not be initiated. Please try again.'
+        );
+        return;
+      }
+
+      const receiptNo =
+        payload.payment.receiptNumber || `RCPT-${Date.now().toString().slice(-6)}`;
       onPaymentSuccess(receiptNo);
       onClose();
     } catch {
-      // Fallback success simulation
-      onPaymentSuccess(`RCPT-AUTO-${Date.now().toString().slice(-4)}`);
-      onClose();
+      toast.error('Network error — payment was not completed. Please try again.');
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !processing) onClose();
+      }}
+    >
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900">
@@ -81,6 +102,7 @@ export function CheckoutModal({
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
+                disabled={processing}
                 onClick={() => setSelectedMethod('upi')}
                 className={`p-3 rounded-lg border text-left text-xs font-semibold transition-all ${
                   selectedMethod === 'upi'
@@ -94,6 +116,7 @@ export function CheckoutModal({
 
               <button
                 type="button"
+                disabled={processing}
                 onClick={() => setSelectedMethod('razorpay')}
                 className={`p-3 rounded-lg border text-left text-xs font-semibold transition-all ${
                   selectedMethod === 'razorpay'
@@ -107,6 +130,7 @@ export function CheckoutModal({
 
               <button
                 type="button"
+                disabled={processing}
                 onClick={() => setSelectedMethod('stripe')}
                 className={`p-3 rounded-lg border text-left text-xs font-semibold transition-all ${
                   selectedMethod === 'stripe'
@@ -120,6 +144,7 @@ export function CheckoutModal({
 
               <button
                 type="button"
+                disabled={processing}
                 onClick={() => setSelectedMethod('bank_transfer')}
                 className={`p-3 rounded-lg border text-left text-xs font-semibold transition-all ${
                   selectedMethod === 'bank_transfer'

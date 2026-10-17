@@ -13,14 +13,11 @@ export const GET = requireAuth(
         return NextResponse.json({ error: "Reconciliation ID is required" }, { status: 400 });
       }
 
-      const result = await reconciliationEngine.getReconciliation(id);
+      // Scope first: a cross-tenant session must look nonexistent, not forbidden.
+      const scope = await getUserInstitutionScope();
+      const result = await reconciliationEngine.getReconciliation(id, scope ?? undefined);
       if (!result) {
         return NextResponse.json({ error: "Reconciliation session not found" }, { status: 404 });
-      }
-
-      const scope = await getUserInstitutionScope();
-      if (scope && result.session.institutionId !== scope) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
       return NextResponse.json(result);

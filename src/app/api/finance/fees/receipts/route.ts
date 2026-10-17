@@ -7,6 +7,7 @@ export const GET = requireAuth(async (request, session) => {
   const url = new URL(request.url);
   const paymentId = url.searchParams.get('paymentId');
   const receiptHash = url.searchParams.get('hash');
+  const studentId = url.searchParams.get('studentId');
 
   const store = FeeDbStore.getInstance();
   if (receiptHash) {
@@ -21,7 +22,14 @@ export const GET = requireAuth(async (request, session) => {
     return NextResponse.json({ success: true, receipt: rcpt });
   }
 
-  return NextResponse.json({ error: 'paymentId or hash query parameter required' }, { status: 400 });
+  // Payment history for the fee portal: tenant-scoped via the session, never
+  // via a client-supplied institution.
+  if (studentId) {
+    const payments = await store.listPayments(session.institutionId || '', studentId);
+    return NextResponse.json({ success: true, payments });
+  }
+
+  return NextResponse.json({ error: 'paymentId, hash, or studentId query parameter required' }, { status: 400 });
 }, 'finance:fees:view');
 
 export const POST = requireAuth(async (request, session) => {

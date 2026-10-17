@@ -13,14 +13,14 @@ export const POST = requireAuth(async (request: Request, _session) => {
     }
 
     const institutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
-    const records = await payrollEngine.generateMonthlyPayroll(
+    const { records, skipped } = await payrollEngine.generateMonthlyPayroll(
       institutionId,
       parsed.data.payPeriodYear,
       parsed.data.payPeriodMonth,
       parsed.data.staffIds
     );
 
-    return NextResponse.json({ records, count: records.length }, { status: 201 });
+    return NextResponse.json({ records, count: records.length, skipped }, { status: 201 });
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("[Payroll Generate Error]:", error instanceof Error ? error.stack : error);

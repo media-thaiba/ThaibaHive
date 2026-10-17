@@ -3,10 +3,17 @@ import {
   payrollSalaryStructures,
   payrollRecords,
   payrollDeductions,
+  staff,
   eq,
   and,
 } from "@/db";
 import { createHash, randomUUID } from "crypto";
+
+export interface PayrollGenerationResult {
+  records: (typeof payrollRecords.$inferSelect)[];
+  /** Staff excluded from this run: inactive, or missing a salary structure. */
+  skipped: Array<{ staffId: string; reason: "inactive" | "missing_structure" }>;
+}
 
 export interface ComputedPayBreakdown {
   baseSalary: number;
@@ -123,15 +130,24 @@ export class PayrollEngine {
   }
 
   /**
-   * Batch generate monthly payroll records for an institution
+   * Batch generate monthly payroll records for an institution.
+   *
+   * Idempotency & integrity invariants:
+   * - Existing records are upserted on (staff, year, month) — re-running the
+   *   same period never duplicates rows.
+   * - `approved` and `disbursed` records are final: regeneration is refused
+   *   and the existing record is returned untouched (void it first to re-run).
+   * - Inactive staff are excluded; staff without a salary structure are
+   *   reported as skipped instead of silently missing from the batch.
+   * - The whole batch commits in one transaction — no partial months.
    */
   async generateMonthlyPayroll(
     institutionId: string,
     year: number,
     month: number,
     specificStaffIds?: string[]
-  ) {
-    // 1. Fetch relevant salary structures
+  ): Promise<PayrollGenerationResult> {
+    // 1. Fetch relevant salary structures (tenant-scoped)
     const query = db
       .select()
       .from(payrollSalaryStructures)
@@ -142,108 +158,144 @@ export class PayrollEngine {
       ? structures.filter((s) => specificStaffIds.includes(s.staffId))
       : structures;
 
-    const generatedRecords = [];
+    const skipped: PayrollGenerationResult["skipped"] = [];
 
+    // 2. Guard: only active staff receive payroll
+    const activeStaff = await db
+      .select({ id: staff.id })
+      .from(staff)
+      .where(eq(staff.isActive, true));
+    const activeIds = new Set(activeStaff.map((s) => s.id));
+
+    const eligibleStructures: typeof targetStructures = [];
     for (const struct of targetStructures) {
-      // Guard: Disbursed records are final and must never be overwritten
-      const [existingRecord] = await db
-        .select()
-        .from(payrollRecords)
-        .where(
-          and(
-            eq(payrollRecords.staffId, struct.staffId),
-            eq(payrollRecords.payPeriodYear, year),
-            eq(payrollRecords.payPeriodMonth, month)
-          )
-        );
-
-      if (existingRecord?.status === "disbursed") {
-        generatedRecords.push(existingRecord);
-        continue;
+      if (activeIds.has(struct.staffId)) {
+        eligibleStructures.push(struct);
+      } else {
+        skipped.push({ staffId: struct.staffId, reason: "inactive" });
       }
+    }
 
-      const breakdown = this.computeBreakdown(struct);
-      const recordId = existingRecord?.id || `pay-rec-${randomUUID()}`;
-      const now = new Date().toISOString();
+    // Guard: report requested staff with no salary structure instead of
+    // silently omitting them from the month.
+    if (specificStaffIds?.length) {
+      const structStaffIds = new Set(targetStructures.map((s) => s.staffId));
+      for (const id of specificStaffIds) {
+        if (!structStaffIds.has(id)) {
+          skipped.push({ staffId: id, reason: "missing_structure" });
+        }
+      }
+    }
 
-      const auditData = `${institutionId}:${struct.staffId}:${year}:${month}:${breakdown.netPayable}:${now}`;
-      const auditHash = createHash("sha256").update(auditData).digest("hex");
+    const generatedRecords: PayrollGenerationResult["records"] = [];
 
-      const [record] = await db
-        .insert(payrollRecords)
-        .values({
-          id: recordId,
-          institutionId,
-          staffId: struct.staffId,
-          payPeriodMonth: month,
-          payPeriodYear: year,
-          grossEarnings: breakdown.grossEarnings,
-          totalDeductions: breakdown.totalDeductions,
-          taxDeduction: breakdown.incomeTax,
-          netPayable: breakdown.netPayable,
-          status: existingRecord?.status || "draft",
-          auditHash,
-          createdAt: existingRecord?.createdAt || now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [payrollRecords.staffId, payrollRecords.payPeriodYear, payrollRecords.payPeriodMonth],
-          set: {
+    // 3. Entire batch in one transaction — a mid-batch failure rolls back
+    // everything rather than leaving a half-generated month.
+    await db.transaction(async (tx) => {
+      for (const struct of eligibleStructures) {
+        // Guard: final records (approved/disbursed) are never overwritten
+        const [existingRecord] = await tx
+          .select()
+          .from(payrollRecords)
+          .where(
+            and(
+              eq(payrollRecords.staffId, struct.staffId),
+              eq(payrollRecords.payPeriodYear, year),
+              eq(payrollRecords.payPeriodMonth, month)
+            )
+          );
+
+        if (
+          existingRecord &&
+          (existingRecord.status === "disbursed" || existingRecord.status === "approved")
+        ) {
+          generatedRecords.push(existingRecord);
+          continue;
+        }
+
+        const breakdown = this.computeBreakdown(struct);
+        const recordId = existingRecord?.id || `pay-rec-${randomUUID()}`;
+        const now = new Date().toISOString();
+
+        const auditData = `${institutionId}:${struct.staffId}:${year}:${month}:${breakdown.netPayable}:${now}`;
+        const auditHash = createHash("sha256").update(auditData).digest("hex");
+
+        const [record] = await tx
+          .insert(payrollRecords)
+          .values({
+            id: recordId,
+            institutionId,
+            staffId: struct.staffId,
+            payPeriodMonth: month,
+            payPeriodYear: year,
             grossEarnings: breakdown.grossEarnings,
             totalDeductions: breakdown.totalDeductions,
             taxDeduction: breakdown.incomeTax,
             netPayable: breakdown.netPayable,
+            status: existingRecord?.status || "draft",
             auditHash,
+            createdAt: existingRecord?.createdAt || now,
             updatedAt: now,
-          },
-        })
-        .returning();
-
-      // Upsert itemized deductions with deterministic IDs & onConflictDoUpdate
-      const deductionsToInsert = [
-        {
-          id: `ded-${record.id}-pf`,
-          payrollRecordId: record.id,
-          deductionType: "provident_fund",
-          amount: breakdown.pfDeduction,
-          description: "Statutory Provident Fund Contribution",
-          createdAt: now,
-        },
-        {
-          id: `ded-${record.id}-pt`,
-          payrollRecordId: record.id,
-          deductionType: "professional_tax",
-          amount: breakdown.professionalTax,
-          description: "Professional Tax",
-          createdAt: now,
-        },
-        {
-          id: `ded-${record.id}-tax`,
-          payrollRecordId: record.id,
-          deductionType: "income_tax",
-          amount: breakdown.incomeTax,
-          description: "Tax Deducted at Source (TDS)",
-          createdAt: now,
-        },
-      ];
-
-      for (const ded of deductionsToInsert) {
-        await db
-          .insert(payrollDeductions)
-          .values(ded)
+          })
           .onConflictDoUpdate({
-            target: [payrollDeductions.payrollRecordId, payrollDeductions.deductionType],
+            target: [payrollRecords.staffId, payrollRecords.payPeriodYear, payrollRecords.payPeriodMonth],
             set: {
-              amount: ded.amount,
-              description: ded.description,
+              grossEarnings: breakdown.grossEarnings,
+              totalDeductions: breakdown.totalDeductions,
+              taxDeduction: breakdown.incomeTax,
+              netPayable: breakdown.netPayable,
+              auditHash,
+              updatedAt: now,
             },
-          });
+          })
+          .returning();
+
+        // Upsert itemized deductions with deterministic IDs & onConflictDoUpdate
+        const deductionsToInsert = [
+          {
+            id: `ded-${record.id}-pf`,
+            payrollRecordId: record.id,
+            deductionType: "provident_fund",
+            amount: breakdown.pfDeduction,
+            description: "Statutory Provident Fund Contribution",
+            createdAt: now,
+          },
+          {
+            id: `ded-${record.id}-pt`,
+            payrollRecordId: record.id,
+            deductionType: "professional_tax",
+            amount: breakdown.professionalTax,
+            description: "Professional Tax",
+            createdAt: now,
+          },
+          {
+            id: `ded-${record.id}-tax`,
+            payrollRecordId: record.id,
+            deductionType: "income_tax",
+            amount: breakdown.incomeTax,
+            description: "Tax Deducted at Source (TDS)",
+            createdAt: now,
+          },
+        ];
+
+        for (const ded of deductionsToInsert) {
+          await tx
+            .insert(payrollDeductions)
+            .values(ded)
+            .onConflictDoUpdate({
+              target: [payrollDeductions.payrollRecordId, payrollDeductions.deductionType],
+              set: {
+                amount: ded.amount,
+                description: ded.description,
+              },
+            });
+        }
+
+        generatedRecords.push(record);
       }
+    });
 
-      generatedRecords.push(record);
-    }
-
-    return generatedRecords;
+    return { records: generatedRecords, skipped };
   }
 
   /**

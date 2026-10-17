@@ -12,13 +12,18 @@ const approvalPayloadSchema = z.object({
   requestId: z.string().min(1, "Request ID is required"),
   requestType: z.enum(["expense", "purchase"]),
   action: z.enum(["approve", "reject", "return"]),
-  notes: z.string().optional(),
-  signature: z.string().optional(),
-  receiptUrl: z.string().optional(),
+  notes: z.string().max(2000, "Notes must be 2000 characters or fewer").optional(),
+  signature: z.string().max(1024, "Signature must be 1024 characters or fewer").optional(),
+  receiptUrl: z.string().max(2048, "Receipt URL must be 2048 characters or fewer").optional(),
 });
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const parsed = approvalPayloadSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(

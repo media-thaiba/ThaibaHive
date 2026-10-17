@@ -46,7 +46,12 @@ export function ParentFeeCard({ allocation, onPayClick }: ParentFeeCardProps) {
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
-          {installments.map((inst) => {
+          {installments.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-500">
+              No installments scheduled for this allocation yet.
+            </div>
+          ) : (
+            installments.map((inst) => {
             const isPaid = inst.status === 'paid' || inst.balanceAmount === 0;
             return (
               <div
@@ -76,7 +81,8 @@ export function ParentFeeCard({ allocation, onPayClick }: ParentFeeCardProps) {
                 </div>
               </div>
             );
-          })}
+            })
+          )}
         </CardContent>
       </Card>
     </div>

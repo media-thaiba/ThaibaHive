@@ -57,14 +57,17 @@ export class CounterRegisterEngine {
   }
 
   /**
-   * Records a payment to the active cashier shift
+   * Records a payment to the active cashier shift.
+   * Totals are persisted immediately so they survive restarts and remain
+   * consistent with the DB row used for close-variance reporting.
    */
   public async recordShiftTransaction(
     shiftId: string,
     method: PaymentMethod,
-    amount: number
+    amount: number,
+    institutionId?: string
   ): Promise<FeeCounterRegisterItem> {
-    const shift = await this.store.getCounterRegisterById(shiftId);
+    const shift = await this.store.getCounterRegisterById(shiftId, institutionId);
     if (!shift || shift.status !== 'open') {
       throw new Error(`Shift ${shiftId} is not active or open`);
     }
@@ -78,6 +81,17 @@ export class CounterRegisterEngine {
     }
 
     shift.updatedAt = new Date().toISOString();
+    await this.store.updateCounterRegisterTotals(
+      shift.id,
+      {
+        systemCashTotal: shift.systemCashTotal,
+        systemPosTotal: shift.systemPosTotal,
+        systemChequeTotal: shift.systemChequeTotal,
+        cashDropsTotal: shift.cashDropsTotal,
+        updatedAt: shift.updatedAt,
+      },
+      institutionId
+    );
     return shift;
   }
 
@@ -87,9 +101,10 @@ export class CounterRegisterEngine {
   public async recordCashDrop(
     shiftId: string,
     dropAmount: number,
-    _authorizedSupervisorId: string
+    _authorizedSupervisorId: string,
+    institutionId?: string
   ): Promise<FeeCounterRegisterItem> {
-    const shift = await this.store.getCounterRegisterById(shiftId);
+    const shift = await this.store.getCounterRegisterById(shiftId, institutionId);
     if (!shift || shift.status !== 'open') {
       throw new Error(`Shift ${shiftId} is not active or open`);
     }
@@ -101,6 +116,17 @@ export class CounterRegisterEngine {
 
     shift.cashDropsTotal += dropAmount;
     shift.updatedAt = new Date().toISOString();
+    await this.store.updateCounterRegisterTotals(
+      shift.id,
+      {
+        systemCashTotal: shift.systemCashTotal,
+        systemPosTotal: shift.systemPosTotal,
+        systemChequeTotal: shift.systemChequeTotal,
+        cashDropsTotal: shift.cashDropsTotal,
+        updatedAt: shift.updatedAt,
+      },
+      institutionId
+    );
     return shift;
   }
 
@@ -111,9 +137,10 @@ export class CounterRegisterEngine {
     shiftId: string,
     closingCashDeclared: number,
     supervisorId?: string,
-    supervisorNotes?: string
+    supervisorNotes?: string,
+    institutionId?: string
   ): Promise<ShiftSummary> {
-    const shift = await this.store.getCounterRegisterById(shiftId);
+    const shift = await this.store.getCounterRegisterById(shiftId, institutionId);
     if (!shift || shift.status !== 'open') {
       throw new Error(`Shift ${shiftId} is not active or open`);
     }
@@ -125,13 +152,17 @@ export class CounterRegisterEngine {
       shiftId,
       closingCashDeclared,
       supervisorId,
-      supervisorNotes
+      supervisorNotes,
+      institutionId
     );
+    if (!closed) {
+      throw new Error(`Shift ${shiftId} is not active or open`);
+    }
 
     const totalAll = shift.systemCashTotal + shift.systemPosTotal + shift.systemChequeTotal;
 
     return {
-      register: closed!,
+      register: closed,
       expectedCashInDrawer: expectedCash,
       totalCollectedAllModes: totalAll,
       paymentCount: 0,

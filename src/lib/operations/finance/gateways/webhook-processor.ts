@@ -100,13 +100,23 @@ export class WebhookProcessor {
       // Mark processed
       this.processedKeys.add(key);
 
-      // Transition payment record if exists
+      // Transition payment record if exists (persisted so a restarted process
+      // cannot re-apply the same completed payment twice).
       if (webhookEvent.gatewayOrderId) {
         for (const payment of (this.store['memoryStore']?.payments.values() || [])) {
           if (payment.gatewayOrderId === webhookEvent.gatewayOrderId || payment.transactionReference === webhookEvent.gatewayOrderId) {
+            const wasCompleted = payment.paymentStatus === 'completed';
             payment.paymentStatus = webhookEvent.status;
             payment.gatewayPaymentId = webhookEvent.gatewayPaymentId;
             payment.updatedAt = new Date().toISOString();
+            await this.store.updatePaymentStatus(payment.id, {
+              paymentStatus: webhookEvent.status,
+              gatewayPaymentId: webhookEvent.gatewayPaymentId,
+              updatedAt: payment.updatedAt,
+            });
+            if (webhookEvent.status === 'completed' && !wasCompleted) {
+              await this.store.applyPaymentToAllocation(payment);
+            }
             break;
           }
         }

@@ -19,13 +19,34 @@ export const POST = requireAuth(async (request, session) => {
       return NextResponse.json({ error: 'Fee allocation not found' }, { status: 404 });
     }
 
+    // Server-side amount guard: the client amount is never allowed to exceed
+    // the outstanding balance it is being collected against.
+    const requestedAmount = Number(parsed.data.amount.toFixed(2));
+    let maxAmount = allocation.balanceAmount;
+    if (parsed.data.installmentId) {
+      const installment = allocation.installments?.find((i) => i.id === parsed.data.installmentId);
+      if (!installment) {
+        return NextResponse.json({ error: 'Fee installment not found for this allocation' }, { status: 404 });
+      }
+      maxAmount = installment.balanceAmount;
+    }
+    if (maxAmount <= 0) {
+      return NextResponse.json({ error: 'No outstanding balance to collect' }, { status: 409 });
+    }
+    if (requestedAmount > maxAmount) {
+      return NextResponse.json(
+        { error: `Amount exceeds outstanding balance of ₹${maxAmount.toFixed(2)}` },
+        { status: 400 }
+      );
+    }
+
     const factory = GatewayAdapterFactory.getInstance();
     const adapter = factory.getAdapter(parsed.data.paymentMethod);
 
     const receiptNumber = `RCPT-${Date.now().toString().slice(-6)}`;
     const order = await adapter.createOrder({
       orderId: `ord_${Date.now()}`,
-      amount: parsed.data.amount,
+      amount: requestedAmount,
       currency: parsed.data.currency,
       receiptNumber,
       customerName: parsed.data.customerName || (session as any).userId || session.staffId || 'Customer',
@@ -45,10 +66,10 @@ export const POST = requireAuth(async (request, session) => {
       institutionId: allocation.institutionId,
       allocationId: allocation.id,
       studentId: allocation.studentId,
-      amount: parsed.data.amount,
+      amount: requestedAmount,
       fineAmount: 0,
       discountAmount: 0,
-      netAmount: parsed.data.amount,
+      netAmount: requestedAmount,
       currency: parsed.data.currency,
       paymentMethod: parsed.data.paymentMethod,
       paymentStatus: 'initiated',

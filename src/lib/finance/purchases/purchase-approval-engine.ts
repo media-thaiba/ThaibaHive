@@ -87,116 +87,167 @@ export class PurchaseApprovalEngine {
   }
 
   /**
-   * Process a purchase approval action with cryptographic Merkle chain verification
+   * Process a purchase approval action with cryptographic Merkle chain verification.
+   *
+   * Hardening invariants:
+   * - The tier level is derived server-side from prior "approved" logs; a
+   *   client-supplied tierLevel can neither skip tiers nor impersonate one.
+   * - Role enforcement is mandatory: an unknown active tier is an error,
+   *   never a bypass. Only super_admin may act outside configured roles.
+   * - No tier matches the amount → fail closed (except super_admin).
+   * - Log insert + status update run in one transaction with an optimistic
+   *   status guard, so concurrent approvals cannot fork the Merkle chain.
    */
   async processApproval(payload: ApprovalActionPayload) {
-    // 1. Fetch purchase request (tenant-scoped when a concrete institution is active)
-    const [request] = await db
-      .select()
-      .from(purchaseRequests)
-      .where(
-        payload.institutionId && payload.institutionId !== "global"
-          ? and(
-              eq(purchaseRequests.id, payload.purchaseRequestId),
-              eq(purchaseRequests.institutionId, payload.institutionId)
-            )
-          : eq(purchaseRequests.id, payload.purchaseRequestId)
-      );
+    const isSuperAdmin = payload.approverRole === "super_admin";
 
-    if (!request) {
-      throw new Error(`Purchase request not found: ${payload.purchaseRequestId}`);
-    }
+    return db.transaction(async (tx) => {
+      // 1. Fetch purchase request (tenant-scoped when a concrete institution is active)
+      const [request] = await tx
+        .select()
+        .from(purchaseRequests)
+        .where(
+          payload.institutionId && payload.institutionId !== "global"
+            ? and(
+                eq(purchaseRequests.id, payload.purchaseRequestId),
+                eq(purchaseRequests.institutionId, payload.institutionId)
+              )
+            : eq(purchaseRequests.id, payload.purchaseRequestId)
+        );
 
-    if (request.status === "approved" || request.status === "rejected") {
-      throw new Error(`Purchase request is already in terminal state: ${request.status}`);
-    }
+      if (!request) {
+        throw new Error(`Purchase request not found: ${payload.purchaseRequestId}`);
+      }
 
-    // 2. Fetch required tiers
-    const requiredTiers = await this.getRequiredTiersForAmount(
-      payload.institutionId,
-      request.estimatedCost || 0
-    );
+      if (request.status === "approved" || request.status === "rejected") {
+        throw new Error(`Purchase request is already in terminal state: ${request.status}`);
+      }
 
-    // 3. Fetch previous logs to get previous Merkle audit hash
-    const pastLogs = await db
-      .select()
-      .from(purchaseApprovalLogs)
-      .where(eq(purchaseApprovalLogs.purchaseRequestId, payload.purchaseRequestId))
-      .orderBy(desc(purchaseApprovalLogs.actionTimestamp));
+      // 2. Fetch required tiers for the amount — fail closed when none match,
+      // otherwise an out-of-range amount would skip every role gate.
+      const allTiers = await tx
+        .select()
+        .from(purchaseApprovalTiers)
+        .where(eq(purchaseApprovalTiers.institutionId, payload.institutionId))
+        .orderBy(asc(purchaseApprovalTiers.tierLevel));
+      const amount = request.estimatedCost || 0;
+      const requiredTiers = allTiers.filter((t) => {
+        const minOk = amount >= t.minAmount;
+        const maxOk = t.maxAmount === null || t.maxAmount === undefined || amount <= t.maxAmount;
+        return minOk && maxOk;
+      });
 
-    const prevAuditHash =
-      pastLogs.length > 0
-        ? pastLogs[0].merkleAuditHash
-        : "0000000000000000000000000000000000000000000000000000000000000000";
+      if (requiredTiers.length === 0 && !isSuperAdmin) {
+        throw new Error(
+          `Forbidden: No approval tier matches amount ${amount} for this institution — configure tiers before approving`
+        );
+      }
 
-    const currentTierLevel = payload.tierLevel || (pastLogs.length + 1);
+      // 3. Fetch previous logs to get previous Merkle audit hash
+      const pastLogs = await tx
+        .select()
+        .from(purchaseApprovalLogs)
+        .where(eq(purchaseApprovalLogs.purchaseRequestId, payload.purchaseRequestId))
+        .orderBy(desc(purchaseApprovalLogs.actionTimestamp));
 
-    // 4. Validate approver role against required tier
-    const activeTier = requiredTiers.find((t) => t.tierLevel === currentTierLevel);
-    if (activeTier && activeTier.requiredRole !== payload.approverRole && payload.approverRole !== "super_admin") {
-      throw new Error(
-        `Role mismatch: Tier ${currentTierLevel} requires ${activeTier.requiredRole}, received ${payload.approverRole}`
-      );
-    }
+      const prevAuditHash =
+        pastLogs.length > 0
+          ? pastLogs[0].merkleAuditHash
+          : "0000000000000000000000000000000000000000000000000000000000000000";
 
-    // 5. Compute SHA-256 Merkle hash
-    const timestamp = new Date().toISOString();
-    const hashData = `${prevAuditHash}:${payload.purchaseRequestId}:${currentTierLevel}:${payload.approverId}:${payload.action}:${timestamp}`;
-    const merkleAuditHash = createHash("sha256").update(hashData).digest("hex");
+      // 4. Server-derived next tier: count prior approvals, never trust the
+      // client's tierLevel for progression (validated below when supplied).
+      const approvedCount = pastLogs.filter((l) => l.action === "approved").length;
+      if (requiredTiers.length > 0 && approvedCount >= requiredTiers.length) {
+        throw new Error(
+          `Purchase request already received all ${requiredTiers.length} required approvals`
+        );
+      }
+      const activeTier = requiredTiers[approvedCount];
+      const currentTierLevel = activeTier ? activeTier.tierLevel : approvedCount + 1;
 
-    // 6. Record log
-    const logId = `log-${randomUUID()}`;
-    const [logEntry] = await db
-      .insert(purchaseApprovalLogs)
-      .values({
-        id: logId,
-        institutionId: payload.institutionId,
-        purchaseRequestId: payload.purchaseRequestId,
-        tierLevel: currentTierLevel,
-        approverId: payload.approverId,
-        action: payload.action,
-        comments: payload.comments,
+      if (payload.tierLevel != null && activeTier && payload.tierLevel !== activeTier.tierLevel) {
+        throw new Error(
+          `Tier mismatch: expected tier ${activeTier.tierLevel}, received ${payload.tierLevel}`
+        );
+      }
+
+      // 5. Mandatory role gate against the derived active tier
+      if (activeTier && activeTier.requiredRole !== payload.approverRole && !isSuperAdmin) {
+        throw new Error(
+          `Role mismatch: Tier ${currentTierLevel} requires ${activeTier.requiredRole}, received ${payload.approverRole}`
+        );
+      }
+
+      // 6. Compute SHA-256 Merkle hash
+      const timestamp = new Date().toISOString();
+      const hashData = `${prevAuditHash}:${payload.purchaseRequestId}:${currentTierLevel}:${payload.approverId}:${payload.action}:${timestamp}`;
+      const merkleAuditHash = createHash("sha256").update(hashData).digest("hex");
+
+      // 7. Record log
+      const logId = `log-${randomUUID()}`;
+      const [logEntry] = await tx
+        .insert(purchaseApprovalLogs)
+        .values({
+          id: logId,
+          institutionId: payload.institutionId,
+          purchaseRequestId: payload.purchaseRequestId,
+          tierLevel: currentTierLevel,
+          approverId: payload.approverId,
+          action: payload.action,
+          comments: payload.comments,
+          merkleAuditHash,
+          prevAuditHash,
+          actionTimestamp: timestamp,
+        })
+        .returning();
+
+      // 8. Update purchase request status with an optimistic guard so a
+      // concurrent approval rolls the log insert back instead of forking
+      // the hash chain.
+      let nextStatus = request.status;
+      if (payload.action === "rejected") {
+        nextStatus = "rejected";
+      } else if (payload.action === "approved") {
+        const isFinalTier =
+          requiredTiers.length > 0
+            ? approvedCount + 1 >= requiredTiers.length
+            : isSuperAdmin;
+        nextStatus = isFinalTier ? "approved" : `pending_tier_${currentTierLevel + 1}`;
+      } else if (payload.action === "escalated") {
+        nextStatus = `escalated_tier_${currentTierLevel + 1}`;
+      }
+
+      const [updatedRequest] = await tx
+        .update(purchaseRequests)
+        .set({
+          status: nextStatus,
+          approvedAt: nextStatus === "approved" ? timestamp : undefined,
+          updatedAt: timestamp,
+        })
+        .where(
+          and(
+            eq(purchaseRequests.id, payload.purchaseRequestId),
+            eq(purchaseRequests.status, request.status),
+            ...(payload.institutionId && payload.institutionId !== "global"
+              ? [eq(purchaseRequests.institutionId, payload.institutionId)]
+              : [])
+          )
+        )
+        .returning();
+
+      if (!updatedRequest) {
+        throw new Error(
+          "Purchase request status changed by a concurrent request — approval not recorded"
+        );
+      }
+
+      return {
+        request: updatedRequest,
+        log: logEntry,
         merkleAuditHash,
-        prevAuditHash,
-        actionTimestamp: timestamp,
-      })
-      .returning();
-
-    // 7. Update purchase request status
-    let nextStatus = request.status;
-    if (payload.action === "rejected") {
-      nextStatus = "rejected";
-    } else if (payload.action === "approved") {
-      const isFinalTier =
-        requiredTiers.length === 0 ||
-        currentTierLevel >= Math.max(...requiredTiers.map((t) => t.tierLevel));
-      nextStatus = isFinalTier ? "approved" : `pending_tier_${currentTierLevel + 1}`;
-    } else if (payload.action === "escalated") {
-      nextStatus = `escalated_tier_${currentTierLevel + 1}`;
-    }
-
-    const [updatedRequest] = await db
-      .update(purchaseRequests)
-      .set({
-        status: nextStatus,
-        approvedAt: nextStatus === "approved" ? timestamp : undefined,
-        updatedAt: timestamp,
-      })
-      .where(
-        payload.institutionId && payload.institutionId !== "global"
-          ? and(
-              eq(purchaseRequests.id, payload.purchaseRequestId),
-              eq(purchaseRequests.institutionId, payload.institutionId)
-            )
-          : eq(purchaseRequests.id, payload.purchaseRequestId)
-      )
-      .returning();
-
-    return {
-      request: updatedRequest,
-      log: logEntry,
-      merkleAuditHash,
-    };
+      };
+    });
   }
 
   /**

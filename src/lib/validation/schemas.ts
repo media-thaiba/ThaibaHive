@@ -1152,21 +1152,24 @@ export const financialReconciliationCreateSchema = z.object({
   periodEnd: z.string().min(1),
   bankStatementEntries: z.array(
     z.object({
-      referenceId: z.string().min(1),
+      referenceId: z.string().min(1).max(128),
       transactionDate: z.string().min(1),
-      amount: z.number(),
-      description: z.string().optional(),
+      amount: z.number().finite(),
+      description: z.string().max(500).optional(),
     })
-  ).optional().default([]),
-  notes: z.string().optional(),
+  ).max(10000).optional().default([]),
+  notes: z.string().max(2000).optional(),
+}).refine((data) => data.periodEnd >= data.periodStart, {
+  message: "periodEnd must not be before periodStart",
+  path: ["periodEnd"],
 });
 export type FinancialReconciliationCreateInput = z.infer<typeof financialReconciliationCreateSchema>;
 
 export const financialReconciliationItemMatchSchema = z.object({
   matchStatus: z.enum(["matched", "unmatched", "manual_override", "variance"]),
-  matchedWithId: z.string().optional(),
-  varianceAmount: z.number().optional().default(0),
-  resolutionNotes: z.string().optional(),
+  matchedWithId: z.string().max(128).optional(),
+  varianceAmount: z.number().finite().optional().default(0),
+  resolutionNotes: z.string().max(2000).optional(),
 });
 export type FinancialReconciliationItemMatchInput = z.infer<typeof financialReconciliationItemMatchSchema>;
 

@@ -188,3 +188,151 @@ describe('FeeDbStore CRUD & Tenant Isolation (Sprint-057 - FEE-002)', () => {
     expect(closed?.varianceAmount).toBe(0); // 50000 - (5000 + 45000) = 0
   });
 });
+
+describe('FeeDbStore payment application (fee balance ledger)', () => {
+  let store: FeeDbStore;
+
+  const seedAllocation = async (): Promise<void> => {
+    await store.createAllocation({
+      id: 'alloc-100',
+      institutionId: 'inst-campus-a',
+      studentId: 'student-101',
+      feeStructureId: 'struct-001',
+      academicYear: '2026-2027',
+      baseAmount: 90000,
+      concessionAmount: 0,
+      netPayableAmount: 90000,
+      paidAmount: 0,
+      balanceAmount: 90000,
+      status: 'unpaid',
+      allocationDate: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      installments: [
+        {
+          id: 'inst-100-1',
+          allocationId: 'alloc-100',
+          installmentNumber: 1,
+          title: 'Term 1 Due',
+          dueDate: '2026-09-15',
+          gracePeriodDays: 7,
+          amount: 45000,
+          paidAmount: 0,
+          balanceAmount: 45000,
+          fineAmount: 0,
+          fineWaivedAmount: 0,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'inst-100-2',
+          allocationId: 'alloc-100',
+          installmentNumber: 2,
+          title: 'Term 2 Due',
+          dueDate: '2027-01-15',
+          gracePeriodDays: 7,
+          amount: 45000,
+          paidAmount: 0,
+          balanceAmount: 45000,
+          fineAmount: 0,
+          fineWaivedAmount: 0,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+  };
+
+  const buildPayment = (
+    overrides: Partial<FeePaymentItem> = {}
+  ): FeePaymentItem => ({
+    id: 'pay_apply_1',
+    paymentNumber: 'RCPT-APPLY-1',
+    institutionId: 'inst-campus-a',
+    allocationId: 'alloc-100',
+    studentId: 'student-101',
+    amount: 50000,
+    fineAmount: 0,
+    discountAmount: 0,
+    netAmount: 50000,
+    currency: 'INR',
+    paymentMethod: 'cash',
+    paymentStatus: 'completed',
+    paidAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    store = FeeDbStore.getInstance();
+    store.clearMemoryStore();
+  });
+
+  it('applies a completed payment waterfall across installments and allocation totals', async () => {
+    await seedAllocation();
+    const payment = buildPayment();
+    await store.recordPayment(payment);
+
+    const result = await store.applyPaymentToAllocation(payment);
+    expect(result.applied).toBe(true);
+    expect(result.appliedAmount).toBe(50000);
+
+    const alloc = await store.getAllocationById('alloc-100', 'inst-campus-a');
+    expect(alloc?.installments?.[0].paidAmount).toBe(45000);
+    expect(alloc?.installments?.[0].balanceAmount).toBe(0);
+    expect(alloc?.installments?.[0].status).toBe('paid');
+    expect(alloc?.installments?.[1].paidAmount).toBe(5000);
+    expect(alloc?.installments?.[1].balanceAmount).toBe(40000);
+    expect(alloc?.installments?.[1].status).toBe('partially_paid');
+    expect(alloc?.paidAmount).toBe(50000);
+    expect(alloc?.balanceAmount).toBe(40000);
+    expect(alloc?.status).toBe('partial');
+  });
+
+  it('is idempotent — a second application of the same payment is refused', async () => {
+    await seedAllocation();
+    const payment = buildPayment();
+    await store.recordPayment(payment);
+
+    await store.applyPaymentToAllocation(payment);
+    const second = await store.applyPaymentToAllocation(payment);
+    expect(second.applied).toBe(false);
+    expect(second.reason).toBe('already_applied');
+
+    const alloc = await store.getAllocationById('alloc-100', 'inst-campus-a');
+    expect(alloc?.paidAmount).toBe(50000);
+    expect(alloc?.installments?.[1].paidAmount).toBe(5000);
+  });
+
+  it('refuses to apply a payment that has not completed', async () => {
+    await seedAllocation();
+    const payment = buildPayment({ paymentStatus: 'initiated' });
+
+    const result = await store.applyPaymentToAllocation(payment);
+    expect(result.applied).toBe(false);
+    expect(result.reason).toBe('payment_not_completed');
+
+    const alloc = await store.getAllocationById('alloc-100', 'inst-campus-a');
+    expect(alloc?.paidAmount).toBe(0);
+    expect(alloc?.balanceAmount).toBe(90000);
+    expect(alloc?.status).toBe('unpaid');
+  });
+
+  it('marks the allocation paid when the payment clears the full balance', async () => {
+    await seedAllocation();
+    const payment = buildPayment({ id: 'pay_apply_full', amount: 90000, netAmount: 90000 });
+    await store.recordPayment(payment);
+
+    const result = await store.applyPaymentToAllocation(payment);
+    expect(result.applied).toBe(true);
+
+    const alloc = await store.getAllocationById('alloc-100', 'inst-campus-a');
+    expect(alloc?.paidAmount).toBe(90000);
+    expect(alloc?.balanceAmount).toBe(0);
+    expect(alloc?.status).toBe('paid');
+    expect(alloc?.installments?.every((i) => i.status === 'paid')).toBe(true);
+  });
+});
