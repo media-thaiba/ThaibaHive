@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
   CheckSquare, Activity, FolderOpen, MessageSquare,
@@ -721,16 +721,47 @@ export default function LoginPage() {
   const innerRadius = 360 * orbitScale;
   const outerRadius = effectivePanelWidth * 0.82;
   const orbitGap = (outerRadius - innerRadius) / 5;
+  const orbitLogoSize = Math.max(240, Math.round(440 * orbitScale));
+
+  // Responsive logo size for the welcome hero:
+  // On mobile (< 640px): ~140-150px so it remains bold without crowding
+  // On tablet (< 1024px): ~190-200px
+  // On desktop (>= 1024px): large ~240-260px matching the login page
+  const welcomeLogoSize = windowSize.w < 640
+    ? Math.round(Math.min(windowSize.w * 0.36, 150))
+    : windowSize.w < 1024
+    ? Math.round(Math.min(windowSize.w * 0.26, 200))
+    : Math.max(220, Math.round(260 * uiScale));
 
   // ── Aspect-aware projection for the Welcome constellation ──
   const halfW = windowSize.w / 2;
   const halfH = windowSize.h / 2;
   const aspect = windowSize.w / Math.max(windowSize.h, 1);
   const coinRadiusPx = (BASE_COIN_SIZE * uiScale) / 2;
-  const heroHalfW = 348 * uiScale; // hero block ≈ max-w-2xl (672px) + padding
-  const heroHalfH = 208 * uiScale; // logo + title + subtitle + button
+  const heroHalfW = Math.min(348 * uiScale, (halfW - EDGE_MARGIN) * 0.85);
+  const heroHalfH = Math.min(
+    (welcomeLogoSize * 0.5 + 115) * uiScale,
+    (halfH - EDGE_MARGIN) * 0.65
+  );
   // Proportional horizontal expansion: 1.0 on square (1:1), smoothly expanding to ~1.36 on 16:9, and up to 1.45 on ultrawide
   const xStretch = Math.min(1.45, Math.max(1.0, 1.0 + (aspect - 1.0) * 0.46));
+
+  // Proportional coin density based on screen viewport:
+  // - Mobile (< 640px): 6 curated perimeter coins for an uncluttered, spacious mobile experience
+  // - Tablet (640px - 1023px): 12 balanced coins
+  // - Desktop (>= 1024px): Full constellation (all 24 coins)
+  const visibleWelcomeCoins = useMemo(() => {
+    if (windowSize.w < 640) {
+      // 6 key outer perimeter icons (Top-L, Top-R, Mid-L, Mid-R, Bot-L, Bot-R)
+      const mobileIds = [2, 4, 5, 9, 12, 15];
+      return FLOATING_ICONS.filter((icon) => mobileIds.includes(icon.id));
+    }
+    if (windowSize.w < 1024) {
+      const tabletIds = [1, 2, 4, 5, 7, 8, 9, 10, 12, 13, 15, 16];
+      return FLOATING_ICONS.filter((icon) => tabletIds.includes(icon.id));
+    }
+    return FLOATING_ICONS;
+  }, [windowSize.w]);
 
   // Polar → screen projection: fits the outer ring inside the viewport at
   // ANY aspect ratio (1:1, 16:9, 4:3, ultrawide), pushes inner coins clear
@@ -778,8 +809,8 @@ export default function LoginPage() {
         style={{
           width: radius * 2,
           height: radius * 2,
-          left: "50%",
-          top: "50%",
+          left: 0,
+          top: 0,
           transform: "translate(-50%, -50%)",
           zIndex: 1,
         }}
@@ -903,7 +934,7 @@ export default function LoginPage() {
                 <div
                   style={{
                     position: "absolute",
-                    left: "100%",
+                    left: 0,
                     top: "50%",
                     width: 0,
                     height: 0,
@@ -916,17 +947,14 @@ export default function LoginPage() {
                   className="select-none"
                 >
                   {/* Central Luminous Logo Emblem in the center of the Orbit */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  <div
                     style={{
                       position: "absolute",
-                      left: "50%",
-                      top: "50%",
+                      left: 0,
+                      top: 0,
                       transform: "translate(-50%, -50%)",
-                      width: 160,
-                      height: 160,
+                      width: orbitLogoSize,
+                      height: orbitLogoSize,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -934,31 +962,43 @@ export default function LoginPage() {
                       pointerEvents: "none",
                     }}
                   >
-                    {/* Glowing Core Radial Backdrop */}
-                    <div
-                      className="absolute inset-0 rounded-full pointer-events-none"
-                      style={{
-                        background:
-                          "radial-gradient(circle, rgba(16,185,129,0.25) 0%, rgba(16,185,129,0.08) 45%, rgba(3, 3, 5, 0) 70%)",
-                        filter: "blur(10px)",
-                      }}
-                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.6 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                      className="relative w-full h-full flex items-center justify-center"
+                    >
+                      {/* Glowing Core Radial Backdrop */}
+                      <div
+                        className="absolute inset-0 rounded-full pointer-events-none"
+                        style={{
+                          background:
+                            "radial-gradient(circle, rgba(16,185,129,0.35) 0%, rgba(16,185,129,0.12) 50%, rgba(3, 3, 5, 0) 75%)",
+                          filter: "blur(20px)",
+                        }}
+                      />
 
-                    {/* Logo Graphic with Emerald Halo */}
-                    <div className="w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center filter drop-shadow-[0_0_28px_rgba(16,185,129,0.5)]">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 90, repeat: Infinity, ease: "linear" }}
-                        className="w-full h-full flex items-center justify-center"
+                      {/* Logo Graphic with Emerald Halo */}
+                      <div
+                        className="w-full h-full flex items-center justify-center filter drop-shadow-[0_0_36px_rgba(16,185,129,0.6)]"
+                        style={{
+                          padding: `${Math.round(orbitLogoSize * 0.08)}px`,
+                        }}
                       >
-                        <img
-                          src="/Logo/thl_logo.svg"
-                          alt="ThaibaHive Logo"
-                          className="w-full h-full object-contain"
-                        />
-                      </motion.div>
-                    </div>
-                  </motion.div>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 90, repeat: Infinity, ease: "linear" }}
+                          className="w-full h-full flex items-center justify-center"
+                        >
+                          <img
+                            src="/Logo/thl_logo.svg"
+                            alt="ThaibaHive Logo"
+                            className="w-full h-full object-contain"
+                          />
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  </div>
 
                   {/* Concentric rings */}
                   {mounted && renderOrbit(orbit1Coins, getOrbitRadius(1), 40, "clockwise", 1)}
@@ -970,7 +1010,7 @@ export default function LoginPage() {
                 /* Scattered Interactive Repelling Coins Layer */
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1] overflow-hidden select-none">
                   {mounted &&
-                    FLOATING_ICONS.map((iconData, index) => {
+                    visibleWelcomeCoins.map((iconData, index) => {
                       const { x: nx, y: ny } = projectCoin(iconData);
                       return (
                         <div
@@ -1037,21 +1077,34 @@ export default function LoginPage() {
                   >
                     {/* Rotating Decorative Welcome Logo */}
                     <div
-                      className="opacity-95 filter drop-shadow-[0_0_24px_rgba(16,185,129,0.35)]"
+                      className="relative flex items-center justify-center opacity-95 filter drop-shadow-[0_0_36px_rgba(16,185,129,0.55)]"
                       style={{
-                        marginBottom: `${Math.max(12, 24 * uiScale)}px`,
+                        width: welcomeLogoSize,
+                        height: welcomeLogoSize,
+                        marginBottom: `${Math.max(16, 28 * uiScale)}px`,
                       }}
                     >
+                      {/* Glowing Core Radial Backdrop */}
+                      <div
+                        className="absolute inset-0 rounded-full pointer-events-none"
+                        style={{
+                          background:
+                            "radial-gradient(circle, rgba(16,185,129,0.35) 0%, rgba(16,185,129,0.12) 50%, rgba(3, 3, 5, 0) 75%)",
+                          filter: "blur(20px)",
+                        }}
+                      />
+
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{
-                          duration: 120,
+                          duration: 90,
                           repeat: Infinity,
                           ease: "linear",
                         }}
                         style={{
-                          width: 105,
-                          height: 105,
+                          width: welcomeLogoSize,
+                          height: welcomeLogoSize,
+                          padding: `${Math.round(welcomeLogoSize * 0.08)}px`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1070,7 +1123,7 @@ export default function LoginPage() {
                       <h1
                         className="font-black tracking-tight text-white uppercase m-0 leading-tight"
                         style={{
-                          fontSize: `${Math.max(26, 44 * uiScale)}px`,
+                          fontSize: `${windowSize.w < 640 ? Math.max(22, Math.round(windowSize.w * 0.062)) : Math.max(26, Math.round(44 * uiScale))}px`,
                           textShadow: "0 2px 24px rgba(255,255,255,0.2)",
                         }}
                       >
@@ -1082,9 +1135,9 @@ export default function LoginPage() {
                     <p
                       className="mx-auto text-zinc-400 leading-relaxed font-sans"
                       style={{
-                        marginTop: `${Math.max(12, 18 * uiScale)}px`,
+                        marginTop: `${Math.max(10, 18 * uiScale)}px`,
                         fontSize: `${Math.max(12, 15 * uiScale)}px`,
-                        maxWidth: `${Math.max(380, 580 * uiScale)}px`,
+                        maxWidth: `${Math.min(Math.max(280, 580 * uiScale), windowSize.w - 48)}px`,
                       }}
                     >
                       The Unified App for the Thaiba Family. Seamlessly manage academic operations, attendance, staff intelligence, and campus workflows.
