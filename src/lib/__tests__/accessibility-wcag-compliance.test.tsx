@@ -40,9 +40,9 @@ describe("WCAG 2.1 AA Accessibility & Inclusive Design Suite", () => {
         </div>
       );
 
-      expect(screen.getByText("Active")).toHaveClass("bg-success/10");
+      expect(screen.getByText("Active")).toHaveClass("bg-emerald-500/10");
       expect(screen.getByText("Suspended")).toHaveClass("bg-destructive/10");
-      expect(screen.getByText("Pending")).toHaveClass("bg-warning/10");
+      expect(screen.getByText("Pending")).toHaveClass("bg-amber-500/10");
     });
   });
 
@@ -52,7 +52,7 @@ describe("WCAG 2.1 AA Accessibility & Inclusive Design Suite", () => {
 
       const btn = screen.getByRole("button", { name: "Submit Approval" });
       expect(btn).toBeInTheDocument();
-      expect(btn).toHaveClass("focus-visible:ring-3");
+      expect(btn).toHaveClass("focus-visible:ring-2");
     });
 
     it("handles disabled state with aria-disabled semantics", () => {

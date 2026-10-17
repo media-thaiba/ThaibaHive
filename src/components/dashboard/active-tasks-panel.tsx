@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, ArrowUpRight, ChevronRight } from "lucide-react";
 
 type TaskItem = { id: string; title: string; priority: string; dueDate?: string; status: string };
@@ -36,15 +37,21 @@ export function ActiveTasksPanel({ tasks, onToggleTask }: ActiveTasksPanelProps)
                   </button>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{task.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-medium capitalize ${
-                        task.priority === "urgent" || task.priority === "high" ? "bg-destructive/10 text-destructive" :
-                        task.priority === "medium" ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"
-                      }`}>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <Badge
+                        variant={
+                          task.priority === "urgent" || task.priority === "high"
+                            ? "destructive"
+                            : task.priority === "medium"
+                            ? "warning"
+                            : "secondary"
+                        }
+                        className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0"
+                      >
                         {task.priority}
-                      </span>
+                      </Badge>
                       {task.dueDate && (
-                        <span>Due {new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                        <span className="text-[11px]">Due {new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
                       )}
                     </div>
                   </div>

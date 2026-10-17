@@ -14,7 +14,7 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[var(--z-sticky)] border-t bg-card/90 backdrop-blur-xl supports-[backdrop-filter]:bg-card/70 lg:hidden safe-area-bottom" aria-label="Bottom navigation">
+    <nav className="fixed bottom-0 left-0 right-0 z-[var(--z-sticky)] border-t border-border/60 bg-background/80 backdrop-blur-2xl lg:hidden safe-area-bottom shadow-lg dark:shadow-[0_-4px_24px_rgba(0,0,0,0.5)]" aria-label="Bottom navigation">
       <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
         {primaryNav.map((item) => {
           const Icon = item.icon;
@@ -28,12 +28,12 @@ export function BottomNav() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-xl transition-all duration-200 min-w-[44px] min-h-[44px] relative",
                   active
-                    ? "text-primary"
-                    : "text-muted-foreground active:bg-muted/60"
+                    ? "text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted/40"
                 )}
               >
                 {active && (
-                  <span className="absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-5 rounded-full bg-primary animate-scale-in" />
+                  <span className="absolute top-1 left-1/2 -translate-x-1/2 h-1 w-6 rounded-full bg-primary shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-scale-in" />
                 )}
                 <Icon
                   className={cn(
