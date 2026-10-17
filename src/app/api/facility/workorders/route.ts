@@ -24,7 +24,7 @@ export const POST = requireAuth(async (req: Request, session: any) => {
 
     // Check if auto-creating from anomaly alert
     if (body.anomalyAlertId && !body.title) {
-      const tenantId = body.institutionId || session?.institutionId || 'global';
+      const tenantId = await resolveRequestInstitution(session, body.institutionId);
       const created = await workOrderEngine.autoCreateFromAnomaly(body.anomalyAlertId, tenantId);
       if (!created) {
         return NextResponse.json({ error: `Anomaly alert '${body.anomalyAlertId}' not found` }, { status: 404 });
@@ -84,7 +84,10 @@ export const PATCH = requireAuth(async (req: Request, session: any) => {
     );
 
     if (!transitionRes.success) {
-      return NextResponse.json({ error: transitionRes.error || 'Transition failed' }, { status: 400 });
+      return NextResponse.json(
+        { error: transitionRes.error || 'Transition failed' },
+        { status: transitionRes.conflict ? 409 : 400 }
+      );
     }
 
     const updatedWo = await facilityStore.getWorkOrder(parsed.data.workOrderNumber, tenantId);

@@ -21,6 +21,8 @@ export interface WorkOrderStateTransitionResult {
   currentStatus: WorkOrderStatus;
   transitionTimestamp: string;
   error?: string;
+  /** True when the failure was caused by a concurrent status change (HTTP 409). */
+  conflict?: boolean;
 }
 
 export interface TechnicianCandidate {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,7 @@ export default function HelpDeskPage() {
     priority: "medium",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [updatingTicket, setUpdatingTicket] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -104,6 +105,7 @@ export default function HelpDeskPage() {
   const fetchTickets = useCallback(async () => {
     try {
       const res = await fetch("/api/help-desk");
+      if (!res.ok) throw new Error("Failed to load tickets");
       const d = await res.json();
       setTickets(Array.isArray(d.tickets) ? d.tickets : []);
     } catch {
@@ -113,13 +115,19 @@ export default function HelpDeskPage() {
     }
   }, []);
 
+  const detailReqRef = useRef<string | null>(null);
+
   const loadTicketDetail = useCallback(async (ticketId: string) => {
+    detailReqRef.current = ticketId;
     try {
       const res = await fetch(`/api/help-desk/${ticketId}`);
       if (res.ok) {
         const data = await res.json();
-        setTicketDetail(data.ticket);
-        setComments(data.comments || []);
+        // Ignore out-of-order responses when the user switches tickets quickly
+        if (detailReqRef.current === ticketId) {
+          setTicketDetail(data.ticket);
+          setComments(data.comments || []);
+        }
       } else {
         toast.error("Failed to load ticket details");
       }
@@ -148,6 +156,10 @@ export default function HelpDeskPage() {
 
   useEffect(() => {
     if (selected) {
+      // Clear the previous ticket immediately so stale details never show
+      // under the newly selected ticket while the fetch is in flight
+      setTicketDetail(null);
+      setComments([]);
       loadTicketDetail(selected);
     } else {
       setTicketDetail(null);
@@ -218,7 +230,8 @@ export default function HelpDeskPage() {
   };
 
   const handleUpdateStatus = async (status: string) => {
-    if (!selected) return;
+    if (!selected || updatingTicket) return;
+    setUpdatingTicket(true);
     try {
       const res = await fetch(`/api/help-desk/${selected}`, {
         method: "PATCH",
@@ -236,11 +249,14 @@ export default function HelpDeskPage() {
       }
     } catch {
       toast.error("Network error. Failed to update status.");
+    } finally {
+      setUpdatingTicket(false);
     }
   };
 
   const handleAssigneeChange = async (assignedToId: string) => {
-    if (!selected) return;
+    if (!selected || updatingTicket) return;
+    setUpdatingTicket(true);
     try {
       const res = await fetch(`/api/help-desk/${selected}`, {
         method: "PATCH",
@@ -258,6 +274,8 @@ export default function HelpDeskPage() {
       }
     } catch {
       toast.error("Network error. Failed to assign ticket.");
+    } finally {
+      setUpdatingTicket(false);
     }
   };
 
@@ -319,6 +337,7 @@ export default function HelpDeskPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 placeholder="Subject / Summary of issue"
+                aria-label="Subject / Summary of issue"
                 value={form.subject}
                 onChange={(e) => setForm({ ...form, subject: e.target.value })}
                 required
@@ -326,6 +345,7 @@ export default function HelpDeskPage() {
 
               <Textarea
                 placeholder="Describe the problem, steps to reproduce, or support requested..."
+                aria-label="Describe the problem, steps to reproduce, or support requested"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={4}
@@ -370,6 +390,7 @@ export default function HelpDeskPage() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search tickets by subject..."
+                aria-label="Search tickets by subject"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -458,9 +479,11 @@ export default function HelpDeskPage() {
                       
                       {/* Ticket Status Selector */}
                       <div className="space-y-1">
-                        <label className="text-[10px] text-muted-foreground">Update Ticket Status</label>
+                        <label htmlFor="ticket-status-select" className="text-[10px] text-muted-foreground">Update Ticket Status</label>
                         <Select
+                          id="ticket-status-select"
                           value={ticketDetail.status}
+                          disabled={updatingTicket}
                           onChange={(e) => handleUpdateStatus(e.target.value)}
                         >
                           <SelectItem value="open">Open</SelectItem>
@@ -472,9 +495,11 @@ export default function HelpDeskPage() {
 
                       {/* IT Assignee Selector */}
                       <div className="space-y-1">
-                        <label className="text-[10px] text-muted-foreground">Assign Staff Agent</label>
+                        <label htmlFor="ticket-assignee-select" className="text-[10px] text-muted-foreground">Assign Staff Agent</label>
                         <Select
+                          id="ticket-assignee-select"
                           value={ticketDetail.assignedToId || ""}
+                          disabled={updatingTicket}
                           onChange={(e) => handleAssigneeChange(e.target.value)}
                         >
                           <option value="">Unassigned</option>

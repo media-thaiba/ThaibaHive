@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq } from 'drizzle-orm';
 import {
   facilityEquipment,
   facilityTelemetrySensors,
@@ -404,6 +405,15 @@ export class FacilityDbStore {
     wo.updatedAt = new Date().toISOString();
     this.memoryStore.workOrders.set(wo.id, wo);
     this.memoryStore.workOrders.set(wo.workOrderNumber, wo);
+    try {
+      if (db) {
+        await db
+          .update(facilityWorkOrders)
+          .set({ ...updates, status, updatedAt: wo.updatedAt } as any)
+          .where(eq(facilityWorkOrders.id, wo.id))
+          .run();
+      }
+    } catch {}
     return wo;
   }
 
@@ -460,6 +470,7 @@ export class FacilityDbStore {
   }
 
   async reservePart(idOrNumber: string, quantity: number, tenantId: string = 'global'): Promise<boolean> {
+    if (!Number.isInteger(quantity) || quantity <= 0) return false;
     const part = await this.getPart(idOrNumber, tenantId);
     if (!part) return false;
     if (part.quantityOnHand - part.quantityReserved < quantity) return false;
@@ -467,10 +478,12 @@ export class FacilityDbStore {
     part.updatedAt = new Date().toISOString();
     this.memoryStore.inventory.set(part.id, part);
     this.memoryStore.inventory.set(part.partNumber, part);
+    await this.persistPart(part);
     return true;
   }
 
   async consumePart(idOrNumber: string, quantity: number, tenantId: string = 'global'): Promise<boolean> {
+    if (!Number.isInteger(quantity) || quantity <= 0) return false;
     const part = await this.getPart(idOrNumber, tenantId);
     if (!part) return false;
     if (part.quantityOnHand < quantity) return false;
@@ -479,7 +492,37 @@ export class FacilityDbStore {
     part.updatedAt = new Date().toISOString();
     this.memoryStore.inventory.set(part.id, part);
     this.memoryStore.inventory.set(part.partNumber, part);
+    await this.persistPart(part);
     return true;
+  }
+
+  /** Inverse of consumePart — used to compensate partial consumption on abort. */
+  async releasePart(idOrNumber: string, quantity: number, tenantId: string = 'global'): Promise<boolean> {
+    if (!Number.isInteger(quantity) || quantity <= 0) return false;
+    const part = await this.getPart(idOrNumber, tenantId);
+    if (!part) return false;
+    part.quantityOnHand += quantity;
+    part.updatedAt = new Date().toISOString();
+    this.memoryStore.inventory.set(part.id, part);
+    this.memoryStore.inventory.set(part.partNumber, part);
+    await this.persistPart(part);
+    return true;
+  }
+
+  private async persistPart(part: FacilityPartsInventoryItem): Promise<void> {
+    try {
+      if (db) {
+        await db
+          .update(facilityPartsInventory)
+          .set({
+            quantityOnHand: part.quantityOnHand,
+            quantityReserved: part.quantityReserved,
+            updatedAt: part.updatedAt,
+          })
+          .where(eq(facilityPartsInventory.id, part.id))
+          .run();
+      }
+    } catch {}
   }
 
   // ─── 8. Contractor Registry ───

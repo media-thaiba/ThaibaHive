@@ -85,7 +85,23 @@ export class WorkOrderEngine {
       };
     }
 
-    const validation = WorkOrderStateMachine.validateTransition(req);
+    // Optimistic concurrency: the client-declared source status must match reality,
+    // otherwise a concurrent transition already advanced (or rewound) this work order.
+    if (req.fromStatus !== wo.status) {
+      return {
+        success: false,
+        workOrderNumber: req.workOrderNumber,
+        previousStatus: wo.status,
+        currentStatus: wo.status,
+        transitionTimestamp: new Date().toISOString(),
+        error: `Work order status changed by a concurrent request (expected '${req.fromStatus}', actual '${wo.status}')`,
+        conflict: true,
+      };
+    }
+
+    // Validate the transition against the ACTUAL persisted status, never the
+    // client-declared one, so illegal jumps (e.g. draft → completed) are rejected.
+    const validation = WorkOrderStateMachine.validateTransition({ ...req, fromStatus: wo.status });
     if (!validation.valid) {
       return {
         success: false,
@@ -95,6 +111,73 @@ export class WorkOrderEngine {
         transitionTimestamp: new Date().toISOString(),
         error: validation.error,
       };
+    }
+
+    // Aggregate requested part consumption per part number (duplicates allowed).
+    const partRequirements = new Map<string, number>();
+    if (req.consumedParts) {
+      for (const partReq of req.consumedParts) {
+        if (!Number.isInteger(partReq.quantity) || partReq.quantity <= 0) {
+          return {
+            success: false,
+            workOrderNumber: req.workOrderNumber,
+            previousStatus: wo.status,
+            currentStatus: wo.status,
+            transitionTimestamp: new Date().toISOString(),
+            error: `Invalid consumed quantity '${partReq.quantity}' for part '${partReq.partNumber}'`,
+          };
+        }
+        partRequirements.set(
+          partReq.partNumber,
+          (partRequirements.get(partReq.partNumber) || 0) + partReq.quantity
+        );
+      }
+    }
+
+    // Pre-validate availability for ALL parts before deducting anything, so stock is
+    // never partially consumed for a transition that will be rejected.
+    for (const [partNumber, quantity] of partRequirements) {
+      const part = await facilityStore.getPart(partNumber, institutionId);
+      if (!part) {
+        return {
+          success: false,
+          workOrderNumber: req.workOrderNumber,
+          previousStatus: wo.status,
+          currentStatus: wo.status,
+          transitionTimestamp: new Date().toISOString(),
+          error: `Part '${partNumber}' not found in inventory`,
+        };
+      }
+      if (part.quantityOnHand < quantity) {
+        return {
+          success: false,
+          workOrderNumber: req.workOrderNumber,
+          previousStatus: wo.status,
+          currentStatus: wo.status,
+          transitionTimestamp: new Date().toISOString(),
+          error: `Insufficient stock for part '${partNumber}' (requested ${quantity}, available ${part.quantityOnHand})`,
+        };
+      }
+    }
+
+    // Deduct parts — all-or-nothing with compensation if a deduction fails mid-way.
+    const consumed: { partNumber: string; quantity: number }[] = [];
+    for (const [partNumber, quantity] of partRequirements) {
+      const ok = await facilityStore.consumePart(partNumber, quantity, institutionId);
+      if (!ok) {
+        for (const c of consumed) {
+          await facilityStore.releasePart(c.partNumber, c.quantity, institutionId);
+        }
+        return {
+          success: false,
+          workOrderNumber: req.workOrderNumber,
+          previousStatus: wo.status,
+          currentStatus: wo.status,
+          transitionTimestamp: new Date().toISOString(),
+          error: `Failed to consume part '${partNumber}' — stock deduction rolled back`,
+        };
+      }
+      consumed.push({ partNumber, quantity });
     }
 
     const updates: Partial<FacilityWorkOrderItem> = {
@@ -113,14 +196,22 @@ export class WorkOrderEngine {
       updates.verifiedByStaffId = req.actorId;
     }
 
-    // Process consumed parts if completing
-    if (req.consumedParts && req.consumedParts.length > 0) {
-      for (const partReq of req.consumedParts) {
-        await facilityStore.consumePart(partReq.partNumber, partReq.quantity, institutionId);
-      }
-    }
-
     const updated = await facilityStore.updateWorkOrderStatus(wo.workOrderNumber, req.toStatus, updates, institutionId);
+    if (!updated) {
+      // Work order disappeared between read and write — refund deducted stock.
+      for (const c of consumed) {
+        await facilityStore.releasePart(c.partNumber, c.quantity, institutionId);
+      }
+      return {
+        success: false,
+        workOrderNumber: req.workOrderNumber,
+        previousStatus: wo.status,
+        currentStatus: wo.status,
+        transitionTimestamp: new Date().toISOString(),
+        error: `Work order '${req.workOrderNumber}' no longer exists`,
+        conflict: true,
+      };
+    }
 
     // Audit log
     await facilityStore.appendAuditLog({
