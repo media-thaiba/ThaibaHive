@@ -1,20 +1,33 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenMealPasses } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@thaiba/auth";
+import { requireAuth, resolveInstitutionContext, resolveScopedInstitutions } from "@/lib/api/auth-guard";
 import { canteenPassCreateSchema } from "@/lib/validation/schemas";
-import { eq, desc } from "drizzle-orm";
+import { isUniqueConstraintViolation } from "@/lib/api/sqlite-errors";
+import { and, eq, inArray, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
-  const isManager = session.role === "admin" || session.role === "super_admin" || session.role === "principal";
-  const userId = isManager && url.searchParams.get("userId") ? url.searchParams.get("userId")! : session.staffId;
+  const isManager =
+    session.role === "admin" || session.role === "super_admin" || session.role === "principal";
+  const requestedUserId = url.searchParams.get("userId");
+
+  if (requestedUserId && requestedUserId !== session.staffId && !isManager) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const userId = requestedUserId && isManager ? requestedUserId : session.staffId;
+  const allowedInstitutions = await resolveScopedInstitutions(session);
+
+  const conditions = [eq(canteenMealPasses.userId, userId)];
+  if (!allowedInstitutions.includes("global")) {
+    conditions.push(inArray(canteenMealPasses.institutionId, allowedInstitutions));
+  }
 
   const passes = await db
     .select()
     .from(canteenMealPasses)
-    .where(eq(canteenMealPasses.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(canteenMealPasses.createdAt))
     .all();
 
@@ -29,23 +42,45 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { userId, passCode, balance, dailyLimit } = parsed.data;
-  const institutionId = await resolveScopedInstitutionId(body.institutionId);
+  const institutionId = await resolveInstitutionContext(session, body.institutionId);
+  if (!institutionId) {
+    return NextResponse.json(
+      { error: "A concrete institution context is required to create a meal pass" },
+      { status: 400 }
+    );
+  }
   const isManager = session.role === "admin" || session.role === "super_admin" || session.role === "principal";
 
-  const pass = await db
-    .insert(canteenMealPasses)
-    .values({
-      id: crypto.randomUUID(),
-      institutionId,
-      userId: isManager && userId ? userId : session.staffId,
-      passCode,
-      balance,
-      currency: "INR",
-      status: "active",
-      dailyLimit: dailyLimit || null,
-    })
-    .returning()
+  const existing = await db
+    .select({ id: canteenMealPasses.id })
+    .from(canteenMealPasses)
+    .where(eq(canteenMealPasses.passCode, passCode))
     .get();
+  if (existing) {
+    return NextResponse.json({ error: "Meal pass code already exists" }, { status: 409 });
+  }
 
-  return NextResponse.json({ pass }, { status: 201 });
+  try {
+    const pass = await db
+      .insert(canteenMealPasses)
+      .values({
+        id: crypto.randomUUID(),
+        institutionId,
+        userId: isManager && userId ? userId : session.staffId,
+        passCode,
+        balance,
+        currency: "INR",
+        status: "active",
+        dailyLimit: dailyLimit || null,
+      })
+      .returning()
+      .get();
+
+    return NextResponse.json({ pass }, { status: 201 });
+  } catch (error) {
+    if (isUniqueConstraintViolation(error, "pass_code")) {
+      return NextResponse.json({ error: "Meal pass code already exists" }, { status: 409 });
+    }
+    throw error;
+  }
 }, "canteen:manage");

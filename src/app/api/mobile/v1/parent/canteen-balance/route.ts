@@ -1,17 +1,33 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenMealPasses, canteenTransactions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc } from "drizzle-orm";
+import { requireAuth, resolveScopedInstitutions } from "@/lib/api/auth-guard";
+import { and, eq, inArray, desc } from "drizzle-orm";
+
+function isManagerRole(role: string): boolean {
+  return role === "admin" || role === "super_admin" || role === "principal";
+}
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
-  const studentId = url.searchParams.get("studentId") || session.staffId;
+  const requestedStudentId = url.searchParams.get("studentId");
+
+  if (requestedStudentId && requestedStudentId !== session.staffId && !isManagerRole(session.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const studentId = requestedStudentId && isManagerRole(session.role) ? requestedStudentId : session.staffId;
+  const allowedInstitutions = await resolveScopedInstitutions(session);
+
+  const conditions = [eq(canteenMealPasses.userId, studentId)];
+  if (!allowedInstitutions.includes("global")) {
+    conditions.push(inArray(canteenMealPasses.institutionId, allowedInstitutions));
+  }
 
   const pass = await db
     .select()
     .from(canteenMealPasses)
-    .where(eq(canteenMealPasses.userId, studentId))
+    .where(and(...conditions))
     .get();
 
   const transactions = pass
@@ -35,12 +51,16 @@ export const GET = requireAuth(async (request: Request, session) => {
   });
 }, "canteen:read");
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { studentId, dietaryFlags } = body;
 
   if (!studentId || !dietaryFlags) {
     return NextResponse.json({ error: "Missing required dietary parameters" }, { status: 400 });
+  }
+
+  if (studentId !== session.staffId && !isManagerRole(session.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   return NextResponse.json({

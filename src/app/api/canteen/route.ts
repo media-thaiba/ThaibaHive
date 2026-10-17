@@ -51,7 +51,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { date, mealType, status, guestCount, notes } = parsed.data;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
 
   const existing = await db
     .select()

@@ -1,31 +1,54 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenItems, canteenMenus } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@thaiba/auth";
+import { requireAuth, resolveInstitutionContext, resolveScopedInstitutions } from "@/lib/api/auth-guard";
 import { canteenItemCreateSchema, canteenMenuPublishSchema } from "@/lib/validation/schemas";
-import { eq, and } from "drizzle-orm";
+import { and, eq, inArray, type SQL } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
-  const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
+  const allowedInstitutions = await resolveScopedInstitutions(session, url.searchParams.get("institutionId"));
+  const isGlobal = allowedInstitutions.includes("global");
 
-  const itemWhere = instId && instId !== "global" ? eq(canteenItems.institutionId, instId) : undefined;
-  const menuWhere = instId && instId !== "global"
-    ? and(eq(canteenMenus.date, date), eq(canteenMenus.institutionId, instId))
-    : eq(canteenMenus.date, date);
+  const institutionCondition: SQL | undefined = isGlobal
+    ? undefined
+    : allowedInstitutions.length === 1
+      ? eq(canteenItems.institutionId, allowedInstitutions[0])
+      : inArray(canteenItems.institutionId, allowedInstitutions);
+  const menuInstitutionCondition: SQL | undefined = isGlobal
+    ? undefined
+    : allowedInstitutions.length === 1
+      ? eq(canteenMenus.institutionId, allowedInstitutions[0])
+      : inArray(canteenMenus.institutionId, allowedInstitutions);
 
-  const items = await db.select().from(canteenItems).where(itemWhere).all();
-  const menus = await db.select().from(canteenMenus).where(menuWhere).all();
+  const items = await db
+    .select()
+    .from(canteenItems)
+    .where(institutionCondition)
+    .all();
+
+  const menuConditions = [eq(canteenMenus.date, date)];
+  if (menuInstitutionCondition) menuConditions.push(menuInstitutionCondition);
+  const menus = await db
+    .select()
+    .from(canteenMenus)
+    .where(and(...menuConditions))
+    .all();
 
   return NextResponse.json({ date, items, menus });
 }, "canteen:read");
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
-  const institutionId = await resolveScopedInstitutionId(body.institutionId);
-  
+  const institutionId = await resolveInstitutionContext(session, body.institutionId);
+  if (!institutionId) {
+    return NextResponse.json(
+      { error: "A concrete institution context is required to publish canteen data" },
+      { status: 400 }
+    );
+  }
+
   if (body.type === "item") {
     const parsed = canteenItemCreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -55,6 +78,28 @@ export const POST = requireAuth(async (request: Request, _session) => {
       return NextResponse.json({ error: "Invalid canteen menu parameters", details: parsed.error.format() }, { status: 400 });
     }
     const { date, mealType, itemsJson } = parsed.data;
+
+    const existing = await db
+      .select({ id: canteenMenus.id })
+      .from(canteenMenus)
+      .where(
+        and(
+          eq(canteenMenus.institutionId, institutionId),
+          eq(canteenMenus.date, date),
+          eq(canteenMenus.mealType, mealType)
+        )
+      )
+      .get();
+
+    if (existing) {
+      const menu = await db
+        .update(canteenMenus)
+        .set({ itemsJson, isActive: true })
+        .where(eq(canteenMenus.id, existing.id))
+        .returning()
+        .get();
+      return NextResponse.json({ menu, updated: true }, { status: 200 });
+    }
 
     const menu = await db
       .insert(canteenMenus)

@@ -8,7 +8,7 @@ import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
     ? and(eq(mealNotifications.id, id), eq(mealNotifications.institutionId, scopedInstitutionId))
     : eq(mealNotifications.id, id);

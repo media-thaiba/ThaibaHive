@@ -29,13 +29,14 @@ export function CashierTerminal() {
         items: cart.map((i) => ({ itemId: i.id, quantity: i.qty, unitPrice: i.price })),
         idempotencyKey: `idem_${Date.now()}`,
       });
-      const responseData = (res as any).data || res;
-      if (responseData.success) {
-        toast.success(`Redemption successful! Remaining Balance: ₹${responseData.remainingBalance}`);
+      if (res.ok && res.data?.success) {
+        toast.success(`Redemption successful! Remaining Balance: ₹${res.data.remainingBalance}`);
         setPassCode("");
-      } else {
+      } else if (res.ok) {
         toast.error("Transaction failed");
       }
+      // On !ok the api client already toasted the exact server error;
+      // keep the scanned code in place so the cashier can retry.
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Redemption failed");
     } finally {

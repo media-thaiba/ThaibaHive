@@ -91,35 +91,40 @@ export default function CanteenPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const res = await api.get<CanteenData>("/api/canteen", {
-      params: { date: selectedDate },
-      toast: false,
-    });
-    if (res.ok && res.data) {
-      const d = res.data;
-      const notifications = ensureArray<MealNotification>(d.notifications);
-      setData({
-        notifications,
-        summary: d.summary || {
-          breakfast: { skip: 0, guests: 0 },
-          lunch: { skip: 0, guests: 0 },
-          dinner: { skip: 0, guests: 0 },
-        },
+    try {
+      const res = await api.get<CanteenData>("/api/canteen", {
+        params: { date: selectedDate },
+        toast: false,
       });
-      const myNotifs = notifications.filter((n) => n.staffId === staff?.id);
-      setPreferences((prev) => {
-        const merged = { ...prev };
-        for (const n of myNotifs) {
-          merged[n.mealType as MealType] = {
-            status: n.status as MealStatus,
-            guestCount: n.guestCount || 0,
-            notes: n.notes || "",
-          };
-        }
-        return merged;
-      });
+      if (res.ok && res.data) {
+        const d = res.data;
+        const notifications = ensureArray<MealNotification>(d.notifications);
+        setData({
+          notifications,
+          summary: d.summary || {
+            breakfast: { skip: 0, guests: 0 },
+            lunch: { skip: 0, guests: 0 },
+            dinner: { skip: 0, guests: 0 },
+          },
+        });
+        const myNotifs = notifications.filter((n) => n.staffId === staff?.id);
+        setPreferences((prev) => {
+          const merged = { ...prev };
+          for (const n of myNotifs) {
+            merged[n.mealType as MealType] = {
+              status: n.status as MealStatus,
+              guestCount: n.guestCount || 0,
+              notes: n.notes || "",
+            };
+          }
+          return merged;
+        });
+      }
+    } catch {
+      toast.error("Failed to load canteen & meal data");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [selectedDate, staff?.id]);
 
   useEffect(() => {
@@ -135,19 +140,24 @@ export default function CanteenPage() {
 
   async function submitPreference(meal: MealType) {
     setSubmitting(true);
-    const pref = preferences[meal];
-    const res = await api.post("/api/canteen", {
-      date: selectedDate,
-      mealType: meal,
-      status: pref.status,
-      guestCount: pref.status === "bring_guest" ? pref.guestCount : 0,
-      notes: pref.notes || undefined,
-    });
-    if (res.ok) {
-      toast.success(`${MEAL_CONFIG[meal].label} preference saved`);
-      fetchData();
+    try {
+      const pref = preferences[meal];
+      const res = await api.post("/api/canteen", {
+        date: selectedDate,
+        mealType: meal,
+        status: pref.status,
+        guestCount: pref.status === "bring_guest" ? pref.guestCount : 0,
+        notes: pref.notes || undefined,
+      });
+      if (res.ok) {
+        toast.success(`${MEAL_CONFIG[meal].label} preference saved`);
+        fetchData();
+      }
+    } catch {
+      toast.error("Failed to save meal preference");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   }
 
   const notifications = data?.notifications ?? [];
