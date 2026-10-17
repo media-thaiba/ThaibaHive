@@ -11,7 +11,7 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const viewport: Viewport = {
   themeColor: "#030305",
-  colorScheme: "dark",
+  colorScheme: "dark light",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -48,8 +48,23 @@ export default async function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <head>
-        <meta name="color-scheme" content="dark" />
         {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
+        {/* Pre-paint theme + sidebar hydration.
+            Runs before first paint so .dark / color-scheme / sidebar width are
+            correct on the very first frame in every browser — no flash, and
+            identical output regardless of engine-specific default timing. */}
+        <script
+          nonce={nonce || undefined}
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{var r=document.documentElement;var t=null;try{t=localStorage.getItem("theme")}catch(e){}' +
+              'var d=t==="dark"||!t||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);' +
+              'r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";' +
+              'var s=null;try{s=localStorage.getItem("sidebar-collapsed")}catch(e){}' +
+              'if(s==="true"||(s===null&&window.innerWidth<1280)){r.setAttribute("data-sidebar-collapsed","true")}' +
+              '}catch(e){}})();',
+          }}
+        />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <PwaRegistrar />

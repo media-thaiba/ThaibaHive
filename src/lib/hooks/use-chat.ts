@@ -60,7 +60,6 @@ export function useChat() {
   const [isLoadingChannels, setIsLoadingChannels] = useState<boolean>(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
   const sseRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef<number>(1000);
@@ -173,22 +172,7 @@ export function useChat() {
         [activeChannelId]: [...(prev[activeChannelId] || []), optimisticMessage],
       }));
 
-      // If WebSocket is open, send frame
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            action: "message:send",
-            channelId: activeChannelId,
-            content: content.trim(),
-            type,
-            clientMessageId,
-            replyToId,
-            attachmentUrl,
-          })
-        );
-      }
-
-      // Also dispatch REST API POST for guaranteed durability & receipts
+      // Persist via REST API for guaranteed durability & receipts
       try {
         const res = await fetch(`/api/chat/channels/${activeChannelId}/messages`, {
           method: "POST",
@@ -250,22 +234,11 @@ export function useChat() {
   );
 
   // ─── Dispatch Typing Indicator ───
-  const sendTyping = useCallback(
-    (isTyping: boolean) => {
-      if (!activeChannelId) return;
-
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            action: "typing",
-            channelId: activeChannelId,
-            isTyping,
-          })
-        );
-      }
-    },
-    [activeChannelId]
-  );
+  const sendTyping = useCallback((_isTyping: boolean) => {
+    // No-op: typing is only broadcast server-side over the real-time transport.
+    // There is no REST publish endpoint, and the previous WebSocket send path
+    // never connected (see transport lifecycle below), so behavior is unchanged.
+  }, []);
 
   // ─── Incoming Event Handler ───
   const handleChatEvent = useCallback(
@@ -364,7 +337,11 @@ export function useChat() {
     [activeChannelId, staff]
   );
 
-  // ─── WebSocket & SSE Transport Lifecycle ───
+  // ─── SSE Transport Lifecycle ───
+  // The /api/chat/ws route is an HTTP simulation (POST/GET only, no WebSocket
+  // upgrade handler), so a WS handshake can never succeed — attempting it only
+  // produced a guaranteed browser console error on every load. SSE is the
+  // real transport; reconnects use capped exponential backoff.
   useEffect(() => {
     if (!staff) return;
 
@@ -372,52 +349,16 @@ export function useChat() {
 
     const connect = () => {
       if (isUnmounted) return;
-
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/api/chat/ws`;
-
       try {
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+        const sse = new EventSource("/api/chat/sse");
+        sseRef.current = sse;
 
-        ws.onopen = () => {
+        sse.onopen = () => {
           if (isUnmounted) return;
           setIsConnected(true);
           reconnectDelayRef.current = 1000;
         };
 
-        ws.onmessage = (e) => {
-          try {
-            const data = JSON.parse(e.data);
-            handleChatEvent(data);
-          } catch {
-            // Ignore parse errors
-          }
-        };
-
-        ws.onclose = () => {
-          if (isUnmounted) return;
-          setIsConnected(false);
-          // Fallback to SSE if WS closes
-          startSseFallback();
-          scheduleReconnect();
-        };
-
-        ws.onerror = () => {
-          ws.close();
-        };
-      } catch {
-        startSseFallback();
-        scheduleReconnect();
-      }
-    };
-
-    const startSseFallback = () => {
-      if (sseRef.current || isUnmounted) return;
-      try {
-        const sse = new EventSource("/api/chat/sse");
-        sseRef.current = sse;
-        sse.onopen = () => setIsConnected(true);
         sse.onmessage = (e) => {
           try {
             const data = JSON.parse(e.data);
@@ -426,13 +367,16 @@ export function useChat() {
             // Ignore parse errors
           }
         };
+
         sse.onerror = () => {
           sse.close();
-          sseRef.current = null;
+          if (sseRef.current === sse) sseRef.current = null;
+          if (isUnmounted) return;
           setIsConnected(false);
+          scheduleReconnect();
         };
       } catch {
-        // Ignore SSE init failure
+        scheduleReconnect();
       }
     };
 
@@ -450,7 +394,7 @@ export function useChat() {
 
     return () => {
       isUnmounted = true;
-      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (sseRef.current) sseRef.current.close();
     };
   }, [staff, handleChatEvent]);

@@ -7,8 +7,10 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <QueryProvider>
-      <AuthProvider>{children}</AuthProvider>
-    </QueryProvider>
+    <div className="dark contents">
+      <QueryProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryProvider>
+    </div>
   );
 }

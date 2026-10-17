@@ -889,7 +889,7 @@ export default function LoginPage() {
     >
       {/* ── Outer Desktop/Web Frame ── */}
       <div
-        className="login-page-frame absolute inset-0 overflow-hidden flex flex-col md:flex-row"
+        className="login-page-frame dark absolute inset-0 overflow-hidden flex flex-col md:flex-row"
         onMouseMove={handleGlobalMouseMove}
       >
         {/* Ambient Ethereal Glow Overlay */}

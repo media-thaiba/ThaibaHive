@@ -46,6 +46,29 @@ Always ask Qwen (via `ask_qwen`), OpenCode (via `chat-with-local-ollama` / routi
    - This prevents accidental feature sprawl. No unsolicited features allowed.
 <!-- END:feature-freeze-perfection-rule -->
 
+<!-- BEGIN:evidence-based-completion-policy -->
+# Evidence-Based Completion Policy
+
+Never claim that a task is complete solely because code was written or files were modified.
+
+Before reporting completion:
+
+1. Convert the request into explicit, verifiable acceptance criteria.
+2. Inspect the relevant implementation and dependencies.
+3. Execute the applicable tests and build commands.
+4. Verify the resulting behavior, using browser or device automation where appropriate.
+5. Review the final diff for unintended changes.
+6. Report exactly what was implemented, what was tested, the actual results, and what remains unverified.
+
+Do not claim that tests passed unless they were executed and passed. Do not claim that a feature works merely because its implementation exists.
+
+If any acceptance criterion remains incomplete, mark the task PARTIALLY COMPLETE and list the outstanding items.
+
+If verification is blocked, mark the task IMPLEMENTED BUT UNVERIFIED and explain why.
+
+Completion status must be based on evidence, not confidence or the number of files changed.
+<!-- END:evidence-based-completion-policy -->
+
 <!-- BEGIN:thaibahive-conventions -->
 # ThaibaHive Conventions
 
@@ -367,6 +390,39 @@ packages/db/         → DB package (Drizzle schema)
 - RBAC Permission AST Scanner: ✅ 100% Route Permission Mapping (0 unmapped keys)
 - TypeScript: ✅ `tsc --noEmit` exits with 0 errors
 - Lint: ✅ ESLint passes with 0 errors
+
+### 2026-10-17: Cross-Browser Visual Parity & Dark Obsidian-Blue Theme Standardization
+
+#### Fixed Issues:
+
+**Issue 1: Cross-Browser Theme & Layout Consistency Across Chromium Engines**
+- Files: `src/app/globals.css`, `src/app/(shell)/layout.tsx`, `src/components/layout/desktop-side-nav.tsx`, `src/contexts/ThemeContext.tsx`, `src/app/layout.tsx`, `src/app/auth/layout.tsx`, `src/app/auth/login/page.tsx`, `src/app/auth/login/_components/login-form.tsx`
+- Problem: Edge and Chrome displayed visual divergence in colors, scaling, and contrast. In Edge, unconfigured profiles or legacy `'light'` in localStorage stripped dark mode and caused dark blue text on dark backgrounds; while in Chrome, large 700px/600px ambient blur orbs (`blur-[140px]`) and translucent glass panel overlays diffused across the canvas, creating a washed-out, whitish haze. In narrow tiled windows, unconstrained flex children pushed brand logos and collapse triggers offscreen.
+- Solution:
+  1. Standardized on the deeper, high-contrast dark obsidian palette (`--background: 222 47% 6%` / `#070b14`, `--card: 222 40% 9%` / `#0b111e`).
+  2. Eliminated the diffusing ambient blur orbs in shell layout, preserving pure deep canvas contrast.
+  3. Increased `.dark .glass-panel` opacity to 0.95 and stripped the 1px white specular outline ring from `DesktopSideNav` dark shadow to eliminate milky borders.
+  4. Scoped `AuthLayout` and `login-page-frame` with the `dark` class so auth cards always render crisp, bright white text (`rgb(248, 250, 252)`) regardless of OS or browser profile state.
+  5. Implemented `shrink-0` on brand header & footer, `min-h-0` on scroller, and single-source `:root[data-sidebar-collapsed="true"]` token.
+  6. Defaulted pre-paint hydration and `ThemeContext` to `"dark"`.
+  7. Fixed blurry password/email icons in login inputs using `KeyRound` and `pointer-events-none z-10`.
+- Status: ✅ Fixed & Permanently Locked
+
+**Issue 2: Safari WebKit & Gecko Cross-Browser Sidebar Expand/Collapse Layout Parity**
+- Files: `src/app/globals.css`, `src/app/(shell)/layout.tsx`, `src/components/layout/desktop-side-nav.tsx`, `src/app/api/public/dev-diagnostics/route.tsx`
+- Problem: In Safari on macOS (WebKit), expanding the desktop sidebar caused it to completely overlap the greeting and stats cards. Arbitrary Tailwind class `lg:pl-[calc(var(--current-sidebar-width,260px)+3rem)]` lacked whitespace around the `+` operator. WebKit strictly enforces W3C CSS Values and Units Level 3/4 and rejected the declaration as invalid CSS, dropping `padding-left` to `0px`. Furthermore, Gecko (Firefox / Tor Browser) lacked standardized scrollbar properties.
+- Solution:
+  1. Built `.shell-main-wrapper` utility in `src/app/globals.css` with guaranteed W3C-compliant whitespace around `+` in `calc(var(--current-sidebar-width, 260px) + 3rem);` and 240ms cubic-bezier transition, gated behind `@media (min-width: 1024px)`.
+  2. Applied `.shell-main-wrapper` to the outer layout container in `src/app/(shell)/layout.tsx`.
+  3. Added standard W3C scrollbar rules (`scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent;`) in `globals.css` for Firefox and Tor Browser.
+  4. Updated `dev-diagnostics` route to probe `.shell-main-wrapper`.
+- Status: ✅ Fixed & Permanently Locked
+
+**Verification:**
+- Playwright WebKit & Chromium Live Automation: ✅ Byte-for-byte identical layout measurements at 1440px desktop (308px expanded, 124px collapsed, 0px overlap) and 390px mobile (0px padding, sidebar hidden).
+- Physical Safari MacBook: ✅ Verified by user on physical Safari macOS.
+- TypeScript: ✅ `pnpm typecheck` (`tsc --noEmit`) exits with 0 errors.
+- Unit Tests: ✅ `pnpm test src/components/layout/` passes 6/6 tests.
 
 <!-- END:issue-fixes -->
 

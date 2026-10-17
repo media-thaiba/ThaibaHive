@@ -39,19 +39,14 @@ export default function ShellLayout({
             Skip to main content
           </a>
           <div className="relative min-h-screen bg-background text-foreground transition-colors duration-200" data-hydrated={isHydrated}>
-            {/* Ambient glow layer — soft atmospheric depth (MediaHive parity, emerald-tinted) */}
+            {/* Ambient subtle top depth — darker obsidian canvas parity */}
             <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
               <div
-                className="absolute inset-x-0 -top-[200px] h-[600px] opacity-50"
+                className="absolute inset-x-0 -top-[200px] h-[400px] opacity-25"
                 style={{
                   background:
-                    "radial-gradient(1200px 600px at 50% 0%, rgba(16, 185, 129, 0.15), transparent 60%)",
+                    "radial-gradient(1000px 400px at 50% 0%, rgba(16, 185, 129, 0.06), transparent 70%)",
                 }}
-              />
-              <div className="absolute -top-40 left-1/3 h-[700px] w-[700px] animate-drift rounded-full bg-emerald-600/10 blur-[140px]" />
-              <div
-                className="absolute top-1/2 -right-[200px] h-[600px] w-[600px] animate-drift rounded-full bg-teal-500/10 blur-[140px]"
-                style={{ animationDelay: "-15s" }}
               />
             </div>
 
@@ -60,7 +55,7 @@ export default function ShellLayout({
               <DesktopSideNav onSearchOpen={() => setCmdOpen(true)} />
             </ErrorBoundary>
 
-            <div className="relative z-10 flex min-h-screen flex-col transition-[padding-left] duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)] lg:pl-[calc(var(--current-sidebar-width)+3rem)]">
+            <div className="relative z-10 flex min-h-screen flex-col shell-main-wrapper">
               {/* Mobile top bar — desktop navigation lives in the floating sidebar */}
               <header
                 role="banner"

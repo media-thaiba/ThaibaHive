@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
-import { ArrowRight, Lock, Mail, User, ShieldCheck, Fingerprint } from "lucide-react";
+import { ArrowRight, Lock, Mail, User, ShieldCheck, Fingerprint, KeyRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { AuthMode } from "./login-header";
 import { DeviceFingerprintCollector } from "@/components/auth/device-fingerprint-collector";
@@ -275,7 +275,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                 <Input
                   id="email"
                   type="email"
@@ -294,7 +294,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <KeyRound className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                 <Input
                   id="password"
                   type="password"
@@ -423,7 +423,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   First Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                   <Input
                     id="signup-firstName"
                     placeholder="First name"
@@ -440,7 +440,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   Last Name
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <User className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                   <Input
                     id="signup-lastName"
                     placeholder="Last name"
@@ -459,7 +459,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Mail className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                 <Input
                   id="signup-email"
                   type="email"
@@ -478,7 +478,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 Employee ID
               </label>
               <div className="relative">
-                <ShieldCheck className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <ShieldCheck className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                 <Input
                   id="signup-employeeId"
                   placeholder="Your employee ID"
@@ -498,7 +498,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 <span className="text-[9px] text-muted-foreground">Institutional Access</span>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                 <Input
                   id="signup-invitationToken"
                   placeholder="Invitation code provided by admin"
@@ -518,7 +518,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <KeyRound className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                   <Input
                     id="signup-password"
                     type="password"
@@ -536,7 +536,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <KeyRound className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                   <Input
                     id="signup-confirm"
                     type="password"
@@ -659,7 +659,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                     Group Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
                     <Input
                       id="forgot-email"
                       type="email"

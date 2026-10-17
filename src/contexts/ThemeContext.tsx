@@ -13,7 +13,7 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
@@ -23,8 +23,10 @@ function applyThemeToDOM(resolvedTheme: "light" | "dark") {
   const root = document.documentElement;
   if (resolvedTheme === "dark") {
     root.classList.add("dark");
+    root.style.colorScheme = "dark";
   } else {
     root.classList.remove("dark");
+    root.style.colorScheme = "light";
   }
 }
 
@@ -33,8 +35,11 @@ function resolveTheme(theme: Theme): "light" | "dark" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const initializedRef = useRef(false);
-  const [theme, setThemeState] = useState<Theme>("system");
+  // The pre-paint script in app/layout.tsx has already set .dark / color-scheme
+  // before first paint. These effects must not overwrite that with the
+  // "dark" default for a frame while localStorage is being read.
+  const hydrationPendingRef = useRef(true);
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   const systemTheme = useSyncExternalStore(
     (callback) => {
@@ -48,24 +53,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const resolvedTheme = theme === "system" ? systemTheme : theme;
 
+  // Mount: adopt the persisted theme and apply it in this same commit.
   useEffect(() => {
-    if (!initializedRef.current) {
-      initializedRef.current = true;
+    const stored = localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark" || stored === "system") {
+      if (stored !== theme) setThemeState(stored);
+      else hydrationPendingRef.current = false;
+      applyThemeToDOM(resolveTheme(stored));
+    } else {
+      hydrationPendingRef.current = false;
       applyThemeToDOM(resolveTheme(theme));
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    applyThemeToDOM(resolvedTheme);
-  }, [resolvedTheme]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored && stored !== theme) {
-      setThemeState(stored);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Post-hydration: keep the DOM in sync with every subsequent change.
+  useEffect(() => {
+    if (hydrationPendingRef.current) {
+      hydrationPendingRef.current = false;
+      return;
+    }
+    applyThemeToDOM(resolvedTheme);
+  }, [resolvedTheme]);
 
   const handleSetTheme = (newTheme: Theme) => {
     setThemeState(newTheme);

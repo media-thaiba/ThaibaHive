@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,12 +53,22 @@ export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
     }
   }, [setSidebarCollapsed]);
 
-  // Keep layout padding in sync with sidebar width + persist choice
+  // Keep layout padding in sync with sidebar width + persist choice.
+  // The width itself is driven by CSS tokens via `data-sidebar-collapsed`
+  // (see globals.css) — no hardcoded px here, no var() indirection.
+  // The pre-paint script in app/layout.tsx already applied the persisted
+  // value, so the very first run must not clobber a pending auto-collapse.
+  const sidebarAttrPrimedRef = useRef(true);
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--current-sidebar-width",
-      collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-width)"
-    );
+    if (collapsed) {
+      document.documentElement.setAttribute("data-sidebar-collapsed", "true");
+    } else if (!sidebarAttrPrimedRef.current) {
+      document.documentElement.removeAttribute("data-sidebar-collapsed");
+    }
+    if (sidebarAttrPrimedRef.current) {
+      sidebarAttrPrimedRef.current = false;
+      return;
+    }
     localStorage.setItem("sidebar-collapsed", String(collapsed));
   }, [collapsed]);
 
@@ -73,16 +83,19 @@ export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
       initial={false}
       animate={{ width: collapsed ? 76 : 260 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+      // Responsive left positioning: hugs content on ultra-wide viewports while maintaining
+      // minimum 1.5rem (24px) margin on standard laptops (1024px-1440px). Strict W3C calc spacing.
       style={{
-        left: "max(1.5rem, calc((100vw - var(--content-max-width)) / 2 - var(--current-sidebar-width) - 1.5rem))",
+        left:
+          "max(1.5rem, calc((100vw - var(--content-max-width, 80rem)) / 2 - var(--current-sidebar-width, 260px) - 1.5rem))",
       }}
-      className="fixed top-1/2 z-40 hidden max-h-[calc(100vh-3rem)] w-fit -translate-y-1/2 select-none flex-col overflow-hidden rounded-[32px] border border-border bg-card shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] lg:flex dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.7)]"
+      className="fixed top-1/2 z-40 hidden max-h-[calc(100vh-3rem)] w-fit -translate-y-1/2 select-none flex-col overflow-hidden rounded-[32px] border border-border bg-card/95 backdrop-blur-xl shadow-[0_20px_40px_-16px_rgba(0,0,0,0.18)] lg:flex dark:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.8)]"
       aria-label="Main navigation"
     >
       {/* 1. Brand Header */}
       <div
         className={cn(
-          "flex min-h-[80px] items-center border-b border-border/60 px-4 py-4 transition-all duration-300",
+          "flex min-h-[80px] shrink-0 items-center border-b border-border/60 px-4 py-4 transition-all duration-300",
           collapsed && "justify-center px-0"
         )}
       >
@@ -127,7 +140,7 @@ export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
       </div>
 
       {/* 2. Content Area */}
-      <div className="no-scrollbar flex-1 overflow-y-auto py-6">
+      <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto py-6">
         {/* Identity cluster: workspace, search, alerts, appearance, profile */}
         <div className={cn("mb-8 flex flex-col gap-2 px-4", collapsed && "items-center")}>
           {/* Workspace Switcher */}
@@ -279,7 +292,7 @@ export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
       </div>
 
       {/* 3. Footer / Collapse Trigger */}
-      <div className="mt-auto border-t border-border/60 p-4">
+      <div className="mt-auto shrink-0 border-t border-border/60 p-4">
         <button
           type="button"
           onClick={toggleSidebar}
