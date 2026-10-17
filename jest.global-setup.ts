@@ -30,7 +30,7 @@ export default async function globalSetup(): Promise<void> {
   }
 
   for (const p of [target, `${target}-wal`, `${target}-shm`]) {
-    fs.rmSync(p, { force: true });
+    fs.rmSync(p, { force: true, maxRetries: 5, retryDelay: 100 });
   }
 
   // VACUUM INTO produces a consistent snapshot even when WAL sidecars exist.
