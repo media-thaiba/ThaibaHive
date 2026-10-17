@@ -22,9 +22,18 @@ export default function EarlyWarningPage() {
     setError(null);
 
     Promise.all([
-      fetch("/api/admin/ai/predictions/attendance").then((res) => res.json()),
-      fetch("/api/admin/ai/predictions/fees").then((res) => res.json()),
-      fetch("/api/admin/ai/predictions/academic").then((res) => res.json()),
+      fetch("/api/admin/ai/predictions/attendance").then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load attendance predictions");
+        return res.json();
+      }),
+      fetch("/api/admin/ai/predictions/fees").then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load fee predictions");
+        return res.json();
+      }),
+      fetch("/api/admin/ai/predictions/academic").then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load academic predictions");
+        return res.json();
+      }),
     ])
       .then(([attData, feeData, acadData]) => {
         const combined: AtRiskRecord[] = [];

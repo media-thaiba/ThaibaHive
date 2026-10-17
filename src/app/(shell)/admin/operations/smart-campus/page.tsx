@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { SmartCampusRadar } from '@/components/operations/smart-campus-radar';
 import { HvacEnergyOptimizerCard } from '@/components/operations/hvac-energy-optimizer-card';
 import { FleetLogisticsMapCard } from '@/components/operations/fleet-logistics-map-card';
@@ -29,15 +30,20 @@ export default function SmartCampusOperationsPage() {
 
   const handleEmergencyKillSwitch = async () => {
     try {
-      await fetch('/api/admin/operations/marl/override', {
+      const res = await fetch('/api/admin/operations/marl/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'EMERGENCY_KILL_SWITCH' }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to engage emergency kill switch');
+      }
+      toast.success('Emergency kill switch engaged');
       energy.refresh();
       fleet.refresh();
-    } catch {
-      // Catch fetch error
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to engage emergency kill switch');
     }
   };
 

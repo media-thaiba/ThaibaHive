@@ -23,8 +23,14 @@ export default function ResearchBillingPage() {
     setError(null);
 
     Promise.all([
-      fetch('/api/neuro/cloud/arbitrage').then((res) => res.json()),
-      fetch('/api/neuro/billing').then((res) => res.json()),
+      fetch('/api/neuro/cloud/arbitrage').then(async (res) => {
+        if (!res.ok) throw new Error('Failed to load spot arbitrage data');
+        return res.json();
+      }),
+      fetch('/api/neuro/billing').then(async (res) => {
+        if (!res.ok) throw new Error('Failed to load billing data');
+        return res.json();
+      }),
     ])
       .then(([arbitrageData, billingData]) => {
         setQuotes(ensureArray(arbitrageData.quotes));

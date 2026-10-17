@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PerformanceHeatmap } from "../_components/performance-heatmap";
 import { DepartmentComparisonChart } from "../_components/department-comparison-chart";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -12,12 +13,18 @@ export default function PerformanceAnalyticsPage() {
 
   useEffect(() => {
     fetch("/api/admin/performance/analytics")
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load analytics");
+        return res.json();
+      })
       .then((d) => {
         setData(d);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        toast.error("Failed to load performance analytics");
+      });
   }, []);
 
   return (

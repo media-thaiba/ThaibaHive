@@ -95,23 +95,30 @@ export default function MediaLibraryPage() {
     if (searchQuery) params.search = searchQuery;
 
     const { data, ok } = await api.get<{ assets: MediaAsset[] }>("/api/media/assets", { params, toast: false });
-    if (ok && data) {
-      setAssets(data.assets || []);
+    if (!ok || !data) {
+      throw new Error("Failed to load media assets");
     }
+    setAssets(data.assets || []);
   }, [activeFolderId, filters.fileType, searchQuery]);
 
   // Fetch Folders from API
   const fetchFolders = useCallback(async () => {
     const { data, ok } = await api.get<{ folders: MediaFolder[] }>("/api/media/folders", { toast: false });
-    if (ok && data) {
-      setFolders(data.folders || []);
+    if (!ok || !data) {
+      throw new Error("Failed to load media folders");
     }
+    setFolders(data.folders || []);
   }, []);
 
   const refreshData = useCallback(async () => {
     setIsLoading(true);
-    await Promise.all([fetchAssets(), fetchFolders()]);
-    setIsLoading(false);
+    try {
+      await Promise.all([fetchAssets(), fetchFolders()]);
+    } catch {
+      toast.error("Failed to load media library");
+    } finally {
+      setIsLoading(false);
+    }
   }, [fetchAssets, fetchFolders]);
 
   useEffect(() => {
@@ -361,14 +368,22 @@ export default function MediaLibraryPage() {
   };
 
   const executeBatchDelete = async (assetIds: string[]) => {
-    let successCount = 0;
+    const deletedIds: string[] = [];
     for (const id of assetIds) {
       const { ok } = await api.delete(`/api/media/assets/${id}`, { toast: false });
-      if (ok) successCount++;
+      if (ok) deletedIds.push(id);
     }
-    setAssets((prev) => prev.filter((a) => !assetIds.includes(a.id)));
+    if (deletedIds.length > 0) {
+      setAssets((prev) => prev.filter((a) => !deletedIds.includes(a.id)));
+    }
     toggleSelectAll([]);
-    toast.success(`Deleted ${successCount} files`);
+    if (deletedIds.length === assetIds.length) {
+      toast.success(`Deleted ${deletedIds.length} files`);
+    } else if (deletedIds.length > 0) {
+      toast.warning(`Deleted ${deletedIds.length} of ${assetIds.length} files — some could not be deleted`);
+    } else {
+      toast.error("Failed to delete selected files");
+    }
   };
 
   const handleMoveAsset = async (targetFolderId: string | null) => {
@@ -390,23 +405,29 @@ export default function MediaLibraryPage() {
     if (selectedAssetIds.size === 0) return;
     setIsDownloadingZip(true);
 
-    const { data, ok } = await api.download("/api/media/batch-download", {
-      method: "POST",
-      body: { assetIds: Array.from(selectedAssetIds) },
-    });
+    try {
+      const { data, ok } = await api.download("/api/media/batch-download", {
+        method: "POST",
+        body: { assetIds: Array.from(selectedAssetIds) },
+      });
 
-    setIsDownloadingZip(false);
-
-    if (ok && data) {
-      const url = window.URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `media-export-${Date.now()}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      toast.success("Download started!");
+      if (ok && data) {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `media-export-${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast.success("Download started!");
+      } else {
+        toast.error("Failed to prepare download");
+      }
+    } catch {
+      toast.error("Failed to prepare download");
+    } finally {
+      setIsDownloadingZip(false);
     }
   };
 

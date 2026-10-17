@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,10 +38,15 @@ export default function TemplateDetailPage() {
   const [description, setDescription] = useState("");
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemDesc, setNewItemDesc] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/checklists/${id}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to load template");
+      }
       const d = await res.json();
       if (d?.template) {
         setTemplate(d.template);
@@ -48,8 +54,8 @@ export default function TemplateDetailPage() {
         setDescription(d.template.description || "");
       }
       setItems(ensureArray(d?.items));
-    } catch {
-      // handled via null template state
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load template");
     } finally {
       setLoading(false);
     }
@@ -60,39 +66,67 @@ export default function TemplateDetailPage() {
   }, [fetchData]);
 
   async function handleSave() {
-    await fetch(`/api/checklists/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description }),
-    });
-    setEditing(false);
-    fetchData();
+    try {
+      const res = await fetch(`/api/checklists/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save template");
+      }
+      toast.success("Template updated");
+      setEditing(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save template");
+    }
   }
 
   async function handleAddItem() {
     if (!newItemTitle.trim()) return;
-    await fetch(`/api/checklists/templates/${id}/items`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: newItemTitle,
-        description: newItemDesc,
-        order: items.length,
-      }),
-    });
-    setNewItemTitle("");
-    setNewItemDesc("");
-    fetchData();
+    try {
+      const res = await fetch(`/api/checklists/templates/${id}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newItemTitle,
+          description: newItemDesc,
+          order: items.length,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to add item");
+      }
+      toast.success("Item added");
+      setNewItemTitle("");
+      setNewItemDesc("");
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add item");
+    }
   }
 
   async function handleDeleteItem(itemId: string) {
     if (!confirm("Delete this item?")) return;
-    await fetch(`/api/checklists/templates/${id}/items`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: itemId }),
-    });
-    fetchData();
+    try {
+      const res = await fetch(`/api/checklists/templates/${id}/items`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete item");
+      }
+      toast.success("Item removed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete item");
+    } finally {
+      fetchData();
+    }
   }
 
   async function handleMoveItem(itemId: string, direction: "up" | "down") {
@@ -102,20 +136,34 @@ export default function TemplateDetailPage() {
     const targetIdx = direction === "up" ? idx - 1 : idx + 1;
     const newOrder = items[targetIdx].order;
 
-    await fetch(`/api/checklists/templates/${id}/items`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: itemId, order: newOrder }),
-    });
-    await fetch(`/api/checklists/templates/${id}/items`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: items[targetIdx].id, order: items[idx].order }),
-    });
-    fetchData();
+    try {
+      const first = await fetch(`/api/checklists/templates/${id}/items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId, order: newOrder }),
+      });
+      if (!first.ok) {
+        const data = await first.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to reorder items");
+      }
+      const second = await fetch(`/api/checklists/templates/${id}/items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: items[targetIdx].id, order: items[idx].order }),
+      });
+      if (!second.ok) {
+        const data = await second.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to reorder items");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reorder items");
+    } finally {
+      fetchData();
+    }
   }
 
   if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;
+  if (loadError) return <div className="flex-1 p-6 text-destructive">{loadError}</div>;
   if (!template) return <div className="flex-1 p-6 text-muted-foreground">Template not found</div>;
 
   return (

@@ -52,13 +52,18 @@ export default function GrievancesPage() {
 
   const fetchGrievances = useCallback(async () => {
     setLoading(true);
-    const res = await api.get<{ grievances: Grievance[] }>("/api/grievances", { toast: false });
-    if (res.ok) {
-      setGrievances(ensureArray<Grievance>(res.data?.grievances));
-    } else {
+    try {
+      const res = await api.get<{ grievances: Grievance[] }>("/api/grievances", { toast: false });
+      if (res.ok) {
+        setGrievances(ensureArray<Grievance>(res.data?.grievances));
+      } else {
+        toast.error("Failed to load grievances");
+      }
+    } catch {
       toast.error("Failed to load grievances");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const fetchPermissions = useCallback(async () => {
@@ -85,18 +90,23 @@ export default function GrievancesPage() {
       return;
     }
     setSubmitting(true);
-    const res = await api.post("/api/grievances", {
-      isAnonymous: form.isAnonymous,
-      category: form.category,
-      subject: form.subject,
-      description: form.description,
-    });
-    setSubmitting(false);
-    if (res.ok) {
-      toast.success("Grievance submitted successfully");
-      setSubmitOpen(false);
-      resetForm();
-      fetchGrievances();
+    try {
+      const res = await api.post("/api/grievances", {
+        isAnonymous: form.isAnonymous,
+        category: form.category,
+        subject: form.subject,
+        description: form.description,
+      });
+      if (res.ok) {
+        toast.success("Grievance submitted successfully");
+        setSubmitOpen(false);
+        resetForm();
+        fetchGrievances();
+      }
+    } catch {
+      toast.error("Failed to submit grievance");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -104,16 +114,21 @@ export default function GrievancesPage() {
     e.preventDefault();
     if (!selected) return;
     setResponding(true);
-    const res = await api.patch(`/api/grievances/${selected.id}`, {
-      status: responseForm.status,
-      response: responseForm.response || undefined,
-    });
-    setResponding(false);
-    if (res.ok) {
-      toast.success("Response submitted");
-      setDetailOpen(false);
-      setSelected(null);
-      fetchGrievances();
+    try {
+      const res = await api.patch(`/api/grievances/${selected.id}`, {
+        status: responseForm.status,
+        response: responseForm.response || undefined,
+      });
+      if (res.ok) {
+        toast.success("Response submitted");
+        setDetailOpen(false);
+        setSelected(null);
+        fetchGrievances();
+      }
+    } catch {
+      toast.error("Failed to submit response");
+    } finally {
+      setResponding(false);
     }
   };
 

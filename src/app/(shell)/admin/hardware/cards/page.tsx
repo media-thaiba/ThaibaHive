@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -36,14 +37,17 @@ export default function NfcCardsPage() {
       if (search) params.set("search", search);
 
       const res = await fetch(`/api/admin/nfc/cards?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to load NFC cards");
       const data = await res.json();
       setCards(data.cards || []);
       setTotal(data.total ?? 0);
     } catch {
       setCards([]);
       setTotal(0);
+      toast.error("Failed to load NFC cards");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [page, statusFilter, search, perPage]);
 
   useEffect(() => {
@@ -64,18 +68,34 @@ export default function NfcCardsPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || "Failed to register card");
+        toast.error(data.error || "Failed to register card");
         setRegistering(false);
         return;
       }
+      toast.success("Card registered");
       setRegisterOpen(false);
       setRegisterTagId("");
       setRegisterNotes("");
       fetchCards();
     } catch {
-      alert("Failed to register card");
+      toast.error("Failed to register card");
     }
     setRegistering(false);
+  }
+
+  async function mutateCard(url: string, init: RequestInit, failureMessage: string, successMessage: string) {
+    try {
+      const res = await fetch(url, init);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || failureMessage);
+      }
+      toast.success(successMessage);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : failureMessage);
+    } finally {
+      fetchCards();
+    }
   }
 
   async function handleAction(action: string, card: NfcCardRow) {
@@ -85,30 +105,40 @@ export default function NfcCardsPage() {
         break;
       case "unassign": {
         if (!confirm("Unassign this NFC card? It will become available for reassignment.")) return;
-        await fetch(`/api/admin/nfc/cards/${card.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "available", notes: "Unassigned by admin" }),
-        });
-        fetchCards();
+        await mutateCard(
+          `/api/admin/nfc/cards/${card.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "available", notes: "Unassigned by admin" }),
+          },
+          "Failed to unassign card",
+          "Card unassigned"
+        );
         break;
       }
       case "report-lost": {
         if (!confirm("Report this NFC card as lost?")) return;
-        await fetch(`/api/admin/nfc/cards/${card.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "lost" }),
-        });
-        fetchCards();
+        await mutateCard(
+          `/api/admin/nfc/cards/${card.id}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "lost" }),
+          },
+          "Failed to report card as lost",
+          "Card reported as lost"
+        );
         break;
       }
       case "retire": {
         if (!confirm("Retire this NFC card? This action cannot be undone.")) return;
-        await fetch(`/api/admin/nfc/cards/${card.id}`, {
-          method: "DELETE",
-        });
-        fetchCards();
+        await mutateCard(
+          `/api/admin/nfc/cards/${card.id}`,
+          { method: "DELETE" },
+          "Failed to retire card",
+          "Card retired"
+        );
         break;
       }
     }

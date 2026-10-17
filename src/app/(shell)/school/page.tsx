@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { SkeletonCard } from "@/components/ui/skeleton";
@@ -24,20 +25,39 @@ export default function SchoolDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/academic/students?limit=1").then((r) => r.json()).catch(() => ({ total: 0 })),
-      fetch("/api/academic/classes").then((r) => r.json()).catch(() => ({ classes: [] })),
-      fetch("/api/academic/academic-years").then((r) => r.json()).catch(() => ({ academicYears: [] })),
-    ])
-      .then(([studentsRes, classesRes, yearsRes]) => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [studentsRes, classesRes, yearsRes] = await Promise.all([
+          fetch("/api/academic/students?limit=1"),
+          fetch("/api/academic/classes"),
+          fetch("/api/academic/academic-years"),
+        ]);
+        if (!studentsRes.ok || !classesRes.ok || !yearsRes.ok) {
+          throw new Error("Dashboard fetch returned a non-ok response");
+        }
+        const [studentsData, classesData, yearsData] = await Promise.all([
+          studentsRes.json(),
+          classesRes.json(),
+          yearsRes.json(),
+        ]);
+        if (cancelled) return;
         setStats({
-          totalStudents: (studentsRes as { total?: number }).total ?? 0,
-          totalClasses: ((classesRes as { classes?: unknown[] }).classes ?? []).length,
-          activeYears: ((yearsRes as { academicYears?: unknown[] }).academicYears ?? []).length,
+          totalStudents: (studentsData as { total?: number }).total ?? 0,
+          totalClasses: ((classesData as { classes?: unknown[] }).classes ?? []).length,
+          activeYears: ((yearsData as { academicYears?: unknown[] }).academicYears ?? []).length,
         });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch {
+        if (!cancelled) toast.error("Failed to load dashboard statistics");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const statCards = [

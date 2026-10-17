@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,34 +35,57 @@ export default function ChecklistTemplatesPage() {
 
   useEffect(() => {
     fetch("/api/checklists")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Failed to load templates");
+        return r.json();
+      })
       .then((d) => {
         setTemplates(ensureArray(d?.templates));
         setLoading(false);
       })
       .catch(() => {
         setLoading(false);
+        toast.error("Failed to load checklist templates");
       });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/checklists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setShowForm(false);
-    setForm({ name: "", type: "onboarding", description: "" });
-    const res = await fetch("/api/checklists");
-    const d = await res.json();
-    setTemplates(ensureArray(d?.templates));
+    try {
+      const res = await fetch("/api/checklists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to create template");
+      }
+      toast.success("Template created");
+      setShowForm(false);
+      setForm({ name: "", type: "onboarding", description: "" });
+      const listRes = await fetch("/api/checklists");
+      if (!listRes.ok) throw new Error("Failed to refresh templates");
+      const d = await listRes.json();
+      setTemplates(ensureArray(d?.templates));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create template");
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this template? This cannot be undone.")) return;
-    await fetch(`/api/checklists/${id}`, { method: "DELETE" });
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    try {
+      const res = await fetch(`/api/checklists/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete template");
+      }
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Template deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete template");
+    }
   }
 
   if (loading) return <div className="flex-1 p-6"><Skeleton className="h-8 w-48" /></div>;

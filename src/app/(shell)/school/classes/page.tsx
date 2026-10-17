@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +29,12 @@ export default function ClassesPage() {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       const res = await fetch(`/api/academic/classes?${params}`);
+      if (!res.ok) throw new Error("Failed to load classes");
       const data = await res.json();
       setClasses(data.classes ?? []);
     } catch {
       setClasses([]);
+      toast.error("Failed to load classes");
     } finally {
       setLoading(false);
     }

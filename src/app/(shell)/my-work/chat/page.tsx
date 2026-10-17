@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { ChatLayout } from "@/components/chat/chat-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -18,10 +19,12 @@ export default function ChatPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const staffData = await fetch("/api/staff").then((r) => r.json());
+      const res = await fetch("/api/staff");
+      if (!res.ok) throw new Error("Failed to load staff");
+      const staffData = await res.json();
       setStaff(Array.isArray(staffData.staff) ? staffData.staff : []);
     } catch {
-      // Silently fail
+      toast.error("Failed to load staff directory");
     } finally {
       setLoading(false);
     }

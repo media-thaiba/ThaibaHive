@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,10 +48,12 @@ export default function StudentsPage() {
       if (search) params.set("search", search);
       if (classFilter) params.set("classId", classFilter);
       const res = await fetch(`/api/academic/students?${params}`);
+      if (!res.ok) throw new Error("Failed to load students");
       const data = await res.json();
       setStudents(data.students ?? []);
     } catch {
       setStudents([]);
+      toast.error("Failed to load students");
     } finally {
       setLoading(false);
     }
@@ -59,10 +62,12 @@ export default function StudentsPage() {
   const fetchClasses = useCallback(async () => {
     try {
       const res = await fetch("/api/academic/classes");
+      if (!res.ok) throw new Error("Failed to load classes");
       const data = await res.json();
       setClasses(data.classes ?? []);
     } catch {
       setClasses([]);
+      toast.error("Failed to load classes for filtering");
     }
   }, []);
 
