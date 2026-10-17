@@ -38,7 +38,10 @@ export const POST = requireAuth(async (request: Request, _session) => {
     };
 
 
-    await db.insert(evaluationForms).values(newForm).run();
+    await db.insert(evaluationForms).values({
+      ...newForm,
+      institutionId,
+    }).run();
 
     return NextResponse.json({ form: newForm }, { status: 201 });
   } catch (error) {

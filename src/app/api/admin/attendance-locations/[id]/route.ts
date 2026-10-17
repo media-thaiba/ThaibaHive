@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { pick } from "@/lib/api/pick";
 import { eq, and, isNull } from "drizzle-orm";
 import { logActivity } from "@/lib/api/activity-log";
@@ -15,7 +16,12 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
 
-  const existing = await db.select().from(attendanceLocations).where(eq(attendanceLocations.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(attendanceLocations.id, id), eq(attendanceLocations.institutionId, scopedInstitutionId))
+    : eq(attendanceLocations.id, id);
+
+  const existing = await db.select().from(attendanceLocations).where(whereClause).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const updates = pick(body, UPDATABLE_FIELDS);
@@ -81,7 +87,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       ...updates,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(attendanceLocations.id, id))
+    .where(whereClause)
     .returning()
     .get();
 
@@ -102,7 +108,12 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 export const DELETE = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
 
-  const existing = await db.select().from(attendanceLocations).where(eq(attendanceLocations.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(attendanceLocations.id, id), eq(attendanceLocations.institutionId, scopedInstitutionId))
+    : eq(attendanceLocations.id, id);
+
+  const existing = await db.select().from(attendanceLocations).where(whereClause).get();
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Snapshot before update (must run before nfcTagId is nulled)
@@ -122,7 +133,7 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
       nfcTagId: null,
       updatedAt: now,
     })
-    .where(eq(attendanceLocations.id, id))
+    .where(whereClause)
     .run();
 
   await logActivity({

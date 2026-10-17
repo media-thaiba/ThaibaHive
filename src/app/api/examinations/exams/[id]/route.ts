@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, examSchedules, gradeScales } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
   const { id } = (await context?.params) || { id: "" };
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(exams.id, id), eq(exams.institutionId, scopedInstitutionId))
+    : eq(exams.id, id);
 
-  const exam = await db.select().from(exams).where(eq(exams.id, id)).get();
+  const exam = await db.select().from(exams).where(whereClause).get();
   if (!exam) {
     return NextResponse.json({ error: "Examination not found" }, { status: 404 });
   }
@@ -16,7 +21,10 @@ export const GET = requireAuth(async (request: Request, session, context?: { par
   
   let scale = null;
   if (exam.gradeScaleId) {
-    scale = await db.select().from(gradeScales).where(eq(gradeScales.id, exam.gradeScaleId)).get();
+    const scaleWhere = scopedInstitutionId && scopedInstitutionId !== "global"
+      ? and(eq(gradeScales.id, exam.gradeScaleId), eq(gradeScales.institutionId, scopedInstitutionId))
+      : eq(gradeScales.id, exam.gradeScaleId);
+    scale = await db.select().from(gradeScales).where(scaleWhere).get();
   }
 
   return NextResponse.json({
@@ -30,7 +38,12 @@ export const PATCH = requireAuth(async (request: Request, session, context?: { p
   const { id } = (await context?.params) || { id: "" };
   const body = await request.json();
 
-  const existing = await db.select().from(exams).where(eq(exams.id, id)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(exams.id, id), eq(exams.institutionId, scopedInstitutionId))
+    : eq(exams.id, id);
+
+  const existing = await db.select().from(exams).where(whereClause).get();
   if (!existing) {
     return NextResponse.json({ error: "Examination not found" }, { status: 404 });
   }
@@ -45,20 +58,24 @@ export const PATCH = requireAuth(async (request: Request, session, context?: { p
   if (body.endDate !== undefined) updates.endDate = body.endDate;
   if (body.gradeScaleId !== undefined) updates.gradeScaleId = body.gradeScaleId;
 
-  await db.update(exams).set(updates).where(eq(exams.id, id));
+  await db.update(exams).set(updates).where(whereClause);
 
-  const updated = await db.select().from(exams).where(eq(exams.id, id)).get();
+  const updated = await db.select().from(exams).where(whereClause).get();
   return NextResponse.json({ success: true, exam: updated });
 }, "exam:create");
 
 export const DELETE = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
   const { id } = (await context?.params) || { id: "" };
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(exams.id, id), eq(exams.institutionId, scopedInstitutionId))
+    : eq(exams.id, id);
 
-  const existing = await db.select().from(exams).where(eq(exams.id, id)).get();
+  const existing = await db.select().from(exams).where(whereClause).get();
   if (!existing) {
     return NextResponse.json({ error: "Examination not found" }, { status: 404 });
   }
 
-  await db.delete(exams).where(eq(exams.id, id));
+  await db.delete(exams).where(whereClause);
   return NextResponse.json({ success: true, deletedId: id });
 }, "exam:create");

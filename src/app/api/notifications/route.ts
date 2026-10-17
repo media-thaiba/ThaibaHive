@@ -17,7 +17,7 @@ export const GET = requireAuth(async (request, session) => {
 
   const unreadCount = all.filter((n) => !n.isRead).length;
   return Response.json({ notifications: all, unreadCount });
-}, "notifications:update");
+}, "notifications:read");
 
 export const PATCH = requireAuth(async (request, session) => {
   const body = await request.json();

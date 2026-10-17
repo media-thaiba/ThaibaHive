@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceGoals } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   try {
@@ -12,10 +13,15 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       return NextResponse.json({ error: "Goal ID is required" }, { status: 400 });
     }
 
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+      ? and(eq(performanceGoals.id, id), eq(performanceGoals.institutionId, scopedInstitutionId))
+      : eq(performanceGoals.id, id);
+
     const existing = await db
       .select()
       .from(performanceGoals)
-      .where(eq(performanceGoals.id, id))
+      .where(whereClause)
       .get();
 
     if (!existing) {
@@ -49,7 +55,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     const updated = await db
       .update(performanceGoals)
       .set(updateData)
-      .where(eq(performanceGoals.id, id))
+      .where(whereClause)
       .returning()
       .get();
 

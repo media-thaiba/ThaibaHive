@@ -6,6 +6,7 @@ import { performanceReviewCreateSchema } from "@/lib/validation/schemas";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
 import { parseJsonStringArray } from "@/lib/utils";
 import { eq, desc, and, inArray } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
@@ -13,10 +14,15 @@ export const GET = requireAuth(async (request, session) => {
   const status = searchParams.get("status");
   const period = searchParams.get("period");
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const conditions = [];
 
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    conditions.push(eq(performanceReviews.institutionId, scopedInstitutionId));
+  }
+
   if (session.role === "super_admin" || session.role === "admin") {
-    // Admin sees all reviews
+    // Admin sees all reviews within institution (or all if global)
   } else if (session.role === "hod") {
     const managedIds = await getManagedStaffIds(session.staffId, session.role);
     if (managedIds !== null && managedIds.length > 0) {
@@ -77,17 +83,22 @@ export const POST = requireAuth(async (request, session) => {
   }
 
   const { staffId, period, goals } = parsed.data;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const institutionId = scopedInstitutionId && scopedInstitutionId !== "global" ? scopedInstitutionId : (session.institutionId || "inst_default");
 
   // Check for duplicate review in same period
+  const duplicateConditions = [
+    eq(performanceReviews.staffId, staffId),
+    eq(performanceReviews.period, period),
+  ];
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    duplicateConditions.push(eq(performanceReviews.institutionId, scopedInstitutionId));
+  }
+
   const existing = await db
     .select({ id: performanceReviews.id })
     .from(performanceReviews)
-    .where(
-      and(
-        eq(performanceReviews.staffId, staffId),
-        eq(performanceReviews.period, period)
-      )
-    )
+    .where(and(...duplicateConditions))
     .get();
 
   if (existing) {
@@ -101,6 +112,7 @@ export const POST = requireAuth(async (request, session) => {
     .insert(performanceReviews)
     .values({
       id: crypto.randomUUID(),
+      institutionId,
       staffId,
       reviewerId: session.staffId,
       period,

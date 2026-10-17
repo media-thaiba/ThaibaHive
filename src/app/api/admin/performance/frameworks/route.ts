@@ -37,7 +37,7 @@ export const POST = requireAuth(async (request: Request, _session) => {
     };
 
 
-    await db.insert(competencyFrameworks).values(newFramework).run();
+    await db.insert(competencyFrameworks).values({ ...newFramework, institutionId }).run();
 
     return NextResponse.json({ framework: newFramework }, { status: 201 });
   } catch (error) {

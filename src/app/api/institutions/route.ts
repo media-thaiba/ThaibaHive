@@ -7,4 +7,4 @@ import { eq, asc } from "drizzle-orm";
 export const GET = requireAuth(async () => {
   const all = await db.select({ id: institutions.id, name: institutions.name }).from(institutions).where(eq(institutions.isActive, true)).orderBy(asc(institutions.name)).all();
   return NextResponse.json({ institutions: all });
-}, "announcements:read");
+}, "institutions:read");

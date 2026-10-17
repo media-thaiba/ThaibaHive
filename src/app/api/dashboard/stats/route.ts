@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import {
   staff,
+  staffInstitutions,
   leaveRequests,
   leaveBalances,
   leaveTypes,
@@ -13,13 +14,17 @@ import {
   eventRsvps,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, sql, desc, gte, inArray } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and, sql, desc, gte, inArray, or, isNull } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   try {
     const { staffId, role } = session;
     const isAdmin = role === "super_admin" || role === "admin" || role === "principal" || role === "hod";
     const today = new Date().toISOString().split("T")[0];
+
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    const activeScope = scopedInstitutionId && scopedInstitutionId !== "global" ? scopedInstitutionId : null;
 
     // Run all independent queries in parallel
     const [
@@ -34,8 +39,12 @@ export const GET = requireAuth(async (request, session) => {
       todayPresentCount,
       staffProfile,
     ] = await Promise.all([
-      // 1. Total staff count
-      db.select({ count: sql<number>`count(*)` }).from(staff).get(),
+      // 1. Staff count (scoped to institution via staffInstitutions junction)
+      activeScope
+        ? db.select({ count: sql<number>`count(${staffInstitutions.staffId})` })
+            .from(staffInstitutions)
+            .where(eq(staffInstitutions.institutionId, activeScope)).get()
+        : db.select({ count: sql<number>`count(*)` }).from(staff).get(),
 
       // 2. Today's attendance log for current user
       db.select().from(attendanceLogs)
@@ -53,10 +62,13 @@ export const GET = requireAuth(async (request, session) => {
         .where(eq(tasks.assignedToId, staffId))
         .all(),
 
-      // 4. Pending leave counts (admin sees all, staff sees own)
+      // 4. Pending leave counts (admin sees own institution, staff sees own)
       isAdmin
         ? db.select({ count: sql<number>`count(*)` }).from(leaveRequests)
-            .where(eq(leaveRequests.status, "pending")).get()
+            .where(and(
+              eq(leaveRequests.status, "pending"),
+              ...(activeScope ? [eq(leaveRequests.institutionId, activeScope)] : [])
+            )).get()
         : db.select({ count: sql<number>`count(*)` }).from(leaveRequests)
             .where(and(eq(leaveRequests.staffId, staffId), eq(leaveRequests.status, "pending"))).get(),
 
@@ -86,24 +98,45 @@ export const GET = requireAuth(async (request, session) => {
         lastName: staff.lastName,
       }).from(announcements)
         .leftJoin(staff, eq(announcements.createdById, staff.id))
-        .where(eq(announcements.isActive, true))
+        .where(and(
+          eq(announcements.isActive, true),
+          ...(activeScope
+            ? [or(isNull(announcements.targetInstitutionId), eq(announcements.targetInstitutionId, activeScope))!]
+            : [])
+        ))
         .orderBy(desc(announcements.createdAt))
         .limit(5)
         .all(),
 
       // 8. Upcoming events (5)
       db.select().from(events)
-        .where(and(eq(events.isActive, true), gte(events.startDate, today)))
+        .where(and(
+          eq(events.isActive, true),
+          gte(events.startDate, today),
+          ...(activeScope
+            ? [or(isNull(events.institutionId), eq(events.institutionId, activeScope))!]
+            : [])
+        ))
         .orderBy(events.startDate)
         .limit(5)
         .all(),
 
-      // 9. Today's present count (for admin badge)
+      // 9. Today's present count (for admin badge, scoped to institution staff)
       isAdmin
-        ? db.select({ count: sql<number>`count(DISTINCT ${attendanceLogs.staffId})` })
-            .from(attendanceLogs)
-            .where(and(eq(attendanceLogs.date, today), sql`${attendanceLogs.checkIn} IS NOT NULL`))
-            .get()
+        ? activeScope
+          ? db.select({ count: sql<number>`count(DISTINCT ${attendanceLogs.staffId})` })
+              .from(attendanceLogs)
+              .innerJoin(staffInstitutions, eq(attendanceLogs.staffId, staffInstitutions.staffId))
+              .where(and(
+                eq(staffInstitutions.institutionId, activeScope),
+                eq(attendanceLogs.date, today),
+                sql`${attendanceLogs.checkIn} IS NOT NULL`
+              ))
+              .get()
+          : db.select({ count: sql<number>`count(DISTINCT ${attendanceLogs.staffId})` })
+              .from(attendanceLogs)
+              .where(and(eq(attendanceLogs.date, today), sql`${attendanceLogs.checkIn} IS NOT NULL`))
+              .get()
         : Promise.resolve({ count: 0 }),
 
       // 10. Staff profile for completion check

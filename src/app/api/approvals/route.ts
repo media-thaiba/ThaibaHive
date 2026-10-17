@@ -27,6 +27,7 @@ export const GET = requireAuth(async (request, session) => {
   }
   const canApproveAll = role === "super_admin" || role === "admin";
   const isPrincipal = role === "principal";
+  const financeScopeId = await resolveScopedInstitutionId(session.institutionId);
 
   let principalStaffIds: Set<string> | null = null;
   if (isPrincipal) {
@@ -74,9 +75,14 @@ export const GET = requireAuth(async (request, session) => {
       .from(leaveRequests)
       .leftJoin(staff, eq(leaveRequests.staffId, staff.id))
       .where(
-        role === "admin" || role === "super_admin"
-          ? inArray(leaveRequests.status, ["pending", "hod_approved"])
-          : eq(leaveRequests.status, "pending")
+        and(
+          financeScopeId !== "global"
+            ? eq(leaveRequests.institutionId, financeScopeId)
+            : undefined,
+          role === "admin" || role === "super_admin"
+            ? inArray(leaveRequests.status, ["pending", "hod_approved"])
+            : eq(leaveRequests.status, "pending")
+        )
       )
       .orderBy(desc(leaveRequests.createdAt))
       .all();
@@ -140,7 +146,11 @@ export const GET = requireAuth(async (request, session) => {
       })
       .from(expenseClaims)
       .leftJoin(staff, eq(expenseClaims.staffId, staff.id))
-      .where(eq(expenseClaims.status, "pending"))
+      .where(
+        financeScopeId !== "global"
+          ? and(eq(expenseClaims.status, "pending"), eq(expenseClaims.institutionId, financeScopeId))
+          : eq(expenseClaims.status, "pending")
+      )
       .orderBy(desc(expenseClaims.createdAt))
       .all();
 
@@ -182,11 +192,20 @@ export const GET = requireAuth(async (request, session) => {
       .from(purchaseRequests)
       .leftJoin(staff, eq(purchaseRequests.requesterId, staff.id))
       .where(
-        or(
-          eq(purchaseRequests.status, "pending_hod"),
-          eq(purchaseRequests.status, "pending_accounts"),
-          eq(purchaseRequests.status, "pending_purchase")
-        )
+        financeScopeId !== "global"
+          ? and(
+              or(
+                eq(purchaseRequests.status, "pending_hod"),
+                eq(purchaseRequests.status, "pending_accounts"),
+                eq(purchaseRequests.status, "pending_purchase")
+              ),
+              eq(purchaseRequests.institutionId, financeScopeId)
+            )
+          : or(
+              eq(purchaseRequests.status, "pending_hod"),
+              eq(purchaseRequests.status, "pending_accounts"),
+              eq(purchaseRequests.status, "pending_purchase")
+            )
       )
       .orderBy(desc(purchaseRequests.createdAt))
       .all();
@@ -220,7 +239,11 @@ export const GET = requireAuth(async (request, session) => {
       })
       .from(purchaseRequests)
       .leftJoin(staff, eq(purchaseRequests.requesterId, staff.id))
-      .where(eq(purchaseRequests.status, "pending_hod"))
+      .where(
+        financeScopeId !== "global"
+          ? and(eq(purchaseRequests.status, "pending_hod"), eq(purchaseRequests.institutionId, financeScopeId))
+          : eq(purchaseRequests.status, "pending_hod")
+      )
       .orderBy(desc(purchaseRequests.createdAt))
       .all();
     for (const p of purchases) {
@@ -254,7 +277,11 @@ export const GET = requireAuth(async (request, session) => {
       })
       .from(bookings)
       .leftJoin(staff, eq(bookings.bookerId, staff.id))
-      .where(eq(bookings.status, "pending"))
+      .where(
+        financeScopeId !== "global"
+          ? and(eq(bookings.status, "pending"), eq(bookings.institutionId, financeScopeId))
+          : eq(bookings.status, "pending")
+      )
       .orderBy(desc(bookings.createdAt))
       .all();
     const filteredBookings =
@@ -331,7 +358,11 @@ export const GET = requireAuth(async (request, session) => {
         })
         .from(leaveRequests)
         .leftJoin(staff, eq(leaveRequests.staffId, staff.id))
-        .where(eq(leaveRequests.status, "pending"))
+        .where(
+          financeScopeId !== "global"
+            ? and(eq(leaveRequests.status, "pending"), eq(leaveRequests.institutionId, financeScopeId))
+            : eq(leaveRequests.status, "pending")
+        )
         .orderBy(desc(leaveRequests.createdAt))
         .all();
       for (const l of delLeaves) {
@@ -365,7 +396,11 @@ export const GET = requireAuth(async (request, session) => {
         })
         .from(expenseClaims)
         .leftJoin(staff, eq(expenseClaims.staffId, staff.id))
-        .where(eq(expenseClaims.status, "pending"))
+        .where(
+        financeScopeId !== "global"
+          ? and(eq(expenseClaims.status, "pending"), eq(expenseClaims.institutionId, financeScopeId))
+          : eq(expenseClaims.status, "pending")
+      )
         .orderBy(desc(expenseClaims.createdAt))
         .all();
       for (const c of delClaims) {
@@ -399,11 +434,20 @@ export const GET = requireAuth(async (request, session) => {
         .from(purchaseRequests)
         .leftJoin(staff, eq(purchaseRequests.requesterId, staff.id))
         .where(
-          or(
-            eq(purchaseRequests.status, "pending_hod"),
-            eq(purchaseRequests.status, "pending_accounts"),
-            eq(purchaseRequests.status, "pending_purchase")
-          )
+          financeScopeId !== "global"
+            ? and(
+                or(
+                  eq(purchaseRequests.status, "pending_hod"),
+                  eq(purchaseRequests.status, "pending_accounts"),
+                  eq(purchaseRequests.status, "pending_purchase")
+                ),
+                eq(purchaseRequests.institutionId, financeScopeId)
+              )
+            : or(
+                eq(purchaseRequests.status, "pending_hod"),
+                eq(purchaseRequests.status, "pending_accounts"),
+                eq(purchaseRequests.status, "pending_purchase")
+              )
         )
         .orderBy(desc(purchaseRequests.createdAt))
         .all();
@@ -436,7 +480,11 @@ export const GET = requireAuth(async (request, session) => {
         })
         .from(bookings)
         .leftJoin(staff, eq(bookings.bookerId, staff.id))
-        .where(eq(bookings.status, "pending"))
+        .where(
+          financeScopeId !== "global"
+            ? and(eq(bookings.status, "pending"), eq(bookings.institutionId, financeScopeId))
+            : eq(bookings.status, "pending")
+        )
         .orderBy(desc(bookings.createdAt))
         .all();
       for (const b of delBookings) {
@@ -488,7 +536,11 @@ export const GET = requireAuth(async (request, session) => {
           })
           .from(leaveRequests)
           .leftJoin(staff, eq(leaveRequests.staffId, staff.id))
-          .where(eq(leaveRequests.status, "pending"))
+          .where(
+            financeScopeId !== "global"
+              ? and(eq(leaveRequests.status, "pending"), eq(leaveRequests.institutionId, financeScopeId))
+              : eq(leaveRequests.status, "pending")
+          )
           .orderBy(desc(leaveRequests.createdAt))
           .all();
         for (const l of delLeaves) {
@@ -523,7 +575,11 @@ export const GET = requireAuth(async (request, session) => {
           })
           .from(expenseClaims)
           .leftJoin(staff, eq(expenseClaims.staffId, staff.id))
-          .where(eq(expenseClaims.status, "pending"))
+          .where(
+        financeScopeId !== "global"
+          ? and(eq(expenseClaims.status, "pending"), eq(expenseClaims.institutionId, financeScopeId))
+          : eq(expenseClaims.status, "pending")
+      )
           .orderBy(desc(expenseClaims.createdAt))
           .all();
         for (const c of delClaims) {
@@ -577,7 +633,11 @@ export const GET = requireAuth(async (request, session) => {
           })
           .from(leaveRequests)
           .leftJoin(staff, eq(leaveRequests.staffId, staff.id))
-          .where(eq(leaveRequests.status, "pending"))
+          .where(
+            financeScopeId !== "global"
+              ? and(eq(leaveRequests.status, "pending"), eq(leaveRequests.institutionId, financeScopeId))
+              : eq(leaveRequests.status, "pending")
+          )
           .orderBy(desc(leaveRequests.createdAt))
           .all();
         for (const l of delLeaves) {
@@ -612,7 +672,11 @@ export const GET = requireAuth(async (request, session) => {
           })
           .from(expenseClaims)
           .leftJoin(staff, eq(expenseClaims.staffId, staff.id))
-          .where(eq(expenseClaims.status, "pending"))
+          .where(
+        financeScopeId !== "global"
+          ? and(eq(expenseClaims.status, "pending"), eq(expenseClaims.institutionId, financeScopeId))
+          : eq(expenseClaims.status, "pending")
+      )
           .orderBy(desc(expenseClaims.createdAt))
           .all();
         for (const c of delClaims) {
@@ -665,6 +729,7 @@ export const PATCH = requireAuth(async (request, session) => {
 
   const now = new Date().toISOString();
   const elevated = role === "super_admin" || role === "admin";
+  const financeScopeId = await resolveScopedInstitutionId(session.institutionId);
 
   try {
     if (type === "leave") {
@@ -756,10 +821,15 @@ export const PATCH = requireAuth(async (request, session) => {
         }
       }
     } else if (type === "expense") {
+      const claimWhere =
+        financeScopeId !== "global"
+          ? and(eq(expenseClaims.id, id), eq(expenseClaims.institutionId, financeScopeId))
+          : eq(expenseClaims.id, id);
+
       const claim = await db
         .select()
         .from(expenseClaims)
-        .where(eq(expenseClaims.id, id))
+        .where(claimWhere)
         .get();
 
       if (!claim) {
@@ -805,7 +875,7 @@ export const PATCH = requireAuth(async (request, session) => {
           reviewNotes: notes || null,
           updatedAt: now,
         })
-        .where(and(eq(expenseClaims.id, id), eq(expenseClaims.status, claim.status)))
+        .where(and(claimWhere, eq(expenseClaims.status, claim.status)))
         .returning()
         .get();
 
@@ -813,10 +883,15 @@ export const PATCH = requireAuth(async (request, session) => {
         return NextResponse.json({ error: "Expense claim status changed by a concurrent request" }, { status: 409 });
       }
     } else if (type === "purchase") {
+      const purchaseWhere =
+        financeScopeId !== "global"
+          ? and(eq(purchaseRequests.id, id), eq(purchaseRequests.institutionId, financeScopeId))
+          : eq(purchaseRequests.id, id);
+
       const purchase = await db
         .select()
         .from(purchaseRequests)
-        .where(eq(purchaseRequests.id, id))
+        .where(purchaseWhere)
         .get();
 
       if (!purchase) {
@@ -844,7 +919,7 @@ export const PATCH = requireAuth(async (request, session) => {
             notes: notes || null,
             updatedAt: now,
           })
-          .where(and(eq(purchaseRequests.id, id), ne(purchaseRequests.status, "rejected")))
+          .where(and(purchaseWhere, ne(purchaseRequests.status, "rejected")))
           .returning()
           .get();
 
@@ -896,7 +971,7 @@ export const PATCH = requireAuth(async (request, session) => {
         const updated = await db
           .update(purchaseRequests)
           .set(updates)
-          .where(and(eq(purchaseRequests.id, id), eq(purchaseRequests.status, purchase.status)))
+          .where(and(purchaseWhere, eq(purchaseRequests.status, purchase.status)))
           .returning()
           .get();
 
@@ -905,10 +980,14 @@ export const PATCH = requireAuth(async (request, session) => {
         }
       }
     } else if (type === "booking") {
+      const bookingWhere = financeScopeId !== "global"
+        ? and(eq(bookings.id, id), eq(bookings.institutionId, financeScopeId))
+        : eq(bookings.id, id);
+
       const booking = await db
         .select()
         .from(bookings)
-        .where(eq(bookings.id, id))
+        .where(bookingWhere)
         .get();
 
       if (!booking) {
@@ -947,7 +1026,7 @@ export const PATCH = requireAuth(async (request, session) => {
         })
         .where(
           and(
-            eq(bookings.id, id),
+            bookingWhere,
             ne(bookings.status, "approved"),
             ne(bookings.status, "rejected")
           )

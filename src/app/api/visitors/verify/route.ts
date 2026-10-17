@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitors, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { logActivity } from "@/lib/api/activity-log";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 /**
  * VISITOR PASS OFFLINE VERIFICATION & REPLAY THREAT MODEL:
@@ -14,7 +15,7 @@ import { eq } from "drizzle-orm";
  */
 import { VisitorQrPassService } from "@/lib/visitors/qr-pass-service";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const passToken = searchParams.get("passToken") || searchParams.get("id") || searchParams.get("qrPayload");
 
@@ -44,7 +45,12 @@ export const GET = requireAuth(async (request: Request, _session) => {
     // Plain visitor ID passed
   }
 
-  const visitor = await db.select().from(visitors).where(eq(visitors.id, visitorId)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(visitors.id, visitorId), eq(visitors.institutionId, scopedInstitutionId))
+    : eq(visitors.id, visitorId);
+
+  const visitor = await db.select().from(visitors).where(whereClause).get();
   if (!visitor) {
     return NextResponse.json({ error: "Visitor pass not found" }, { status: 404 });
   }
@@ -89,7 +95,12 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "visitorId and valid action ('check_in' | 'check_out') are required" }, { status: 400 });
   }
 
-  const visitor = await db.select().from(visitors).where(eq(visitors.id, visitorId)).get();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(visitors.id, visitorId), eq(visitors.institutionId, scopedInstitutionId))
+    : eq(visitors.id, visitorId);
+
+  const visitor = await db.select().from(visitors).where(whereClause).get();
   if (!visitor) {
     return NextResponse.json({ error: "Visitor not found" }, { status: 404 });
   }
@@ -111,7 +122,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       status: newStatus,
       checkOut: action === "check_out" ? now : visitor.checkOut,
     })
-    .where(eq(visitors.id, visitorId))
+    .where(whereClause)
     .returning()
     .get();
 

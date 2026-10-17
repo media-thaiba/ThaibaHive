@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, tabulationRegisters, examAuditLogs } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {
   try {
@@ -13,7 +14,12 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Missing required parameter: examId" }, { status: 400 });
     }
 
-    const exam = await db.select().from(exams).where(eq(exams.id, examId)).get();
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+      ? and(eq(exams.id, examId), eq(exams.institutionId, scopedInstitutionId))
+      : eq(exams.id, examId);
+
+    const exam = await db.select().from(exams).where(whereClause).get();
     if (!exam) {
       return NextResponse.json({ error: "Target examination session not found" }, { status: 404 });
     }
@@ -21,7 +27,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     const now = new Date().toISOString();
 
     // 1. Update exam status to 'published'
-    await db.update(exams).set({ status: "published", updatedAt: now }).where(eq(exams.id, examId));
+    await db.update(exams).set({ status: "published", updatedAt: now }).where(whereClause);
 
     // 2. Stamp publication timestamp on tabulation registers
     await db

@@ -47,7 +47,7 @@ export async function createSession(payload: SessionPayload, extendSession = fal
     const cookieOptions: Record<string, unknown> = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
       path: "/",
       maxAge,
     };

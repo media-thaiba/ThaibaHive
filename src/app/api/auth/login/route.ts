@@ -218,8 +218,12 @@ export const POST = withPublicApm(async function POST(request: Request) {
       resourceType: "auth",
     });
 
+    // F-12: JWT in response body only for mobile clients presenting the
+    // platform header; web clients rely on the httpOnly cookie alone.
+    const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
+
     return NextResponse.json({
-      token,
+      ...(isMobileClient ? { token } : {}),
       user: {
         id: staffMember.id,
         email: staffMember.email,

@@ -5,10 +5,16 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { performanceReviewUpdateSchema } from "@/lib/validation/schemas";
 import { isManagedBy } from "@/lib/auth/department-scope";
 import { parseJsonStringArray } from "@/lib/utils";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(performanceReviews.id, id), eq(performanceReviews.institutionId, scopedInstitutionId))
+    : eq(performanceReviews.id, id);
 
   const review = await db
     .select({
@@ -31,7 +37,7 @@ export const GET = requireAuth(async (_request, session, context) => {
     })
     .from(performanceReviews)
     .leftJoin(staff, eq(performanceReviews.staffId, staff.id))
-    .where(eq(performanceReviews.id, id))
+    .where(whereClause)
     .get();
 
   if (!review) {
@@ -53,10 +59,15 @@ export const GET = requireAuth(async (_request, session, context) => {
 export const PATCH = requireAuth(async (request, session, context) => {
   const { id } = await context!.params;
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(performanceReviews.id, id), eq(performanceReviews.institutionId, scopedInstitutionId))
+    : eq(performanceReviews.id, id);
+
   const existing = await db
     .select()
     .from(performanceReviews)
-    .where(eq(performanceReviews.id, id))
+    .where(whereClause)
     .get();
 
   if (!existing) {
@@ -105,7 +116,7 @@ export const PATCH = requireAuth(async (request, session, context) => {
     const updated = await db
       .update(performanceReviews)
       .set(allowedUpdates)
-      .where(eq(performanceReviews.id, id))
+      .where(whereClause)
       .returning()
       .get();
 
@@ -132,7 +143,7 @@ export const PATCH = requireAuth(async (request, session, context) => {
     const updated = await db
       .update(performanceReviews)
       .set(allowedUpdates)
-      .where(eq(performanceReviews.id, id))
+      .where(whereClause)
       .returning()
       .get();
 

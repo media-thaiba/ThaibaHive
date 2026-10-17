@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { leaveRequests, leaveBalances } from "@/db/schema";
@@ -96,7 +97,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     const leave = await tx
       .insert(leaveRequests)
       .values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         staffId: session.staffId,
         leaveTypeId,
         startDate,
@@ -117,4 +118,4 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   return NextResponse.json({ leave: result.leave }, { status: 201 });
-}, "leaves:read");
+}, "leaves:create");

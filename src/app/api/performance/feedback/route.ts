@@ -100,7 +100,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       submittedAt: validated.feedbackText ? new Date().toISOString() : null,
       createdAt: new Date().toISOString() };
 
-    await db.insert(feedbackRequests).values(newFeedback).run();
+    await db.insert(feedbackRequests).values({ ...newFeedback, institutionId }).run();
 
     return NextResponse.json({ feedback: newFeedback }, { status: 201 });
   } catch (error) {

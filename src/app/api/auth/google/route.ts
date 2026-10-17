@@ -77,8 +77,11 @@ export async function POST(request: Request) {
       tokenVersion: staffMember.tokenVersion ?? 0,
     });
 
+    // F-12: token-in-body only for mobile clients presenting the platform header.
+    const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
+
     return NextResponse.json({
-      token,
+      ...(isMobileClient ? { token } : {}),
       user: {
         id: staffMember.id,
         email: staffMember.email,

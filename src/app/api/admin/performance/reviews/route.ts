@@ -35,7 +35,7 @@ export const POST = requireAuth(async (request: Request, _session) => {
     };
 
 
-    await db.insert(performanceReviews).values(newReview).run();
+    await db.insert(performanceReviews).values({ ...newReview, institutionId }).run();
 
     return NextResponse.json({ review: newReview }, { status: 201 });
   } catch (error) {

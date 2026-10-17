@@ -710,6 +710,11 @@ export const GET = requireAuth(async (request: Request, session) => {
     const conditions: (SQL | undefined)[] = [];
     if (dateFrom) conditions.push(gte(purchaseRequests.createdAt, dateFrom));
     if (dateTo) conditions.push(lte(purchaseRequests.createdAt, dateTo));
+    if (finalInstitutionId) {
+      conditions.push(eq(purchaseRequests.institutionId, finalInstitutionId));
+    } else if (!isSuperOrAdmin) {
+      conditions.push(inArray(purchaseRequests.institutionId, allowedInstIds));
+    }
 
     const activeConditions = conditions.filter((c): c is SQL => !!c);
     if (activeConditions.length > 0) {

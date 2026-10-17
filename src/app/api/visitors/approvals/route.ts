@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitorRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
   const body = await request.json();
   const { requestId, status, rejectionReason } = body;
 
@@ -12,10 +13,15 @@ export const POST = requireAuth(async (request: Request, _session) => {
     return NextResponse.json({ error: "Invalid approval parameters" }, { status: 400 });
   }
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(visitorRequests.id, requestId), eq(visitorRequests.institutionId, scopedInstitutionId))
+    : eq(visitorRequests.id, requestId);
+
   const existing = await db
     .select()
     .from(visitorRequests)
-    .where(eq(visitorRequests.id, requestId))
+    .where(whereClause)
     .get();
 
   if (!existing) {
@@ -29,7 +35,7 @@ export const POST = requireAuth(async (request: Request, _session) => {
       rejectionReason: rejectionReason || null,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(visitorRequests.id, requestId))
+    .where(whereClause)
     .returning()
     .get();
 

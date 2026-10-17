@@ -68,7 +68,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       updatedAt: new Date().toISOString(),
     };
 
-    await db.insert(performanceCycles).values(newCycle).run();
+    await db.insert(performanceCycles).values({ ...newCycle, institutionId }).run();
 
     return NextResponse.json({ cycle: newCycle }, { status: 201 });
   } catch (error) {

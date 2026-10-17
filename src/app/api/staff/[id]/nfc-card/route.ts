@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { nfcCards, nfcCardHistory, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -10,6 +11,16 @@ export const GET = requireAuth(async (_request, session, context) => {
 
   if (session.staffId !== id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const conditions = [
+    eq(nfcCards.ownerType, "staff"),
+    eq(nfcCards.ownerId, id),
+    eq(nfcCards.status, "assigned"),
+  ];
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    conditions.push(eq(nfcCards.institutionId, scopedInstitutionId));
   }
 
   const card = await db
@@ -22,7 +33,7 @@ export const GET = requireAuth(async (_request, session, context) => {
       notes: nfcCards.notes,
     })
     .from(nfcCards)
-    .where(and(eq(nfcCards.ownerType, "staff"), eq(nfcCards.ownerId, id), eq(nfcCards.status, "assigned")))
+    .where(and(...conditions))
     .get();
 
   return NextResponse.json({ card: card || null });
@@ -43,6 +54,12 @@ export const POST = requireAuth(async (request: Request, session, context) => {
   }
 
   const cleanTagId = tagId.trim();
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+
+  const lookupConditions = [eq(nfcCards.tagId, cleanTagId)];
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    lookupConditions.push(eq(nfcCards.institutionId, scopedInstitutionId));
+  }
 
   const card = await db
     .select({
@@ -53,7 +70,7 @@ export const POST = requireAuth(async (request: Request, session, context) => {
       ownerId: nfcCards.ownerId,
     })
     .from(nfcCards)
-    .where(eq(nfcCards.tagId, cleanTagId))
+    .where(and(...lookupConditions))
     .get();
 
   if (!card) {
@@ -75,6 +92,11 @@ export const POST = requireAuth(async (request: Request, session, context) => {
   const now = new Date().toISOString();
 
   await db.transaction(async (tx) => {
+    const updateConditions = [eq(nfcCards.id, card.id)];
+    if (scopedInstitutionId && scopedInstitutionId !== "global") {
+      updateConditions.push(eq(nfcCards.institutionId, scopedInstitutionId));
+    }
+
     await tx
       .update(nfcCards)
       .set({
@@ -86,7 +108,7 @@ export const POST = requireAuth(async (request: Request, session, context) => {
         lastCheckedAt: now,
         updatedAt: now,
       })
-      .where(eq(nfcCards.id, card.id));
+      .where(and(...updateConditions));
 
     await tx
       .update(staff)
@@ -122,10 +144,20 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
     return NextResponse.json({ error: "A reason is required to unlink NFC card" }, { status: 400 });
   }
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const deleteConditions = [
+    eq(nfcCards.ownerType, "staff"),
+    eq(nfcCards.ownerId, id),
+    eq(nfcCards.status, "assigned"),
+  ];
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    deleteConditions.push(eq(nfcCards.institutionId, scopedInstitutionId));
+  }
+
   const card = await db
     .select({ id: nfcCards.id, tagId: nfcCards.tagId, status: nfcCards.status })
     .from(nfcCards)
-    .where(and(eq(nfcCards.ownerType, "staff"), eq(nfcCards.ownerId, id), eq(nfcCards.status, "assigned")))
+    .where(and(...deleteConditions))
     .get();
 
   if (!card) {
@@ -135,6 +167,11 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
   const now = new Date().toISOString();
 
   await db.transaction(async (tx) => {
+    const cardConditions = [eq(nfcCards.id, card.id)];
+    if (scopedInstitutionId && scopedInstitutionId !== "global") {
+      cardConditions.push(eq(nfcCards.institutionId, scopedInstitutionId));
+    }
+
     await tx
       .update(nfcCards)
       .set({
@@ -146,7 +183,7 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
         lastCheckedAt: now,
         updatedAt: now,
       })
-      .where(eq(nfcCards.id, card.id));
+      .where(and(...cardConditions));
 
     await tx
       .update(staff)

@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { nfcCards, nfcCardHistory, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc, sql } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq, and, desc, sql } from "drizzle-orm";
 import crypto from "crypto";
 
-export const GET = requireAuth(async (_request, _session, context) => {
+export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(nfcCards.id, id), eq(nfcCards.institutionId, scopedInstitutionId))
+    : eq(nfcCards.id, id);
 
   const card = await db
     .select({
@@ -25,7 +30,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
     })
     .from(nfcCards)
     .leftJoin(staff, eq(nfcCards.ownerId, staff.id))
-    .where(eq(nfcCards.id, id))
+    .where(whereClause)
     .get();
 
   if (!card) {
@@ -51,7 +56,7 @@ export const GET = requireAuth(async (_request, _session, context) => {
   return NextResponse.json({ card, history });
 }, "nfc:admin");
 
-export const PATCH = requireAuth(async (request: Request, _session, context) => {
+export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
   const body = await request.json();
   const { status, notes } = body;
@@ -60,10 +65,15 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
     return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
   }
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(nfcCards.id, id), eq(nfcCards.institutionId, scopedInstitutionId))
+    : eq(nfcCards.id, id);
+
   const existing = await db
     .select({ id: nfcCards.id, status: nfcCards.status })
     .from(nfcCards)
-    .where(eq(nfcCards.id, id))
+    .where(whereClause)
     .get();
 
   if (!existing) {
@@ -77,7 +87,7 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
   const updated = await db
     .update(nfcCards)
     .set(updateData)
-    .where(eq(nfcCards.id, id))
+    .where(whereClause)
     .returning()
     .get();
 
@@ -95,13 +105,17 @@ export const PATCH = requireAuth(async (request: Request, _session, context) => 
   return NextResponse.json({ card: updated });
 }, "nfc:admin");
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
+export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(nfcCards.id, id), eq(nfcCards.institutionId, scopedInstitutionId))
+    : eq(nfcCards.id, id);
 
   const existing = await db
     .select({ id: nfcCards.id, status: nfcCards.status })
     .from(nfcCards)
-    .where(eq(nfcCards.id, id))
+    .where(whereClause)
     .get();
 
   if (!existing) {
@@ -112,7 +126,7 @@ export const DELETE = requireAuth(async (_request, _session, context) => {
   await db
     .update(nfcCards)
     .set({ status: "retired", updatedAt: now })
-    .where(eq(nfcCards.id, id));
+    .where(whereClause);
 
   await db.insert(nfcCardHistory).values({
     id: crypto.randomUUID(),

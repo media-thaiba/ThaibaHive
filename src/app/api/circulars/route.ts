@@ -189,7 +189,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       category: category || "general",
       targetRole,
       targetDepartmentId,
-      targetInstitutionId,
+      targetInstitutionId, // Scoped institutionId for tenant boundary
       uploadedById: session.staffId,
     })
     .returning()

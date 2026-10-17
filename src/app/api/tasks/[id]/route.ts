@@ -94,8 +94,8 @@ async function handleUpdate(request: Request, session: SessionPayload, context?:
   return NextResponse.json({ task: updated });
 }
 
-export const PUT = requireAuth(handleUpdate, "tasks:create");
-export const PATCH = requireAuth(handleUpdate, "tasks:create");
+export const PUT = requireAuth(handleUpdate, "tasks:update");
+export const PATCH = requireAuth(handleUpdate, "tasks:update");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -116,5 +116,5 @@ export const DELETE = requireAuth(async (_request, session, context) => {
   await db.delete(taskComments).where(eq(taskComments.taskId, id)).run();
   await db.delete(tasks).where(whereClause).run();
   return NextResponse.json({ success: true });
-}, "tasks:create");
+}, "tasks:delete");
 

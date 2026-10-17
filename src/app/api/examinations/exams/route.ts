@@ -77,7 +77,10 @@ export const POST = requireAuth(async (request: Request, session) => {
       updatedAt: new Date().toISOString(),
     };
 
-    await db.insert(exams).values(newExam);
+    await db.insert(exams).values({
+      ...newExam,
+      institutionId,
+    });
 
     return NextResponse.json({ success: true, exam: newExam }, { status: 201 });
   } catch (err: any) {

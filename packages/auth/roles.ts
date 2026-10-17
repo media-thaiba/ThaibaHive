@@ -65,6 +65,7 @@ const basePermissions = {
     "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "crosscampus:read", "crosscampus:request",
     "conference:create", "conference:join", "conference:record", "conference:manage",
+    "notifications:read", "institutions:read", "auth:logout",
   ],
   institutional_head: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -94,6 +95,7 @@ const basePermissions = {
     "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
     "sso:read", "conference:create", "conference:join", "conference:record", "conference:manage",
+    "leaves:create", "tasks:update", "tasks:delete", "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
   academic_coordinator: [
     "academic.grade.create", "academic.classes.manage", "academic.classes.manage", "academic.classes.manage",
@@ -107,6 +109,7 @@ const basePermissions = {
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "workflow_studio:read", "workflow_studio:design",
     "conference:create", "conference:join",
+    "notifications:read", "institutions:read", "auth:logout",
   ],
   exam_coordinator: [
     "exam:create", "exam:read", "exam:publish_results", "exam:enter_marks", "exam:approve_marks",
@@ -118,6 +121,7 @@ const basePermissions = {
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "workflow_studio:read", "workflow_studio:design",
     "conference:create", "conference:join",
+    "notifications:read", "institutions:read", "auth:logout",
   ],
   teacher: [
     "exam.marks.enter", "exam.marks.enter", "exam:enter_marks", "exam:read",
@@ -133,6 +137,7 @@ const basePermissions = {
     "ai:copilot:access", "ai:copilot:voice", "ai:documents:upload", "ai:rag:query",
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design",
     "conference:create", "conference:join", "conference:record", "conference:manage",
+    "leaves:create", "tasks:update", "institutions:read", "auth:logout", "checklists:read",
   ],
   inspector: [
     "reports:read", "reports:review", "staff:read", "attendance:read", "student_attendance:read",
@@ -143,6 +148,7 @@ const basePermissions = {
     "ai:rag:query", "ai:audit:view",
     "marketplace:plugins:read", "workflow_studio:read", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "conference:join",
+    "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
 };
 
@@ -213,6 +219,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "crosscampus:read",
     "sso:read", "conference:join",
+    "notifications:read", "institutions:read", "auth:logout",
   ],
   admin: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -285,6 +292,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "marketplace:plugins:publish", "marketplace:plugins:approve", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "sis:manage", "sis:sync", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
     "sso:read", "sso:manage", "sso:test", "conference:create", "conference:join", "conference:record", "conference:manage",
+    "leaves:create", "tasks:update", "tasks:delete", "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
   principal: [
     "academic.student.admissions", "students:create", "students:read", "students:update", "students:delete", "students:write",
@@ -356,6 +364,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "workflow_studio:publish", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "sis:read", "crosscampus:read", "crosscampus:request", "crosscampus:approve",
     "sso:read", "conference:create", "conference:join", "conference:record", "conference:manage",
+    "leaves:create", "tasks:update", "tasks:delete", "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
   hod: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -409,6 +418,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "workflow_studio:design", "live_stream:start", "live_stream:view", "live_stream:snippets:read",
     "crosscampus:read", "crosscampus:request",
     "conference:create", "conference:join", "conference:record", "conference:manage",
+    "leaves:create", "tasks:update", "tasks:delete", "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
   staff: [
     "exam.marks.enter", "exam.marks.enter", "exam:read", "exam:enter_marks",
@@ -458,6 +468,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "marketplace:reviews:write", "workflow_studio:read", "live_stream:view", "live_stream:snippets:read",
     "crosscampus:read", "crosscampus:request",
     "conference:create", "conference:join",
+    "leaves:create", "tasks:update", "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
   accounts: [
     "staff:read",
@@ -496,6 +507,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "workflow_studio:read",
     "sis:read", "crosscampus:read",
     "conference:join",
+    "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
   purchase: [
     "staff:read",
@@ -530,6 +542,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "marketplace:plugins:read", "workflow_studio:read",
     "crosscampus:read", "crosscampus:request",
     "conference:join",
+    "notifications:read", "institutions:read", "auth:logout", "checklists:read",
   ],
 };
 

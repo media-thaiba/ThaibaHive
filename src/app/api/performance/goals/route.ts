@@ -48,7 +48,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       updatedAt: new Date().toISOString(),
     };
 
-    await db.insert(performanceGoals).values(newGoal).run();
+    await db.insert(performanceGoals).values({ ...newGoal, institutionId }).run();
 
     return NextResponse.json({ goal: newGoal }, { status: 201 });
   } catch (error) {

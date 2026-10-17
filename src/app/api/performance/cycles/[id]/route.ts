@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { performanceCycles, performanceReviews } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 
 export const GET = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
@@ -11,10 +12,15 @@ export const GET = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Cycle ID is required" }, { status: 400 });
   }
 
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(performanceCycles.id, id), eq(performanceCycles.institutionId, scopedInstitutionId))
+    : eq(performanceCycles.id, id);
+
   const cycle = await db
     .select()
     .from(performanceCycles)
-    .where(eq(performanceCycles.id, id))
+    .where(whereClause)
     .get();
 
   if (!cycle) {
@@ -46,10 +52,15 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       return NextResponse.json({ error: "Cycle ID is required" }, { status: 400 });
     }
 
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
+      ? and(eq(performanceCycles.id, id), eq(performanceCycles.institutionId, scopedInstitutionId))
+      : eq(performanceCycles.id, id);
+
     const existing = await db
       .select()
       .from(performanceCycles)
-      .where(eq(performanceCycles.id, id))
+      .where(whereClause)
       .get();
 
     if (!existing) {
@@ -71,7 +82,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     const updated = await db
       .update(performanceCycles)
       .set(updateData)
-      .where(eq(performanceCycles.id, id))
+      .where(whereClause)
       .returning()
       .get();
 

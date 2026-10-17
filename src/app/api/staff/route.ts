@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, departments } from "@/db/schema";
@@ -128,7 +129,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     const staffResult = await tx
       .insert(staff)
       .values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         email,
         employeeId,
         firstName,
@@ -149,7 +150,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     if (departmentIds?.length) {
       await tx.insert(staffDepartments).values(
         departmentIds.map((deptId: string) => ({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           staffId: staffResult.id,
           departmentId: deptId,
         }))
@@ -159,7 +160,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     if (institutionIds?.length) {
       await tx.insert(staffInstitutions).values(
         institutionIds.map((instId: string) => ({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           staffId: staffResult.id,
           institutionId: instId,
         }))
