@@ -10,6 +10,8 @@ const REQUIRED_SCOPED_TABLES = [
   "bookings",
   "media_folders",
   "media_assets",
+  "expense_claims",
+  "purchase_requests",
 ];
 
 export async function verifyTenantColumns(): Promise<boolean> {

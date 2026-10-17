@@ -30,7 +30,7 @@ export async function runInstitutionBackfill(options?: BackfillOptions): Promise
   const isApply = options?.apply ?? (process.argv.includes("--apply") || process.env.BACKFILL_APPLY === "true");
   const customReportPath = options?.customReportPath;
 
-  console.log(`[db:backfill] Starting institution ID backfill across 8 scoped tables (Mode: ${isApply ? "APPLY" : "DRY-RUN"})...`);
+  console.log(`[db:backfill] Starting institution ID backfill across 10 scoped tables (Mode: ${isApply ? "APPLY" : "DRY-RUN"})...`);
 
   const report: BackfillReport = {
     timestamp: new Date().toISOString(),
@@ -152,6 +152,10 @@ export async function runInstitutionBackfill(options?: BackfillOptions): Promise
   await backfillTable("media_folders", "id", "created_by_id");
   // 8. media_assets (created_by_id)
   await backfillTable("media_assets", "id", "created_by_id");
+  // 9. expense_claims (staff_id)
+  await backfillTable("expense_claims", "id", "staff_id");
+  // 10. purchase_requests (requester_id)
+  await backfillTable("purchase_requests", "id", "requester_id");
 
   // Output report artifact
   if (process.env.NODE_ENV !== "test" || customReportPath) {

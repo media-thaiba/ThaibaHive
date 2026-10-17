@@ -763,11 +763,13 @@ export const expenseClaims = sqliteTable("expense_claims", {
   reviewedById: text("reviewed_by_id").references(() => staff.id),
   reviewedAt: text("reviewed_at"),
   reviewNotes: text("review_notes"),
+  institutionId: text("institution_id").references(() => institutions.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   staffStatusIdx: index("idx_expense_claims_staff_status").on(t.staffId, t.status),
   statusIdx: index("idx_expense_claims_status").on(t.status),
+  instIdx: index("idx_expense_claims_institution").on(t.institutionId),
 }));
 
 // ─── Purchase Requests ───
@@ -785,11 +787,13 @@ export const purchaseRequests = sqliteTable("purchase_requests", {
   approvedByPurchaseId: text("approved_by_purchase_id").references(() => staff.id),
   approvedAt: text("approved_at"),
   notes: text("notes"),
+  institutionId: text("institution_id").references(() => institutions.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   requesterStatusIdx: index("idx_purchase_requests_requester_status").on(t.requesterId, t.status),
   statusIdx: index("idx_purchase_requests_status").on(t.status),
+  instIdx: index("idx_purchase_requests_institution").on(t.institutionId),
 }));
 
 // ─── Visitor Management ───
