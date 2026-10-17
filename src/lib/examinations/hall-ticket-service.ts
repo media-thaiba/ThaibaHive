@@ -66,7 +66,11 @@ export function verifyQRPayload(qrPayloadBase64: string): { valid: boolean; payl
     const secretKey = getJwtSecret("hall-ticket");
     const expectedHmac = crypto.createHmac("sha256", secretKey).update(dataString).digest("hex").substring(0, 16);
 
-    if (parsed.signature !== expectedHmac) {
+    // Constant-time comparison — a plain !== lets an attacker brute-force the
+    // signature one character at a time via response timing.
+    const provided = Buffer.from(String(parsed.signature));
+    const expected = Buffer.from(expectedHmac);
+    if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
       return { valid: false, error: "Signature verification failed (tampered QR code)" };
     }
 

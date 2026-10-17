@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { markEntries, students } from "@thaiba/db/schema";
+import { markEntries, students, examSchedules, exams } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq,  } from "drizzle-orm";
+import { resolveScopedInstitutionId } from "@/lib/auth";
+import { eq } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, _session) => {
   const { searchParams } = new URL(request.url);
@@ -11,6 +12,20 @@ export const GET = requireAuth(async (request: Request, _session) => {
 
   if (!examScheduleId) {
     return NextResponse.json({ error: "Missing required parameter: examScheduleId" }, { status: 400 });
+  }
+
+  // Tenant boundary: the schedule's parent exam must belong to the caller's institution.
+  const institutionId = await resolveScopedInstitutionId(_session.institutionId);
+  if (institutionId && institutionId !== "global") {
+    const scoped = await db
+      .select({ examInstitutionId: exams.institutionId })
+      .from(examSchedules)
+      .innerJoin(exams, eq(examSchedules.examId, exams.id))
+      .where(eq(examSchedules.id, examScheduleId))
+      .get();
+    if (!scoped || scoped.examInstitutionId !== institutionId) {
+      return NextResponse.json({ error: "Target examination schedule not found" }, { status: 404 });
+    }
   }
 
   const list = await db

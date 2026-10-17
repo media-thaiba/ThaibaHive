@@ -24,6 +24,21 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Target examination session not found" }, { status: 404 });
     }
 
+    // Terminal-state guard: results are final once published or archived — re-publishing
+    // must not duplicate audit logs or re-stamp the publication timestamp.
+    if (exam.status === "published") {
+      return NextResponse.json(
+        { error: "Examination results are already published" },
+        { status: 409 }
+      );
+    }
+    if (exam.status === "archived") {
+      return NextResponse.json(
+        { error: "Cannot publish results for an archived examination" },
+        { status: 400 }
+      );
+    }
+
     const now = new Date().toISOString();
 
     // 1. Update exam status to 'published'

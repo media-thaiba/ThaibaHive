@@ -1,19 +1,32 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { hallTickets, exams, examAuditLogs } from "@thaiba/db/schema";
+import { hallTickets, exams, examAuditLogs, students } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { hallTicketIssueSchema } from "@/lib/validation/schemas";
 import { checkStudentFeeClearance, generateQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const conditions = [];
   if (examId) conditions.push(eq(hallTickets.examId, examId));
   if (studentId) conditions.push(eq(hallTickets.studentId, studentId));
+
+  // Tenant boundary: non-global scopes only ever see tickets for their own exams.
+  if (institutionId && institutionId !== "global") {
+    const scopedTickets = await db
+      .select({ ticket: hallTickets })
+      .from(hallTickets)
+      .innerJoin(exams, eq(hallTickets.examId, exams.id))
+      .where(and(...conditions, eq(exams.institutionId, institutionId)))
+      .all();
+    return NextResponse.json({ hallTickets: scopedTickets.map((t) => t.ticket) });
+  }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -25,10 +38,22 @@ export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const parsed = hallTicketIssueSchema.parse(body);
+    const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-    const examExists = await db.select().from(exams).where(eq(exams.id, parsed.examId)).get();
+    // Tenant boundary: target exam must belong to the caller's institution.
+    const examExists = institutionId && institutionId !== "global"
+      ? await db.select().from(exams).where(and(eq(exams.id, parsed.examId), eq(exams.institutionId, institutionId))).get()
+      : await db.select().from(exams).where(eq(exams.id, parsed.examId)).get();
     if (!examExists) {
       return NextResponse.json({ error: "Target examination session not found" }, { status: 404 });
+    }
+
+    // Tenant boundary: target student must belong to the caller's institution.
+    const studentExists = institutionId && institutionId !== "global"
+      ? await db.select().from(students).where(and(eq(students.id, parsed.studentId), eq(students.institutionId, institutionId))).get()
+      : await db.select().from(students).where(eq(students.id, parsed.studentId)).get();
+    if (!studentExists) {
+      return NextResponse.json({ error: "Target student not found" }, { status: 404 });
     }
 
     // Check existing hall ticket

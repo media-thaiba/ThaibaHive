@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { verifyQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { db } from "@/db";
-import { hallTickets } from "@thaiba/db/schema";
+import { hallTickets, exams } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
   try {
     const body = await request.json();
     const { qrPayload } = body;
@@ -28,6 +29,21 @@ export const POST = requireAuth(async (request: Request, _session) => {
 
     if (!ticket) {
       return NextResponse.json({ valid: false, error: "Hall ticket record not found in database" }, { status: 404 });
+    }
+
+    // Tenant boundary: the ticket's exam must belong to the verifying staff member's
+    // institution — a gate scanner must not validate another tenant's tickets.
+    const institutionId = await resolveScopedInstitutionId(session.institutionId);
+    if (institutionId && institutionId !== "global") {
+      const exam = await db
+        .select({ institutionId: exams.institutionId })
+        .from(exams)
+        .where(eq(exams.id, ticket.examId))
+        .get();
+      if (!exam || exam.institutionId !== institutionId) {
+        // Same 404 as a missing ticket — do not leak existence across tenants.
+        return NextResponse.json({ valid: false, error: "Hall ticket record not found in database" }, { status: 404 });
+      }
     }
 
     if (ticket.status !== "issued") {

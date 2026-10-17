@@ -36,6 +36,14 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Target mark entry not found" }, { status: 404 });
     }
 
+    // Terminal-state lockout: published/archived results are final — no moderation.
+    if (row.exam.status === "published" || row.exam.status === "archived") {
+      return NextResponse.json(
+        { error: "Cannot moderate marks for a published or archived examination" },
+        { status: 400 }
+      );
+    }
+
     const existing = row.entry;
     const schedule = row.schedule;
 
@@ -55,7 +63,8 @@ export const POST = requireAuth(async (request: Request, session) => {
       updates.status = "moderated";
     } else if (action === "return") {
       updates.status = "returned";
-      updates.moderationRemarks = reason || "Returned to teacher for correction";
+      // Schema has no moderationRemarks column — writing it was silently dropped.
+      updates.remarks = reason || "Returned to teacher for correction";
     } else {
       return NextResponse.json({ error: "Invalid moderation action" }, { status: 400 });
     }

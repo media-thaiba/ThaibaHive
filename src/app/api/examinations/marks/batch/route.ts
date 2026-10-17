@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { markEntries, examSchedules, examAuditLogs } from "@thaiba/db/schema";
+import { markEntries, examSchedules, examAuditLogs, exams, students } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { markEntryBatchSchema } from "@/lib/validation/schemas";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import crypto from "crypto";
 
 export const POST = requireAuth(async (request: Request, session) => {
@@ -21,6 +22,22 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Target examination schedule not found" }, { status: 404 });
     }
 
+    // Tenant boundary: the schedule's parent exam must belong to the caller's institution.
+    const institutionId = await resolveScopedInstitutionId(session.institutionId);
+    const exam = await db.select().from(exams).where(eq(exams.id, schedule.examId)).get();
+    if (!exam || (institutionId && institutionId !== "global" && exam.institutionId !== institutionId)) {
+      // Same message as a missing schedule — do not leak existence across tenants.
+      return NextResponse.json({ error: "Target examination schedule not found" }, { status: 404 });
+    }
+
+    // Terminal-state lockout: results are final once published or archived.
+    if (exam.status === "published" || exam.status === "archived") {
+      return NextResponse.json(
+        { error: "Cannot enter marks for a published or archived examination" },
+        { status: 400 }
+      );
+    }
+
     // Check duplicate student IDs in submission payload
     const studentIds = parsed.entries.map((e) => e.studentId);
     const uniqueStudentIds = new Set(studentIds);
@@ -29,6 +46,23 @@ export const POST = requireAuth(async (request: Request, session) => {
         { error: "Duplicate student IDs detected in batch mark submission" },
         { status: 400 }
       );
+    }
+
+    // Tenant boundary: every submitted student must belong to the caller's institution.
+    if (institutionId && institutionId !== "global") {
+      const validStudents = await db
+        .select({ id: students.id })
+        .from(students)
+        .where(and(inArray(students.id, [...uniqueStudentIds]), eq(students.institutionId, institutionId)))
+        .all();
+      const validSet = new Set(validStudents.map((s) => s.id));
+      const missing = [...uniqueStudentIds].filter((id) => !validSet.has(id));
+      if (missing.length > 0) {
+        return NextResponse.json(
+          { error: `Students not found in institution scope: ${missing.join(", ")}` },
+          { status: 404 }
+        );
+      }
     }
 
     const now = new Date().toISOString();

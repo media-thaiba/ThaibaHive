@@ -1,17 +1,16 @@
 import { POST as issueHallTicket } from "@/app/api/examinations/hall-tickets/route";
 import { checkStudentFeeClearance } from "../hall-ticket-service";
-jest.mock("@thaiba/auth", () => {
-  const actual = jest.requireActual("@thaiba/auth");
-  return {
-    ...actual,
-    verifySession: jest.fn().mockResolvedValue({
-      staffId: "admin_01",
-      role: "admin",
-      institutionId: "inst_campus_main",
-    }),
-    hasPermission: jest.fn(() => true),
-  };
-});
+jest.mock("@thaiba/auth", () => ({
+  ...jest.requireActual("@thaiba/auth"),
+  verifySession: jest.fn().mockResolvedValue({
+    staffId: "admin_01",
+    role: "admin",
+    institutionId: "inst_campus_main",
+  }),
+  hasPermission: jest.fn(() => true),
+  // Re-exported through @/lib/auth — required by the new tenant-scoped lookups.
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_campus_main"),
+}));
 
 jest.mock("../hall-ticket-service", () => ({
   ...jest.requireActual("../hall-ticket-service"),
@@ -19,22 +18,24 @@ jest.mock("../hall-ticket-service", () => ({
 }));
 
 jest.mock("@/db", () => {
-  const mockExam = { id: "exam_100", title: "Term Exam" };
-  let getCallCount = 0;
+  const { exams, hallTickets, students } = jest.requireActual("@/db/schema");
+  const mockExam = { id: "exam_100", title: "Term Exam", institutionId: "inst_campus_main", status: "ongoing" };
+  const mockStudent = { id: "stud_defaulter_01", institutionId: "inst_campus_main" };
+
+  // Table-aware routing: the hall-ticket POST issues three lookups (exam, existing
+  // ticket, student) and must return the right shape for each regardless of order.
+  const tableResult = (table: unknown) => {
+    if (table === exams) return { get: () => Promise.resolve(mockExam) };
+    if (table === hallTickets) return { get: () => Promise.resolve(null) };
+    if (table === students) return { get: () => Promise.resolve(mockStudent) };
+    return { get: () => Promise.resolve(null) };
+  };
 
   return {
     db: {
       select: jest.fn(() => ({
-        from: jest.fn(() => ({
-          where: jest.fn(() => ({
-            get: jest.fn().mockImplementation(() => {
-              getCallCount++;
-              if (getCallCount % 2 === 1) {
-                return Promise.resolve(mockExam);
-              }
-              return Promise.resolve(null);
-            }),
-          })),
+        from: jest.fn((table: unknown) => ({
+          where: jest.fn(() => tableResult(table)),
         })),
       })),
       insert: jest.fn(() => ({

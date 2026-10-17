@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, examSchedules, markEntries, students } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { calculateStudentTabulation } from "@/lib/examinations/grade-calculator";
-import { eq, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
 
@@ -13,7 +14,13 @@ export const GET = requireAuth(async (request: Request, _session) => {
     return NextResponse.json({ error: "Missing required parameter: examId" }, { status: 400 });
   }
 
-  const exam = await db.select().from(exams).where(eq(exams.id, examId)).get();
+  // Tenant boundary: target exam must belong to the caller's institution.
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const examWhere = institutionId && institutionId !== "global"
+    ? and(eq(exams.id, examId), eq(exams.institutionId, institutionId))
+    : eq(exams.id, examId);
+
+  const exam = await db.select().from(exams).where(examWhere).get();
   if (!exam) {
     return NextResponse.json({ error: "Examination not found" }, { status: 404 });
   }

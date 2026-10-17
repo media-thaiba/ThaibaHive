@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, examSchedules, markEntries, students,  } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { hasPermission } from "@thaiba/auth";
+import { resolveScopedInstitutionId } from "@/lib/auth";
 import { generateStudentReportCardPDF } from "@/lib/examinations/report-card-generator";
 import { calculateStudentTabulation,  } from "@/lib/examinations/grade-calculator";
-import { eq, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");
@@ -16,14 +18,33 @@ export const GET = requireAuth(async (request: Request, _session) => {
     return NextResponse.json({ error: "Missing required parameters: examId, studentId" }, { status: 400 });
   }
 
-  const exam = await db.select().from(exams).where(eq(exams.id, examId)).get();
+  // Tenant boundary: exam and student must both belong to the caller's institution.
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+  const examWhere = institutionId && institutionId !== "global"
+    ? and(eq(exams.id, examId), eq(exams.institutionId, institutionId))
+    : eq(exams.id, examId);
+
+  const exam = await db.select().from(exams).where(examWhere).get();
   if (!exam) {
     return NextResponse.json({ error: "Examination session not found" }, { status: 404 });
   }
 
-  const studentObj = await db.select().from(students).where(eq(students.id, studentId)).get();
+  const studentWhere = institutionId && institutionId !== "global"
+    ? and(eq(students.id, studentId), eq(students.institutionId, institutionId))
+    : eq(students.id, studentId);
+
+  const studentObj = await db.select().from(students).where(studentWhere).get();
   if (!studentObj) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
+  }
+
+  // Publication lock: report cards are official documents — before the exam is
+  // published only staff with result-publication privilege may preview them.
+  if (exam.status !== "published" && !hasPermission(session.role, "exam:publish_results")) {
+    return NextResponse.json(
+      { error: "Report cards cannot be accessed prior to official publication" },
+      { status: 403 }
+    );
   }
 
   const schedules = await db.select().from(examSchedules).where(eq(examSchedules.examId, examId));

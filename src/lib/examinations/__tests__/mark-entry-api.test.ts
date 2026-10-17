@@ -32,10 +32,16 @@ jest.mock("@/db", () => {
     updatedAt: new Date().toISOString(),
   };
 
+  // Returned for every .where().get(): serves as the schedule lookup, the parent
+  // exam lookup (institutionId + status feed the new tenant/terminal guards),
+  // and the per-student existing-mark lookup. The out-of-bound mark check fires
+  // before any update, so a single shape is sufficient.
   const mockSchedule = {
     id: "sched_math_1",
     examId: "exam_100",
     maxMarks: 100,
+    institutionId: "inst_campus_main",
+    status: "ongoing",
   };
 
   return {
@@ -47,6 +53,7 @@ jest.mock("@/db", () => {
           })),
           where: jest.fn(() => ({
             get: jest.fn().mockResolvedValue(mockSchedule),
+            all: jest.fn().mockResolvedValue([{ id: "stud_01" }]),
           })),
         })),
       })),
