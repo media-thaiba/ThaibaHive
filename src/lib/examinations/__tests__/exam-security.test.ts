@@ -5,6 +5,7 @@ import { verifySession, hasPermission } from "@thaiba/auth";
 jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(),
+  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_campus_main"),
 }));
 
 
