@@ -67,7 +67,18 @@ function mockDb(selectResult: unknown, updateResult: unknown) {
     }),
   };
   const mockDbInstance = {
-    select: jest.fn().mockReturnValue(mockSelect),
+    // db.select() (bare) is the primary row fetch; db.select({col: ...}) is the
+    // booking overlap conflict-check query, which must find no conflicts.
+    select: jest.fn().mockImplementation((...args: unknown[]) => {
+      if (args.length > 0) {
+        return {
+          from: () => ({
+            where: () => ({ get: () => Promise.resolve(undefined), all: () => Promise.resolve([]) }),
+          }),
+        };
+      }
+      return mockSelect;
+    }),
     update: jest.fn().mockReturnValue(mockUpdate),
     transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) => fn(mockDbInstance)),
   };

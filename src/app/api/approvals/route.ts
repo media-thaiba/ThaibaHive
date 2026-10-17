@@ -18,7 +18,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
 import { canAccessStaff } from "@/lib/auth/department-scope";
-import { eq, desc, or, and, inArray, ne, sql } from "drizzle-orm";
+import { eq, desc, or, and, inArray, ne, sql, lt, gt } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { staffId, role } = session;
@@ -1046,6 +1046,39 @@ export const PATCH = requireAuth(async (request, session) => {
           { error: `Role '${role}' is not authorized to review bookings` },
           { status: 403 }
         );
+      }
+
+      // Terminal-state guard first: re-approving/re-rejecting is a specific,
+      // user-actionable error — report it before any overlap re-check.
+      if (booking.status === "approved" || booking.status === "rejected") {
+        return NextResponse.json(
+          { error: "Booking is already in a terminal state" },
+          { status: 400 }
+        );
+      }
+
+      // Re-check slot availability at approval time: another active booking may have
+      // claimed the resource slot while this request awaited review.
+      if (action === "approve") {
+        const conflicting = await db
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.resourceId, booking.resourceId),
+              ne(bookings.id, booking.id),
+              inArray(bookings.status, ["pending", "confirmed", "approved"]),
+              lt(bookings.startTime, booking.endTime),
+              gt(bookings.endTime, booking.startTime)
+            )
+          )
+          .get();
+        if (conflicting) {
+          return NextResponse.json(
+            { error: "Booking time slot overlaps with an active booking and cannot be approved" },
+            { status: 409 }
+          );
+        }
       }
 
       const updated = await db

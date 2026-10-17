@@ -48,11 +48,12 @@ type Booking = {
 
 type Permissions = { role: string; permissions: string[]; staffId?: string };
 
-const statusVariant: Record<string, "info" | "warning" | "success" | "secondary"> = {
+const statusVariant: Record<string, "info" | "warning" | "success" | "secondary" | "destructive"> = {
   pending: "warning",
   approved: "success",
   confirmed: "success",
-  rejected: "secondary",
+  rejected: "destructive",
+  cancelled: "secondary",
 };
 
 export default function BookingsPage() {
@@ -87,15 +88,19 @@ export default function BookingsPage() {
 
   const [permissions, setPermissions] = useState<Permissions | null>(null);
   const isAdmin = permissions?.role === "super_admin" || (permissions?.permissions.includes("bookings:manage") ?? false);
-  const _currentStaffId = permissions?.role ? permissions.staffId : null;
 
   const loadData = useCallback(async () => {
     try {
-      const [resData, bookData, permsData] = await Promise.all([
-        fetch("/api/bookings/resources").then((r) => r.json()),
-        fetch("/api/bookings").then((r) => r.json()),
+      const [resRes, bookRes, permsData] = await Promise.all([
+        fetch("/api/bookings/resources"),
+        fetch("/api/bookings"),
         fetch("/api/auth/permissions").then((r) => r.json()).catch(() => ({ permissions: [], role: "" })),
       ]);
+      if (!resRes.ok || !bookRes.ok) {
+        throw new Error("Failed to fetch booking details");
+      }
+      const resData = await resRes.json();
+      const bookData = await bookRes.json();
 
       setResources(Array.isArray(resData.resources) ? resData.resources : []);
       setBookings(Array.isArray(bookData.bookings) ? bookData.bookings : []);
@@ -121,8 +126,27 @@ export default function BookingsPage() {
     // Client-side quick duration check
     const start = new Date(form.startTime).getTime();
     const end = new Date(form.endTime).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+      setError("Please enter valid start and end times");
+      return;
+    }
     if (end <= start) {
       setError("End time must be after start time");
+      return;
+    }
+
+    // Client-side overlap pre-check against already-loaded active bookings so the
+    // user gets instant feedback before the round trip (server still enforces it).
+    const conflict = bookings.find(
+      (b) =>
+        b.resourceId === form.resourceId &&
+        ["pending", "confirmed", "approved"].includes(b.status) &&
+        new Date(b.startTime).getTime() < end &&
+        new Date(b.endTime).getTime() > start
+    );
+    if (conflict) {
+      setError(`Time slot overlaps with an existing booking: "${conflict.title}"`);
+      toast.error("Time slot conflicts with an existing booking");
       return;
     }
 
@@ -364,8 +388,9 @@ export default function BookingsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-semibold">Start Time</label>
+                  <label htmlFor="booking-start" className="text-xs text-muted-foreground font-semibold">Start Time</label>
                   <Input
+                    id="booking-start"
                     type="datetime-local"
                     value={form.startTime}
                     onChange={(e) => setForm({ ...form, startTime: e.target.value })}
@@ -373,8 +398,9 @@ export default function BookingsPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground font-semibold">End Time</label>
+                  <label htmlFor="booking-end" className="text-xs text-muted-foreground font-semibold">End Time</label>
                   <Input
+                    id="booking-end"
                     type="datetime-local"
                     value={form.endTime}
                     onChange={(e) => setForm({ ...form, endTime: e.target.value })}
@@ -406,7 +432,16 @@ export default function BookingsPage() {
           <div className="space-y-3">
             <Card 
               onClick={() => setSelectedResource("")}
-              className={`cursor-pointer hover:shadow-sm transition-shadow ${
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedResource("");
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-pressed={selectedResource === ""}
+              className={`cursor-pointer hover:shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 selectedResource === "" ? "border-primary border-2" : "border"
               }`}
             >
@@ -423,7 +458,16 @@ export default function BookingsPage() {
               <Card
                 key={r.id}
                 onClick={() => setSelectedResource(r.id)}
-                className={`cursor-pointer hover:shadow-sm transition-shadow ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedResource(r.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedResource === r.id}
+                className={`cursor-pointer hover:shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   selectedResource === r.id ? "border-primary border-2" : "border"
                 }`}
               >
@@ -468,7 +512,7 @@ export default function BookingsPage() {
                     <p className="text-xs text-muted-foreground">Resource: <span className="font-medium text-foreground">{b.resourceName}</span></p>
                     <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
                       <span className="flex items-center gap-1 font-medium text-foreground">
-                        <Users className="h-3.5 w-3.5" /> Booked by: {b.bookedByName} {b.bookedByLastName}
+                        <Users className="h-3.5 w-3.5" /> Booked by: {b.bookedByName ? `${b.bookedByName} ${b.bookedByLastName ?? ""}`.trim() : "Unknown"}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" /> 

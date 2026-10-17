@@ -4,7 +4,7 @@ import { bookings, bookingResources, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { bookingCreateSchema } from "@/lib/validation/schemas";
-import { eq, and, desc, gte, lte, lt, gt } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, gt, or, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
@@ -24,11 +24,14 @@ export const GET = requireAuth(async (request: Request, session) => {
     conditions.push(gte(bookings.startTime, dayStart), lte(bookings.startTime, dayEnd));
   }
 
-  // Staff (non-admin/hod/principal) only see their own bookings or approved public bookings
+  // Staff (non-admin/hod/principal) only see their own bookings or confirmed/approved public bookings
   const isAdminRole = ["super_admin", "admin", "principal", "hod"].includes(session.role);
   if (!isAdminRole) {
     conditions.push(
-      eq(bookings.bookerId, session.staffId)
+      or(
+        eq(bookings.bookerId, session.staffId),
+        inArray(bookings.status, ["confirmed", "approved"])
+      )!
     );
   }
 
@@ -55,7 +58,10 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "bookings:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const parsed = bookingCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid booking parameters", details: parsed.error.format() }, { status: 400 });
@@ -65,35 +71,53 @@ export const POST = requireAuth(async (request: Request, session) => {
   const noteText = notes || description || null;
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  // Check for overlapping bookings on the same resource
-  const overlapping = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.resourceId, resourceId),
-        eq(bookings.status, "confirmed"),
-        lt(bookings.startTime, endTime),
-        gt(bookings.endTime, startTime)
-      )
-    )
-    .get();
-
-  if (overlapping) {
-    return NextResponse.json({ error: "Time slot overlaps with an existing confirmed booking" }, { status: 409 });
+  // Resource must exist inside the caller's tenant scope (blocks cross-tenant booking IDOR)
+  const resourceWhere = scopedInstitutionId && scopedInstitutionId !== "global"
+    ? and(eq(bookingResources.id, resourceId), eq(bookingResources.institutionId, scopedInstitutionId))
+    : eq(bookingResources.id, resourceId);
+  const resource = await db.select({ id: bookingResources.id }).from(bookingResources).where(resourceWhere).get();
+  if (!resource) {
+    return NextResponse.json({ error: "Booking resource not found" }, { status: 404 });
   }
 
-  const booking = await db.insert(bookings).values({
-    id: crypto.randomUUID(),
-    resourceId,
-    title,
-    startTime,
-    endTime,
-    notes: noteText,
-    bookerId: session.staffId,
-    status: "confirmed",
-    institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
-  }).returning().get();
+  // Overlap check + insert atomically so concurrent requests cannot double-book the slot.
+  // Any active booking (pending/confirmed/approved) holds the slot; rejected/cancelled release it.
+  const booking = await db.transaction(async (tx) => {
+    const overlapping = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.resourceId, resourceId),
+          inArray(bookings.status, ["pending", "confirmed", "approved"]),
+          lt(bookings.startTime, endTime),
+          gt(bookings.endTime, startTime)
+        )
+      )
+      .get();
+
+    if (overlapping) return null;
+
+    return await tx
+      .insert(bookings)
+      .values({
+        id: crypto.randomUUID(),
+        resourceId,
+        title,
+        startTime,
+        endTime,
+        notes: noteText,
+        bookerId: session.staffId,
+        status: "pending",
+        institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
+      })
+      .returning()
+      .get();
+  });
+
+  if (!booking) {
+    return NextResponse.json({ error: "Time slot overlaps with an existing booking" }, { status: 409 });
+  }
 
   return NextResponse.json({ booking }, { status: 201 });
 }, "bookings:create");

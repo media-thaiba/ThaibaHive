@@ -184,14 +184,27 @@ export const canteenCreateSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const bookingCreateSchema = z.object({
-  resourceId: z.string().min(1),
-  title: z.string().min(1),
-  startTime: z.string().min(1),
-  endTime: z.string().min(1),
-  notes: z.string().optional(),
-  description: z.string().optional(),
-});
+export const bookingCreateSchema = z
+  .object({
+    resourceId: z.string().min(1),
+    title: z.string().min(1),
+    startTime: z
+      .string()
+      .refine((v) => !Number.isNaN(Date.parse(v)), {
+        message: "startTime must be a valid datetime",
+      }),
+    endTime: z
+      .string()
+      .refine((v) => !Number.isNaN(Date.parse(v)), {
+        message: "endTime must be a valid datetime",
+      }),
+    notes: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .refine((data) => Date.parse(data.endTime) > Date.parse(data.startTime), {
+    message: "endTime must be after startTime",
+    path: ["endTime"],
+  });
 
 export const pollCreateSchema = z.object({
   title: z.string().min(1),
