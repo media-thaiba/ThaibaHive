@@ -28,6 +28,25 @@ export async function GET(
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }
 
+    // ── Multi-Tenant Isolation & Temp Storage Gate ─────────────────────────
+    if (segments.length > 1) {
+      const [root, tenantSegment] = segments;
+      if (root === "private_tmp" && session.role !== "super_admin") {
+        return NextResponse.json({ error: "Access to temporary media denied" }, { status: 403 });
+      }
+
+      const targetInst = tenantSegment.replace(/^tenant_/, "");
+      if (targetInst !== "default" && session.role !== "super_admin") {
+        const callerInst = session.institutionId;
+        if (callerInst && callerInst !== "global" && callerInst !== targetInst) {
+          return NextResponse.json(
+            { error: "Forbidden: file belongs to another institution" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     // 1. Prioritize Supabase Storage (flat and nested keys both resolve here)
     if (isStorageConfigured) {
       const supabaseFile = await downloadFromSupabase(key, "uploads");

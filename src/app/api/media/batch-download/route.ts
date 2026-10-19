@@ -20,6 +20,27 @@ interface ResolvedAssetItem {
 }
 
 /**
+ * Sanitize asset and folder names against Zip Slip path traversal vulnerabilities
+ */
+export function sanitizeZipEntryName(rawName: string): string {
+  const clean = rawName.replace(/[\0\r\n\t]/g, "").trim();
+  const safe = clean
+    .replace(/(\.\.[\/\\])+/g, "")
+    .replace(/[\/\\]+/g, "_")
+    .replace(/^\.+/, "");
+  return safe || "unnamed_asset";
+}
+
+export function sanitizeZipFolderName(rawName: string): string {
+  const clean = rawName.replace(/[\0\r\n\t]/g, "").trim();
+  const safe = clean
+    .replace(/(\.\.[\/\\])+/g, "")
+    .replace(/[\/\\]+/g, "_")
+    .replace(/^\.+/, "");
+  return safe || "unnamed_folder";
+}
+
+/**
  * Recursively collect all ready assets in a folder tree, constructing relative zip paths
  */
 async function collectFolderAssets(
@@ -46,12 +67,13 @@ async function collectFolderAssets(
 
   for (const asset of assets) {
     if (asset.status === "ready" && asset.fileUrl) {
+      const safeName = sanitizeZipEntryName(asset.name);
       outList.push({
         id: asset.id,
         name: asset.name,
         fileUrl: asset.fileUrl,
         fileSize: asset.fileSize,
-        relativePath: currentPath ? `${currentPath}/${asset.name}` : asset.name,
+        relativePath: currentPath ? `${currentPath}/${safeName}` : safeName,
       });
       if (outList.length >= MAX_FILE_COUNT) return;
     }
@@ -65,7 +87,8 @@ async function collectFolderAssets(
     .all();
 
   for (const sub of subfolders) {
-    const subPath = currentPath ? `${currentPath}/${sub.name}` : sub.name;
+    const safeSub = sanitizeZipFolderName(sub.name);
+    const subPath = currentPath ? `${currentPath}/${safeSub}` : safeSub;
     await collectFolderAssets(sub.id, subPath, outList, visited);
     if (outList.length >= MAX_FILE_COUNT) return;
   }
@@ -160,7 +183,7 @@ export async function POST(req: NextRequest) {
             name: asset.name,
             fileUrl: asset.fileUrl,
             fileSize: asset.fileSize,
-            relativePath: asset.name,
+            relativePath: sanitizeZipEntryName(asset.name),
           });
         }
       }

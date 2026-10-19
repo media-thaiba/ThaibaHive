@@ -167,3 +167,48 @@ export async function deleteFromSupabase(
     throw new Error(`Failed to delete from Supabase Storage: ${response.statusText} (${errText})`);
   }
 }
+
+export interface StorageObjectItem {
+  name: string;
+  id?: string;
+  updated_at?: string;
+  created_at?: string;
+  last_accessed_at?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * List objects within a bucket prefix in Supabase Storage
+ */
+export async function listSupabaseObjects(
+  prefix: string,
+  bucket = "uploads",
+  options: { limit?: number; offset?: number; sortBy?: { column: string; order: string } } = {}
+): Promise<StorageObjectItem[]> {
+  if (!isStorageConfigured) {
+    return [];
+  }
+
+  const listUrl = new URL(`/storage/v1/object/list/${bucket}`, supabaseUrl).toString();
+
+  const response = await fetch(listUrl, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${supabaseKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prefix,
+      limit: options.limit ?? 100,
+      offset: options.offset ?? 0,
+      sortBy: options.sortBy ?? { column: "created_at", order: "asc" },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Failed to list objects in Supabase Storage: ${response.statusText} (${errText})`);
+  }
+
+  return (await response.json()) as StorageObjectItem[];
+}

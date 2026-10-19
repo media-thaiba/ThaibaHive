@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         id: mediaAssets.id,
         status: mediaAssets.status,
         fileUrl: mediaAssets.fileUrl,
+        fileType: mediaAssets.fileType,
         updatedAt: mediaAssets.updatedAt,
       })
       .from(mediaAssets)
@@ -99,6 +100,22 @@ export async function POST(req: NextRequest) {
 
       const rawPath = asset.fileUrl.replace(/^\/api\/upload\/files\//, "");
 
+      // ── Failed Asset Quarantine ──────────────────────────────────────────
+      // Failed assets (e.g. video box-walk or GPS-zeroing failures) must NEVER
+      // be promoted to 'ready'. Purge any residual private_tmp object immediately.
+      if (asset.status === "failed") {
+        if (rawPath.includes("private_tmp")) {
+          try {
+            await deleteFromSupabase([rawPath]);
+            cleaned++;
+          } catch {
+            /* best-effort cleanup */
+          }
+        }
+        continue;
+      }
+
+      // ── Processing Asset Recovery ─────────────────────────────────────────
       if (rawPath.includes("private_tmp")) {
         const assetsPath = rawPath.replace("private_tmp", "assets");
         // Check if promoted file already exists in Supabase Storage
@@ -122,24 +139,38 @@ export async function POST(req: NextRequest) {
           // Check if temp file still exists in private_tmp
           const tempFile = await downloadFromSupabase(rawPath);
           if (tempFile) {
-            // Re-attempt promotion
-            try {
-              await copySupabaseObject(rawPath, assetsPath);
-              await deleteFromSupabase([rawPath]);
-              const newFileUrl = `/api/upload/files/${assetsPath}`;
-              await db
-                .update(mediaAssets)
-                .set({ status: "ready", fileUrl: newFileUrl, updatedAt: new Date().toISOString() })
-                .where(eq(mediaAssets.id, asset.id))
-                .run();
-              recovered++;
-            } catch {
-              // Permanently mark failed
+            // Videos require full box-walk and GPS zeroing before promotion.
+            // Raw unstripped videos in private_tmp cannot be blindly promoted.
+            if (asset.fileType === "video") {
+              try {
+                await deleteFromSupabase([rawPath]);
+              } catch { /* best-effort */ }
               await db
                 .update(mediaAssets)
                 .set({ status: "failed", updatedAt: new Date().toISOString() })
                 .where(eq(mediaAssets.id, asset.id))
                 .run();
+              cleaned++;
+            } else {
+              // Non-video assets (images/documents): safe to promote
+              try {
+                await copySupabaseObject(rawPath, assetsPath);
+                await deleteFromSupabase([rawPath]);
+                const newFileUrl = `/api/upload/files/${assetsPath}`;
+                await db
+                  .update(mediaAssets)
+                  .set({ status: "ready", fileUrl: newFileUrl, updatedAt: new Date().toISOString() })
+                  .where(eq(mediaAssets.id, asset.id))
+                  .run();
+                recovered++;
+              } catch {
+                await db
+                  .update(mediaAssets)
+                  .set({ status: "failed", updatedAt: new Date().toISOString() })
+                  .where(eq(mediaAssets.id, asset.id))
+                  .run();
+                cleaned++;
+              }
             }
           } else {
             // Neither file exists — mark failed and clean up

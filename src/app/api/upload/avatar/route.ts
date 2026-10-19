@@ -38,9 +38,27 @@ export const POST = requireAuth(async (request: Request, session) => {
       );
     }
 
-    const ext = file.name.split(".").pop() || "bin";
+    const rawExt = file.name.split(".").pop()?.toLowerCase() || "png";
+    const ext = rawExt.replace(/[^a-z0-9]/g, "") || "png";
     const filename = `${session.staffId}-${randomUUID()}.${ext}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+
+    // ── Privacy & Security: Strip EXIF / GPS Metadata via Sharp ───────────
+    let buffer = rawBuffer;
+    try {
+      const sharpModule = await import("sharp");
+      const sharp = sharpModule.default;
+      if (file.type === "image/jpeg" || file.type === "image/jpg") {
+        buffer = await sharp(rawBuffer).rotate().jpeg({ quality: 85 }).toBuffer();
+      } else if (file.type === "image/png") {
+        buffer = await sharp(rawBuffer).png({ compressionLevel: 8 }).toBuffer();
+      } else if (file.type === "image/webp") {
+        buffer = await sharp(rawBuffer).rotate().webp({ quality: 85 }).toBuffer();
+      }
+    } catch {
+      // Fallback: use rawBuffer if sharp is unavailable in testing/mocked runtime
+      buffer = rawBuffer;
+    }
 
     let fileUrl = "";
 
@@ -53,7 +71,6 @@ export const POST = requireAuth(async (request: Request, session) => {
       await writeFile(filepath, buffer);
       fileUrl = `/api/upload/files/avatars/${filename}`;
     }
-
 
     await db.update(staff).set({ avatarUrl: fileUrl }).where(eq(staff.id, session.staffId)).run();
 
