@@ -65,7 +65,14 @@ describe("POST /api/mobile/v1/sync", () => {
   it("applies mutations once and replays idempotently", async () => {
     // First call: not processed -> balance ok -> leave inserted -> processed recorded
     const processedCheckEmpty = chainable({ get: jest.fn(async () => null) });
-    const txSelect = chainable({ get: jest.fn(async () => ({ totalDays: 12, usedDays: 2 })) });
+    // Balance lookup consumes the first get(); the pending-sum and overlap
+    // queries that follow must see no row (0 pending days, no overlap).
+    let txSelectCalls = 0;
+    const txSelect = chainable({
+      get: jest.fn(async () =>
+        txSelectCalls++ === 0 ? { totalDays: 12, usedDays: 2 } : undefined
+      ),
+    });
     const txInsert = chainable({ run: jest.fn(async () => undefined) });
     const processedInsert = chainable({ run: jest.fn(async () => undefined) });
 

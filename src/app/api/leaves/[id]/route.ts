@@ -1,11 +1,12 @@
 import { NextResponse, after } from "next/server";
 import { db } from "@/db";
-import { leaveRequests, leaveBalances } from "@/db/schema";
+import { leaveRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
+import { deductLeaveDays, creditLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
 import { sendPushNotification } from "@/lib/notifications/push-service";
-import { eq, and, ne, sql } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -74,9 +75,10 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   }
 
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  let nextStatus: string | undefined;
 
   if (body.status) {
-    let nextStatus = body.status;
+    nextStatus = body.status;
     if (body.status === "approved" && (session.role === "hod" || session.role === "principal")) {
       nextStatus = "hod_approved";
     }
@@ -87,44 +89,49 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     updates.reviewNotes = (body.reviewNotes as string | undefined)?.trim() || null;
   }
 
-  // Atomic: status transition + balance deduction commit together so a
-  // failure between them can't approve a leave without deducting days.
-  const updated = await db.transaction(async (tx) => {
-    const row = await tx
-      .update(leaveRequests)
-      .set(updates)
-      .where(
-        and(
-          whereClause,
-          ne(leaveRequests.status, "approved"),
-          ne(leaveRequests.status, "rejected")
-        )
-      )
-      .returning()
-      .get();
-
-    if (!row) return null;
-
-    // Deduct days ONLY after atomic transition to 'approved'.
-    // Atomic read-modify-write: safe against concurrent approvals.
-    if (row.status === "approved") {
-      await tx
-        .update(leaveBalances)
-        .set({
-          usedDays: sql`${leaveBalances.usedDays} + ${leave.daysCount}`,
-        })
+  let updated;
+  try {
+    updated = await withLeaveLedgerLock(() => db.transaction(async (tx) => {
+      // Transition status first — the WHERE clause guards against concurrent
+      // or repeated approvals (0 rows → already terminal → 400, no deduction).
+      const row = await tx
+        .update(leaveRequests)
+        .set(updates)
         .where(
           and(
-            eq(leaveBalances.staffId, leave.staffId),
-            eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-            eq(leaveBalances.year, new Date().getFullYear())
+            whereClause,
+            ne(leaveRequests.status, "approved"),
+            ne(leaveRequests.status, "rejected")
           )
         )
-        .run();
-    }
+        .returning()
+        .get();
 
-    return row;
-  });
+      if (!row) return null;
+
+      // Fund the deduction only after a successful transition; an
+      // insufficient balance throws and rolls back the whole transaction
+      // (status change included), so an approved leave always has funded days.
+      if (nextStatus === "approved") {
+        await deductLeaveDays(tx, {
+          staffId: leave.staffId,
+          leaveTypeId: leave.leaveTypeId,
+          year: leaveYearFor(leave.startDate),
+          days: leave.daysCount,
+        });
+      }
+
+      return row;
+    }));
+  } catch (error) {
+    if (error instanceof LeaveLedgerError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
+    throw error;
+  }
 
   if (!updated) {
     return NextResponse.json(
@@ -160,9 +167,9 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     ? and(eq(leaveRequests.id, id), eq(leaveRequests.institutionId, scopedInstitutionId))
     : eq(leaveRequests.id, id);
 
-  const leave = await db.select({ staffId: leaveRequests.staffId }).from(leaveRequests).where(whereClause).get();
+  const leave = await db.select().from(leaveRequests).where(whereClause).get();
   if (!leave) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  
+
   if (leave.staffId !== session.staffId && session.role !== "super_admin" && session.role !== "admin") {
     const hasAccess = await isAuthorizedToViewLeave(session.staffId, session.role, leave.staffId);
     if (!hasAccess) {
@@ -170,7 +177,19 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     }
   }
 
-  await db.delete(leaveRequests).where(whereClause).run();
+  // Deleting an approved leave returns its days to the balance atomically —
+  // otherwise the deduction is silently destroyed and the entitlement lost.
+  await withLeaveLedgerLock(() => db.transaction(async (tx) => {
+    if (leave.status === "approved") {
+      await creditLeaveDays(tx, {
+        staffId: leave.staffId,
+        leaveTypeId: leave.leaveTypeId,
+        year: leaveYearFor(leave.startDate),
+        days: leave.daysCount,
+      });
+    }
+    await tx.delete(leaveRequests).where(whereClause).run();
+  }));
   return NextResponse.json({ success: true });
 }, "leaves:delete");
 

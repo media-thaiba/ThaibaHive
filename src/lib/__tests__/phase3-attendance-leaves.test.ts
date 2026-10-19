@@ -222,7 +222,7 @@ describe("Phase 3 — Attendance Anti-Replay & Leave Balance Deduction", () => {
 
     it("should approve a pending leave request via the real PATCH handler and deduct leave balance atomically", async () => {
       const { mockUpdate } = mockDb(
-        { id: "leave-1", status: "pending", staffId: "s1", leaveTypeId: "lt1", daysCount: 2 },
+        { id: "leave-1", status: "pending", staffId: "s1", leaveTypeId: "lt1", daysCount: 2, startDate: "2026-01-10" },
         { id: "leave-1", status: "approved" }
       );
 

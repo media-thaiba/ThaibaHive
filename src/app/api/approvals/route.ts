@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import {
   leaveRequests,
-  leaveBalances,
   expenseClaims,
   purchaseRequests,
   bookings,
@@ -18,7 +17,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
 import { canAccessStaff } from "@/lib/auth/department-scope";
-import { eq, desc, or, and, inArray, ne, sql, lt, gt } from "drizzle-orm";
+import { deductLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
+import { eq, desc, or, and, inArray, ne, lt, gt } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { staffId, role } = session;
@@ -805,49 +805,54 @@ export const PATCH = requireAuth(async (request, session) => {
         nextStatus = "hod_approved";
       }
 
-      // Atomic: status transition + balance deduction commit together so a
-      // failure between them can't approve a leave without deducting days.
-      const result = await db.transaction(async (tx) => {
-        const updated = await tx
-          .update(leaveRequests)
-          .set({
-            status: nextStatus,
-            reviewedById: staffId,
-            reviewedAt: now,
-            reviewNotes,
-            updatedAt: now,
-          })
-          .where(
-            and(
-              leaveWhere,
-              ne(leaveRequests.status, "approved"),
-              ne(leaveRequests.status, "rejected")
-            )
-          )
-          .returning()
-          .get();
-
-        if (!updated) return null;
-
-        if (updated.status === "approved") {
-          // Atomic read-modify-write: safe against concurrent approvals.
-          await tx
-            .update(leaveBalances)
+      // Transition status first — the WHERE clause guards against concurrent
+      // or repeated approvals (0 rows → already terminal → 400). Fund the
+      // deduction only after a successful transition; an insufficient balance
+      // throws and rolls back the whole transaction (status included).
+      let result;
+      try {
+        result = await withLeaveLedgerLock(() => db.transaction(async (tx) => {
+          const updated = await tx
+            .update(leaveRequests)
             .set({
-              usedDays: sql`${leaveBalances.usedDays} + ${leave.daysCount}`,
+              status: nextStatus,
+              reviewedById: staffId,
+              reviewedAt: now,
+              reviewNotes,
+              updatedAt: now,
             })
             .where(
               and(
-                eq(leaveBalances.staffId, leave.staffId),
-                eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-                eq(leaveBalances.year, new Date().getFullYear())
+                leaveWhere,
+                ne(leaveRequests.status, "approved"),
+                ne(leaveRequests.status, "rejected")
               )
             )
-            .run();
-        }
+            .returning()
+            .get();
 
-        return updated;
-      });
+          if (!updated) return null;
+
+          if (nextStatus === "approved") {
+            await deductLeaveDays(tx, {
+              staffId: leave.staffId,
+              leaveTypeId: leave.leaveTypeId,
+              year: leaveYearFor(leave.startDate),
+              days: leave.daysCount,
+            });
+          }
+
+          return updated;
+        }));
+      } catch (error) {
+        if (error instanceof LeaveLedgerError) {
+          return NextResponse.json(
+            { error: error.message },
+            { status: error.status }
+          );
+        }
+        throw error;
+      }
 
       if (!result) {
         return NextResponse.json({ error: "Leave request is already in a terminal state" }, { status: 400 });

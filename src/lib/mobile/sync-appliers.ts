@@ -27,6 +27,12 @@ import {
   validateNfcCheckIn,
   AttendanceValidationError,
 } from "@/lib/attendance/validation";
+import {
+  deductLeaveDays,
+  leaveYearFor,
+  pendingDaysFor,
+  hasOverlappingLeave,
+} from "@/lib/leaves/balance-ledger";
 import { eq, and, ne } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -113,7 +119,8 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
   }
 
   const { leaveTypeId, startDate, endDate, daysCount, reason } = parsed.data;
-  const year = new Date().getFullYear();
+  // Entitlement year follows the leave's own start date, not the approval year.
+  const year = leaveYearFor(startDate);
   const scope = actorScope(ctx);
 
   await db.transaction(async (tx) => {
@@ -133,9 +140,29 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
       throw new Error("No leave balance configured for this leave type for the current year.");
     }
 
-    if (balance.totalDays - balance.usedDays < daysCount) {
+    // Pending requests reserve days against the same balance so offline
+    // submissions cannot overcommit what approvers will later fund.
+    const pendingDays = await pendingDaysFor(tx, {
+      staffId: ctx.staffId,
+      leaveTypeId,
+      year,
+    });
+    const remaining = balance.totalDays - balance.usedDays - pendingDays;
+    if (remaining < daysCount) {
       throw new Error(
-        `Insufficient leave balance. Requested: ${daysCount} days, Remaining: ${balance.totalDays - balance.usedDays} days.`
+        `Insufficient leave balance. Requested: ${daysCount} days, Remaining: ${remaining} days.`
+      );
+    }
+
+    if (
+      await hasOverlappingLeave(tx, {
+        staffId: ctx.staffId,
+        startDate,
+        endDate,
+      })
+    ) {
+      throw new Error(
+        "Leave dates overlap with an existing approved or pending leave request."
       );
     }
 
@@ -528,6 +555,11 @@ async function applyApprovalDecision(
     }
 
     await db.transaction(async (tx) => {
+      // Transition status first — the WHERE clause guards against concurrent
+      // or repeated approvals (0 rows → already terminal → error, no
+      // deduction). Fund the deduction only after a successful transition;
+      // an insufficient balance throws and rolls back the whole transaction
+      // (status change included).
       const updated = await tx
         .update(leaveRequests)
         .set({ status: nextStatus, reviewedById: ctx.staffId, reviewedAt: now, reviewNotes: notes, updatedAt: now })
@@ -543,25 +575,13 @@ async function applyApprovalDecision(
         .get();
       if (!updated) throw new Error("Leave request is already in a terminal state");
 
-      if (updated.status === "approved") {
-        const existing = await tx
-          .select()
-          .from(leaveBalances)
-          .where(
-            and(
-              eq(leaveBalances.staffId, leave.staffId),
-              eq(leaveBalances.leaveTypeId, leave.leaveTypeId),
-              eq(leaveBalances.year, new Date().getFullYear())
-            )
-          )
-          .get();
-        if (existing) {
-          await tx
-            .update(leaveBalances)
-            .set({ usedDays: existing.usedDays + leave.daysCount })
-            .where(eq(leaveBalances.id, existing.id))
-            .run();
-        }
+      if (nextStatus === "approved") {
+        await deductLeaveDays(tx, {
+          staffId: leave.staffId,
+          leaveTypeId: leave.leaveTypeId,
+          year: leaveYearFor(leave.startDate),
+          days: leave.daysCount,
+        });
       }
     });
     return;

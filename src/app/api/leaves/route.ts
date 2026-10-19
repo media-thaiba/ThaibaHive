@@ -6,6 +6,7 @@ import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { leaveCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { leaveYearFor, pendingDaysFor, hasOverlappingLeave, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -70,11 +71,13 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Invalid leave date range." }, { status: 400 });
   }
   const daysCount = Math.round((endMs - startMs) / 86_400_000) + 1;
-  const year = new Date().getFullYear();
+  // Entitlement year is anchored to the leave's own start date — a December
+  // leave approved in January must consume the December leave-year balance.
+  const year = leaveYearFor(startDate);
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   // Atomic transaction to eliminate race conditions between balance check and insertion
-  const result = await db.transaction(async (tx) => {
+  const result = await withLeaveLedgerLock(() => db.transaction(async (tx) => {
     const balance = await tx
       .select()
       .from(leaveBalances)
@@ -102,6 +105,36 @@ export const POST = requireAuth(async (request: Request, session) => {
       };
     }
 
+    // Reserve pending days against the same balance so concurrent submissions
+    // cannot overcommit what approvers will later be asked to fund.
+    const pendingDays = await pendingDaysFor(tx, {
+      staffId: session.staffId,
+      leaveTypeId,
+      year,
+    });
+    const remainingAfterPending = remaining - pendingDays;
+    if (remainingAfterPending < daysCount) {
+      return {
+        error: `Insufficient leave balance. Requested: ${daysCount} days, Remaining: ${remainingAfterPending} days.`,
+        status: 400,
+      };
+    }
+
+    // No two active leaves may occupy the same calendar span.
+    if (
+      await hasOverlappingLeave(tx, {
+        staffId: session.staffId,
+        startDate,
+        endDate,
+      })
+    ) {
+      return {
+        error:
+          "Leave dates overlap with an existing approved or pending leave request.",
+        status: 409,
+      };
+    }
+
     const leave = await tx
       .insert(leaveRequests)
       .values({
@@ -119,7 +152,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       .get();
 
     return { leave, status: 201 };
-  });
+  }));
 
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: result.status });

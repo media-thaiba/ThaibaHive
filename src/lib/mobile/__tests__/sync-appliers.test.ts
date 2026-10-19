@@ -67,7 +67,14 @@ describe("applySyncMutation", () => {
   }
 
   it("leave_apply creates a request scoped to the session user", async () => {
-    const txSelect = chainable({ get: jest.fn(async () => ({ totalDays: 12, usedDays: 2 })) });
+    // Balance lookup consumes the first get(); the pending-sum and overlap
+    // queries that follow must see no row (0 pending days, no overlap).
+    let txSelectCalls = 0;
+    const txSelect = chainable({
+      get: jest.fn(async () =>
+        txSelectCalls++ === 0 ? { totalDays: 12, usedDays: 2 } : undefined
+      ),
+    });
     const txInsert = chainable({ run: jest.fn(async () => undefined) });
     (db.transaction as jest.Mock).mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
       fn({ select: () => txSelect, insert: () => txInsert })
