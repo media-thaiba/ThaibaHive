@@ -161,6 +161,17 @@ export const circularCreateSchema = z.object({
   targetInstitutionId: z.string().optional(),
 });
 
+export const circularUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  category: z.string().optional(),
+  targetRole: z.string().optional().nullable(),
+  targetDepartmentId: z.string().optional().nullable(),
+  targetInstitutionId: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+
 export const helpDeskTicketCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),

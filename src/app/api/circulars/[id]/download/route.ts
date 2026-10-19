@@ -2,39 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { circulars, circularDownloads } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@/lib/auth";
+import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
+import { canAccessCircular } from "@/lib/circulars/auth";
 import { eq } from "drizzle-orm";
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 30;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
-
 export const GET = requireAuth(async (request, session, context) => {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
-
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json(
-      { error: "Too many download requests. Please try again later." },
-      { status: 429 }
-    );
-  }
+  const ip = extractIp(request);
+  const rl = checkRateLimit(ip, "download");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const { id } = await context!.params;
-  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
+  const callerInstitutionId = session.institutionId;
 
   const circular = await db
     .select({
@@ -43,20 +21,22 @@ export const GET = requireAuth(async (request, session, context) => {
       title: circulars.title,
       fileType: circulars.fileType,
       isActive: circulars.isActive,
+      targetRole: circulars.targetRole,
+      targetDepartmentId: circulars.targetDepartmentId,
       targetInstitutionId: circulars.targetInstitutionId,
+      uploadedById: circulars.uploadedById,
     })
     .from(circulars)
     .where(eq(circulars.id, id))
     .get();
 
-  if (
-    !circular ||
-    !circular.isActive ||
-    (circular.targetInstitutionId &&
-      scopedInstId &&
-      scopedInstId !== "global" &&
-      circular.targetInstitutionId !== scopedInstId)
-  ) {
+  if (!circular) {
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  // ── Target Audience & Scope Authorization Gate ─────────────────────────
+  const authorized = await canAccessCircular(session, circular);
+  if (!authorized) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
@@ -67,12 +47,15 @@ export const GET = requireAuth(async (request, session, context) => {
   }
 
   // Log the download
-  await db.insert(circularDownloads).values({
-    id: crypto.randomUUID(),
-    circularId: circular.id,
-    staffId: session.staffId,
-    downloadedAt: new Date().toISOString(),
-  }).run();
+  await db
+    .insert(circularDownloads)
+    .values({
+      id: crypto.randomUUID(),
+      circularId: circular.id,
+      staffId: session.staffId,
+      downloadedAt: new Date().toISOString(),
+    })
+    .run();
 
   // Redirect to the actual file URL
   return NextResponse.redirect(resolvedUrl);
