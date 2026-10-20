@@ -4,7 +4,9 @@ import { purchaseRequests } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { purchaseCreateSchema, paginationSchema } from "@/lib/validation/schemas";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { getManagedStaffIds } from "@/lib/auth/department-scope";
+import { withFinanceLock, checkInstitutionBudget } from "@/lib/finance/budget-ledger";
 import { eq, desc, and, inArray, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -58,10 +60,17 @@ export const GET = requireAuth(async (request: Request, session) => {
     .all();
 
   return NextResponse.json({ purchases, total, page, limit });
-}, "finance:create");
+}, "finance:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const rl = checkRateLimit(`purchase-create:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const parsed = purchaseCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -71,8 +80,35 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { itemName, quantity, estimatedCost, justification } = parsed.data;
-
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const effectiveInstitutionId = scopedInstitutionId !== "global" ? scopedInstitutionId : null;
+
+  // If scoped to an institution, lock and verify against allocated budget ceiling
+  if (effectiveInstitutionId) {
+    return await withFinanceLock(`inst:${effectiveInstitutionId}`, async () => {
+      const budgetCheck = await checkInstitutionBudget(effectiveInstitutionId, estimatedCost);
+      if (!budgetCheck.allowed) {
+        return NextResponse.json({ error: budgetCheck.error }, { status: 400 });
+      }
+
+      const purchase = await db
+        .insert(purchaseRequests)
+        .values({
+          id: crypto.randomUUID(),
+          requesterId: session.staffId,
+          itemName,
+          quantity,
+          estimatedCost,
+          justification: justification || null,
+          status: "pending_hod",
+          institutionId: effectiveInstitutionId,
+        })
+        .returning()
+        .get();
+
+      return NextResponse.json({ purchase }, { status: 201 });
+    });
+  }
 
   const purchase = await db
     .insert(purchaseRequests)
@@ -84,7 +120,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       estimatedCost,
       justification: justification || null,
       status: "pending_hod",
-      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
+      institutionId: null,
     })
     .returning()
     .get();

@@ -94,7 +94,7 @@ export const assetCreateSchema = z.object({
 
 export const expenseClaimCreateSchema = z
   .object({
-    amount: z.number().positive(),
+    amount: z.number().positive().max(10_000_000, "Expense claim amount cannot exceed ₹10,000,000"),
     category: z.string().min(1),
     description: z.string().min(1),
     receiptUrl: z.string().optional(),
@@ -106,6 +106,13 @@ export const expenseClaimCreateSchema = z
       path: ["receiptUrl"],
     }
   );
+
+export const expenseClaimUpdateSchema = z.object({
+  category: z.string().min(1).optional(),
+  description: z.string().min(1).optional(),
+  amount: z.number().positive().max(10_000_000).optional(),
+  receiptUrl: z.string().optional().nullable(),
+});
 
 export const expenseClaimReviewSchema = z.object({
   status: z.enum(["pending_hod", "pending_finance", "approved", "disbursed", "rejected"]),
@@ -120,9 +127,18 @@ export const expenseClaimReviewSchema = z.object({
 
 export const purchaseCreateSchema = z.object({
   itemName: z.string().min(1),
-  quantity: z.number().int().positive(),
-  estimatedCost: z.number().nonnegative(),
+  quantity: z.number().int().positive().max(10_000),
+  estimatedCost: z.number().positive("Estimated cost must be greater than 0").max(50_000_000, "Estimated cost cannot exceed ₹50,000,000"),
   justification: z.string().optional(),
+});
+
+export const purchaseUpdateSchema = z.object({
+  itemName: z.string().min(1).optional(),
+  quantity: z.number().int().positive().max(10_000).optional(),
+  estimatedCost: z.number().positive().max(50_000_000).optional(),
+  justification: z.string().optional().nullable(),
+  status: z.string().optional(),
+  notes: z.string().optional().nullable(),
 });
 
 export const visitorCreateSchema = z.object({

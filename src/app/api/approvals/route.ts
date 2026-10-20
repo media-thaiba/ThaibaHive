@@ -19,6 +19,7 @@ import type { Role } from "@/lib/finance/models/approval-state";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { deductLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
 import { withBookingLock, hasOverlappingBooking } from "@/lib/bookings/ledger";
+import { withFinanceLock, checkInstitutionBudget } from "@/lib/finance/budget-ledger";
 import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
@@ -904,18 +905,20 @@ export const PATCH = requireAuth(async (request, session) => {
         claim.amount ?? 0
       );
 
-      const updated = await db
-        .update(expenseClaims)
-        .set({
-          status: nextStatus,
-          reviewedById: staffId,
-          reviewedAt: now,
-          reviewNotes,
-          updatedAt: now,
-        })
-        .where(and(claimWhere, eq(expenseClaims.status, claim.status)))
-        .returning()
-        .get();
+      const updated = await withFinanceLock(`expense:${id}`, async () => {
+        return await db
+          .update(expenseClaims)
+          .set({
+            status: nextStatus,
+            reviewedById: staffId,
+            reviewedAt: now,
+            reviewNotes,
+            updatedAt: now,
+          })
+          .where(and(claimWhere, eq(expenseClaims.status, claim.status)))
+          .returning()
+          .get();
+      });
 
       if (!updated) {
         return NextResponse.json({ error: "Expense claim status changed by a concurrent request" }, { status: 409 });
@@ -993,6 +996,16 @@ export const PATCH = requireAuth(async (request, session) => {
             updates.approvedByAccountsId = staffId;
             break;
           case "pending_purchase":
+            if (purchase.institutionId) {
+              const budgetCheck = await checkInstitutionBudget(
+                purchase.institutionId,
+                purchase.estimatedCost ?? 0,
+                purchase.id
+              );
+              if (!budgetCheck.allowed) {
+                return NextResponse.json({ error: budgetCheck.error }, { status: 400 });
+              }
+            }
             updates.status = "approved";
             updates.approvedByPurchaseId = staffId;
             updates.approvedAt = now;
@@ -1005,13 +1018,15 @@ export const PATCH = requireAuth(async (request, session) => {
         }
         if (reviewNotes) updates.notes = reviewNotes;
 
-        // Atomic optimistic concurrency guard: only update if status hasn't changed since select
-        const updated = await db
-          .update(purchaseRequests)
-          .set(updates)
-          .where(and(purchaseWhere, eq(purchaseRequests.status, purchase.status)))
-          .returning()
-          .get();
+        // Atomic optimistic concurrency guard under lock: only update if status hasn't changed since select
+        const updated = await withFinanceLock(`purchase:${id}`, async () => {
+          return await db
+            .update(purchaseRequests)
+            .set(updates)
+            .where(and(purchaseWhere, eq(purchaseRequests.status, purchase.status)))
+            .returning()
+            .get();
+        });
 
         if (!updated) {
           return NextResponse.json({ error: "Purchase request status changed by concurrent request" }, { status: 409 });
