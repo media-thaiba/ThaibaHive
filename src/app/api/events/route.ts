@@ -81,7 +81,13 @@ export const GET = requireAuth(async (request, session) => {
   // - holiday / institution
   // - department (if in deptIds)
   // - meeting (if in deptIds and instIds)
-  const isHolidayOrInst = or(eq(events.eventType, "holiday"), eq(events.eventType, "institution"));
+  const isHolidayOrInst = and(
+    or(eq(events.eventType, "holiday"), eq(events.eventType, "institution")),
+    or(
+      isNull(events.institutionId),
+      instIds.length > 0 ? inArray(events.institutionId, instIds) : sql`1=0`
+    )
+  );
 
   const isDeptTargeted = and(
     eq(events.eventType, "department"),

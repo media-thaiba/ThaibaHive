@@ -21,6 +21,26 @@ export const pushTokenSchema = z.object({
 
 export type PushTokenInput = z.infer<typeof pushTokenSchema>;
 
+export const staffRoleEnum = z.enum([
+  "super_admin",
+  "admin",
+  "principal",
+  "hod",
+  "staff",
+  "accounts",
+  "purchase",
+  "regional_admin",
+  "regional_auditor",
+  "coordinator",
+  "institutional_head",
+  "academic_coordinator",
+  "exam_coordinator",
+  "teacher",
+  "inspector",
+]);
+
+export type StaffRoleInput = z.infer<typeof staffRoleEnum>;
+
 export const staffCreateSchema = z.object({
   email: z.string().email(),
   employeeId: z.string().min(1),
@@ -28,7 +48,7 @@ export const staffCreateSchema = z.object({
   lastName: z.string().min(1),
   phone: z.string().optional(),
   designation: z.string().optional(),
-  role: z.string().optional(),
+  role: staffRoleEnum.optional().default("staff"),
   password: z.string().min(8).optional(),
   departmentIds: z.array(z.string()).optional(),
   institutionIds: z.array(z.string()).optional(),
@@ -469,33 +489,30 @@ export const resendVerificationSchema = z.object({
   email: z.string().email(),
 });
 
+export const dailyReportTaskSchema = z.object({
+  taskId: z.string().trim().min(1).optional().nullable(),
+  description: z.string().trim().min(1, "Task description is required").max(1000, "Description must not exceed 1000 characters"),
+  hoursSpent: z.number().min(0.1, "Hours spent must be at least 0.1").max(24, "Hours spent cannot exceed 24.0"),
+  status: z.enum(["completed", "in_progress"]).optional().default("completed"),
+});
+
 export const dailyReportCreateSchema = z.object({
-  date: z.string().min(1),
-  summary: z.string().optional(),
-  status: z.enum(["draft", "submitted"]).optional(),
-  tasks: z.array(z.object({
-    taskId: z.string().optional().nullable(),
-    description: z.string().min(1),
-    hoursSpent: z.number().min(0.1).max(24),
-    status: z.enum(["completed", "in_progress"]).optional(),
-  })).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  summary: z.string().trim().max(5000, "Summary must not exceed 5000 characters").optional().nullable(),
+  status: z.enum(["draft", "submitted"]).optional().default("submitted"),
+  tasks: z.array(dailyReportTaskSchema).max(50, "Maximum 50 task entries per daily report").optional(),
 });
 
 export const dailyReportUpdateSchema = z.object({
-  date: z.string().min(1).optional(),
-  summary: z.string().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
+  summary: z.string().trim().max(5000, "Summary must not exceed 5000 characters").optional().nullable(),
   status: z.enum(["draft", "submitted"]).optional(),
-  tasks: z.array(z.object({
-    taskId: z.string().optional().nullable(),
-    description: z.string().min(1),
-    hoursSpent: z.number().min(0.1).max(24),
-    status: z.enum(["completed", "in_progress"]).optional(),
-  })).optional(),
+  tasks: z.array(dailyReportTaskSchema).max(50, "Maximum 50 task entries per daily report").optional(),
 });
 
 export const dailyReportReviewSchema = z.object({
   status: z.enum(["reviewed", "rejected"]),
-  reviewerComment: z.string().optional().nullable(),
+  reviewerComment: z.string().trim().max(2000, "Reviewer comment must not exceed 2000 characters").optional().nullable(),
 }).refine(
   (data) => data.status !== "rejected" || (data.reviewerComment && data.reviewerComment.trim().length > 0),
   {

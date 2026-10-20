@@ -12,7 +12,6 @@ export const GET = requireAuth(async (request, session, context) => {
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const { id } = await context!.params;
-  const callerInstitutionId = session.institutionId;
 
   const circular = await db
     .select({

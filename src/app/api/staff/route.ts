@@ -91,34 +91,87 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const { email, employeeId, firstName, lastName, phone, designation, role, password, departmentIds, institutionIds } = parsed.data;
+  const targetRole = role || "staff";
 
-  if (session.role === "principal" && institutionIds?.length) {
-    const callerInst = await db
-      .select({ institutionId: staffInstitutions.institutionId })
-      .from(staffInstitutions)
-      .where(eq(staffInstitutions.staffId, session.staffId))
-      .limit(1);
-    const instId = callerInst[0]?.institutionId;
-    if (instId && !institutionIds.includes(instId)) {
-      return NextResponse.json({ error: "Cannot assign staff to institutions outside your own" }, { status: 403 });
+  // ── Role-Creation Hierarchy & Privilege Escalation Guard (TH-001) ──────────
+  if (targetRole === "super_admin" && session.role !== "super_admin") {
+    return NextResponse.json(
+      { error: "Forbidden: Only super_admin can create super_admin accounts" },
+      { status: 403 }
+    );
+  }
+
+  if (targetRole === "admin" && session.role !== "super_admin" && session.role !== "admin") {
+    return NextResponse.json(
+      { error: "Forbidden: Only administrators can create admin accounts" },
+      { status: 403 }
+    );
+  }
+
+  const PRINCIPAL_ALLOWED_ROLES = new Set([
+    "hod",
+    "staff",
+    "accounts",
+    "purchase",
+    "teacher",
+    "coordinator",
+    "academic_coordinator",
+    "exam_coordinator",
+    "inspector",
+  ]);
+
+  if (session.role === "principal" || session.role === "institutional_head") {
+    if (!PRINCIPAL_ALLOWED_ROLES.has(targetRole)) {
+      return NextResponse.json(
+        { error: `Forbidden: Principal cannot create '${targetRole}' accounts` },
+        { status: 403 }
+      );
     }
   }
 
-  if (session.role === "principal" && departmentIds?.length) {
+  // ── Mandatory Institutional Tenancy Enforcement ────────────────────────────
+  if (session.role !== "super_admin") {
+    if (!institutionIds || institutionIds.length === 0) {
+      return NextResponse.json(
+        { error: "Staff creation requires at least one institution assignment" },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (session.role === "principal" || session.role === "institutional_head") {
     const callerInst = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
       .where(eq(staffInstitutions.staffId, session.staffId))
       .limit(1);
     const instId = callerInst[0]?.institutionId;
-    if (instId) {
+
+    if (!instId) {
+      return NextResponse.json(
+        { error: "Forbidden: Caller has no assigned institution to scope staff creation" },
+        { status: 403 }
+      );
+    }
+
+    if (institutionIds?.some((id) => id !== instId)) {
+      return NextResponse.json(
+        { error: "Cannot assign staff to institutions outside your own" },
+        { status: 403 }
+      );
+    }
+
+    if (departmentIds?.length) {
       const validDepts = await db
         .select({ id: departments.id })
         .from(departments)
         .where(and(eq(departments.institutionId, instId), inArray(departments.id, departmentIds)))
         .all();
       if (validDepts.length !== departmentIds.length) {
-        return NextResponse.json({ error: "Cannot assign staff to departments outside your institution" }, { status: 403 });
+        return NextResponse.json(
+          { error: "Cannot assign staff to departments outside your institution" },
+          { status: 403 }
+        );
       }
     }
   }
@@ -136,7 +189,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         lastName,
         phone,
         designation,
-        role: role || "staff",
+        role: targetRole,
         passwordHash,
         emailVerifiedAt: new Date().toISOString(),
         aadhaar: encryptPiiField(parsed.data.aadhaar),

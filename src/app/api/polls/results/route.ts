@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { polls, pollResponses, staffDepartments, staffInstitutions } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
-import { parsePollOptions, resolvePollScope } from "@/lib/polls/ledger";
+import { parsePollOptions } from "@/lib/polls/ledger";
 import { eq, and, or, isNull, inArray, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {

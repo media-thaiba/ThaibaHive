@@ -148,20 +148,26 @@ export async function canAccessTask(
   if (role === "super_admin" || role === "admin") return true;
   if (task.assignedToId === callerStaffId || task.assignedById === callerStaffId) return true;
 
-  if (role === "principal" && task.departmentId) {
+  if (role === "principal") {
+    const callerInst = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, callerStaffId))
+      .limit(1);
+    const callerInstitutionId = callerInst[0]?.institutionId;
+    if (!callerInstitutionId) return false;
+
+    // Institution-wide task without specific department assignment
+    if (!task.departmentId) {
+      return (task as { institutionId?: string | null }).institutionId === callerInstitutionId;
+    }
+
     const dept = await db
       .select({ institutionId: departments.institutionId })
       .from(departments)
       .where(eq(departments.id, task.departmentId))
       .get();
-    if (dept?.institutionId) {
-      const callerInst = await db
-        .select({ institutionId: staffInstitutions.institutionId })
-        .from(staffInstitutions)
-        .where(eq(staffInstitutions.staffId, callerStaffId))
-        .limit(1);
-      return callerInst[0]?.institutionId === dept.institutionId;
-    }
+    return dept?.institutionId === callerInstitutionId;
   }
 
   if (role === "hod" && task.departmentId) {

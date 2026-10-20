@@ -28,7 +28,19 @@ export const POST = requireAuth(async (request, session) => {
     console.error("Failed to update presence on logout:", err);
   }
 
-  // 3. Clear session
+  // 3. Invalidate JWT tokens across devices by incrementing tokenVersion
+  try {
+    const { staff } = await import("@thaiba/db/schema");
+    const { sql } = await import("drizzle-orm");
+    await db
+      .update(staff)
+      .set({ tokenVersion: sql`${staff.tokenVersion} + 1` })
+      .where(eq(staff.id, session.staffId));
+  } catch (err) {
+    console.error("Failed to increment tokenVersion on logout:", err);
+  }
+
+  // 4. Clear session cookie
   await destroySession();
   return NextResponse.json({ success: true });
 }, "auth:logout");

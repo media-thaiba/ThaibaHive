@@ -22,6 +22,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
@@ -177,6 +178,61 @@ function TaskCardOverlay({ task }: { task: Task }) {
   );
 }
 
+
+function DroppableColumn({
+  col,
+  label,
+  color,
+  tasks,
+  isVisible,
+}: {
+  col: (typeof columns)[number];
+  label: string;
+  color: string;
+  tasks: Task[];
+  isVisible: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: col,
+    data: { column: col },
+  });
+
+  return (
+    <section
+      id={`task-col-${col}`}
+      role="region"
+      aria-label={`${label} tasks column, ${tasks.length} items`}
+      className={`rounded-xl border transition-colors ${isOver ? "ring-2 ring-primary bg-primary/5" : "bg-muted/20"} ${
+        !isVisible ? "hidden sm:block" : ""
+      }`}
+    >
+      <div className={`border-b px-3.5 py-2.5 flex items-center justify-between rounded-t-xl ${color}`}>
+        <span className="text-sm font-medium">{label}</span>
+        <Badge variant="secondary" className="text-xs" aria-label={`${tasks.length} tasks`}>
+          {tasks.length}
+        </Badge>
+      </div>
+      <SortableContext
+        items={tasks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div
+          ref={setNodeRef}
+          className="p-2.5 space-y-2.5 min-h-[300px]"
+          role="list"
+          aria-label={`${label} task list`}
+        >
+          {tasks.map((task) => (
+            <div role="listitem" key={task.id}>
+              <SortableTaskCard task={task} />
+            </div>
+          ))}
+        </div>
+      </SortableContext>
+    </section>
+  );
+}
+
 export default function TasksPage() {
   const [scope, setScope] = useState<"all" | "my" | "department">("all");
   const { data: remoteTasks = [], isLoading } = useTasks(scope);
@@ -193,7 +249,12 @@ export default function TasksPage() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
-    useSensor(TouchSensor)
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
   );
 
   async function saveTasksOrder(updates: { id: string; status: string; sortOrder: number }[]) {
@@ -383,32 +444,14 @@ export default function TasksPage() {
               const colTasks = tasks.filter((t) => t.status === col);
               const isVisible = mobileColumn === col;
               return (
-                <section
+                <DroppableColumn
                   key={col}
-                  id={`task-col-${col}`}
-                  role="region"
-                  aria-label={`${columnLabels[col]} tasks column, ${colTasks.length} items`}
-                  className={`rounded-xl border bg-muted/20 ${!isVisible ? "hidden sm:block" : ""}`}
-                >
-                  <div className={`border-b px-3.5 py-2.5 flex items-center justify-between rounded-t-xl ${columnColors[col]}`}>
-                    <span className="text-sm font-medium">{columnLabels[col]}</span>
-                    <Badge variant="secondary" className="text-xs" aria-label={`${colTasks.length} tasks`}>
-                      {colTasks.length}
-                    </Badge>
-                  </div>
-                  <SortableContext
-                    items={colTasks.map((t) => t.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="p-2.5 space-y-2.5 min-h-[300px]" role="list" aria-label={`${columnLabels[col]} task list`}>
-                      {colTasks.map((task) => (
-                        <div role="listitem" key={task.id}>
-                          <SortableTaskCard task={task} />
-                        </div>
-                      ))}
-                    </div>
-                  </SortableContext>
-                </section>
+                  col={col}
+                  label={columnLabels[col]}
+                  color={columnColors[col]}
+                  tasks={colTasks}
+                  isVisible={isVisible}
+                />
               );
             })}
           </div>

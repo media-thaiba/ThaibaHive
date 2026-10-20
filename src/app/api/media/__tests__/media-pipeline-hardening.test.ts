@@ -21,7 +21,7 @@
 
 import { POST as reconcilePost } from "../reconcile/route";
 import { GET as filesGet } from "../../upload/files/[...filename]/route";
-import { sanitizeZipEntryName, sanitizeZipFolderName } from "../batch-download/route";
+import { sanitizeZipEntryName, sanitizeZipFolderName } from "@/lib/media/zip-utils";
 import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
 import { downloadFromSupabase, deleteFromSupabase, copySupabaseObject } from "@/lib/storage";
