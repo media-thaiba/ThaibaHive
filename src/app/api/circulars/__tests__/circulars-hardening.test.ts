@@ -90,7 +90,6 @@ describe("Circulars & Policy Broadcasts Pipeline Hardening", () => {
         lastName: "Alpha",
         email: `pa_${suffix}@circ.test`,
         role: "principal",
-        institutionId: instAId,
       },
       {
         id: principalBId,
@@ -99,7 +98,6 @@ describe("Circulars & Policy Broadcasts Pipeline Hardening", () => {
         lastName: "Beta",
         email: `pb_${suffix}@circ.test`,
         role: "principal",
-        institutionId: instBId,
       },
       {
         id: hodAId,
@@ -108,7 +106,6 @@ describe("Circulars & Policy Broadcasts Pipeline Hardening", () => {
         lastName: "Alpha",
         email: `hod_${suffix}@circ.test`,
         role: "hod",
-        institutionId: instAId,
       },
       {
         id: staffAId,
@@ -117,7 +114,6 @@ describe("Circulars & Policy Broadcasts Pipeline Hardening", () => {
         lastName: "MemberA",
         email: `staff_a_${suffix}@circ.test`,
         role: "staff",
-        institutionId: instAId,
       },
       {
         id: staffBId,
@@ -126,7 +122,6 @@ describe("Circulars & Policy Broadcasts Pipeline Hardening", () => {
         lastName: "MemberB",
         email: `staff_b_${suffix}@circ.test`,
         role: "staff",
-        institutionId: instBId,
       },
     ]).run();
 

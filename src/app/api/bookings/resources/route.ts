@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookingResources } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
+import { bookingResourceCreateSchema } from "@/lib/validation/schemas";
 import { desc, eq } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request: Request, session) => {
@@ -20,25 +21,38 @@ export const GET = requireAuth(async (_request: Request, session) => {
 }, "bookings:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { name, type, capacity, location, description } = body;
-  if (!name || !type) {
-    return NextResponse.json({ error: "Name and type required" }, { status: 400 });
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const parsed = bookingResourceCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid resource payload" }, { status: 400 });
+  }
+
+  const { name, type, capacity, location, description, institutionId: requestedInstId } = parsed.data;
+
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
-  const institutionId = scopedInstitutionId && scopedInstitutionId !== "global"
-    ? scopedInstitutionId
-    : (session.institutionId || "inst_default");
+  let effectiveInstitutionId: string | null = null;
+  if (scopedInstitutionId && scopedInstitutionId !== "global") {
+    effectiveInstitutionId = scopedInstitutionId;
+  } else if (requestedInstId && requestedInstId !== "global") {
+    effectiveInstitutionId = requestedInstId;
+  } else if (session.institutionId && session.institutionId !== "global") {
+    effectiveInstitutionId = session.institutionId;
+  }
 
   const resource = await db.insert(bookingResources).values({
     id: crypto.randomUUID(),
-    institutionId,
+    institutionId: effectiveInstitutionId,
     name,
     type,
-    capacity,
-    location,
-    description,
+    capacity: capacity ?? null,
+    location: location ?? null,
+    description: description ?? null,
+    isActive: true,
   }).returning().get();
+
   return NextResponse.json({ resource }, { status: 201 });
 }, "bookings:manage");

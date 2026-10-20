@@ -217,6 +217,23 @@ export const bookingCreateSchema = z
     path: ["endTime"],
   });
 
+export const bookingUpdateSchema = z.object({
+  title: z.string().min(1).optional(),
+  notes: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  status: z.enum(["cancelled", "pending", "approved", "rejected", "confirmed"]).optional(),
+  cancellationReason: z.string().optional().nullable(),
+});
+
+export const bookingResourceCreateSchema = z.object({
+  name: z.string().min(1).max(120),
+  type: z.string().min(1),
+  capacity: z.coerce.number().int().positive().optional().nullable(),
+  location: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  institutionId: z.string().optional().nullable(),
+});
+
 export const pollCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),

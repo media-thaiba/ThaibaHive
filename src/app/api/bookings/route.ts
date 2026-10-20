@@ -3,8 +3,10 @@ import { db } from "@/db";
 import { bookings, bookingResources, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { withBookingLock, hasOverlappingBooking, validateBookingTimes } from "@/lib/bookings/ledger";
 import { bookingCreateSchema } from "@/lib/validation/schemas";
-import { eq, and, desc, gte, lte, lt, gt, or, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, lte, or, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
@@ -58,6 +60,9 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "bookings:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(`booking-create:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -69,36 +74,47 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const { resourceId, title, startTime, endTime, notes, description } = parsed.data;
   const noteText = notes || description || null;
+
+  // Time & duration validation (reject past times and unbounded durations)
+  const timeValidation = validateBookingTimes(startTime, endTime);
+  if (!timeValidation.valid) {
+    return NextResponse.json({ error: timeValidation.error }, { status: 400 });
+  }
+
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   // Resource must exist inside the caller's tenant scope (blocks cross-tenant booking IDOR)
   const resourceWhere = scopedInstitutionId && scopedInstitutionId !== "global"
     ? and(eq(bookingResources.id, resourceId), eq(bookingResources.institutionId, scopedInstitutionId))
     : eq(bookingResources.id, resourceId);
-  const resource = await db.select({ id: bookingResources.id }).from(bookingResources).where(resourceWhere).get();
+
+  const resource = await db
+    .select({
+      id: bookingResources.id,
+      institutionId: bookingResources.institutionId,
+      isActive: bookingResources.isActive,
+    })
+    .from(bookingResources)
+    .where(resourceWhere)
+    .get();
+
   if (!resource) {
     return NextResponse.json({ error: "Booking resource not found" }, { status: 404 });
   }
 
-  // Overlap check + insert atomically so concurrent requests cannot double-book the slot.
-  // Any active booking (pending/confirmed/approved) holds the slot; rejected/cancelled release it.
-  const booking = await db.transaction(async (tx) => {
-    const overlapping = await tx
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.resourceId, resourceId),
-          inArray(bookings.status, ["pending", "confirmed", "approved"]),
-          lt(bookings.startTime, endTime),
-          gt(bookings.endTime, startTime)
-        )
-      )
-      .get();
+  if (resource.isActive === false) {
+    return NextResponse.json({ error: "Booking resource is inactive or undergoing maintenance" }, { status: 400 });
+  }
 
-    if (overlapping) return null;
+  // Serialized per-resource lock: guarantees that concurrent slot overlap checks
+  // and inserts execute strictly sequentially with zero double-booking races.
+  const booking = await withBookingLock(resourceId, async () => {
+    const isOverlapping = await hasOverlappingBooking(resourceId, startTime, endTime);
+    if (isOverlapping) return null;
 
-    return await tx
+    const effectiveInstitutionId = resource.institutionId || (scopedInstitutionId !== "global" ? scopedInstitutionId : null);
+
+    return await db
       .insert(bookings)
       .values({
         id: crypto.randomUUID(),
@@ -109,7 +125,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         notes: noteText,
         bookerId: session.staffId,
         status: "pending",
-        institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
+        institutionId: effectiveInstitutionId,
       })
       .returning()
       .get();

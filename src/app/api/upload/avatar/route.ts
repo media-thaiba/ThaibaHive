@@ -46,8 +46,9 @@ export const POST = requireAuth(async (request: Request, session) => {
     // ── Privacy & Security: Strip EXIF / GPS Metadata via Sharp ───────────
     let buffer = rawBuffer;
     try {
+      // @ts-expect-error sharp is an optional peer dependency
       const sharpModule = await import("sharp");
-      const sharp = sharpModule.default;
+      const sharp = sharpModule.default || sharpModule;
       if (file.type === "image/jpeg" || file.type === "image/jpg") {
         buffer = await sharp(rawBuffer).rotate().jpeg({ quality: 85 }).toBuffer();
       } else if (file.type === "image/png") {

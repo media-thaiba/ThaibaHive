@@ -18,7 +18,8 @@ import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { deductLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
-import { eq, desc, or, and, inArray, ne, lt, gt } from "drizzle-orm";
+import { withBookingLock, hasOverlappingBooking } from "@/lib/bookings/ledger";
+import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
   const { staffId, role } = session;
@@ -1053,59 +1054,69 @@ export const PATCH = requireAuth(async (request, session) => {
         );
       }
 
-      // Terminal-state guard first: re-approving/re-rejecting is a specific,
+      // Terminal-state guard first: re-approving/re-rejecting/cancelled is a specific,
       // user-actionable error — report it before any overlap re-check.
-      if (booking.status === "approved" || booking.status === "rejected") {
+      if (booking.status === "approved" || booking.status === "rejected" || booking.status === "cancelled") {
         return NextResponse.json(
           { error: "Booking is already in a terminal state" },
           { status: 400 }
         );
       }
 
-      // Re-check slot availability at approval time: another active booking may have
-      // claimed the resource slot while this request awaited review.
-      if (action === "approve") {
-        const conflicting = await db
-          .select({ id: bookings.id })
-          .from(bookings)
-          .where(
-            and(
-              eq(bookings.resourceId, booking.resourceId),
-              ne(bookings.id, booking.id),
-              inArray(bookings.status, ["pending", "confirmed", "approved"]),
-              lt(bookings.startTime, booking.endTime),
-              gt(bookings.endTime, booking.startTime)
-            )
-          )
-          .get();
-        if (conflicting) {
-          return NextResponse.json(
-            { error: "Booking time slot overlaps with an active booking and cannot be approved" },
-            { status: 409 }
-          );
-        }
+      // Past booking guard: cannot approve a booking whose start time has already passed
+      if (new Date(booking.startTime).getTime() < Date.now()) {
+        return NextResponse.json(
+          { error: "Cannot approve a past booking whose start time has already passed" },
+          { status: 400 }
+        );
       }
 
-      const updated = await db
-        .update(bookings)
-        .set({
-          status: action === "approve" ? "approved" : "rejected",
-          approvedById: staffId,
-          notes: reviewNotes,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            bookingWhere,
-            ne(bookings.status, "approved"),
-            ne(bookings.status, "rejected")
-          )
-        )
-        .returning()
-        .get();
+      // Serialized per-resource lock: eliminates approval double-booking race condition
+      const approvalResult = await withBookingLock(booking.resourceId, async () => {
+        if (action === "approve") {
+          const isOverlapping = await hasOverlappingBooking(
+            booking.resourceId,
+            booking.startTime,
+            booking.endTime,
+            booking.id,
+            ["confirmed", "approved"]
+          );
+          if (isOverlapping) {
+            return {
+              error: "Booking time slot overlaps with an active booking and cannot be approved",
+              status: 409,
+            };
+          }
+        }
 
-      if (!updated) {
-        return NextResponse.json({ error: "Booking is already in a terminal state" }, { status: 400 });
+        const updated = await db
+          .update(bookings)
+          .set({
+            status: action === "approve" ? "approved" : "rejected",
+            approvedById: staffId,
+            notes: reviewNotes,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              bookingWhere,
+              ne(bookings.status, "approved"),
+              ne(bookings.status, "rejected"),
+              ne(bookings.status, "cancelled")
+            )
+          )
+          .returning()
+          .get();
+
+        if (!updated) {
+          return { error: "Booking is already in a terminal state", status: 400 };
+        }
+
+        return { success: true };
+      });
+
+      if ("error" in approvalResult) {
+        return NextResponse.json({ error: approvalResult.error }, { status: approvalResult.status });
       }
     } else {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
