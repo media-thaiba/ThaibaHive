@@ -3,8 +3,12 @@ import { db } from "@/db";
 import { canteenTransactions } from "@/db/schema";
 import { requireAuth, resolveScopedInstitutions } from "@/lib/api/auth-guard";
 import { and, eq, inArray, desc } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const requestedUserId = url.searchParams.get("userId");
   const isManager =

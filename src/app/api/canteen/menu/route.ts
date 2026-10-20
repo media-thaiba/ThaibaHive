@@ -4,8 +4,12 @@ import { canteenItems, canteenMenus } from "@/db/schema";
 import { requireAuth, resolveInstitutionContext, resolveScopedInstitutions } from "@/lib/api/auth-guard";
 import { canteenItemCreateSchema, canteenMenuPublishSchema } from "@/lib/validation/schemas";
 import { and, eq, inArray, type SQL } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const date = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
   const allowedInstitutions = await resolveScopedInstitutions(session, url.searchParams.get("institutionId"));
@@ -40,8 +44,18 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "canteen:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const institutionId = await resolveInstitutionContext(session, body.institutionId);
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const raw = (body || {}) as Record<string, unknown>;
+  const institutionId = await resolveInstitutionContext(session, raw.institutionId as string | undefined);
   if (!institutionId) {
     return NextResponse.json(
       { error: "A concrete institution context is required to publish canteen data" },
@@ -49,7 +63,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  if (body.type === "item") {
+  if (raw.type === "item") {
     const parsed = canteenItemCreateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid canteen item parameters", details: parsed.error.format() }, { status: 400 });

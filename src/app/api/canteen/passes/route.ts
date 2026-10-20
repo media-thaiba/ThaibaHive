@@ -5,8 +5,12 @@ import { requireAuth, resolveInstitutionContext, resolveScopedInstitutions } fro
 import { canteenPassCreateSchema } from "@/lib/validation/schemas";
 import { isUniqueConstraintViolation } from "@/lib/api/sqlite-errors";
 import { and, eq, inArray, desc } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const isManager =
     session.role === "admin" || session.role === "super_admin" || session.role === "principal";
@@ -35,14 +39,24 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "canteen:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = canteenPassCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid meal pass parameters", details: parsed.error.format() }, { status: 400 });
   }
 
+  const raw = (body || {}) as Record<string, unknown>;
   const { userId, passCode, balance, dailyLimit } = parsed.data;
-  const institutionId = await resolveInstitutionContext(session, body.institutionId);
+  const institutionId = await resolveInstitutionContext(session, raw.institutionId as string | undefined);
   if (!institutionId) {
     return NextResponse.json(
       { error: "A concrete institution context is required to create a meal pass" },

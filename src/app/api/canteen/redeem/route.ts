@@ -6,6 +6,7 @@ import { canteenRedeemSchema } from "@/lib/validation/schemas";
 import { isUniqueConstraintViolation } from "@/lib/api/sqlite-errors";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { SessionPayload } from "@thaiba/auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 const NOT_FOUND_MSG = "Invalid or unassigned meal pass QR code";
 
@@ -36,7 +37,16 @@ function isIdempotencyKeyViolation(error: unknown): boolean {
 }
 
 async function handleRedeem(request: Request, session: SessionPayload) {
-  const body = await request.json();
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = canteenRedeemSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid redemption payload", details: parsed.error.format() }, { status: 400 });

@@ -314,11 +314,11 @@ export const recognitionCreateSchema = z.object({
 });
 
 export const canteenCreateSchema = z.object({
-  date: z.string().min(1),
-  mealType: z.string().min(1),
-  status: z.string().min(1),
-  guestCount: z.number().int().nonnegative().optional(),
-  notes: z.string().optional(),
+  date: z.string().trim().min(1, "Date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
+  status: z.enum(["skip", "eating", "bring_guest"]),
+  guestCount: z.number().int().min(0).max(20, "Guest count cannot exceed 20").optional().nullable(),
+  notes: z.string().trim().max(500, "Notes cannot exceed 500 characters").optional().nullable(),
 });
 
 export const bookingCreateSchema = z
@@ -778,35 +778,35 @@ export const fleetMaintenanceCreateSchema = z.object({
 });
 
 export const canteenItemCreateSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1, "Item name is required").max(100, "Item name must not exceed 100 characters"),
   category: z.enum(["breakfast", "lunch", "snacks", "beverages"]).default("snacks"),
-  price: z.number().positive(),
+  price: z.number().min(0.01, "Price must be at least 0.01").max(10000, "Price cannot exceed 10,000"),
   isAvailable: z.boolean().optional().default(true),
-  dietaryFlags: z.string().optional(),
-  imageUrl: z.string().optional(),
+  dietaryFlags: z.string().trim().max(500, "Dietary flags must not exceed 500 characters").optional().nullable(),
+  imageUrl: z.string().trim().max(2000, "Image URL must not exceed 2000 characters").optional().nullable(),
 });
 
 export const canteenMenuPublishSchema = z.object({
-  date: z.string().min(1),
+  date: z.string().trim().min(1, "Date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
   mealType: z.enum(["breakfast", "lunch", "snacks"]).default("lunch"),
-  itemsJson: z.string().min(1),
+  itemsJson: z.string().trim().min(1, "Menu items payload is required").max(50000, "Menu items payload is too large"),
 });
 
 export const canteenPassCreateSchema = z.object({
-  userId: z.string().min(1),
-  passCode: z.string().min(1),
-  balance: z.number().min(0).default(0.0),
-  dailyLimit: z.number().positive().optional(),
+  userId: z.string().trim().min(1, "User ID is required").max(100),
+  passCode: z.string().trim().min(1, "Pass code is required").max(100, "Pass code must not exceed 100 characters"),
+  balance: z.number().min(0, "Balance cannot be negative").max(100000, "Maximum balance is 100,000").default(0.0),
+  dailyLimit: z.number().positive("Daily limit must be positive").max(50000, "Daily limit cannot exceed 50,000").optional().nullable(),
 });
 
 export const canteenRedeemSchema = z.object({
-  passCode: z.string().min(1),
+  passCode: z.string().trim().min(1, "Pass code is required").max(100),
   items: z.array(z.object({
-    itemId: z.string().min(1),
-    quantity: z.number().int().positive(),
-    unitPrice: z.number().positive(),
-  })).min(1),
-  idempotencyKey: z.string().optional(),
+    itemId: z.string().trim().min(1, "Item ID is required").max(100),
+    quantity: z.number().int("Quantity must be an integer").min(1, "Quantity must be at least 1").max(50, "Quantity cannot exceed 50"),
+    unitPrice: z.number().min(0.01, "Unit price must be at least 0.01").max(10000, "Unit price cannot exceed 10,000"),
+  })).min(1, "At least one item is required").max(100, "Cannot redeem more than 100 items per transaction"),
+  idempotencyKey: z.string().trim().max(200).optional().nullable(),
 });
 
 export const visitorPreRegisterSchema = z.object({

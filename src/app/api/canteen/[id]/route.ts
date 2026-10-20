@@ -5,14 +5,18 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export const DELETE = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
     ? and(eq(mealNotifications.id, id), eq(mealNotifications.institutionId, scopedInstitutionId))
     : eq(mealNotifications.id, id);
-  
+
   const existing = await db
     .select()
     .from(mealNotifications)
@@ -33,4 +37,3 @@ export const DELETE = requireAuth(async (_request, session, context) => {
   await db.delete(mealNotifications).where(whereClause).run();
   return NextResponse.json({ success: true });
 }, "canteen:delete");
-
