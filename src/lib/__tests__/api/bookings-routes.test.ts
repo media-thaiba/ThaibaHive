@@ -42,7 +42,7 @@ describe("Bookings API — collision integrity & tenant boundaries", () => {
     });
 
   const day = (hour: number, minute = 0) =>
-    new Date(Date.UTC(2026, 9, 20, hour, minute, 0)).toISOString();
+    new Date(Date.now() + 86400000 + hour * 3600000 + minute * 60000).toISOString();
 
   beforeAll(async () => {
     await db.insert(institutions).values([

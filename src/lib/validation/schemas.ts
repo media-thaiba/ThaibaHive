@@ -117,7 +117,7 @@ export const announcementCreateSchema = z.object({
 export const eventCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
-  eventType: z.string().optional(),
+  eventType: z.enum(["holiday", "institution", "department", "meeting"]).optional().default("institution"),
   startDate: z.string().min(1),
   endDate: z.string().optional(),
   location: z.string().optional(),
@@ -1459,6 +1459,79 @@ export const attendancePunchSchema = z.object({
   longitude: z.number().optional(),
 });
 export type AttendancePunchInput = z.infer<typeof attendancePunchSchema>;
+
+export const attendanceLocationUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  institutionId: z.string().min(1).optional(),
+  nfcTagId: z.string().min(1).optional().nullable(),
+  qrSecret: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+  latitude: z.number().finite().optional(),
+  longitude: z.number().finite().optional(),
+  radius: z.number().int().positive().optional(),
+  accuracy: z.number().int().positive().optional(),
+  wifiSsids: z.string().optional(),
+});
+export type AttendanceLocationUpdateInput = z.infer<typeof attendanceLocationUpdateSchema>;
+
+export const leaveBalanceUpdateSchema = z.object({
+  totalDays: z.number().int().min(0).max(365).optional(),
+  usedDays: z.number().int().min(0).max(365).optional(),
+});
+export type LeaveBalanceUpdateInput = z.infer<typeof leaveBalanceUpdateSchema>;
+
+export const leaveTypeUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  code: z.string().min(1).max(20).optional(),
+  description: z.string().max(500).optional().nullable(),
+  daysAllowed: z.number().int().min(0).max(365).optional(),
+  requiresApproval: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
+export type LeaveTypeUpdateInput = z.infer<typeof leaveTypeUpdateSchema>;
+
+export const adminDepartmentUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  code: z.string().min(1).max(20).optional(),
+  description: z.string().max(500).optional().nullable(),
+  headUserId: z.string().min(1).optional().nullable(),
+  institutionId: z.string().min(1).optional(),
+});
+export type AdminDepartmentUpdateInput = z.infer<typeof adminDepartmentUpdateSchema>;
+
+export const adminInstitutionUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  code: z.string().min(1).max(20).optional(),
+  type: z.string().min(1).optional(),
+  address: z.string().max(500).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  email: z.string().email().optional().nullable(),
+});
+export type AdminInstitutionUpdateInput = z.infer<typeof adminInstitutionUpdateSchema>;
+
+export const adminShiftUpdateSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  startTime: z.string().min(1).optional(),
+  endTime: z.string().min(1).optional(),
+  gracePeriodMinutes: z.number().int().min(0).max(120).optional(),
+  departmentId: z.string().min(1).optional().nullable(),
+  applicableToAll: z.boolean().optional(),
+});
+export type AdminShiftUpdateInput = z.infer<typeof adminShiftUpdateSchema>;
+
+export const adminSubDepartmentUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  code: z.string().min(1).max(20).optional().nullable(),
+  description: z.string().max(500).optional().nullable(),
+});
+export type AdminSubDepartmentUpdateInput = z.infer<typeof adminSubDepartmentUpdateSchema>;
+
+export const checklistUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  type: z.string().min(1).max(50).optional(),
+  description: z.string().max(1000).optional().nullable(),
+});
+export type ChecklistUpdateInput = z.infer<typeof checklistUpdateSchema>;
 
 export const syncConflictResolveSchema = z.object({
   fields: z.record(z.string(), z.unknown()),

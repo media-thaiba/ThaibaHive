@@ -3,10 +3,18 @@ import { GET as getDetail } from "@/app/api/reports/[id]/route";
 import { PATCH } from "@/app/api/reports/[id]/review/route";
 import { verifySession, hasPermission } from "@thaiba/auth";
 
-jest.mock("@thaiba/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(),
+    getUserInstitutionScope: jest.fn().mockResolvedValue("inst_test"),
+    resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_test"),
+    resolveRequestInstitution: jest.fn().mockResolvedValue("inst_test"),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_test"),
+  };
+});
 
 
 const mockGet = jest.fn();
