@@ -8,9 +8,20 @@ export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
   const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));
   const conditions = [eq(assets.isActive, true)];
+
   if (institutionId && institutionId !== "global") {
     conditions.push(eq(assets.institutionId, institutionId));
   }
+
+  // Non-manager restriction
+  const isManager = ["super_admin", "admin", "principal", "hod"].includes(session.role);
+  if (!isManager) {
+    if (!session.staffId) {
+      return NextResponse.json({ byStatus: [], byType: [] });
+    }
+    conditions.push(eq(assets.assignedToId, session.staffId));
+  }
+
   const whereClause = and(...conditions);
 
   const byStatus = await db

@@ -78,18 +78,49 @@ export const eventCreateSchema = z.object({
 });
 
 export const assetCreateSchema = z.object({
-  name: z.string().min(1),
-  type: z.string().min(1),
-  model: z.string().optional(),
-  serialNumber: z.string().optional(),
-  institutionId: z.string().optional(),
-  assignedToId: z.string().optional(),
-  location: z.string().optional(),
-  purchaseDate: z.string().optional(),
-  purchaseCost: z.number().nonnegative().optional(),
-  warrantyEnd: z.string().optional(),
-  status: z.string().optional(),
-  notes: z.string().optional(),
+  name: z.string().trim().min(1, "Asset name is required").max(150, "Asset name cannot exceed 150 characters"),
+  type: z.string().trim().min(1, "Asset type is required").max(50, "Asset type cannot exceed 50 characters"),
+  model: z.string().trim().max(100).optional().nullable(),
+  serialNumber: z.string().trim().max(100).optional().nullable(),
+  institutionId: z.string().optional().nullable(),
+  assignedToId: z.string().optional().nullable(),
+  location: z.string().trim().max(150).optional().nullable(),
+  purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid purchase date format (expected YYYY-MM-DD)").optional().nullable(),
+  purchaseCost: z.number().nonnegative("Purchase cost cannot be negative").max(100_000_000, "Purchase cost exceeds limit").optional().nullable(),
+  warrantyEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid warranty end date format (expected YYYY-MM-DD)").optional().nullable(),
+  status: z.enum(["available", "in_use", "under_maintenance", "decommissioned"]).optional().default("available"),
+  notes: z.string().max(2000, "Notes cannot exceed 2000 characters").optional().nullable(),
+});
+
+export const assetUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Asset name cannot be empty").max(150).optional(),
+  type: z.string().trim().min(1, "Asset type cannot be empty").max(50).optional(),
+  model: z.string().trim().max(100).optional().nullable(),
+  serialNumber: z.string().trim().max(100).optional().nullable(),
+  institutionId: z.string().optional().nullable(),
+  assignedToId: z.string().optional().nullable(),
+  location: z.string().trim().max(150).optional().nullable(),
+  purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional().nullable(),
+  purchaseCost: z.number().nonnegative("Purchase cost cannot be negative").max(100_000_000).optional().nullable(),
+  warrantyEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional().nullable(),
+  status: z.enum(["available", "in_use", "under_maintenance", "decommissioned"]).optional(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const assetServiceCreateSchema = z.object({
+  serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid service date format (expected YYYY-MM-DD)"),
+  description: z.string().trim().min(1, "Description is required").max(1000, "Description cannot exceed 1000 characters"),
+  cost: z.number().nonnegative("Service cost cannot be negative").max(10_000_000).optional().nullable(),
+  servicedBy: z.string().trim().max(100).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const assetTagBindSchema = z.object({
+  barcode: z.string().trim().min(1).max(100).optional(),
+  qrCode: z.string().trim().min(1).max(256).optional(),
+  nfcTagId: z.string().trim().min(1).max(100).optional(),
+}).refine((data) => Boolean(data.barcode || data.qrCode || data.nfcTagId), {
+  message: "At least one identifier (barcode, qrCode, or nfcTagId) is required",
 });
 
 export const expenseClaimCreateSchema = z
