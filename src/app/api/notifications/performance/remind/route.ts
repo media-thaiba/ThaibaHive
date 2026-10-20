@@ -1,23 +1,44 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { performanceReminderSchema } from "@/lib/validation/schemas";
 import { PerformanceNotificationService } from "@/lib/notifications/performance-notifications";
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = performanceReminderSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
+      { status: 400 }
+    );
+  }
+
+  const { staffId, staffName, cycleTitle, dueDate, reminderType } = parsed.data;
+
+  try {
     const payload = PerformanceNotificationService.buildReminderPayload({
-      staffId: body.staffId,
-      staffName: body.staffName || "Staff Member",
-      cycleTitle: body.cycleTitle || "Quarterly Review",
-      dueDate: body.dueDate || "2026-08-31",
-      reminderType: body.reminderType || "self_assessment",
+      staffId,
+      staffName: staffName || "Staff Member",
+      cycleTitle: cycleTitle || "Quarterly Review",
+      dueDate: dueDate || "2026-08-31",
+      reminderType: reminderType || "self_assessment",
     });
 
     return NextResponse.json({
       success: true,
       notificationSent: true,
       payload,
-      recipientId: body.staffId,
+      recipientId: staffId,
     });
   } catch (error) {
     return NextResponse.json(

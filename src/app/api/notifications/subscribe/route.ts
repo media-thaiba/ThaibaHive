@@ -7,10 +7,14 @@ import {
   broadcastPresence,
   type SSEConnection,
 } from "@/lib/api/realtime";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { db } from "@/db";
 import { presence } from "@thaiba/db/schema";
 
 export const GET = requireAuth(async (_request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const key = `notification-${session.staffId}`;
 
   let cleanup: (() => void) | null = null;

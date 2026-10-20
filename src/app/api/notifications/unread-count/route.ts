@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, and, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     const { staffId } = session;
     const result = await db
@@ -18,4 +22,4 @@ export const GET = requireAuth(async (_request, session) => {
     console.error("Unread notifications count error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}, "notifications:update");
+}, "notifications:read");

@@ -1,13 +1,18 @@
+import { randomUUID } from "crypto";
+import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staffDeviceTokens, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import {
+  deviceTokenRegisterSchema,
+  deviceTokenDeleteSchema,
+} from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
-import crypto from "crypto";
 
 export const POST = requireAuth(async (request, session) => {
-  const rateLimitResult = await checkRateLimit(`device-token:${session.staffId}`, {
-    max: 5,
+  const rateLimitResult = checkRateLimit(`device-token:${session.staffId}`, {
+    max: 10,
     windowMs: 60 * 1000,
   });
 
@@ -15,15 +20,22 @@ export const POST = requireAuth(async (request, session) => {
     return rateLimitResponse(rateLimitResult.resetMs);
   }
 
-  const body = await request.json().catch(() => ({}));
-  const { token, platform, deviceName } = body;
-
-  if (!token || typeof token !== "string" || !token.trim()) {
-    return Response.json({ error: "FCM registration token is required" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const validPlatforms = ["android", "ios", "web"];
-  const targetPlatform = validPlatforms.includes(platform) ? platform : "web";
+  const parsed = deviceTokenRegisterSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
+      { status: 400 }
+    );
+  }
+
+  const { token, platform, deviceName } = parsed.data;
   const now = new Date().toISOString();
 
   const staffInst = await db
@@ -31,7 +43,7 @@ export const POST = requireAuth(async (request, session) => {
     .from(staffInstitutions)
     .where(eq(staffInstitutions.staffId, session.staffId))
     .get();
-  const institutionId = staffInst?.institutionId || "inst-1";
+  const institutionId = staffInst?.institutionId || session.institutionId || "inst-1";
 
   // Check if token already exists (global unique constraint on token)
   const existing = await db
@@ -47,7 +59,7 @@ export const POST = requireAuth(async (request, session) => {
       .set({
         staffId: session.staffId,
         institutionId,
-        platform: targetPlatform,
+        platform,
         deviceName: deviceName ?? null,
         lastUsedAt: now,
       })
@@ -58,11 +70,11 @@ export const POST = requireAuth(async (request, session) => {
     await db
       .insert(staffDeviceTokens)
       .values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         staffId: session.staffId,
         institutionId,
         token: token.trim(),
-        platform: targetPlatform,
+        platform,
         deviceName: deviceName ?? null,
         lastUsedAt: now,
         createdAt: now,
@@ -70,15 +82,25 @@ export const POST = requireAuth(async (request, session) => {
       .run();
   }
 
-  return Response.json({ success: true });
+  return NextResponse.json({ success: true });
 }, "notifications:update");
 
-
 export const DELETE = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const tokenParam = searchParams.get("token");
 
   if (tokenParam) {
+    const parsed = deviceTokenDeleteSchema.safeParse({ token: tokenParam });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid token" },
+        { status: 400 }
+      );
+    }
+
     await db
       .delete(staffDeviceTokens)
       .where(
@@ -95,5 +117,5 @@ export const DELETE = requireAuth(async (request, session) => {
       .run();
   }
 
-  return Response.json({ success: true });
+  return NextResponse.json({ success: true });
 }, "notifications:update");

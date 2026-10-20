@@ -1630,6 +1630,39 @@ export const checklistTemplateItemDeleteSchema = z.object({
 });
 export type ChecklistTemplateItemDeleteInput = z.infer<typeof checklistTemplateItemDeleteSchema>;
 
+export const notificationMarkReadSchema = z.object({
+  id: z.string().trim().min(1, "Notification ID cannot be empty").max(100, "Notification ID too long").optional(),
+});
+export type NotificationMarkReadInput = z.infer<typeof notificationMarkReadSchema>;
+
+export const notificationBroadcastSchema = z.object({
+  userId: z.string().trim().min(1, "User ID is required").max(100, "User ID too long"),
+  channel: z.string().trim().min(1).max(100).default("notification"),
+  data: z.record(z.string(), z.unknown()).default({}),
+});
+export type NotificationBroadcastInput = z.infer<typeof notificationBroadcastSchema>;
+
+export const deviceTokenRegisterSchema = z.object({
+  token: z.string({ required_error: "FCM registration token is required" }).trim().min(1, "FCM registration token is required").max(500, "Token too long"),
+  platform: z.enum(["android", "ios", "web"]).default("web"),
+  deviceName: z.string().trim().max(100).optional().nullable(),
+});
+export type DeviceTokenRegisterInput = z.infer<typeof deviceTokenRegisterSchema>;
+
+export const deviceTokenDeleteSchema = z.object({
+  token: z.string().trim().min(1, "Token cannot be empty").max(500, "Token too long").optional(),
+});
+export type DeviceTokenDeleteInput = z.infer<typeof deviceTokenDeleteSchema>;
+
+export const performanceReminderSchema = z.object({
+  staffId: z.string().trim().min(1, "Staff ID is required").max(100, "Staff ID too long"),
+  staffName: z.string().trim().max(100).optional(),
+  cycleTitle: z.string().trim().max(100).optional(),
+  dueDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be YYYY-MM-DD").optional(),
+  reminderType: z.enum(["self_assessment", "manager_review", "peer_review", "final_signoff"]).optional(),
+});
+export type PerformanceReminderInput = z.infer<typeof performanceReminderSchema>;
+
 export const syncConflictResolveSchema = z.object({
   fields: z.record(z.string(), z.unknown()),
 });
