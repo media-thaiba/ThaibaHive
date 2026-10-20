@@ -7,6 +7,8 @@ import { announcementCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, and, or, isNull, sql, inArray } from "drizzle-orm";
 import { createNotificationsForTarget } from "@/lib/api/notifications";
 import { sendBulkPushNotifications } from "@/lib/notifications/push-service";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { verifyDepartmentInstitution, getStaffPrimaryInstitutionId } from "@/lib/announcements/utils";
 import type { StaffRole } from "@/types";
 
 const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal"];
@@ -18,6 +20,9 @@ function pinnedUntilOrderSql() {
 }
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const includeInactive = searchParams.get("includeInactive") === "true";
   const isAdmin = ADMIN_ROLES.includes(session.role as StaffRole);
@@ -133,12 +138,60 @@ export const GET = requireAuth(async (request, session) => {
 }, "announcements:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = announcementCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
   const { title, content, priority, targetRole, targetDepartmentId, targetInstitutionId, pinnedUntil } = parsed.data;
+
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const isSuperAdmin = session.role === "super_admin";
+
+  let effectiveTargetInstitutionId: string | null = null;
+
+  if (isSuperAdmin) {
+    effectiveTargetInstitutionId = targetInstitutionId || null;
+  } else {
+    let callerInstId = scopedInstitutionId && scopedInstitutionId !== "global" ? scopedInstitutionId : null;
+    if (!callerInstId && session.staffId) {
+      callerInstId = await getStaffPrimaryInstitutionId(session.staffId);
+    }
+
+    // Non-super_admins are strictly bound to their institution scope
+    if (callerInstId) {
+      if (targetInstitutionId && targetInstitutionId !== callerInstId) {
+        return NextResponse.json(
+          { error: "Cannot create announcements for another institution" },
+          { status: 403 }
+        );
+      }
+      effectiveTargetInstitutionId = callerInstId;
+    } else {
+      effectiveTargetInstitutionId = targetInstitutionId || null;
+    }
+  }
+
+  // If a department is targeted, verify it belongs to the target institution
+  if (targetDepartmentId && effectiveTargetInstitutionId) {
+    const isDeptValid = await verifyDepartmentInstitution(targetDepartmentId, effectiveTargetInstitutionId);
+    if (!isDeptValid) {
+      return NextResponse.json(
+        { error: "Target department does not belong to this institution" },
+        { status: 400 }
+      );
+    }
+  }
+
   const announcement = await db
     .insert(announcements)
     .values({
@@ -146,11 +199,11 @@ export const POST = requireAuth(async (request: Request, session) => {
       title,
       content,
       priority: priority || "normal",
-      targetRole,
-      targetDepartmentId,
-      targetInstitutionId,
+      targetRole: targetRole || null,
+      targetDepartmentId: targetDepartmentId || null,
+      targetInstitutionId: effectiveTargetInstitutionId,
       createdById: session.staffId,
-      pinnedUntil,
+      pinnedUntil: pinnedUntil || null,
     })
     .returning()
     .get();
@@ -162,16 +215,16 @@ export const POST = requireAuth(async (request: Request, session) => {
     type: "announcement",
     referenceType: "announcement",
     referenceId: announcement.id,
-    targetRole,
-    targetDepartmentId,
-    targetInstitutionId,
+    targetRole: targetRole || undefined,
+    targetDepartmentId: targetDepartmentId || undefined,
+    targetInstitutionId: effectiveTargetInstitutionId || undefined,
   });
 
   // Asynchronous FCM Bulk Push Dispatch
-  after(async () => {
+  const triggerPush = async () => {
     try {
       await sendBulkPushNotifications({
-        institutionId: targetInstitutionId || undefined,
+        institutionId: effectiveTargetInstitutionId || undefined,
         title: `Announcement: ${title}`,
         message: content.substring(0, 150) + (content.length > 150 ? "..." : ""),
         type: "announcement",
@@ -181,7 +234,14 @@ export const POST = requireAuth(async (request: Request, session) => {
     } catch (err) {
       console.error("[PushNotification] Bulk announcement push failed:", err);
     }
-  });
+  };
+
+  try {
+    after(triggerPush);
+  } catch {
+    // In standalone tests or execution environments where after() is called outside request scope
+    void triggerPush();
+  }
 
   return NextResponse.json({ announcement }, { status: 201 });
 }, "announcements:create");

@@ -110,13 +110,24 @@ export const leaveReviewSchema = z.object({
 });
 
 export const announcementCreateSchema = z.object({
-  title: z.string().min(1),
-  content: z.string().min(1),
-  priority: z.enum(["normal", "high", "urgent"]).optional(),
-  targetRole: z.enum(["super_admin", "admin", "principal", "hod", "staff"]).optional(),
-  targetDepartmentId: z.string().optional(),
-  targetInstitutionId: z.string().optional(),
-  pinnedUntil: z.string().optional(),
+  title: z.string().trim().min(1, "Title is required").max(200, "Title must not exceed 200 characters"),
+  content: z.string().trim().min(1, "Content is required").max(10000, "Content must not exceed 10000 characters"),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
+  targetRole: z.enum(["super_admin", "admin", "principal", "hod", "staff"]).optional().nullable(),
+  targetDepartmentId: z.string().trim().optional().nullable(),
+  targetInstitutionId: z.string().trim().optional().nullable(),
+  pinnedUntil: z.string().trim().optional().nullable(),
+});
+
+export const announcementUpdateSchema = z.object({
+  title: z.string().trim().min(1, "Title cannot be empty").max(200, "Title must not exceed 200 characters").optional(),
+  content: z.string().trim().min(1, "Content cannot be empty").max(10000, "Content must not exceed 10000 characters").optional(),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+  targetRole: z.enum(["super_admin", "admin", "principal", "hod", "staff"]).optional().nullable(),
+  targetDepartmentId: z.string().trim().optional().nullable(),
+  targetInstitutionId: z.string().trim().optional().nullable(),
+  pinnedUntil: z.string().trim().optional().nullable(),
+  isActive: z.boolean().optional(),
 });
 
 export const eventCreateSchema = z.object({
