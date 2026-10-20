@@ -26,6 +26,7 @@ import {
 type Ticket = {
   id: string;
   subject: string;
+  title?: string;
   description: string;
   category: string;
   priority: string;
@@ -107,7 +108,11 @@ export default function HelpDeskPage() {
       const res = await fetch("/api/help-desk");
       if (!res.ok) throw new Error("Failed to load tickets");
       const d = await res.json();
-      setTickets(Array.isArray(d.tickets) ? d.tickets : []);
+      const raw = Array.isArray(d.tickets) ? d.tickets : [];
+      setTickets(raw.map((t: Record<string, unknown>) => ({
+        ...t,
+        subject: (t.subject as string) || (t.title as string) || "Untitled",
+      } as unknown as Ticket)));
     } catch {
       toast.error("Failed to load tickets");
     } finally {
@@ -125,7 +130,8 @@ export default function HelpDeskPage() {
         const data = await res.json();
         // Ignore out-of-order responses when the user switches tickets quickly
         if (detailReqRef.current === ticketId) {
-          setTicketDetail(data.ticket);
+          const t = data.ticket;
+          setTicketDetail(t ? { ...t, subject: t.subject || t.title || "Untitled" } : null);
           setComments(data.comments || []);
         }
       } else {
@@ -182,7 +188,13 @@ export default function HelpDeskPage() {
       const res = await fetch("/api/help-desk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          title: form.subject,
+          subject: form.subject,
+          description: form.description,
+          category: form.category,
+          priority: form.priority,
+        }),
       });
 
       if (res.ok) {
@@ -281,8 +293,8 @@ export default function HelpDeskPage() {
 
   const filteredTickets = tickets.filter(
     (t) =>
-      (t.subject.toLowerCase().includes(search.toLowerCase()) ||
-        t.description.toLowerCase().includes(search.toLowerCase())) &&
+      (((t.subject || t.title || "").toLowerCase().includes(search.toLowerCase())) ||
+        ((t.description || "").toLowerCase().includes(search.toLowerCase()))) &&
       (statusFilter === "" || t.status === statusFilter)
   );
 

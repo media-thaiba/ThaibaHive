@@ -110,7 +110,9 @@ export async function deductLeaveDays(tx: LedgerTx, ref: LedgerRef): Promise<voi
 export async function creditLeaveDays(tx: LedgerTx, ref: LedgerRef): Promise<void> {
   await tx
     .update(leaveBalances)
-    .set({ usedDays: sql`max(0, ${leaveBalances.usedDays} - ${ref.days})` })
+    .set({
+      usedDays: sql`CASE WHEN ${leaveBalances.usedDays} - ${ref.days} < 0 THEN 0 ELSE ${leaveBalances.usedDays} - ${ref.days} END`,
+    })
     .where(
       and(
         eq(leaveBalances.staffId, ref.staffId),
@@ -122,7 +124,7 @@ export async function creditLeaveDays(tx: LedgerTx, ref: LedgerRef): Promise<voi
 }
 
 /**
- * Sums daysCount of other pending requests for the same staff/type/leave-year.
+ * Sums daysCount of other pending/hod_approved requests for the same staff/type/leave-year.
  * Pending days are reserved against the balance so concurrent submissions
  * cannot overcommit what approvers will later fund.
  */
@@ -130,7 +132,7 @@ export async function pendingDaysFor(tx: LedgerTx, ref: PendingRef): Promise<num
   const conditions: SQL[] = [
     eq(leaveRequests.staffId, ref.staffId),
     eq(leaveRequests.leaveTypeId, ref.leaveTypeId),
-    eq(leaveRequests.status, "pending"),
+    inArray(leaveRequests.status, ["pending", "hod_approved"]),
     gte(leaveRequests.startDate, `${ref.year}-01-01`),
     lte(leaveRequests.startDate, `${ref.year}-12-31`),
   ];

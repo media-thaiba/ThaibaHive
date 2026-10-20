@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { staff } from '@thaiba/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { checkDistributedRateLimit } from '@/lib/api/rate-limit';
 
 const stepUpSchema = z.object({
   password: z.string().min(1),
@@ -11,7 +12,20 @@ const stepUpSchema = z.object({
 });
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const rateLimit = await checkDistributedRateLimit(`step-up:${session.staffId}`, { max: 5, windowMs: 300_000 });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many step-up verification attempts. Please try again later.' },
+      { status: 429 }
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+  }
   const parsed = stepUpSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });

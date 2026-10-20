@@ -24,7 +24,7 @@ export default function NotFound() {
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <Link href="/dashboard">
+        <Link href="/">
           <Button variant="default" className="gap-2">
             <Home className="h-4 w-4" />
             Return to Dashboard

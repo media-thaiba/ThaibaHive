@@ -8,7 +8,7 @@ export default async function globalTeardown(): Promise<void> {
     return;
   }
 
-  const target = path.join(process.cwd(), "test.db");
+  const target = process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/^file:/, "") : path.join(process.cwd(), "test.db");
   for (const p of [target, `${target}-wal`, `${target}-shm`]) {
     try {
       // Windows can keep the snapshot locked until worker handles fully close;

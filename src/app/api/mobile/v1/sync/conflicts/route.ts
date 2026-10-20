@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, isPostgres } from "@/db";
 import { offlineSyncOutbox } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
@@ -38,7 +38,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       // Tenant-scanner Rule C: literal institutionId reference — conflicts are
       // also envelope-filtered because the column store has no native tenant key.
       conditions.push(
-        sql`json_extract(${offlineSyncOutbox.conflictDetailsJson}, '$.institutionId') = ${scope}`
+        isPostgres ? sql`(${offlineSyncOutbox.conflictDetailsJson}::jsonb ->> 'institutionId') = ${scope}` : sql`json_extract(${offlineSyncOutbox.conflictDetailsJson}, '$.institutionId') = ${scope}`
       );
     }
     if (since) {

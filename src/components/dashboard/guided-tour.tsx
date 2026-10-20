@@ -10,10 +10,16 @@ type TourStep = {
 };
 
 const TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "tour-workspace-switcher",
+    title: "Specialized Workspaces",
+    content: "ThaibaHive is organized into distinct workspaces (My Space, Academics, Operations & Admin). Switch workspaces anytime here or press Ctrl+Shift+1..4.",
+    position: "bottom",
+  },
   { targetId: "tour-profile", title: "Profile Status", content: "Track your profile completion progress here.", position: "bottom" },
   { targetId: "tour-attendance", title: "Attendance & Shift", content: "Quickly check in/out and view your attendance status.", position: "left" },
   { targetId: "tour-tasks", title: "My Tasks Panel", content: "View and manage your active tasks directly from this dashboard checklist.", position: "bottom" },
-  { targetId: "tour-shortcuts", title: "Shortcuts", content: "Quick navigation to all major sections of the app.", position: "top" },
+  { targetId: "tour-actions", title: "Quick Actions", content: "Quickly apply for leave or assign new tasks without leaving the dashboard.", position: "left" },
 ];
 
 type GuidedTourProps = {

@@ -65,6 +65,8 @@ export interface InMemorySupplyStore {
 }
 
 export class SupplyDbStore {
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private static instance: SupplyDbStore;
   private memoryStore: InMemorySupplyStore = {
     vendors: new Map(),
@@ -91,6 +93,7 @@ export class SupplyDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.vendors.clear();
     this.memoryStore.certifications.clear();
     this.memoryStore.riskAssessments.clear();
@@ -106,6 +109,63 @@ export class SupplyDbStore {
     this.memoryStore.encumbrances.clear();
     this.memoryStore.auditLogs.clear();
     this.auditLogList = [];
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [
+        vendors,
+        certs,
+        risks,
+        esgs,
+        reqs,
+        pos,
+        lines,
+        grns,
+        invs,
+        matches,
+        contracts,
+        miles,
+        encs,
+        audits,
+      ] = await Promise.all([
+        db.select().from(supplyVendors),
+        db.select().from(supplyVendorCertifications),
+        db.select().from(supplyVendorRiskAssessments),
+        db.select().from(supplyVendorEsgScores),
+        db.select().from(supplyPurchaseRequisitions),
+        db.select().from(supplyPurchaseOrders),
+        db.select().from(supplyPoLineItems),
+        db.select().from(supplyGoodsReceipts),
+        db.select().from(supplyVendorInvoices),
+        db.select().from(supplyThreeWayMatches),
+        db.select().from(supplyContracts),
+        db.select().from(supplyContractMilestones),
+        db.select().from(supplyBudgetEncumbrances),
+        db.select().from(supplyAuditLogs),
+      ]);
+      for (const r of vendors) if (!this.memoryStore.vendors.has(r.id)) this.memoryStore.vendors.set(r.id, r as unknown as SupplyVendorItem);
+      for (const r of certs) if (!this.memoryStore.certifications.has(r.id)) this.memoryStore.certifications.set(r.id, r as unknown as SupplyVendorCertificationItem);
+      for (const r of risks) if (!this.memoryStore.riskAssessments.has(r.id)) this.memoryStore.riskAssessments.set(r.id, r as unknown as SupplyVendorRiskAssessmentItem);
+      for (const r of esgs) if (!this.memoryStore.esgScores.has(r.id)) this.memoryStore.esgScores.set(r.id, r as unknown as SupplyVendorEsgScoreItem);
+      for (const r of reqs) if (!this.memoryStore.requisitions.has(r.id)) this.memoryStore.requisitions.set(r.id, r as unknown as SupplyPurchaseRequisitionItem);
+      for (const r of pos) if (!this.memoryStore.purchaseOrders.has(r.id)) this.memoryStore.purchaseOrders.set(r.id, r as unknown as SupplyPurchaseOrderItem);
+      for (const r of lines) if (!this.memoryStore.lineItems.has(r.id)) this.memoryStore.lineItems.set(r.id, r as unknown as SupplyPoLineItemItem);
+      for (const r of grns) if (!this.memoryStore.goodsReceipts.has(r.id)) this.memoryStore.goodsReceipts.set(r.id, r as unknown as SupplyGoodsReceiptItem);
+      for (const r of invs) if (!this.memoryStore.invoices.has(r.id)) this.memoryStore.invoices.set(r.id, r as unknown as SupplyVendorInvoiceItem);
+      for (const r of matches) if (!this.memoryStore.threeWayMatches.has(r.id)) this.memoryStore.threeWayMatches.set(r.id, r as unknown as SupplyThreeWayMatchItem);
+      for (const r of contracts) if (!this.memoryStore.contracts.has(r.id)) this.memoryStore.contracts.set(r.id, r as unknown as SupplyContractItem);
+      for (const r of miles) if (!this.memoryStore.milestones.has(r.id)) this.memoryStore.milestones.set(r.id, r as unknown as SupplyContractMilestoneItem);
+      for (const r of encs) if (!this.memoryStore.encumbrances.has(r.id)) this.memoryStore.encumbrances.set(r.id, r as unknown as SupplyBudgetEncumbranceItem);
+      for (const r of audits) {
+        if (!this.memoryStore.auditLogs.has(r.id)) {
+          this.memoryStore.auditLogs.set(r.id, r as unknown as SupplyAuditLogItem);
+          this.auditLogList.push(r as unknown as SupplyAuditLogItem);
+        }
+      }
+    } catch {}
   }
 
   // ─── Vendors ───
@@ -168,6 +228,7 @@ export class SupplyDbStore {
   }
 
   public async getVendorById(id: string, institutionId = 'global'): Promise<SupplyVendorItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.vendors.get(id);
     if (item && (item.institutionId === institutionId || institutionId === 'global' || item.institutionId === 'global')) {
       return item;
@@ -188,6 +249,7 @@ export class SupplyDbStore {
   }
 
   public async listVendors(institutionId = 'global'): Promise<SupplyVendorItem[]> {
+    await this.ensureHydrated();
     const result: SupplyVendorItem[] = [];
     for (const item of this.memoryStore.vendors.values()) {
       if (item.institutionId === institutionId || institutionId === 'global' || item.institutionId === 'global') {
@@ -400,6 +462,7 @@ export class SupplyDbStore {
   }
 
   public async getRequisitionById(id: string, institutionId = 'global'): Promise<SupplyPurchaseRequisitionItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.requisitions.get(id);
     if (item && (item.institutionId === institutionId || institutionId === 'global' || item.institutionId === 'global')) {
       return item;
@@ -420,6 +483,7 @@ export class SupplyDbStore {
   }
 
   public async listRequisitions(institutionId = 'global'): Promise<SupplyPurchaseRequisitionItem[]> {
+    await this.ensureHydrated();
     const result: SupplyPurchaseRequisitionItem[] = [];
     for (const item of this.memoryStore.requisitions.values()) {
       if (item.institutionId === institutionId || institutionId === 'global' || item.institutionId === 'global') {
@@ -509,6 +573,7 @@ export class SupplyDbStore {
   }
 
   public async getPurchaseOrderById(id: string, institutionId = 'global'): Promise<SupplyPurchaseOrderItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.purchaseOrders.get(id);
     if (item && (item.institutionId === institutionId || institutionId === 'global' || item.institutionId === 'global')) {
       return item;
@@ -529,6 +594,7 @@ export class SupplyDbStore {
   }
 
   public async listPurchaseOrders(institutionId = 'global'): Promise<SupplyPurchaseOrderItem[]> {
+    await this.ensureHydrated();
     const result: SupplyPurchaseOrderItem[] = [];
     for (const item of this.memoryStore.purchaseOrders.values()) {
       if (item.institutionId === institutionId || institutionId === 'global' || item.institutionId === 'global') {

@@ -1,5 +1,5 @@
 import { db } from '@thaiba/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import {
   facilityEquipment,
   facilityTelemetrySensors,
@@ -46,6 +46,8 @@ export interface InMemoryFacilityStore {
 
 export class FacilityDbStore {
   private static instance: FacilityDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryFacilityStore = {
     equipment: new Map(),
     sensors: new Map(),
@@ -67,6 +69,7 @@ export class FacilityDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.equipment.clear();
     this.memoryStore.sensors.clear();
     this.memoryStore.readings.clear();
@@ -77,6 +80,53 @@ export class FacilityDbStore {
     this.memoryStore.workOrderParts.clear();
     this.memoryStore.contractors.clear();
     this.memoryStore.auditLogs.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [equips, sensors, readings, models, alerts, orders, inventory, contractors, audits] = await Promise.all([
+        db.select().from(facilityEquipment),
+        db.select().from(facilityTelemetrySensors),
+        db.select().from(facilitySensorReadings),
+        db.select().from(facilityPredictiveModels),
+        db.select().from(facilityAnomalyAlerts),
+        db.select().from(facilityWorkOrders),
+        db.select().from(facilityPartsInventory),
+        db.select().from(facilityContractorRegistry),
+        db.select().from(facilityAuditLogs),
+      ]);
+      for (const r of equips) {
+        if (!this.memoryStore.equipment.has(r.id)) {
+          this.memoryStore.equipment.set(r.id, r as unknown as FacilityEquipmentItem);
+          this.memoryStore.equipment.set(r.assetTag, r as unknown as FacilityEquipmentItem);
+        }
+      }
+      for (const r of sensors) {
+        if (!this.memoryStore.sensors.has(r.id)) {
+          this.memoryStore.sensors.set(r.id, r as unknown as FacilitySensorItem);
+          this.memoryStore.sensors.set(r.sensorId, r as unknown as FacilitySensorItem);
+        }
+      }
+      for (const r of readings) if (!this.memoryStore.readings.has(r.readingId)) this.memoryStore.readings.set(r.readingId, r as unknown as FacilitySensorReadingItem);
+      for (const r of models) if (!this.memoryStore.models.has(r.modelId)) this.memoryStore.models.set(r.modelId, r as unknown as FacilityPredictiveModelItem);
+      for (const r of alerts) if (!this.memoryStore.alerts.has(r.alertId)) this.memoryStore.alerts.set(r.alertId, r as unknown as FacilityAnomalyAlertItem);
+      for (const r of orders) {
+        if (!this.memoryStore.workOrders.has(r.id)) {
+          this.memoryStore.workOrders.set(r.id, r as unknown as FacilityWorkOrderItem);
+          this.memoryStore.workOrders.set(r.workOrderNumber, r as unknown as FacilityWorkOrderItem);
+        }
+      }
+      for (const r of inventory) {
+        if (!this.memoryStore.inventory.has(r.id)) {
+          this.memoryStore.inventory.set(r.id, r as unknown as FacilityPartsInventoryItem);
+          this.memoryStore.inventory.set(r.partNumber, r as unknown as FacilityPartsInventoryItem);
+        }
+      }
+      for (const r of contractors) if (!this.memoryStore.contractors.has(r.contractorId)) this.memoryStore.contractors.set(r.contractorId, r as unknown as FacilityContractorRegistryItem);
+      for (const r of audits) if (!this.memoryStore.auditLogs.has(r.auditId)) this.memoryStore.auditLogs.set(r.auditId, r as unknown as FacilityAuditLogItem);
+    } catch {}
   }
 
   // ─── 1. Equipment Assets ───
@@ -112,6 +162,7 @@ export class FacilityDbStore {
   }
 
   async getEquipmentById(idOrTag: string, tenantId: string = 'global'): Promise<FacilityEquipmentItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.equipment.get(idOrTag);
     if (item && item.institutionId === tenantId) return item;
     for (const val of this.memoryStore.equipment.values()) {
@@ -123,6 +174,7 @@ export class FacilityDbStore {
   }
 
   async listEquipment(tenantId: string = 'global', category?: EquipmentCategory): Promise<FacilityEquipmentItem[]> {
+    await this.ensureHydrated();
     const results: FacilityEquipmentItem[] = [];
     const seen = new Set<string>();
     for (const item of this.memoryStore.equipment.values()) {
@@ -371,6 +423,7 @@ export class FacilityDbStore {
   }
 
   async getWorkOrder(idOrNumber: string, tenantId: string = 'global'): Promise<FacilityWorkOrderItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.workOrders.get(idOrNumber);
     if (item && item.institutionId === tenantId) return item;
     for (const val of this.memoryStore.workOrders.values()) {
@@ -382,6 +435,7 @@ export class FacilityDbStore {
   }
 
   async listWorkOrders(tenantId: string = 'global', status?: WorkOrderStatus, priority?: WorkOrderPriority): Promise<FacilityWorkOrderItem[]> {
+    await this.ensureHydrated();
     const results: FacilityWorkOrderItem[] = [];
     const seen = new Set<string>();
     for (const item of this.memoryStore.workOrders.values()) {

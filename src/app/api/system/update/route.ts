@@ -4,6 +4,7 @@ import { systemConfigs } from "@/db/schema";
 import { inArray } from "drizzle-orm";
 import { ensureArray } from "@/lib/utils";
 import { systemUpdatePostSchema } from "@/lib/validation/schemas";
+import { withPublicApm } from "@/lib/api/public-apm";
 
 import fs from "fs";
 import path from "path";
@@ -49,7 +50,7 @@ function loadDefaultReleaseMetadata(): ReleaseMetadata {
   };
 }
 
-export async function GET(_request: Request) {
+export const GET = withPublicApm(async function GET(_request: Request) {
   try {
     const rawConfigs = await db
       .select()
@@ -87,7 +88,6 @@ export async function GET(_request: Request) {
     let computedSha256 = configMap.app_sha256;
     let computedFileSize = parseInt(configMap.app_file_size, 10) || 0;
 
-    // If downloadUrl is relative, check local filesystem for sha256 and size if not already configured
     if (downloadUrl && downloadUrl.startsWith("/")) {
       const localFilePath = path.join(process.cwd(), "public", downloadUrl.replace(/^\//, ""));
       if (fs.existsSync(localFilePath)) {
@@ -129,11 +129,11 @@ export async function GET(_request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withPublicApm(async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get("Authorization");
+    const authHeader = request.headers.get("Authorization") || "";
     const secret = process.env.SYSTEM_UPDATE_SECRET;
 
     if (!secret || secret.trim() === "") {
@@ -141,7 +141,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (authHeader !== `Bearer ${secret}`) {
+    const expectedHeader = `Bearer ${secret}`;
+    const authBuf = Buffer.from(authHeader);
+    const expBuf = Buffer.from(expectedHeader);
+    if (authBuf.length !== expBuf.length || !crypto.timingSafeEqual(authBuf, expBuf)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -180,4 +183,4 @@ export async function POST(request: Request) {
     console.error("System update configure error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

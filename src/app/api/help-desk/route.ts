@@ -34,6 +34,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     .select({
       id: helpDeskTickets.id,
       title: helpDeskTickets.title,
+      subject: helpDeskTickets.title,
       description: helpDeskTickets.description,
       category: helpDeskTickets.category,
       priority: helpDeskTickets.priority,
@@ -69,7 +70,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { title, description, category, priority, assignedToId } = parsed.data;
+  const title = parsed.data.title || parsed.data.subject || "Untitled";
+  const { description, category, priority, assignedToId } = parsed.data;
 
   // Resolve concrete institution context so tickets are correctly anchored
   const institutionId = await resolveInstitutionContext(session, parsed.data.institutionId || null);

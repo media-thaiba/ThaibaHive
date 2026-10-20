@@ -173,11 +173,8 @@ export class OidcService {
 
       tokenResponse = await res.json();
     } catch (fetchErr: unknown) {
-      // In isolated/mock/test environments, fallback to mock token extraction if authorization server is unreachable
-      if (
-        process.env.NODE_ENV === 'test' ||
-        (fetchErr instanceof Error && fetchErr.message.includes('fetch failed'))
-      ) {
+      // Strictly restricted to test environment only (B-03): never mint synthetic sessions in production
+      if (process.env.NODE_ENV === 'test') {
         return {
           sub: `oidc-sub-${code.substring(0, 8)}`,
           email: `user-${code.substring(0, 6)}@enterprise-oidc.org`,

@@ -54,6 +54,7 @@ export interface InMemoryFeeStore {
 export class FeeDbStore {
   private static instance: FeeDbStore;
   public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryFeeStore = {
     structures: new Map(),
     components: new Map(),
@@ -78,6 +79,7 @@ export class FeeDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.structures.clear();
     this.memoryStore.components.clear();
     this.memoryStore.allocations.clear();
@@ -91,6 +93,41 @@ export class FeeDbStore {
     this.memoryStore.defaulterLogs.clear();
     this.memoryStore.reconciliationBatches.clear();
     this.memoryStore.auditLogs.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [structs, comps, allocs, insts, pays, payTxs, rcpts, schols, concs, regs, defs, recons, audits] = await Promise.all([
+        db.select().from(feeStructures),
+        db.select().from(feeStructureComponents),
+        db.select().from(feeStudentAllocations),
+        db.select().from(feeInstallments),
+        db.select().from(feePayments),
+        db.select().from(feePaymentTransactions),
+        db.select().from(feeReceipts),
+        db.select().from(feeScholarships),
+        db.select().from(feeConcessions),
+        db.select().from(feeCounterRegisters),
+        db.select().from(feeDefaulterLogs),
+        db.select().from(feeReconciliationBatches),
+        db.select().from(feeAuditLogs),
+      ]);
+      for (const r of structs) if (!this.memoryStore.structures.has(r.id)) this.memoryStore.structures.set(r.id, r as unknown as FeeStructureItem);
+      for (const r of comps) if (!this.memoryStore.components.has(r.id)) this.memoryStore.components.set(r.id, r as unknown as FeeStructureComponentItem);
+      for (const r of allocs) if (!this.memoryStore.allocations.has(r.id)) this.memoryStore.allocations.set(r.id, r as unknown as FeeStudentAllocationItem);
+      for (const r of insts) if (!this.memoryStore.installments.has(r.id)) this.memoryStore.installments.set(r.id, r as unknown as FeeInstallmentItem);
+      for (const r of pays) if (!this.memoryStore.payments.has(r.id)) this.memoryStore.payments.set(r.id, r as unknown as FeePaymentItem);
+      for (const r of payTxs) if (!this.memoryStore.paymentTransactions.has(r.id)) this.memoryStore.paymentTransactions.set(r.id, r as unknown as FeePaymentTransactionItem);
+      for (const r of rcpts) if (!this.memoryStore.receipts.has(r.id)) this.memoryStore.receipts.set(r.id, r as unknown as FeeReceiptItem);
+      for (const r of schols) if (!this.memoryStore.scholarships.has(r.id)) this.memoryStore.scholarships.set(r.id, r as unknown as FeeScholarshipItem);
+      for (const r of concs) if (!this.memoryStore.concessions.has(r.id)) this.memoryStore.concessions.set(r.id, r as unknown as FeeConcessionItem);
+      for (const r of regs) if (!this.memoryStore.counterRegisters.has(r.id)) this.memoryStore.counterRegisters.set(r.id, r as unknown as FeeCounterRegisterItem);
+      for (const r of defs) if (!this.memoryStore.defaulterLogs.has(r.id)) this.memoryStore.defaulterLogs.set(r.id, r as unknown as FeeDefaulterLogItem);
+      for (const r of recons) if (!this.memoryStore.reconciliationBatches.has(r.id)) this.memoryStore.reconciliationBatches.set(r.id, r as unknown as FeeReconciliationBatchItem);
+      for (const r of audits) if (!this.memoryStore.auditLogs.has(r.id)) this.memoryStore.auditLogs.set(r.id, r as unknown as FeeAuditLogItem);
+    } catch {}
   }
 
   private handlePersistenceError(operation: string, entityId: string, err: unknown): void {
@@ -163,6 +200,7 @@ export class FeeDbStore {
   }
 
   public async getFeeStructureById(id: string, institutionId?: string): Promise<FeeStructureItem | null> {
+    await this.ensureHydrated();
     const struct = this.memoryStore.structures.get(id);
     if (!struct) return null;
     if (institutionId && struct.institutionId !== institutionId && struct.institutionId !== 'global') {
@@ -175,6 +213,7 @@ export class FeeDbStore {
   }
 
   public async listFeeStructures(institutionId: string, academicYear?: string): Promise<FeeStructureItem[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.structures.values())
       .filter((s) => (s.institutionId === institutionId || s.institutionId === 'global') && (!academicYear || s.academicYear === academicYear))
       .map((s) => ({
@@ -254,6 +293,7 @@ export class FeeDbStore {
   }
 
   public async getAllocationById(id: string, institutionId?: string): Promise<FeeStudentAllocationItem | null> {
+    await this.ensureHydrated();
     const alloc = this.memoryStore.allocations.get(id);
     if (!alloc) return null;
     if (institutionId && alloc.institutionId !== institutionId && institutionId !== 'global') {
@@ -266,6 +306,7 @@ export class FeeDbStore {
   }
 
   public async listAllocationsByStudent(studentId: string, institutionId?: string): Promise<FeeStudentAllocationItem[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.allocations.values())
       .filter((a) => a.studentId === studentId && (!institutionId || a.institutionId === institutionId))
       .map((a) => ({
@@ -277,6 +318,7 @@ export class FeeDbStore {
   }
 
   public async listAllocations(institutionId: string, status?: AllocationStatus): Promise<FeeStudentAllocationItem[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.allocations.values())
       .filter((a) => a.institutionId === institutionId && (!status || a.status === status))
       .map((a) => ({
@@ -549,6 +591,7 @@ export class FeeDbStore {
   }
 
   public async getPaymentById(id: string, institutionId?: string): Promise<FeePaymentItem | null> {
+    await this.ensureHydrated();
     const pay = this.memoryStore.payments.get(id);
     if (!pay) return null;
     if (institutionId && pay.institutionId !== institutionId) {
@@ -571,6 +614,7 @@ export class FeeDbStore {
   }
 
   public async listPayments(institutionId: string, studentId?: string, status?: PaymentStatus): Promise<FeePaymentItem[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.payments.values())
       .filter((p) => p.institutionId === institutionId && (!studentId || p.studentId === studentId) && (!status || p.paymentStatus === status))
       .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());

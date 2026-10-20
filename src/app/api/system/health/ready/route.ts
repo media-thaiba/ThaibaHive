@@ -108,8 +108,8 @@ export async function GET(request: Request) {
   };
 
   if (!isAuthorized) {
-    recordApm(200);
-    return NextResponse.json({ status, timestamp: response.timestamp });
+    recordApm(statusCode);
+    return NextResponse.json({ status, timestamp: response.timestamp }, { status: statusCode });
   }
 
   recordApm(statusCode);

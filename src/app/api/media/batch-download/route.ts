@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { mediaShareLinks, mediaAssets, mediaFolders } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { mediaBatchDownloadSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
-import { verifySession } from "@/lib/auth";
+import { verifySession, verifyPassword } from "@/lib/auth";
 import { downloadFromSupabase, isStorageConfigured } from "@/lib/storage";
 import { sanitizeZipEntryName, sanitizeZipFolderName } from "@/lib/media/zip-utils";
+import { verifyShareAuthCookie } from "@/lib/media/share-auth";
+import { withPublicApm } from "@/lib/api/public-apm";
 import JSZip from "jszip";
 
 const MAX_FILE_COUNT = 100;
@@ -27,10 +29,16 @@ async function collectFolderAssets(
   folderId: string,
   currentPath: string,
   outList: ResolvedAssetItem[],
+  institutionIdScope?: string | null,
   visited = new Set<string>()
 ): Promise<void> {
   if (visited.has(folderId) || outList.length >= MAX_FILE_COUNT) return;
   visited.add(folderId);
+
+  const assetWhere =
+    institutionIdScope && institutionIdScope !== "global"
+      ? and(eq(mediaAssets.folderId, folderId), eq(mediaAssets.institutionId, institutionIdScope))
+      : eq(mediaAssets.folderId, folderId);
 
   // Get assets in current folder
   const assets = await db
@@ -42,7 +50,7 @@ async function collectFolderAssets(
       status: mediaAssets.status,
     })
     .from(mediaAssets)
-    .where(eq(mediaAssets.folderId, folderId))
+    .where(assetWhere)
     .all();
 
   for (const asset of assets) {
@@ -59,22 +67,27 @@ async function collectFolderAssets(
     }
   }
 
+  const folderWhere =
+    institutionIdScope && institutionIdScope !== "global"
+      ? and(eq(mediaFolders.parentId, folderId), eq(mediaFolders.institutionId, institutionIdScope))
+      : eq(mediaFolders.parentId, folderId);
+
   // Recurse into subfolders
   const subfolders = await db
     .select({ id: mediaFolders.id, name: mediaFolders.name })
     .from(mediaFolders)
-    .where(eq(mediaFolders.parentId, folderId))
+    .where(folderWhere)
     .all();
 
   for (const sub of subfolders) {
     const safeSub = sanitizeZipFolderName(sub.name);
     const subPath = currentPath ? `${currentPath}/${safeSub}` : safeSub;
-    await collectFolderAssets(sub.id, subPath, outList, visited);
+    await collectFolderAssets(sub.id, subPath, outList, institutionIdScope, visited);
     if (outList.length >= MAX_FILE_COUNT) return;
   }
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withPublicApm(async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const result = mediaBatchDownloadSchema.safeParse(body);
@@ -114,13 +127,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Share link has expired" }, { status: 410 });
       }
 
-      // Password check or cookie check
+      // Password check or HMAC-signed cookie check
       if (link.passwordHash) {
         const cookieName = `share_auth_${token}`;
-        const hasValidCookie = req.cookies.get(cookieName)?.value === "true";
+        const cookieVal = req.cookies.get(cookieName)?.value;
+        const hasValidCookie = verifyShareAuthCookie(cookieVal, token, link.passwordHash);
 
-        if (!password && !hasValidCookie) {
-          return NextResponse.json({ error: "Password required" }, { status: 401 });
+        if (!hasValidCookie) {
+          if (!password) {
+            return NextResponse.json({ error: "Password required" }, { status: 401 });
+          }
+          const isValidPassword = await verifyPassword(password, link.passwordHash);
+          if (!isValidPassword) {
+            return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+          }
         }
       }
 
@@ -138,12 +158,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const callerInstScope =
+      !isShareTokenScoped && session && session.role !== "super_admin"
+        ? session.institutionId || null
+        : null;
+
     // Resolve assets to pack into ZIP
     const itemsToPack: ResolvedAssetItem[] = [];
 
     if (folderId) {
-      await collectFolderAssets(folderId, "", itemsToPack);
+      await collectFolderAssets(folderId, "", itemsToPack, callerInstScope);
     } else if (assetIds && assetIds.length > 0) {
+      const whereClause =
+        callerInstScope && callerInstScope !== "global"
+          ? and(inArray(mediaAssets.id, assetIds), eq(mediaAssets.institutionId, callerInstScope))
+          : inArray(mediaAssets.id, assetIds);
+
       const assets = await db
         .select({
           id: mediaAssets.id,
@@ -153,7 +183,7 @@ export async function POST(req: NextRequest) {
           status: mediaAssets.status,
         })
         .from(mediaAssets)
-        .where(inArray(mediaAssets.id, assetIds))
+        .where(whereClause)
         .all();
 
       for (const asset of assets) {
@@ -224,7 +254,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (!fileBuffer) {
-        // Fallback placeholder content if storage object is unavailable in local dev
         fileBuffer = Buffer.from(`Sample file content for ${item.name}`);
       }
 
@@ -246,4 +275,4 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : "Batch download failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

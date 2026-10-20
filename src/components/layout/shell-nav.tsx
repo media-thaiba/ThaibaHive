@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Search, Settings, Sun, Moon, Monitor, MessageSquare } from "lucide-react";
@@ -15,14 +16,15 @@ type ShellNavProps = {
 };
 
 export function ShellNav({ onSearchOpen }: ShellNavProps) {
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { currentWorkspace, allWorkspaces, setWorkspace } = useWorkspace();
+  const { currentWorkspace, availableWorkspaces, allWorkspaces, setWorkspace } = useWorkspace();
   const [chatOpen, setChatOpen] = useState(false);
 
   return (
     <>
-      {/* Brand */}
-      <Link href="/" className="flex items-center gap-3 font-semibold text-base tracking-tight shrink-0 group">
+      {/* Brand (Mobile only — on desktop it lives in the floating sidebar) */}
+      <Link href="/" className="flex items-center gap-3 font-semibold text-base tracking-tight shrink-0 group lg:hidden">
         <img
           src="/Logo/thl_logo.svg"
           alt="ThaibaHive Logo"
@@ -39,12 +41,50 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         />
       </Link>
 
-      {/* Workspace Tabs - Segmented Pill Container */}
-      <div className="flex items-center gap-1 ml-2 sm:ml-4 mr-1 sm:mr-6 bg-muted/40 p-1 rounded-xl border border-border/50 max-w-[130px] xs:max-w-[180px] sm:max-w-none overflow-x-auto no-scrollbar shrink">
-        {allWorkspaces.map((w) => (
-          <button
-            key={w.id}
-            onClick={() => setWorkspace(w.id)}
+      {/* Desktop Workspace Selection - Topbar Left Corner */}
+      <div id="tour-workspace-switcher" className="hidden lg:flex items-center gap-1 p-1 rounded-2xl bg-muted/40 border border-border/60 shadow-xs">
+        {availableWorkspaces.map((w, idx) => {
+          const isActive = w.id === currentWorkspace.id;
+          const targetHref = w.id === "my-work" ? "/" : `/${w.id}`;
+          return (
+            <button
+              key={w.id}
+              type="button"
+              onClick={() => {
+                setWorkspace(w.id);
+                router.push(targetHref);
+              }}
+              title={`${w.label} (Ctrl+Shift+${idx + 1})`}
+              className={cn(
+                "group relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 outline-none active:scale-95 focus-visible:ring-2 focus-visible:ring-ring shrink-0",
+                isActive
+                  ? "bg-card text-foreground shadow-xs border border-border/80 font-bold"
+                  : "text-muted-foreground hover:bg-card/50 hover:text-foreground"
+              )}
+            >
+              <div className={cn("flex h-5 w-5 items-center justify-center rounded-md transition-transform duration-150 group-hover:scale-110", isActive ? w.bgColor : "bg-transparent")}>
+                <w.icon className={cn("h-3.5 w-3.5", isActive ? w.color : "text-muted-foreground group-hover:text-foreground")} />
+              </div>
+              <span>{w.label}</span>
+              {isActive && (
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mobile Workspace Tabs - Segmented Pill Container (Mobile only) */}
+      <div className="flex items-center gap-1 ml-2 sm:ml-4 mr-1 sm:mr-6 bg-muted/40 p-1 rounded-xl border border-border/50 max-w-[130px] xs:max-w-[180px] sm:max-w-none overflow-x-auto no-scrollbar shrink lg:hidden">
+        {allWorkspaces.map((w) => {
+          const targetHref = w.id === "my-work" ? "/" : `/${w.id}`;
+          return (
+            <button
+              key={w.id}
+              onClick={() => {
+                setWorkspace(w.id);
+                router.push(targetHref);
+              }}
             className={cn(
               "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0",
               w.id === currentWorkspace.id
@@ -57,26 +97,30 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
             <w.icon className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden md:inline">{w.label}</span>
           </button>
-        ))}
+        );
+      })}
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-0.5 sm:gap-1 ml-auto shrink-0">
+      {/* Right side: Search, Chat, Notifications, Theme, Settings, Profile */}
+      <div className="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
         {/* Search */}
         <button
           onClick={onSearchOpen}
           aria-label="Search"
-          className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-2 sm:px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 shrink-0"
+          className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 shrink-0"
         >
           <Search className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">Search...</span>
+          <span className="hidden sm:inline">Search {currentWorkspace.label}...</span>
+          <kbd className="hidden sm:inline rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground">
+            Ctrl K
+          </kbd>
         </button>
 
         {/* Chat Drawer Toggle */}
         <button
           onClick={() => setChatOpen(true)}
           aria-label="Open Chat (Cmd+Shift+M)"
-          className="relative rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0"
+          className="relative rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0"
         >
           <MessageSquare className="h-[18px] w-[18px]" />
         </button>
@@ -95,7 +139,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
             setTheme(nextTheme);
           }}
           aria-label={`Switch theme (current: ${theme})`}
-          className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center shrink-0"
+          className="rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0"
         >
           {theme === "light" && <Sun className="h-[18px] w-[18px]" />}
           {theme === "dark" && <Moon className="h-[18px] w-[18px]" />}
@@ -106,14 +150,14 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         <Link
           href="/my-work/settings"
           aria-label="Settings"
-          className="hidden sm:flex rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[40px] min-h-[40px] items-center justify-center shrink-0"
+          className="hidden sm:flex rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] items-center justify-center shrink-0"
         >
           <Settings className="h-[18px] w-[18px]" />
         </Link>
 
-        {/* User menu */}
-        <div className="shrink-0">
-          <UserAvatarDropdown />
+        {/* User Profile Avatar */}
+        <div className="shrink-0 pl-1 border-l border-border/60">
+          <UserAvatarDropdown variant="icon" align="end" />
         </div>
       </div>
 

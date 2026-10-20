@@ -21,7 +21,7 @@ const GrievanceDetailDialog = dynamic(
   { ssr: false }
 );
 
-type Permissions = { role: string; permissions: string[] };
+type Permissions = { staffId?: string; role: string; permissions: string[] };
 
 export default function GrievancesPage() {
   const {
@@ -48,7 +48,13 @@ export default function GrievancesPage() {
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<Permissions | null>(null);
 
-  const isAdmin = permissions?.role === "super_admin" || permissions?.role === "admin";
+  const canManage =
+    permissions?.role === "super_admin" ||
+    permissions?.role === "admin" ||
+    permissions?.role === "principal" ||
+    permissions?.role === "hod" ||
+    !!permissions?.permissions?.includes("grievances:manage") ||
+    !!permissions?.permissions?.includes("*");
 
   const fetchGrievances = useCallback(async () => {
     setLoading(true);
@@ -142,7 +148,7 @@ export default function GrievancesPage() {
   };
 
   const filteredGrievances = grievances.filter((g) => {
-    if (activeTab === "mine") return g.staffId !== null && !g.isAnonymous;
+    if (activeTab === "mine") return permissions?.staffId ? g.staffId === permissions.staffId : (g.staffId !== null && !g.isAnonymous);
     if (activeTab === "open") return g.status === "open" || g.status === "in_review";
     if (activeTab === "resolved") return g.status === "resolved";
     return true;
@@ -152,7 +158,7 @@ export default function GrievancesPage() {
   const openCount = grievances.filter((g) => g.status === "open" || g.status === "in_review").length;
   const resolvedCount = grievances.filter((g) => g.status === "resolved").length;
   const anonymousCount = grievances.filter((g) => g.isAnonymous).length;
-  const myCount = grievances.filter((g) => g.staffId !== null && !g.isAnonymous).length;
+  const myCount = grievances.filter((g) => permissions?.staffId ? g.staffId === permissions.staffId : (g.staffId !== null && !g.isAnonymous)).length;
 
   if (loading) {
     return (
@@ -226,7 +232,7 @@ export default function GrievancesPage() {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         selected={selected}
-        isAdmin={isAdmin}
+        isAdmin={canManage}
         responseForm={responseForm}
         setResponseForm={setResponseForm}
         onSubmitResponse={handleAdminResponse}

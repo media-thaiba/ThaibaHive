@@ -19,7 +19,7 @@ export default function Error({
   // only reliable way to recover and discard the failed render tree.
   const goToDashboard = () => {
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- no router in an error boundary
-    window.location.href = "/dashboard";
+    window.location.href = "/";
   };
 
   return (

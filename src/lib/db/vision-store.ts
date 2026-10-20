@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq, and } from 'drizzle-orm';
 import {
   visionCameras,
   visionDetectionZones,
@@ -29,6 +30,8 @@ export interface InMemoryVisionStore {
 
 export class VisionDbStore {
   private static instance: VisionDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryVisionStore = {
     cameras: new Map(),
     detectionZones: new Map(),
@@ -50,6 +53,7 @@ export class VisionDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.cameras.clear();
     this.memoryStore.detectionZones.clear();
     this.memoryStore.threatAlerts.clear();
@@ -62,6 +66,35 @@ export class VisionDbStore {
     this.memoryStore.privacyAuditLogs.clear();
   }
 
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [cams, zones, alerts, incs, guards, disps, alprs, whites, locks, audits] = await Promise.all([
+        db.select().from(visionCameras),
+        db.select().from(visionDetectionZones),
+        db.select().from(visionThreatAlerts),
+        db.select().from(visionSecurityIncidents),
+        db.select().from(visionGuardProfiles),
+        db.select().from(visionGuardDispatches),
+        db.select().from(visionAlprLogs),
+        db.select().from(visionVehicleWhitelist),
+        db.select().from(visionLockdownEvents),
+        db.select().from(visionPrivacyAuditLogs),
+      ]);
+      for (const r of cams) if (!this.memoryStore.cameras.has(r.cameraId)) this.memoryStore.cameras.set(r.cameraId, r);
+      for (const r of zones) if (!this.memoryStore.detectionZones.has(r.zoneId)) this.memoryStore.detectionZones.set(r.zoneId, r);
+      for (const r of alerts) if (!this.memoryStore.threatAlerts.has(r.alertId)) this.memoryStore.threatAlerts.set(r.alertId, r);
+      for (const r of incs) if (!this.memoryStore.securityIncidents.has(r.incidentId)) this.memoryStore.securityIncidents.set(r.incidentId, r);
+      for (const r of guards) if (!this.memoryStore.guardProfiles.has(r.guardId)) this.memoryStore.guardProfiles.set(r.guardId, r);
+      for (const r of disps) if (!this.memoryStore.guardDispatches.has(r.dispatchId)) this.memoryStore.guardDispatches.set(r.dispatchId, r);
+      for (const r of alprs) if (!this.memoryStore.alprLogs.has(r.logId)) this.memoryStore.alprLogs.set(r.logId, r);
+      for (const r of whites) if (!this.memoryStore.vehicleWhitelist.has(r.plateNumber.toUpperCase())) this.memoryStore.vehicleWhitelist.set(r.plateNumber.toUpperCase(), r);
+      for (const r of locks) if (!this.memoryStore.lockdownEvents.has(r.lockdownId)) this.memoryStore.lockdownEvents.set(r.lockdownId, r);
+      for (const r of audits) if (!this.memoryStore.privacyAuditLogs.has(r.auditId)) this.memoryStore.privacyAuditLogs.set(r.auditId, r);
+    } catch {}
+  }
+
   // ─── Cameras ───
   async createCamera(data: OptionalId<typeof visionCameras.$inferInsert>): Promise<any> {
     const record = {
@@ -72,12 +105,13 @@ export class VisionDbStore {
     };
     this.memoryStore.cameras.set(record.cameraId, record);
     try {
-      if (db) await db.insert(visionCameras).values(record as any);
+      if (db && !this.useMemoryOnly) await db.insert(visionCameras).values(record as any);
     } catch {}
     return record;
   }
 
   async getCameraById(cameraId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.cameras.get(cameraId);
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
@@ -86,6 +120,7 @@ export class VisionDbStore {
   }
 
   async listCameras(tenantId: string = 'global', facilityId?: string, status?: string): Promise<any[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.cameras.values()).filter(
       (c) =>
         (tenantId === 'global' || c.institutionId === tenantId) &&
@@ -103,6 +138,14 @@ export class VisionDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.cameras.set(cameraId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(visionCameras.cameraId, cameraId), eq(visionCameras.institutionId, tenantId))
+          : eq(visionCameras.cameraId, cameraId);
+        await db.update(visionCameras).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 
@@ -184,6 +227,14 @@ export class VisionDbStore {
       ...updates,
     };
     this.memoryStore.threatAlerts.set(alertId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(visionThreatAlerts.alertId, alertId), eq(visionThreatAlerts.institutionId, tenantId))
+          : eq(visionThreatAlerts.alertId, alertId);
+        await db.update(visionThreatAlerts).set(updates as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 
@@ -230,6 +281,14 @@ export class VisionDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.securityIncidents.set(incidentId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(visionSecurityIncidents.incidentId, incidentId), eq(visionSecurityIncidents.institutionId, tenantId))
+          : eq(visionSecurityIncidents.incidentId, incidentId);
+        await db.update(visionSecurityIncidents).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 
@@ -273,6 +332,14 @@ export class VisionDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.guardProfiles.set(guardId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(visionGuardProfiles.guardId, guardId), eq(visionGuardProfiles.institutionId, tenantId))
+          : eq(visionGuardProfiles.guardId, guardId);
+        await db.update(visionGuardProfiles).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 
@@ -317,6 +384,14 @@ export class VisionDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.guardDispatches.set(dispatchId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(visionGuardDispatches.dispatchId, dispatchId), eq(visionGuardDispatches.institutionId, tenantId))
+          : eq(visionGuardDispatches.dispatchId, dispatchId);
+        await db.update(visionGuardDispatches).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 
@@ -419,6 +494,14 @@ export class VisionDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.lockdownEvents.set(lockdownId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(visionLockdownEvents.lockdownId, lockdownId), eq(visionLockdownEvents.institutionId, tenantId))
+          : eq(visionLockdownEvents.lockdownId, lockdownId);
+        await db.update(visionLockdownEvents).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 

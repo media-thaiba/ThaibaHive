@@ -2,17 +2,54 @@ import { db } from "@/db";
 import { staffDepartments, departments, staffInstitutions } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
+async function sharesInstitutionMembership(callerStaffId: string, targetStaffId: string): Promise<boolean> {
+  const callerInstRows = await db
+    .select({ institutionId: staffInstitutions.institutionId })
+    .from(staffInstitutions)
+    .where(eq(staffInstitutions.staffId, callerStaffId))
+    .all();
+
+  if (callerInstRows.length === 0) return false;
+  const callerInstSet = new Set(callerInstRows.map((r) => r.institutionId));
+
+  const targetInstRows = await db
+    .select({ institutionId: staffInstitutions.institutionId })
+    .from(staffInstitutions)
+    .where(eq(staffInstitutions.staffId, targetStaffId))
+    .all();
+
+  return targetInstRows.some((r) => callerInstSet.has(r.institutionId));
+}
+
 /**
  * Returns an array of staff IDs that the given HOD is authorized to manage.
  * These are staff members who belong to any department where `hodStaffId` is the head.
- * Returns null for super_admin/admin (they see everything — no filtering needed).
+ * Returns null for super_admin (global scope).
+ * For admin/principal: returns all staff in their assigned institutions (or null if unmapped in legacy unit tests).
  * Returns empty array for non-HOD roles (they manage nobody).
  */
 export async function getManagedStaffIds(
   hodStaffId: string,
   role: string
 ): Promise<string[] | null> {
-  if (role === "super_admin" || role === "admin") return null;
+  if (role === "super_admin") return null;
+  if (role === "admin" || role === "principal") {
+    const callerInstRows = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, hodStaffId))
+      .all();
+    if (callerInstRows.length === 0) {
+      return role === "admin" ? null : [hodStaffId];
+    }
+    const instIds = callerInstRows.map((r) => r.institutionId);
+    const instStaff = await db
+      .select({ staffId: staffInstitutions.staffId })
+      .from(staffInstitutions)
+      .where(inArray(staffInstitutions.institutionId, instIds))
+      .all();
+    return [...new Set([...instStaff.map((s) => s.staffId), hodStaffId])];
+  }
   if (role !== "hod") return [];
 
   const managedDepts = await db
@@ -41,10 +78,7 @@ export async function getManagedStaffIds(
 }
 
 /**
- * Checks whether the given HOD manages a specific staff member.
- * Returns true for super_admin/admin (they manage everyone).
- * Returns true if the target is the same person.
- * For HOD: checks if the target staff is in any department the HOD heads.
+ * Checks whether the given manager manages a specific staff member within their tenant scope.
  */
 export async function isManagedBy(
   managerStaffId: string,
@@ -52,7 +86,20 @@ export async function isManagedBy(
   targetStaffId: string
 ): Promise<boolean> {
   if (targetStaffId === managerStaffId) return true;
-  if (role === "super_admin" || role === "admin" || role === "principal" || role === "accounts" || role === "purchase") return true;
+  if (role === "super_admin") return true;
+
+  if (role === "admin" || role === "principal" || role === "accounts" || role === "purchase") {
+    const callerInstRows = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, managerStaffId))
+      .all();
+    // If manager has explicit institution mappings, enforce same-institution membership
+    if (callerInstRows.length > 0) {
+      return sharesInstitutionMembership(managerStaffId, targetStaffId);
+    }
+    return role === "admin";
+  }
 
   const managedIds = await getManagedStaffIds(managerStaffId, role);
   if (managedIds === null) return true;
@@ -61,8 +108,8 @@ export async function isManagedBy(
 
 /**
  * Checks whether the caller can access a specific staff member's data.
- * - super_admin/admin: everyone
- * - principal: staff in the same institution
+ * - super_admin: everyone
+ * - admin/principal: staff in the same institution
  * - hod: staff in the same departments
  * - staff: only self
  */
@@ -72,23 +119,18 @@ export async function canAccessStaff(
   targetStaffId: string
 ): Promise<boolean> {
   if (targetStaffId === callerStaffId) return true;
-  if (role === "super_admin" || role === "admin") return true;
+  if (role === "super_admin") return true;
 
-  if (role === "principal") {
-    const callerInst = await db
+  if (role === "admin" || role === "principal") {
+    const callerInstRows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
       .where(eq(staffInstitutions.staffId, callerStaffId))
-      .limit(1);
-    const instId = callerInst[0]?.institutionId;
-    if (!instId) return false;
-
-    const targetInst = await db
-      .select({ institutionId: staffInstitutions.institutionId })
-      .from(staffInstitutions)
-      .where(eq(staffInstitutions.staffId, targetStaffId))
-      .limit(1);
-    return targetInst[0]?.institutionId === instId;
+      .all();
+    if (callerInstRows.length === 0) {
+      return role === "admin";
+    }
+    return sharesInstitutionMembership(callerStaffId, targetStaffId);
   }
 
   if (role === "hod") {
@@ -102,8 +144,8 @@ export async function canAccessStaff(
 
 /**
  * Returns all staff IDs the caller is authorized to access.
- * - super_admin/admin: returns null (meaning no filter — all staff)
- * - principal: staff in their institution
+ * - super_admin: returns null (meaning no filter — all staff)
+ * - admin/principal: staff in their institution
  * - hod: staff in their departments
  * - staff: only themselves
  */
@@ -111,23 +153,24 @@ export async function getAccessibleStaffIds(
   callerStaffId: string,
   role: string
 ): Promise<string[] | null> {
-  if (role === "super_admin" || role === "admin") return null;
+  if (role === "super_admin") return null;
 
-  if (role === "principal") {
-    const callerInst = await db
+  if (role === "admin" || role === "principal") {
+    const callerInstRows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
       .where(eq(staffInstitutions.staffId, callerStaffId))
-      .limit(1);
-    const instId = callerInst[0]?.institutionId;
-    if (!instId) return [callerStaffId];
-
+      .all();
+    if (callerInstRows.length === 0) {
+      return role === "admin" ? null : [callerStaffId];
+    }
+    const instIds = callerInstRows.map((r) => r.institutionId);
     const instStaff = await db
       .select({ staffId: staffInstitutions.staffId })
       .from(staffInstitutions)
-      .where(eq(staffInstitutions.institutionId, instId))
+      .where(inArray(staffInstitutions.institutionId, instIds))
       .all();
-    return [...new Set(instStaff.map((s) => s.staffId))];
+    return [...new Set([...instStaff.map((s) => s.staffId), callerStaffId])];
   }
 
   return getManagedStaffIds(callerStaffId, role);
@@ -135,31 +178,29 @@ export async function getAccessibleStaffIds(
 
 /**
  * Checks whether the caller is authorized to access a specific task.
- * - super_admin/admin: see/modify everything
- * - assignedToId or assignedById is the caller: see/modify
- * - principal: task's department belongs to the same institution
- * - hod: task's department is managed by the HOD
  */
 export async function canAccessTask(
   callerStaffId: string,
   role: string,
   task: { assignedToId: string | null; assignedById: string | null; departmentId: string | null }
 ): Promise<boolean> {
-  if (role === "super_admin" || role === "admin") return true;
+  if (role === "super_admin") return true;
   if (task.assignedToId === callerStaffId || task.assignedById === callerStaffId) return true;
 
-  if (role === "principal") {
+  if (role === "admin" || role === "principal") {
     const callerInst = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
       .where(eq(staffInstitutions.staffId, callerStaffId))
-      .limit(1);
-    const callerInstitutionId = callerInst[0]?.institutionId;
-    if (!callerInstitutionId) return false;
+      .all();
+    if (callerInst.length === 0) {
+      return role === "admin";
+    }
+    const callerInstSet = new Set(callerInst.map((r) => r.institutionId));
 
-    // Institution-wide task without specific department assignment
     if (!task.departmentId) {
-      return (task as { institutionId?: string | null }).institutionId === callerInstitutionId;
+      const taskInst = (task as { institutionId?: string | null }).institutionId;
+      return taskInst ? callerInstSet.has(taskInst) : role === "admin";
     }
 
     const dept = await db
@@ -167,7 +208,7 @@ export async function canAccessTask(
       .from(departments)
       .where(eq(departments.id, task.departmentId))
       .get();
-    return dept?.institutionId === callerInstitutionId;
+    return dept?.institutionId ? callerInstSet.has(dept.institutionId) : false;
   }
 
   if (role === "hod" && task.departmentId) {
@@ -181,4 +222,3 @@ export async function canAccessTask(
 
   return false;
 }
-

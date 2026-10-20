@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { workspaces, WorkspaceId, getWorkspaceById, getWorkspacesForRole, type WorkspaceConfig, type StaffRole } from "@/config/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,6 +20,7 @@ const WORKSPACE_STORAGE_KEY = "thaibahive_workspace";
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { staff } = useAuth();
   const userRole = staff?.role as StaffRole | undefined;
+  const pathname = usePathname();
 
   const [availableWorkspaces, setAvailableWorkspaces] = useState<WorkspaceConfig[]>(workspaces);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<WorkspaceId>(() => {
@@ -40,6 +42,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setAvailableWorkspaces(workspaces);
     }
   }, [userRole]);
+
+  // Sync workspace with pathname when navigating directly to a domain route
+  useEffect(() => {
+    if (!pathname) return;
+    let targetWorkspaceId: WorkspaceId | null = null;
+    if (pathname.startsWith("/school")) {
+      targetWorkspaceId = "school";
+    } else if (pathname.startsWith("/operations")) {
+      targetWorkspaceId = "operations";
+    } else if (pathname.startsWith("/admin")) {
+      targetWorkspaceId = "admin";
+    } else if (pathname.startsWith("/my-work") || pathname === "/") {
+      targetWorkspaceId = "my-work";
+    }
+
+    if (targetWorkspaceId && targetWorkspaceId !== currentWorkspaceId) {
+      if (availableWorkspaces.some((w) => w.id === targetWorkspaceId)) {
+        setCurrentWorkspaceId(targetWorkspaceId);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(WORKSPACE_STORAGE_KEY, targetWorkspaceId);
+        }
+      }
+    }
+  }, [pathname, availableWorkspaces, currentWorkspaceId]);
 
   // Hydration effect
   useEffect(() => {

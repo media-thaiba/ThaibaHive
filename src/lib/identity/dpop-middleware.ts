@@ -43,8 +43,9 @@ export function withDPoP<T extends (request: Request, ...args: never[]) => Promi
     const dpopHeader = request.headers.get('dpop');
     const authHeader = request.headers.get('authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : '';
-    const { isDPoPToken } = await import('./migration-layer');
+    const { isDPoPToken, extractDPoPThumbprint } = await import('./migration-layer');
     const tokenIsDPoP = token ? isDPoPToken(token) : false;
+    const expectedThumbprint = token ? extractDPoPThumbprint(token) : undefined;
 
     // Strict Legacy Token Deprecation Evaluation (TIF-008)
     const deprecationEngine = LegacyTokenDeprecationEngine.getInstance();
@@ -98,7 +99,7 @@ export function withDPoP<T extends (request: Request, ...args: never[]) => Promi
     const htm = request.method;
     const htu = request.url.split('?')[0]; // URL without query string for DPoP validation
 
-    const result = await verifyDPoPProof(dpopHeader, htm, htu);
+    const result = await verifyDPoPProof(dpopHeader, htm, htu, expectedThumbprint);
 
     if (!result.valid) {
       return NextResponse.json({ error: 'DPoP proof invalid' }, { status: 401 });

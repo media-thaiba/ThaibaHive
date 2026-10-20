@@ -180,7 +180,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
       switch (item.type) {
         case "workspace":
-          router.push(item.data.id === "my-work" ? "/my-work" : `/${item.data.id}`);
+          router.push(item.data.id === "my-work" ? "/" : `/${item.data.id}`);
           break;
         case "nav":
           router.push(item.data.href);
@@ -284,6 +284,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               placeholder="Search students, staff, tasks, events, or type 'workspace:'..."
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               role="combobox"
+              aria-label="Search command palette"
               aria-expanded={open}
               aria-autocomplete="list"
               aria-controls="command-palette-results"
@@ -304,7 +305,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             )}
             {/* Voice Copilot Trigger */}
             <VoiceCopilotTrigger variant="compact" />
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground">
               esc
             </kbd>
           </div>
@@ -357,7 +358,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                           e.stopPropagation();
                           clearRecentSearches();
                         }}
-                        className="text-[10px] text-muted-foreground hover:text-foreground underline"
+                        className="text-[11px] text-muted-foreground hover:text-foreground underline"
                       >
                         Clear all
                       </button>
@@ -484,7 +485,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             )}
           </div>
 
-          <div className="border-t px-4 py-2 flex items-center gap-4 text-[10px] text-muted-foreground bg-muted/10">
+          <div className="border-t px-4 py-2 flex items-center gap-4 text-[11px] text-muted-foreground bg-muted/10">
             <span className="flex items-center gap-1">
               <kbd className="rounded border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
               navigate
@@ -573,7 +574,7 @@ function EntityCommandItem({
           className="h-7 w-7 rounded-full object-cover shrink-0 border"
         />
       ) : item.initials ? (
-        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 border border-primary/20">
+        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary text-[11px] font-bold flex items-center justify-center shrink-0 border border-primary/20">
           {item.initials}
         </div>
       ) : (
@@ -585,11 +586,11 @@ function EntityCommandItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium truncate leading-tight">{item.title}</p>
-          <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 shrink-0 font-normal">
+          <Badge variant="outline" className="text-[11px] py-0 px-1.5 h-4 shrink-0 font-normal">
             {entityLabel}
           </Badge>
           {item.isWebOnly && (
-            <Badge variant="info" className="text-[9px] py-0 px-1 h-3.5 shrink-0">
+            <Badge variant="info" className="text-[11px] py-0 px-1 h-3.5 shrink-0">
               Web Only
             </Badge>
           )}
@@ -637,7 +638,7 @@ function WorkspaceCommandItem({
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium leading-tight">{workspace.label}</p>
           {active && (
-            <span className="text-[9px] font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary px-1.5 py-0.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider rounded-full bg-primary/20 text-primary px-1.5 py-0.5">
               Current
             </span>
           )}

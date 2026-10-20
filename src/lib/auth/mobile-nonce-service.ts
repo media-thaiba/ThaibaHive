@@ -16,7 +16,8 @@ export interface MobileNoncePayload {
 export const NONCE_TTL_SECONDS = 60; // 60 seconds TTL
 
 /**
- * Creates a short-lived single-use mobile authentication handoff nonce as an HMAC-signed JWT.
+ * Creates a short-lived single-use mobile authentication handoff nonce as an HMAC-signed JWT
+ * using a dedicated HKDF purpose key ("mobile-handoff") so it can never be replayed as a Bearer session JWT (B-09).
  */
 export async function createMobileNonce(params: {
   staffId: string;
@@ -52,7 +53,7 @@ export async function createMobileNonce(params: {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt(now)
     .setExpirationTime(expiresAtSeconds)
-    .sign(getJwtSecretBytes("session"));
+    .sign(getJwtSecretBytes("mobile-handoff"));
 
   const redirectUrl = `/auth/mobile-handoff?nonce=${encodeURIComponent(nonce)}&redirect=${encodeURIComponent(target)}`;
 
@@ -80,7 +81,7 @@ export async function verifyMobileNonce(nonce: string): Promise<{
   exp?: number;
 } | null> {
   try {
-    const result = await jwtVerify(nonce, getJwtSecretBytes("session"), {
+    const result = await jwtVerify(nonce, getJwtSecretBytes("mobile-handoff"), {
       algorithms: ["HS256"],
     });
     const payload = result.payload as Record<string, unknown>;

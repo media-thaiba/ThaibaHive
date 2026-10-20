@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLog } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { hasPermission, type StaffRole } from "@thaiba/auth";
 import { pick } from "@/lib/api/pick";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { autoAssignOffboardingChecklists } from "@/lib/onboarding/auto-assign";
@@ -77,6 +78,10 @@ const UPDATABLE_FIELDS = [
 ] as const;
 
 const PII_FIELDS = new Set(["aadhaar", "pan", "bankAccount", "ifscCode"]);
+const SELF_UPDATABLE_FIELDS = new Set([
+  "phone", "avatarUrl", "biography", "skills", "languages",
+  "emergencyContactName", "emergencyContactPhone", "dateOfBirth"
+]);
 
 export const PUT = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
@@ -158,17 +163,28 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
+  const isSelf = session.staffId === id;
 
-  const authorized = await canAccessStaff(session.staffId, session.role, id);
-  if (!authorized) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (isSelf) {
+    if (!hasPermission(session.role as StaffRole, "profile:write")) {
+      return NextResponse.json({ error: "Forbidden: profile:write required" }, { status: 403 });
+    }
+  } else {
+    if (!hasPermission(session.role as StaffRole, "staff:update")) {
+      return NextResponse.json({ error: "Forbidden: staff:update required" }, { status: 403 });
+    }
+    const authorized = await canAccessStaff(session.staffId, session.role, id);
+    if (!authorized) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const body = await request.json();
 
   const safeFields: Record<string, unknown> = {};
+  const allowedFieldKeys = isSelf ? SELF_UPDATABLE_FIELDS : new Set(UPDATABLE_FIELDS);
   for (const key of UPDATABLE_FIELDS) {
-    if (key in body) {
+    if (key in body && allowedFieldKeys.has(key)) {
       const val = body[key];
       if (PII_FIELDS.has(key)) {
         safeFields[key] = typeof val === "string" ? encryptPiiField(val) : (val ?? null);
@@ -202,7 +218,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   };
 
   return NextResponse.json({ staff: safeStaff });
-}, "staff:update");
+});
 
 export const DELETE = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;

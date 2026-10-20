@@ -165,7 +165,11 @@ jobs:
             echo "VERCEL_TOKEN secret is not configured; skipping post-deploy health check."
             exit 0
           fi
-          pnpm deploy:preflight --base-url="https://${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}"
+          if [[ "$APP_URL" != http* ]]; then
+            APP_URL="https://${APP_URL}"
+          fi
+          pnpm deploy:preflight --base-url="$APP_URL"
         env:
           NODE_ENV: production
           AUTH_JWT_SECRET: ${{ secrets.AUTH_JWT_SECRET }}

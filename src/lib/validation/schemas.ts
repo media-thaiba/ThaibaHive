@@ -1603,15 +1603,44 @@ export const adminInstitutionUpdateSchema = z.object({
 });
 export type AdminInstitutionUpdateInput = z.infer<typeof adminInstitutionUpdateSchema>;
 
+const TIME_24H_REGEX = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+const DATE_ISO_REGEX = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+export const adminShiftCreateSchema = z.object({
+  name: z.string().trim().min(1, "Shift name is required").max(100, "Shift name too long"),
+  startTime: z.string().trim().regex(TIME_24H_REGEX, "Start time must be a valid 24-hour time (HH:MM)"),
+  endTime: z.string().trim().regex(TIME_24H_REGEX, "End time must be a valid 24-hour time (HH:MM)"),
+  gracePeriodMinutes: z.number().int().min(0, "Grace period cannot be negative").max(120, "Grace period cannot exceed 120 minutes").optional().default(15),
+  departmentId: z.string().trim().min(1).max(100).optional().nullable(),
+  applicableToAll: z.boolean().optional().default(false),
+});
+export type AdminShiftCreateInput = z.infer<typeof adminShiftCreateSchema>;
+
 export const adminShiftUpdateSchema = z.object({
-  name: z.string().min(1).max(50).optional(),
-  startTime: z.string().min(1).optional(),
-  endTime: z.string().min(1).optional(),
-  gracePeriodMinutes: z.number().int().min(0).max(120).optional(),
-  departmentId: z.string().min(1).optional().nullable(),
+  name: z.string().trim().min(1, "Name cannot be empty").max(100, "Name too long").optional(),
+  startTime: z.string().trim().regex(TIME_24H_REGEX, "Start time must be a valid 24-hour time (HH:MM)").optional(),
+  endTime: z.string().trim().regex(TIME_24H_REGEX, "End time must be a valid 24-hour time (HH:MM)").optional(),
+  gracePeriodMinutes: z.number().int().min(0, "Grace period cannot be negative").max(120, "Grace period cannot exceed 120 minutes").optional(),
+  departmentId: z.string().trim().min(1).max(100).optional().nullable(),
   applicableToAll: z.boolean().optional(),
 });
 export type AdminShiftUpdateInput = z.infer<typeof adminShiftUpdateSchema>;
+
+export const adminStaffShiftCreateSchema = z
+  .object({
+    staffId: z.string().trim().min(1, "Staff ID is required").max(100, "Staff ID too long"),
+    shiftId: z.string().trim().min(1, "Shift ID is required").max(100, "Shift ID too long"),
+    effectiveFrom: z.string().trim().regex(DATE_ISO_REGEX, "effectiveFrom must be YYYY-MM-DD"),
+    effectiveTo: z.string().trim().regex(DATE_ISO_REGEX, "effectiveTo must be YYYY-MM-DD").optional().nullable(),
+  })
+  .refine(
+    (data) => !data.effectiveTo || data.effectiveFrom <= data.effectiveTo,
+    {
+      message: "effectiveTo must be on or after effectiveFrom",
+      path: ["effectiveTo"],
+    }
+  );
+export type AdminStaffShiftCreateInput = z.infer<typeof adminStaffShiftCreateSchema>;
 
 export const adminSubDepartmentUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),

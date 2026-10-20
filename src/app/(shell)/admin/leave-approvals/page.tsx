@@ -36,9 +36,10 @@ type LeaveRequest = {
   leaveTypeCode: string | null;
 };
 
-const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary" | "info"> = {
   approved: "success",
   pending: "warning",
+  hod_approved: "info",
   rejected: "destructive",
   cancelled: "secondary",
 };
@@ -121,12 +122,12 @@ export default function LeaveApprovalsPage() {
   }
 
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "pending", label: "Pending", count: leaves.filter((l) => l.status === "pending").length },
+    { key: "pending", label: "Pending", count: leaves.filter((l) => l.status === "pending" || l.status === "hod_approved").length },
     { key: "all", label: "All Requests", count: leaves.length },
   ];
 
   const displayLeaves = activeTab === "pending"
-    ? leaves.filter((l) => l.status === "pending")
+    ? leaves.filter((l) => l.status === "pending" || l.status === "hod_approved")
     : leaves;
 
   return (
@@ -202,7 +203,7 @@ export default function LeaveApprovalsPage() {
                     <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">{leave.reason || "—"}</td>
                     <td className="px-4 py-3">
                       <Badge variant={statusVariant[leave.status] || "secondary"} className="capitalize text-[10px]">
-                        {leave.status}
+                        {leave.status === "hod_approved" ? "HOD Recommended" : leave.status}
                       </Badge>
                     </td>
                     {activeTab === "pending" && (

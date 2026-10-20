@@ -38,13 +38,27 @@ import {
   type LeaveRequest,
 } from "@/lib/hooks/use-leaves";
 
-const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary" | "info"> = {
   approved: "success",
+  pending: "warning",
+  hod_approved: "info",
+  rejected: "destructive",
+  cancelled: "secondary",
+};
+/*
+
+  pending: "warning",
+  hod_approved: "info",
+  rejected: "destructive",
+  cancelled: "secondary",
+};
+
   pending: "warning",
   rejected: "destructive",
   cancelled: "secondary",
 };
 
+*/
 export default function LeavesPage() {
   const [showForm, setShowForm] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
@@ -250,8 +264,10 @@ export default function LeavesPage() {
                     {l.reason && <p className="text-xs text-muted-foreground mt-0.5">{l.reason}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={statusVariant[l.status] || "secondary"} className="capitalize">{l.status}</Badge>
-                    {l.status === "pending" && (
+                    <Badge variant={statusVariant[l.status] || "secondary"} className="capitalize">
+                      {l.status === "hod_approved" ? "Recommended by HOD" : l.status}
+                    </Badge>
+                    {(l.status === "pending" || l.status === "hod_approved") && (
                       <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(l.id)} disabled={cancelMutation.isPending && cancelMutation.variables === l.id}>
                         <Trash2 className="h-3.5 w-3.5 mr-1" />
                         Cancel

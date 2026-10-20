@@ -56,8 +56,13 @@ uploads/
 # scratch
 scratch/
 
-# APK binaries
+# APK binaries & Android keystores
 *.apk
+*.jks
+
+# Mobile local Hive databases and lockfiles
+thaibahive_mobile_app/*.hive
+thaibahive_mobile_app/*.lock
 
 # build outputs and backups
 api/dist/
@@ -98,6 +103,9 @@ build_history.json
 test.db
 test.db-wal
 test.db-shm
+test-*.db
+test-*.db-wal
+test-*.db-shm
 
 # Stryker mutation testing temp sandboxes
 .stryker-tmp/

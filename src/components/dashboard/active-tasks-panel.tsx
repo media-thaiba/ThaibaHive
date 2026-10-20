@@ -31,7 +31,7 @@ export function ActiveTasksPanel({ tasks, onToggleTask }: ActiveTasksPanelProps)
                   <button
                     onClick={() => onToggleTask(task.id)}
                     aria-label={`Mark "${task.title}" as complete`}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-muted-foreground/30 hover:border-primary text-transparent hover:text-primary hover:bg-primary/5 transition-colors"
+                    className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-muted-foreground/30 hover:border-primary text-transparent hover:text-primary hover:bg-primary/5 transition-colors active:scale-90 before:absolute before:-inset-3 before:content-['']"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
                   </button>
@@ -46,18 +46,22 @@ export function ActiveTasksPanel({ tasks, onToggleTask }: ActiveTasksPanelProps)
                             ? "warning"
                             : "secondary"
                         }
-                        className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0"
+                        className="text-[11px] font-medium tracking-wide px-2 py-0"
                       >
                         {task.priority}
                       </Badge>
                       {task.dueDate && (
-                        <span className="text-[11px]">Due {new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                        <span className="text-xs tabular-nums text-muted-foreground/80">Due {new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
                       )}
                     </div>
                   </div>
                 </div>
-                <Link href={`/my-work/tasks/${task.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-lg">
-                  <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+                <Link
+                  href={`/my-work/tasks/${task.id}`}
+                  aria-label={`View task details for "${task.title}"`}
+                  className="p-1.5 hover:bg-muted text-muted-foreground/50 hover:text-foreground rounded-lg transition-colors shrink-0"
+                >
+                  <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
             ))}

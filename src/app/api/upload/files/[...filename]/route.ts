@@ -3,26 +3,41 @@ import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import { downloadFromDrive } from "@/lib/drive";
 import { isStorageConfigured, downloadFromSupabase } from "@/lib/storage";
-import { verifySession } from "@/lib/auth";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { contentTypeFor, nodeStreamToWeb, validateFileKey } from "@/lib/media/serve-file-utils";
 
 export const runtime = "nodejs";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
 
-// NOTE: All uploaded files are designed to be organization-wide readable by any authenticated session.
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ filename: string[] | string }> }
-) {
-  try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+function buildSafeFileHeaders(mimeType: string, key: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": mimeType,
+    "Cache-Control": "private, no-transform, max-age=3600",
+    "X-Content-Type-Options": "nosniff",
+  };
+  const lowerMime = mimeType.toLowerCase();
+  if (
+    lowerMime.includes("html") ||
+    lowerMime.includes("svg") ||
+    lowerMime.includes("xml") ||
+    lowerMime.includes("javascript")
+  ) {
+    const filename = key.split("/").pop() || "download";
+    headers["Content-Disposition"] = `attachment; filename="${filename.replace(/[^A-Za-z0-9._-]/g, "_")}"`;
+  }
+  return headers;
+}
 
-    const { filename } = await params;
-    const segments = Array.isArray(filename) ? filename : filename.split("/");
+export const GET = requireAuth(async (
+  _request: Request,
+  session,
+  context?: { params: Promise<{ filename: string[] | string }> }
+) => {
+  try {
+    const resolvedParams = context?.params ? await context.params : { filename: [] };
+    const { filename } = resolvedParams;
+    const segments = Array.isArray(filename) ? filename : String(filename || "").split("/");
     const key = validateFileKey(segments);
     if (!key) {
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
@@ -38,7 +53,7 @@ export async function GET(
       const targetInst = tenantSegment.replace(/^tenant_/, "");
       if (targetInst !== "default" && session.role !== "super_admin") {
         const callerInst = session.institutionId;
-        if (callerInst && callerInst !== "global" && callerInst !== targetInst) {
+        if (!callerInst || (callerInst !== "global" && callerInst !== targetInst)) {
           return NextResponse.json(
             { error: "Forbidden: file belongs to another institution" },
             { status: 403 }
@@ -52,15 +67,10 @@ export async function GET(
       const supabaseFile = await downloadFromSupabase(key, "uploads");
       if (supabaseFile) {
         return new NextResponse(supabaseFile.stream, {
-          headers: {
-            "Content-Type": supabaseFile.mimeType,
-            "Cache-Control": "private, no-transform, max-age=3600",
-          },
+          headers: buildSafeFileHeaders(supabaseFile.mimeType, key),
         });
       }
       if (segments.length > 1) {
-        // Nested keys only ever exist in Supabase — don't fall through to
-        // flat local/Drive lookups with a slash-containing key.
         return NextResponse.json({ error: "File not found in Supabase Storage" }, { status: 404 });
       }
     }
@@ -70,10 +80,7 @@ export async function GET(
       const driveFile = await downloadFromDrive(key);
       if (driveFile) {
         return new NextResponse(nodeStreamToWeb(driveFile.stream), {
-          headers: {
-            "Content-Type": driveFile.mimeType,
-            "Cache-Control": "private, no-transform, max-age=3600",
-          },
+          headers: buildSafeFileHeaders(driveFile.mimeType, key),
         });
       }
       if (segments.length > 1) {
@@ -81,8 +88,7 @@ export async function GET(
       }
     }
 
-    // 3. Local dev - fetch from filesystem (flat keys only; nested keys are
-    //    rejected above so join() can never escape UPLOAD_DIR).
+    // 3. Local dev - fetch from filesystem (flat keys only)
     const filepath = join(UPLOAD_DIR, key);
 
     try {
@@ -94,10 +100,7 @@ export async function GET(
     const fileBuffer = await readFile(filepath);
 
     return new NextResponse(fileBuffer, {
-      headers: {
-        "Content-Type": contentTypeFor(key),
-        "Cache-Control": "private, no-transform, max-age=3600",
-      },
+      headers: buildSafeFileHeaders(contentTypeFor(key), key),
     });
   } catch (error) {
     console.error("File serve error:", error);
@@ -106,4 +109,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

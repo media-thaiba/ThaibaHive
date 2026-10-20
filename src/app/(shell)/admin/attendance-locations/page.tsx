@@ -1,5 +1,7 @@
 "use client";
 
+import QRCode from "qrcode";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -531,7 +533,19 @@ export default function AttendanceLocationsPage() {
 }
 
 function drawQR(canvas: HTMLCanvasElement, data: string) {
-  const ctx = canvas.getContext("2d");
+  QRCode.toCanvas(canvas, data, {
+    width: 256,
+    margin: 2,
+    errorCorrectionLevel: "M",
+    color: {
+      dark: "#000000",
+      light: "#ffffff",
+    },
+  }).catch((err) => {
+    console.error("[QRCode] Failed to render QR:", err);
+  });
+}
+  /*
   if (!ctx) return;
   const size = canvas.width;
   const moduleCount = 25;
@@ -577,3 +591,4 @@ function dataToBits(data: string, length: number): boolean[] {
   while (bits.length < length) bits.push(false);
   return bits;
 }
+*/

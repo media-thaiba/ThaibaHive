@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db, isPostgres } from "@/db";
 import {
   dwAggregatedAnalytics,
   dwMaterializedSnapshots,
@@ -28,6 +28,18 @@ export interface EtlRunResult {
 }
 
 export async function ensureRegionalTablesExist(): Promise<void> {
+  if (isPostgres) {
+    try {
+      await db
+        .insert(institutions)
+        .values({ id: "inst_default", name: "Default Campus", code: "DEF" })
+        .onConflictDoNothing()
+        .run();
+    } catch (err) {
+      console.warn("ensureRegionalTablesExist PG warning:", err);
+    }
+    return;
+  }
   try {
     await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES ('inst_default', 'Default Campus', 'DEF')`);
 
@@ -278,10 +290,11 @@ export class DwEtlService {
       const aggregatedSnapshots = [];
 
       for (const instId of targetInstitutionIds) {
-        // Calculate attendance rate
+        // Calculate attendance rate scoped to the institution
         const attRecords = await db
           .select({ status: attendanceLogs.status })
           .from(attendanceLogs)
+          .where(eq(attendanceLogs.institutionId, instId))
           .all();
 
         const totalAtt = attRecords.length;

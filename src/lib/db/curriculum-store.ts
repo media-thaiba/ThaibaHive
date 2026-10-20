@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq, and } from 'drizzle-orm';
 import {
   curriculumPrograms,
   curriculumCourses,
@@ -39,6 +40,8 @@ export interface InMemoryCurriculumStore {
 
 export class CurriculumDbStore {
   private static instance: CurriculumDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryCurriculumStore = {
     programs: new Map(),
     courses: new Map(),
@@ -60,6 +63,7 @@ export class CurriculumDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.programs.clear();
     this.memoryStore.courses.clear();
     this.memoryStore.prerequisites.clear();
@@ -70,6 +74,50 @@ export class CurriculumDbStore {
     this.memoryStore.advisingMessages.clear();
     this.memoryStore.retentionAlerts.clear();
     this.memoryStore.auditLogs.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [progs, courses, prereqs, plans, pcourses, transfers, sessions, msgs, alerts, audits] = await Promise.all([
+        db.select().from(curriculumPrograms),
+        db.select().from(curriculumCourses),
+        db.select().from(curriculumPrerequisites),
+        db.select().from(curriculumDegreePlans),
+        db.select().from(curriculumPlanCourses),
+        db.select().from(curriculumTransferArticulations),
+        db.select().from(curriculumAdvisingSessions),
+        db.select().from(curriculumAdvisingMessages),
+        db.select().from(curriculumRetentionAlerts),
+        db.select().from(curriculumAuditLogs),
+      ]);
+      for (const r of progs) {
+        if (!this.memoryStore.programs.has(r.id)) {
+          this.memoryStore.programs.set(r.id, r as unknown as CurriculumProgramDto);
+          this.memoryStore.programs.set(r.programCode, r as unknown as CurriculumProgramDto);
+        }
+      }
+      for (const r of courses) {
+        if (!this.memoryStore.courses.has(r.id)) {
+          this.memoryStore.courses.set(r.id, r as unknown as CurriculumCourseDto);
+          this.memoryStore.courses.set(r.courseCode, r as unknown as CurriculumCourseDto);
+        }
+      }
+      for (const r of prereqs) if (!this.memoryStore.prerequisites.has(r.id)) this.memoryStore.prerequisites.set(r.id, r as unknown as CurriculumPrerequisiteDto);
+      for (const r of plans) {
+        if (!this.memoryStore.degreePlans.has(r.planId)) {
+          this.memoryStore.degreePlans.set(r.planId, r as unknown as CurriculumDegreePlanDto);
+          this.memoryStore.degreePlans.set(r.id, r as unknown as CurriculumDegreePlanDto);
+        }
+      }
+      for (const r of pcourses) if (!this.memoryStore.planCourses.has(r.id)) this.memoryStore.planCourses.set(r.id, r as unknown as CurriculumPlanCourseDto);
+      for (const r of transfers) if (!this.memoryStore.transferArticulations.has(r.articulationId)) this.memoryStore.transferArticulations.set(r.articulationId, r as unknown as CurriculumTransferArticulationDto);
+      for (const r of sessions) if (!this.memoryStore.advisingSessions.has(r.sessionId)) this.memoryStore.advisingSessions.set(r.sessionId, r as unknown as CurriculumAdvisingSessionDto);
+      for (const r of msgs) if (!this.memoryStore.advisingMessages.has(r.id)) this.memoryStore.advisingMessages.set(r.id, r as unknown as CurriculumAdvisingMessageDto);
+      for (const r of alerts) if (!this.memoryStore.retentionAlerts.has(r.alertId)) this.memoryStore.retentionAlerts.set(r.alertId, r as unknown as CurriculumRetentionAlertDto);
+      for (const r of audits) if (!this.memoryStore.auditLogs.has(r.auditId)) this.memoryStore.auditLogs.set(r.auditId, r as unknown as CurriculumAuditLogDto);
+    } catch {}
   }
 
   // ─── Programs ───
@@ -98,6 +146,7 @@ export class CurriculumDbStore {
   }
 
   async getProgramById(idOrCode: string, tenantId: string = 'global'): Promise<CurriculumProgramDto | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.programs.get(idOrCode);
     if (item && (tenantId === 'global' || item.institutionId === tenantId)) {
       return item;
@@ -106,6 +155,7 @@ export class CurriculumDbStore {
   }
 
   async listPrograms(tenantId: string = 'global', status?: string): Promise<CurriculumProgramDto[]> {
+    await this.ensureHydrated();
     const seen = new Set<string>();
     const list: CurriculumProgramDto[] = [];
     for (const prog of this.memoryStore.programs.values()) {
@@ -149,6 +199,7 @@ export class CurriculumDbStore {
   }
 
   async getCourseById(idOrCode: string, tenantId: string = 'global'): Promise<CurriculumCourseDto | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.courses.get(idOrCode);
     if (item && (tenantId === 'global' || item.institutionId === tenantId)) {
       return item;
@@ -157,6 +208,7 @@ export class CurriculumDbStore {
   }
 
   async listCourses(tenantId: string = 'global', departmentId?: string, level?: number): Promise<CurriculumCourseDto[]> {
+    await this.ensureHydrated();
     const seen = new Set<string>();
     const list: CurriculumCourseDto[] = [];
     for (const crs of this.memoryStore.courses.values()) {

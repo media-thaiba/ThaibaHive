@@ -23,6 +23,7 @@ import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliatio
 import { resolveShift } from "@/lib/attendance/shifts";
 import { isPresenceTrackingEnabled } from "@/lib/features";
 import type { Role } from "@/lib/finance/models/approval-state";
+import { hasPermission, type StaffRole as AuthRole } from "@thaiba/auth";
 import {
   validateNfcCheckIn,
   AttendanceValidationError,
@@ -78,6 +79,7 @@ export async function applySyncMutation(
     case "attendance_nfc_checkin":
       return applyAttendanceNfcCheckin(ctx, payload);
     case "attendance_punch":
+    case "attendance_checkout":
       return applyAttendancePunch(ctx, payload);
     case "finance_purchase_action":
       return applyFinancePurchaseAction(ctx, payload);
@@ -408,7 +410,7 @@ const PUNCH_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
   const payload = asRecord(raw);
   const parsed = attendancePunchSchema.safeParse({
-    mode: payload.mode,
+    mode: payload.mode ?? "checkout",
     at: payload.at ?? payload.timestamp,
     latitude: payload.latitude,
     longitude: payload.longitude,
@@ -499,6 +501,13 @@ async function applyFinanceReconciliationMatch(
   ctx: SyncApplierContext,
   raw: Record<string, unknown>
 ): Promise<void> {
+  if (
+    !hasPermission(ctx.role as AuthRole, "finance:reconcile") &&
+    !hasPermission(ctx.role as AuthRole, "expenses:approve")
+  ) {
+    throw new Error("Forbidden: Insufficient permissions to reconcile financial items.");
+  }
+
   const payload = asRecord(raw);
   const itemId = asString(payload.itemId, "itemId");
   const parsed = financialReconciliationItemMatchSchema.safeParse({
@@ -538,6 +547,10 @@ async function applyApprovalDecision(
   const scope = actorScope(ctx);
 
   if (type === "leave") {
+    if (!hasPermission(ctx.role as AuthRole, "leaves:approve")) {
+      throw new Error("Forbidden: Insufficient permissions to review leave requests.");
+    }
+
     const leaveIdClause = eq(leaveRequests.id, id);
     const leave = await db
       .select()
@@ -550,7 +563,7 @@ async function applyApprovalDecision(
     }
 
     let nextStatus = decision === "approve" ? "approved" : "rejected";
-    if (decision === "approve" && (ctx.role === "hod" || ctx.role === "principal")) {
+    if (decision === "approve" && ctx.role === "hod") {
       nextStatus = "hod_approved";
     }
 
@@ -588,6 +601,10 @@ async function applyApprovalDecision(
   }
 
   if (type === "expense") {
+    if (!hasPermission(ctx.role as AuthRole, "expenses:approve")) {
+      throw new Error("Forbidden: Insufficient permissions to review expense claims.");
+    }
+
     const claim = await db
       .select()
       .from(expenseClaims)
@@ -632,6 +649,10 @@ async function applyApprovalDecision(
   }
 
   if (type === "purchase") {
+    if (!hasPermission(ctx.role as AuthRole, "purchases:approve")) {
+      throw new Error("Forbidden: Insufficient permissions to review purchase requests.");
+    }
+
     const purchase = await db
       .select()
       .from(purchaseRequests)
@@ -666,14 +687,23 @@ async function applyApprovalDecision(
     const updates: Record<string, unknown> = { updatedAt: now };
     switch (purchase.status) {
       case "pending_hod":
+        if (!["hod", "principal", "admin", "super_admin"].includes(ctx.role)) {
+          throw new Error("Forbidden: HOD or higher role required to approve at pending_hod stage.");
+        }
         updates.status = "pending_accounts";
         updates.approvedByHodId = ctx.staffId;
         break;
       case "pending_accounts":
+        if (!["accounts", "admin", "super_admin"].includes(ctx.role)) {
+          throw new Error("Forbidden: Accounts or Admin role required to approve at pending_accounts stage.");
+        }
         updates.status = "pending_purchase";
         updates.approvedByAccountsId = ctx.staffId;
         break;
       case "pending_purchase":
+        if (!["purchase", "principal", "admin", "super_admin"].includes(ctx.role)) {
+          throw new Error("Forbidden: Purchase, Principal, or Admin role required to approve at pending_purchase stage.");
+        }
         updates.status = "approved";
         updates.approvedByPurchaseId = ctx.staffId;
         updates.approvedAt = now;
@@ -700,6 +730,10 @@ async function applyApprovalDecision(
   }
 
   if (type === "booking") {
+    if (!hasPermission(ctx.role as AuthRole, "bookings:approve")) {
+      throw new Error("Forbidden: Insufficient permissions to review booking requests.");
+    }
+
     const bookingIdClause = eq(bookings.id, id);
     const booking = await db
       .select()
@@ -707,6 +741,9 @@ async function applyApprovalDecision(
       .where(scope ? and(bookingIdClause, eq(bookings.institutionId, scope)) : bookingIdClause)
       .get();
     if (!booking) throw new Error("Booking not found");
+    if (!elevated && booking.bookerId === ctx.staffId) {
+      throw new Error("Requesters cannot review their own booking requests.");
+    }
 
     const updated = await db
       .update(bookings)

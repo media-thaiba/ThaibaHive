@@ -190,9 +190,9 @@ export function SwarmTelemetryCharts({ metrics }: SwarmTelemetryChartsProps) {
               <div 
                 className={`h-full transition-all duration-500 rounded-full ${
                   activeConcurrency === 2 
-                    ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" 
+                    ? "bg-amber-500" 
                     : activeConcurrency === 1 
-                    ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+                    ? "bg-emerald-500" 
                     : "bg-slate-700"
                 }`}
                 style={{ width: `${(activeConcurrency / 2) * 100}%` }}
@@ -206,13 +206,6 @@ export function SwarmTelemetryCharts({ metrics }: SwarmTelemetryChartsProps) {
           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Active Execution Pipeline Topology</h4>
           <div className="relative h-48 w-full border border-border/50 rounded-lg bg-black/20 flex items-center justify-center overflow-hidden">
             <svg className="absolute inset-0 w-full h-full">
-              <defs>
-                <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
-              
               {/* Path from Queue to Worker 1 */}
               <path
                 d="M 80 96 L 240 48"
@@ -220,7 +213,6 @@ export function SwarmTelemetryCharts({ metrics }: SwarmTelemetryChartsProps) {
                 strokeWidth="2"
                 strokeDasharray={activeConcurrency > 0 ? "4 4" : "none"}
                 className={activeConcurrency > 0 ? "animate-pulse" : ""}
-                style={activeConcurrency > 0 ? { filter: "url(#glow-green)" } : {}}
               />
               
               {/* Path from Queue to Worker 2 */}
@@ -230,13 +222,12 @@ export function SwarmTelemetryCharts({ metrics }: SwarmTelemetryChartsProps) {
                 strokeWidth="2"
                 strokeDasharray={activeConcurrency > 1 ? "4 4" : "none"}
                 className={activeConcurrency > 1 ? "animate-pulse" : ""}
-                style={activeConcurrency > 1 ? { filter: "url(#glow-green)" } : {}}
               />
             </svg>
 
             {/* Queue Node */}
             <div className="absolute left-8 flex flex-col items-center space-y-1">
-              <div className="h-12 w-12 rounded-full bg-blue-500/10 border border-blue-500/80 flex items-center justify-center text-blue-400 font-bold text-xs shadow-[0_0_12px_rgba(59,130,246,0.2)]">
+              <div className="h-12 w-12 rounded-full bg-blue-500/10 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-xs shadow-xs">
                 Queue
               </div>
               <span className="text-[10px] text-muted-foreground font-mono">
@@ -246,9 +237,9 @@ export function SwarmTelemetryCharts({ metrics }: SwarmTelemetryChartsProps) {
 
             {/* Worker 1 Node */}
             <div className="absolute right-16 top-6 flex flex-col items-center space-y-1">
-              <div className={`h-12 w-12 rounded-full border flex items-center justify-center font-bold text-xs transition-all duration-300 ${
+              <div className={`h-12 w-12 rounded-full border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-xs ${
                 activeConcurrency > 0 
-                  ? "bg-emerald-500/10 border-emerald-500/80 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
+                  ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400" 
                   : "bg-slate-900/40 border-slate-800 text-slate-600"
               }`}>
                 W1
@@ -260,9 +251,9 @@ export function SwarmTelemetryCharts({ metrics }: SwarmTelemetryChartsProps) {
 
             {/* Worker 2 Node */}
             <div className="absolute right-16 bottom-6 flex flex-col items-center space-y-1">
-              <div className={`h-12 w-12 rounded-full border flex items-center justify-center font-bold text-xs transition-all duration-300 ${
+              <div className={`h-12 w-12 rounded-full border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-xs ${
                 activeConcurrency > 1 
-                  ? "bg-emerald-500/10 border-emerald-500/80 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
+                  ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400" 
                   : "bg-slate-900/40 border-slate-800 text-slate-600"
               }`}>
                 W2

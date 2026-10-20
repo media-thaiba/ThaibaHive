@@ -5,6 +5,7 @@ import { drizzle as sqliteDrizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
+import { getTableColumns, isTable } from "drizzle-orm";
 import { Pool } from "pg";
 import { ReplicaQueryRouter } from "./replica-router";
 import { TenantRouter } from "./tenant-router";
@@ -16,6 +17,59 @@ export * from "./tenant-router";
 
 export const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
 export const isPostgres = databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://");
+
+/**
+ * Ensures column mappers on exported schema tables work seamlessly in both
+ * SQLite and PostgreSQL modes (prevents SQLite 1/0 boolean coercion and
+ * double JSON.parse on PostgreSQL jsonb columns, plus syncs dialect column names).
+ */
+export function syncSchemaColumnMappers(forPostgres: boolean = isPostgres): void {
+  const sqliteEntries = Object.entries(sqliteSchema);
+  const pgRecord = pgSchema as Record<string, unknown>;
+
+  for (const [tableKey, sqliteTableVal] of sqliteEntries) {
+    if (!isTable(sqliteTableVal)) continue;
+    const sqliteCols = getTableColumns(sqliteTableVal) as Record<string, any>;
+    const pgTableVal = pgRecord[tableKey];
+    const pgCols = pgTableVal && isTable(pgTableVal) ? (getTableColumns(pgTableVal) as Record<string, any>) : null;
+
+    for (const [colKey, sqliteCol] of Object.entries(sqliteCols)) {
+      if (!sqliteCol) continue;
+
+      // Always make JSON column mapFromDriverValue resilient to pre-parsed objects (PG jsonb or in-memory)
+      if (sqliteCol.columnType === "SQLiteTextJson") {
+        sqliteCol.mapFromDriverValue = (value: unknown): unknown => {
+          if (value === null || value === undefined) return value;
+          if (typeof value === "string") {
+            try {
+              return JSON.parse(value);
+            } catch {
+              return value;
+            }
+          }
+          return value;
+        };
+      }
+
+      if (forPostgres) {
+        const pgCol = pgCols?.[colKey];
+        if (pgCol && typeof pgCol.name === "string" && pgCol.name !== sqliteCol.name) {
+          sqliteCol.name = pgCol.name;
+        }
+        if (sqliteCol.columnType === "SQLiteBoolean") {
+          sqliteCol.mapToDriverValue = (value: unknown): boolean => Boolean(value);
+          sqliteCol.mapFromDriverValue = (value: unknown): boolean =>
+            value === true || value === 1 || value === "1" || value === "true" || value === "t";
+        } else if (sqliteCol.columnType === "SQLiteTextJson") {
+          sqliteCol.mapToDriverValue = (value: unknown): unknown =>
+            typeof value === "string" ? value : JSON.stringify(value);
+        }
+      }
+    }
+  }
+}
+
+syncSchemaColumnMappers(isPostgres);
 
 export function logSlowQuery(op: string, durationMs: number) {
   if (durationMs > 500) {
@@ -50,15 +104,19 @@ export function getPgPoolConfig(connStr: string = databaseUrl): PgPoolOptions {
   }
 
   let ssl: boolean | { rejectUnauthorized: boolean } | undefined;
+  const isSupabaseHost =
+    connStr.includes("supabase.co") || connStr.includes("pooler.supabase.com");
+
   if (process.env.DB_SSL === "false") {
     ssl = false;
-  } else if (
-    process.env.DB_SSL === "true" ||
-    process.env.NODE_ENV === "production" ||
-    connStr.includes("supabase.co") ||
-    connStr.includes("pooler.supabase.com")
-  ) {
-    ssl = { rejectUnauthorized: false };
+  } else if (isSupabaseHost) {
+    ssl = {
+      rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true",
+    };
+  } else if (process.env.DB_SSL === "true" || process.env.NODE_ENV === "production") {
+    ssl = {
+      rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false",
+    };
   }
 
   return {

@@ -191,8 +191,10 @@ export function ReportBuilder() {
           {activeSubTab === "builder" ? (
             <form onSubmit={handleCompile} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">Analytics Category</label>
+                <label htmlFor="analytics-category" className="text-xs font-bold text-slate-500">Analytics Category</label>
                 <select
+                  id="analytics-category"
+                  aria-label="Analytics Category"
                   value={metricType}
                   onChange={(e) => setMetricType(e.target.value as any)}
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none dark:border-slate-800 dark:bg-slate-950"
@@ -232,8 +234,10 @@ export function ReportBuilder() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">Start Date</label>
+                <label htmlFor="report-start-date" className="text-xs font-bold text-slate-500">Start Date</label>
                 <input
+                  id="report-start-date"
+                  aria-label="Start Date"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
@@ -242,8 +246,10 @@ export function ReportBuilder() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">End Date</label>
+                <label htmlFor="report-end-date" className="text-xs font-bold text-slate-500">End Date</label>
                 <input
+                  id="report-end-date"
+                  aria-label="End Date"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
@@ -253,9 +259,11 @@ export function ReportBuilder() {
 
               {metricType === "academics" && (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500">Class ID (Optional)</label>
+                  <label htmlFor="report-class-id" className="text-xs font-bold text-slate-500">Class ID (Optional)</label>
                   <input
                     type="text"
+                    id="report-class-id"
+                    aria-label="Class ID"
                     placeholder="All Classes"
                     value={classId}
                     onChange={(e) => setClassId(e.target.value)}
@@ -294,9 +302,11 @@ export function ReportBuilder() {
           ) : (
             <form onSubmit={handleSaveSchedule} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">Schedule Title</label>
+                <label htmlFor="schedule-title" className="text-xs font-bold text-slate-500">Schedule Title</label>
                 <input
                   type="text"
+                  id="schedule-title"
+                  aria-label="Schedule Title"
                   placeholder="Weekly Finance Report"
                   value={scheduleTitle}
                   onChange={(e) => setScheduleTitle(e.target.value)}
@@ -305,8 +315,10 @@ export function ReportBuilder() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">Dispatch Frequency</label>
+                <label htmlFor="schedule-frequency" className="text-xs font-bold text-slate-500">Dispatch Frequency</label>
                 <select
+                  id="schedule-frequency"
+                  aria-label="Dispatch Frequency"
                   value={scheduleFrequency}
                   onChange={(e) => setScheduleFrequency(e.target.value as any)}
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none dark:border-slate-800 dark:bg-slate-950"
@@ -318,8 +330,10 @@ export function ReportBuilder() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">Format</label>
+                <label htmlFor="schedule-format" className="text-xs font-bold text-slate-500">Format</label>
                 <select
+                  id="schedule-format"
+                  aria-label="Schedule Format"
                   value={scheduleFormat}
                   onChange={(e) => setScheduleFormat(e.target.value as any)}
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none dark:border-slate-800 dark:bg-slate-950"
@@ -330,8 +344,10 @@ export function ReportBuilder() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500">Recipients (comma separated)</label>
+                <label htmlFor="schedule-recipients" className="text-xs font-bold text-slate-500">Recipients (comma separated)</label>
                 <textarea
+                  id="schedule-recipients"
+                  aria-label="Recipients"
                   placeholder="principal@campus.edu, accounts@campus.edu"
                   value={recipients}
                   onChange={(e) => setRecipients(e.target.value)}

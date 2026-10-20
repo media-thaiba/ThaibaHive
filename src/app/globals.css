@@ -279,16 +279,7 @@
   to { transform: rotate(360deg); }
 }
 
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(40px, -30px) scale(1.06); }
-  66% { transform: translate(-30px, 25px) scale(0.94); }
-}
-
 @layer utilities {
-  .animate-drift {
-    animation: drift 45s ease-in-out infinite;
-  }
 
   /* MediaHive micro-typography: section/eyebrow labels */
   .no-scrollbar {
@@ -301,17 +292,17 @@
   }
 
   .micro-label {
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 0.2em;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    line-height: 1;
+    line-height: 1.2;
   }
 
   @media (min-width: 640px) {
     .micro-label {
-      font-size: 10px;
-      letter-spacing: 0.3em;
+      font-size: 11px;
+      letter-spacing: 0.1em;
     }
   }
 
@@ -321,25 +312,11 @@
   .animate-slide-up {
     animation: slide-up 250ms cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .animate-slide-down {
-    animation: slide-down 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .animate-slide-in-right {
-    animation: slide-in-right 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
   .animate-scale-in {
     animation: scale-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .animate-pulse-subtle {
     animation: pulse-subtle 2s ease-in-out infinite;
-  }
-  .animate-shimmer {
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
-  .animate-spin-slow {
-    animation: spin-slow 3s linear infinite;
   }
 }
 
@@ -492,27 +469,6 @@
     box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.02);
   }
 
-  .emerald-glow-sm {
-    box-shadow: 0 0 16px -2px rgba(16, 185, 129, 0.2);
-  }
-
-  .emerald-glow-md {
-    box-shadow: 0 0 28px -4px rgba(16, 185, 129, 0.28);
-  }
-
-  .ambient-canvas-mesh {
-    background-image: 
-      radial-gradient(at 10% 10%, rgba(16, 185, 129, 0.035) 0px, transparent 50%),
-      radial-gradient(at 90% 0%, rgba(5, 150, 105, 0.03) 0px, transparent 40%),
-      radial-gradient(at 80% 50%, rgba(16, 185, 129, 0.02) 0px, transparent 50%);
-  }
-
-  .dark .ambient-canvas-mesh {
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 45%),
-      radial-gradient(at 100% 10%, rgba(6, 78, 59, 0.08) 0px, transparent 50%),
-      radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
-  }
 
   /* ─── Shell Layout Responsive Wrapper ───
    * Guarantees 100% W3C calc() compliance with mandatory whitespace around '+' and '-'.

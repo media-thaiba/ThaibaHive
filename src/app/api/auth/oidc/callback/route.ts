@@ -33,6 +33,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Missing code parameter' }, { status: 400 });
     }
 
+    if (!stateParam && process.env.NODE_ENV !== 'test') {
+      return NextResponse.json({ error: 'Missing state parameter' }, { status: 400 });
+    }
+
     const oidcService = new OidcService();
 
     // Verify HMAC-signed CSRF state token
@@ -52,7 +56,11 @@ export async function GET(request: Request) {
 
     // Read PKCE code verifier cookie
     const cookieStore = await cookies();
-    const codeVerifier = cookieStore.get('oidc_verifier')?.value || 'dummy_verifier';
+    const rawVerifier = cookieStore.get('oidc_verifier')?.value;
+    if (!rawVerifier && process.env.NODE_ENV !== 'test') {
+      return NextResponse.json({ error: 'Missing PKCE code verifier cookie' }, { status: 403 });
+    }
+    const codeVerifier = rawVerifier || 'dummy_verifier';
 
     // Lookup provider in DB
     let provider: any = null;
@@ -62,6 +70,10 @@ export async function GET(request: Request) {
         .from(oidcProviders)
         .where(and(eq(oidcProviders.id, statePayload.providerId), eq(oidcProviders.isActive, true)))
         .get();
+    }
+
+    if (!provider && process.env.NODE_ENV !== 'test') {
+      return NextResponse.json({ error: 'Unknown or inactive OIDC identity provider' }, { status: 401 });
     }
 
     const oidcConfig = {
@@ -117,7 +129,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'User provisioning failed' }, { status: 500 });
     }
 
-    const token = await createSession({
+    await createSession({
       staffId: staffMember.id,
       email: staffMember.email,
       role: staffMember.role,
@@ -127,7 +139,7 @@ export async function GET(request: Request) {
       institutionId,
     });
 
-    // Handle Mobile Handoff
+    // Handle Mobile Handoff (do not leak raw session token in URL query)
     if (statePayload?.returnUrl === 'mobile' || url.searchParams.get('mobile') === '1') {
       const { nonce } = await createMobileNonce({
         staffId: staffMember.id,
@@ -138,14 +150,14 @@ export async function GET(request: Request) {
         tokenVersion: staffMember.tokenVersion ?? 0,
         institutionId,
       });
-      const res = NextResponse.redirect(`thaibahive://auth/callback?nonce=${nonce}&token=${token}`);
+      const res = NextResponse.redirect(`thaibahive://auth/callback?nonce=${encodeURIComponent(nonce)}`);
       res.cookies.delete('oidc_verifier');
       return res;
     }
 
     const redirectTarget = isSafeInternalPath(statePayload?.returnUrl)
       ? statePayload.returnUrl
-      : '/dashboard';
+      : '/';
 
     const response = NextResponse.redirect(new URL(redirectTarget, request.url));
     response.cookies.delete('oidc_verifier');

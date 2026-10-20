@@ -29,11 +29,13 @@ export type AttendanceTodayResponse = {
 
 export type MyAttendanceResponse = {
   logs: AttendanceLog[];
+  total?: number;
   pagination?: { total: number; limit: number; offset: number };
 };
 
 export type TeamAttendanceResponse = {
   logs: TeamLog[];
+  total?: number;
   pagination?: { total: number; limit: number; offset: number };
 };
 

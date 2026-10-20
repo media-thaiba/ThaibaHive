@@ -1,7 +1,7 @@
 /**
  * Walks the error cause chain (drizzle wraps driver errors as
  * "Failed query: ..." with the original driver error on `error.cause`)
- * and reports whether a SQLite UNIQUE constraint violation occurred.
+ * and reports whether a SQLite or PostgreSQL UNIQUE constraint violation occurred.
  */
 export function isUniqueConstraintViolation(
   error: unknown,
@@ -10,8 +10,29 @@ export function isUniqueConstraintViolation(
   let current: unknown = error;
   for (let depth = 0; current && depth < 5; depth++) {
     const message = current instanceof Error ? current.message : String(current);
-    if (/UNIQUE constraint failed/i.test(message)) {
-      if (!columnFragment || message.toLowerCase().includes(columnFragment.toLowerCase())) {
+    const code =
+      current && typeof current === "object" && "code" in current
+        ? String((current as { code?: unknown }).code)
+        : "";
+    const detail =
+      current && typeof current === "object" && "detail" in current
+        ? String((current as { detail?: unknown }).detail)
+        : "";
+    const constraint =
+      current && typeof current === "object" && "constraint" in current
+        ? String((current as { constraint?: unknown }).constraint)
+        : "";
+
+    const isSqliteUnique = /UNIQUE constraint failed/i.test(message);
+    const isPgUnique =
+      code === "23505" || /duplicate key value violates unique constraint/i.test(message);
+
+    if (isSqliteUnique || isPgUnique) {
+      if (!columnFragment) {
+        return true;
+      }
+      const haystack = `${message} ${detail} ${constraint}`.toLowerCase();
+      if (haystack.includes(columnFragment.toLowerCase())) {
         return true;
       }
     }

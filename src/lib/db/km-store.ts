@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq } from 'drizzle-orm';
 import {
   kmEntities,
   kmRelations,
@@ -28,6 +29,8 @@ export interface InMemoryKmStore {
 
 export class KmDbStore {
   private static instance: KmDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryKmStore = {
     entities: new Map(),
     relations: new Map(),
@@ -49,6 +52,7 @@ export class KmDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.entities.clear();
     this.memoryStore.relations.clear();
     this.memoryStore.documents.clear();
@@ -59,6 +63,35 @@ export class KmDbStore {
     this.memoryStore.advisingSessions.clear();
     this.memoryStore.advisingInterventions.clear();
     this.memoryStore.translationCache.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [entities, rels, docs, chunks, embeds, progs, prereqs, sessions, intervs, trans] = await Promise.all([
+        db.select().from(kmEntities),
+        db.select().from(kmRelations),
+        db.select().from(kmDocuments),
+        db.select().from(kmChunks),
+        db.select().from(kmEmbeddings),
+        db.select().from(kmDegreePrograms),
+        db.select().from(kmCoursePrerequisites),
+        db.select().from(kmAdvisingSessions),
+        db.select().from(kmAdvisingInterventions),
+        db.select().from(kmTranslationCache),
+      ]);
+      for (const r of entities) if (!this.memoryStore.entities.has(r.entityId)) this.memoryStore.entities.set(r.entityId, r);
+      for (const r of rels) if (!this.memoryStore.relations.has(r.relationId)) this.memoryStore.relations.set(r.relationId, r);
+      for (const r of docs) if (!this.memoryStore.documents.has(r.documentId)) this.memoryStore.documents.set(r.documentId, r);
+      for (const r of chunks) if (!this.memoryStore.chunks.has(r.chunkId)) this.memoryStore.chunks.set(r.chunkId, r);
+      for (const r of embeds) if (!this.memoryStore.embeddings.has(r.embeddingId)) this.memoryStore.embeddings.set(r.embeddingId, r);
+      for (const r of progs) if (!this.memoryStore.degreePrograms.has(r.programId)) this.memoryStore.degreePrograms.set(r.programId, r);
+      for (const r of prereqs) if (!this.memoryStore.coursePrerequisites.has(r.prereqId)) this.memoryStore.coursePrerequisites.set(r.prereqId, r);
+      for (const r of sessions) if (!this.memoryStore.advisingSessions.has(r.sessionId)) this.memoryStore.advisingSessions.set(r.sessionId, r);
+      for (const r of intervs) if (!this.memoryStore.advisingInterventions.has(r.interventionId)) this.memoryStore.advisingInterventions.set(r.interventionId, r);
+      for (const r of trans) if (!this.memoryStore.translationCache.has(r.contentHash)) this.memoryStore.translationCache.set(r.contentHash, r);
+    } catch {}
   }
 
   // ─── Entities ───
@@ -79,6 +112,7 @@ export class KmDbStore {
   }
 
   async getEntityById(entityId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.entities.get(entityId);
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
@@ -87,6 +121,7 @@ export class KmDbStore {
   }
 
   async listEntities(tenantId: string = 'global', type?: string): Promise<any[]> {
+    await this.ensureHydrated();
     const list = Array.from(this.memoryStore.entities.values()).filter(
       (e) => (tenantId === 'global' || e.institutionId === tenantId) && (!type || e.type === type)
     );
@@ -131,6 +166,7 @@ export class KmDbStore {
   }
 
   async getDocumentById(documentId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const doc = this.memoryStore.documents.get(documentId);
     if (doc && (doc.institutionId === tenantId || tenantId === 'global')) {
       return doc;
@@ -138,7 +174,35 @@ export class KmDbStore {
     return null;
   }
 
+  async updateDocumentStatus(
+    documentId: string,
+    status: string,
+    chunkCount?: number,
+    tenantId: string = 'global'
+  ): Promise<any | null> {
+    await this.ensureHydrated();
+    const doc = this.memoryStore.documents.get(documentId);
+    if (!doc) return null;
+    if (tenantId !== 'global' && doc.institutionId && doc.institutionId !== tenantId) {
+      return null;
+    }
+    doc.status = status;
+    if (typeof chunkCount === 'number') doc.chunkCount = chunkCount;
+    doc.updatedAt = new Date().toISOString();
+    this.memoryStore.documents.set(documentId, doc);
+    try {
+      if (db) {
+        await db
+          .update(kmDocuments)
+          .set({ status, ...(typeof chunkCount === 'number' ? { chunkCount } : {}), updatedAt: doc.updatedAt })
+          .where(eq(kmDocuments.documentId, documentId));
+      }
+    } catch {}
+    return doc;
+  }
+
   async listDocuments(tenantId: string = 'global', category?: string): Promise<any[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.documents.values()).filter(
       (d) =>
         (tenantId === 'global' || d.institutionId === tenantId) &&

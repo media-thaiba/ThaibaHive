@@ -1,7 +1,7 @@
 import { readdir, stat, readFile } from "fs/promises";
 import { join, relative, extname, basename, dirname } from "path";
 import { createHash, randomUUID } from "crypto";
-import { db } from "@/db";
+import { db, isPostgres } from "@/db";
 import { mediaAssets, mediaFolders, departments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -320,10 +320,13 @@ export class NASSyncService {
   }
 
   private async findAssetByHash(sha256: string) {
+    const hashExpr = isPostgres
+      ? sql`(${mediaAssets.metadata}::jsonb ->> 'sha256') = ${sha256}`
+      : sql`json_extract(${mediaAssets.metadata}, '$.sha256') = ${sha256}`;
     return db
       .select()
       .from(mediaAssets)
-      .where(sql`json_extract(${mediaAssets.metadata}, '$.sha256') = ${sha256}`)
+      .where(hashExpr)
       .get();
   }
 

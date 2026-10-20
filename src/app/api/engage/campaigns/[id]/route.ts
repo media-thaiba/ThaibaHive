@@ -5,13 +5,14 @@ import { EngageDbStore } from '@/lib/db/engage-store';
 
 const store = EngageDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request, context?: any) => {
+export const GET = requireAuth(async (request: Request, session, context?: any) => {
   try {
     const params = await context?.params;
     const id = params?.id;
     if (!id) return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 });
 
-    const message = await store.getMessageAsync(`camp_msg_${id}`, 'global');
+    const instScope = session.institutionId && session.institutionId !== 'global' ? session.institutionId : 'global';
+    const message = (await store.getMessageAsync(`camp_msg_${id}`, instScope)) || (await store.getMessageAsync(`camp_msg_${id}`, 'global'));
     if (!message) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
@@ -21,13 +22,14 @@ export const GET = requireAuth(async (request: Request, context?: any) => {
   }
 }, 'engage:campaign:view');
 
-export const PATCH = requireAuth(async (request: Request, context?: any) => {
+export const PATCH = requireAuth(async (request: Request, session, context?: any) => {
   try {
     const params = await context?.params;
     const id = params?.id;
     if (!id) return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 });
 
-    const message = await store.getMessageAsync(`camp_msg_${id}`, 'global');
+    const instScope = session.institutionId && session.institutionId !== 'global' ? session.institutionId : 'global';
+    const message = (await store.getMessageAsync(`camp_msg_${id}`, instScope)) || (await store.getMessageAsync(`camp_msg_${id}`, 'global'));
     if (!message) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
@@ -53,13 +55,14 @@ export const PATCH = requireAuth(async (request: Request, context?: any) => {
   }
 }, 'engage:campaign:manage');
 
-export const DELETE = requireAuth(async (request: Request, context?: any) => {
+export const DELETE = requireAuth(async (request: Request, session, context?: any) => {
   try {
     const params = await context?.params;
     const id = params?.id;
     if (!id) return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 });
 
-    const message = await store.getMessageAsync(`camp_msg_${id}`, 'global');
+    const instScope = session.institutionId && session.institutionId !== 'global' ? session.institutionId : 'global';
+    const message = (await store.getMessageAsync(`camp_msg_${id}`, instScope)) || (await store.getMessageAsync(`camp_msg_${id}`, 'global'));
     if (!message) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
@@ -67,7 +70,7 @@ export const DELETE = requireAuth(async (request: Request, context?: any) => {
     await store.saveMessageAsync({
       messageId: `camp_msg_${id}`,
       status: 'cancelled',
-      institutionId: 'global',
+      institutionId: message.institutionId || instScope,
     });
 
     return NextResponse.json({ success: true, cancelledId: id }, { status: 200 });

@@ -24,6 +24,7 @@ export interface InMemoryAgentStore {
 export class AgentDbStore {
   private static instance: AgentDbStore;
   public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryAgentStore = {
     workflows: new Map(),
     workflowRuns: new Map(),
@@ -42,6 +43,7 @@ export class AgentDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.workflows.clear();
     this.memoryStore.workflowRuns.clear();
     this.memoryStore.workflowSteps.clear();
@@ -49,6 +51,29 @@ export class AgentDbStore {
     this.memoryStore.memoryEntries.clear();
     this.memoryStore.toolInvocations.clear();
     this.memoryStore.outboxMessages.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [wfs, runs, steps, gates, entries, invocations, outboxes] = await Promise.all([
+        db.select().from(agenticWorkflows),
+        db.select().from(agenticWorkflowRuns),
+        db.select().from(agenticWorkflowSteps),
+        db.select().from(agentApprovalGates),
+        db.select().from(agentMemoryEntries),
+        db.select().from(agentToolInvocations),
+        db.select().from(agentOutboxMessages),
+      ]);
+      for (const r of wfs) if (!this.memoryStore.workflows.has(r.id)) this.memoryStore.workflows.set(r.id, r);
+      for (const r of runs) if (!this.memoryStore.workflowRuns.has(r.id)) this.memoryStore.workflowRuns.set(r.id, r);
+      for (const r of steps) if (!this.memoryStore.workflowSteps.has(r.id)) this.memoryStore.workflowSteps.set(r.id, r);
+      for (const r of gates) if (!this.memoryStore.approvalGates.has(r.id)) this.memoryStore.approvalGates.set(r.id, r);
+      for (const r of entries) if (!this.memoryStore.memoryEntries.has(r.id)) this.memoryStore.memoryEntries.set(r.id, r);
+      for (const r of invocations) if (!this.memoryStore.toolInvocations.has(r.id)) this.memoryStore.toolInvocations.set(r.id, r);
+      for (const r of outboxes) if (!this.memoryStore.outboxMessages.has(r.id)) this.memoryStore.outboxMessages.set(r.id, r);
+    } catch {}
   }
 
   // ─── Workflows ───
@@ -69,6 +94,7 @@ export class AgentDbStore {
   }
 
   async getWorkflowById(workflowId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.workflows.get(workflowId);
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
@@ -77,6 +103,7 @@ export class AgentDbStore {
   }
 
   async listWorkflows(tenantId: string = 'global', status?: string): Promise<any[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.workflows.values()).filter(
       (w) =>
         (tenantId === 'global' || w.institutionId === tenantId) &&
@@ -126,6 +153,7 @@ export class AgentDbStore {
   }
 
   async getWorkflowRunById(runId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.workflowRuns.get(runId);
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
@@ -134,6 +162,7 @@ export class AgentDbStore {
   }
 
   async listWorkflowRuns(tenantId: string = 'global', workflowId?: string, status?: string): Promise<any[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.workflowRuns.values()).filter(
       (r) =>
         (tenantId === 'global' || r.institutionId === tenantId) &&

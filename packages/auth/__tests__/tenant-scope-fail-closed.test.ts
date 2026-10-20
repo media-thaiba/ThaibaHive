@@ -17,6 +17,7 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
   const staffAlpha = `staff_alp_${ts}`;
   const staffMulti = `staff_mul_${ts}`;
   const staffAdmin = `staff_adm_${ts}`;
+  const staffInstAdmin = `staff_inst_adm_${ts}`;
 
   beforeAll(async () => {
     // Insert test institutions
@@ -32,6 +33,7 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       { id: staffAlpha, email: `alp_${ts}@test.com`, employeeId: `EMP_ALP_${ts}`, firstName: "Alpha", lastName: "Staff", role: "staff" },
       { id: staffMulti, email: `mul_${ts}@test.com`, employeeId: `EMP_MUL_${ts}`, firstName: "Multi", lastName: "Staff", role: "staff" },
       { id: staffAdmin, email: `adm_${ts}@test.com`, employeeId: `EMP_ADM_${ts}`, firstName: "Super", lastName: "Admin", role: "super_admin" },
+      { id: staffInstAdmin, email: `inst_adm_${ts}@test.com`, employeeId: `EMP_IADM_${ts}`, firstName: "Inst", lastName: "Admin", role: "admin" },
     ]).run();
 
     // Insert staff-institution mappings
@@ -39,13 +41,14 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       { id: `map_alp_${ts}`, staffId: staffAlpha, institutionId: instAlpha },
       { id: `map_mul_1_${ts}`, staffId: staffMulti, institutionId: instAlpha },
       { id: `map_mul_2_${ts}`, staffId: staffMulti, institutionId: instBeta },
+      { id: `map_iadm_${ts}`, staffId: staffInstAdmin, institutionId: instAlpha },
     ]).run();
   });
 
   afterAll(async () => {
     try {
-      await db.delete(staffInstitutions).where(inArray(staffInstitutions.staffId, [staffUnmapped, staffAlpha, staffMulti, staffAdmin])).run();
-      await db.delete(staff).where(inArray(staff.id, [staffUnmapped, staffAlpha, staffMulti, staffAdmin])).run();
+      await db.delete(staffInstitutions).where(inArray(staffInstitutions.staffId, [staffUnmapped, staffAlpha, staffMulti, staffAdmin, staffInstAdmin])).run();
+      await db.delete(staff).where(inArray(staff.id, [staffUnmapped, staffAlpha, staffMulti, staffAdmin, staffInstAdmin])).run();
       await db.delete(institutions).where(inArray(institutions.id, [instAlpha, instBeta, instGamma])).run();
     } catch {
       // cleanup
@@ -60,12 +63,14 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       expect(scope).not.toBe("global");
     });
 
-    it("should return 'global' for super_admin and admin users", async () => {
+    it("should return 'global' for super_admin and scope 'admin' to assigned staffInstitutions", async () => {
       const superAdminSession = { staffId: staffAdmin, role: "super_admin", email: "admin@test.com", employeeId: "EMP_ADM", name: "Admin", tokenVersion: 1 };
-      const adminSession = { staffId: staffAdmin, role: "admin", email: "admin@test.com", employeeId: "EMP_ADM", name: "Admin", tokenVersion: 1 };
-      
+      const instAdminSession = { staffId: staffInstAdmin, role: "admin", email: "inst_admin@test.com", employeeId: "EMP_IADM", name: "Inst Admin", tokenVersion: 1 };
+      const unmappedAdminSession = { staffId: staffUnmapped, role: "admin", email: "unmapped_admin@test.com", employeeId: "EMP_UNM", name: "Unmapped Admin", tokenVersion: 1 };
+
       expect(await resolveInstitutionScopeForSession(superAdminSession)).toBe("global");
-      expect(await resolveInstitutionScopeForSession(adminSession)).toBe("global");
+      expect(await resolveInstitutionScopeForSession(instAdminSession)).toBe(instAlpha);
+      expect(await resolveInstitutionScopeForSession(unmappedAdminSession)).toBeNull();
     });
 
     it("should resolve single institution mapping correctly", async () => {
@@ -87,13 +92,21 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
     it("should reject (return null) if staff accesses subdomain of institution they are NOT a member of", async () => {
       const session = { staffId: staffAlpha, role: "staff", email: "alpha@test.com", employeeId: "EMP_ALP", name: "Alpha", tokenVersion: 1 };
       
-      // staffAlpha only belongs to instAlpha, not instGamma
+      // staffAlpha only belongs to instAlpha, not instGamma or unknown subdomain
       const scopeGamma = await resolveInstitutionScopeForSession(session, `gamma_${ts}.thaibahive.com`);
       expect(scopeGamma).toBeNull();
+
+      const scopeUnknown = await resolveInstitutionScopeForSession(session, `unknown_${ts}.thaibahive.com`);
+      expect(scopeUnknown).toBeNull();
     });
   });
 
   describe("resolveScopedInstitutionId", () => {
+    it("should throw TenantMismatchError when session is null/missing", async () => {
+      await expect(resolveScopedInstitutionId(instAlpha, null)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(null, null)).rejects.toThrow(TenantMismatchError);
+    });
+
     it("should throw TenantMismatchError if unmapped staff attempts to resolve scope", async () => {
       const session = {
         staffId: staffUnmapped,
@@ -108,7 +121,7 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       await expect(resolveScopedInstitutionId(null, session)).rejects.toThrow(TenantMismatchError);
     });
 
-    it("should throw TenantMismatchError if staff of institution A requests institution B", async () => {
+    it("should throw TenantMismatchError if staff or admin of institution A requests institution B", async () => {
       const session = {
         staffId: staffAlpha,
         role: "staff",
@@ -117,8 +130,18 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
         name: "Alpha",
         tokenVersion: 1,
       };
+      const instAdminSession = {
+        staffId: staffInstAdmin,
+        role: "admin",
+        email: "inst_admin@test.com",
+        employeeId: "EMP_IADM",
+        name: "Inst Admin",
+        tokenVersion: 1,
+      };
 
       await expect(resolveScopedInstitutionId(instBeta, session)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(instBeta, instAdminSession)).rejects.toThrow(TenantMismatchError);
+      expect(await resolveScopedInstitutionId(instAlpha, instAdminSession)).toBe(instAlpha);
     });
 
     it("should return requested institution ID if staff is an active member", async () => {
@@ -138,7 +161,7 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       expect(resolvedAlpha).toBe(instAlpha);
     });
 
-    it("should permit super_admin / admin to target any requested institution or default to global", async () => {
+    it("should permit super_admin to target any requested institution or default to global", async () => {
       const session = {
         staffId: staffAdmin,
         role: "super_admin",
@@ -154,7 +177,7 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
   });
 
   describe("resolveRequestInstitution (Blocker B8)", () => {
-    it("should return requested institution or global for super_admin / admin / system", async () => {
+    it("should return requested institution or global for super_admin / system", async () => {
       const adminSession = {
         staffId: staffAdmin,
         role: "super_admin",
@@ -183,7 +206,7 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       await expect(resolveRequestInstitution(unmappedSession, instAlpha)).rejects.toThrow(TenantMismatchError);
     });
 
-    it("should throw TenantMismatchError if non-admin staff requests an institution they are not a member of", async () => {
+    it("should throw TenantMismatchError if non-global staff or admin requests an institution they are not a member of", async () => {
       const alphaSession = {
         staffId: staffAlpha,
         role: "staff",
@@ -193,10 +216,20 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
         tokenVersion: 1,
         institutionId: instAlpha,
       };
+      const instAdminSession = {
+        staffId: staffInstAdmin,
+        role: "admin",
+        email: "inst_admin@test.com",
+        employeeId: "EMP_IADM",
+        name: "Inst Admin",
+        tokenVersion: 1,
+      };
 
       await expect(resolveRequestInstitution(alphaSession, instBeta)).rejects.toThrow(TenantMismatchError);
       await expect(resolveRequestInstitution(alphaSession, instGamma)).rejects.toThrow(TenantMismatchError);
       await expect(resolveRequestInstitution(alphaSession, "global")).rejects.toThrow(TenantMismatchError);
+      await expect(resolveRequestInstitution(instAdminSession, instBeta)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveRequestInstitution(instAdminSession, "global")).rejects.toThrow(TenantMismatchError);
     });
 
     it("should return caller institution when requested is omitted or matches membership", async () => {

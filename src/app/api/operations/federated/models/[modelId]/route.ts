@@ -4,7 +4,7 @@ import { AfedDbStore } from '@/lib/operations/persistence/afed-db-store';
 
 const dbStore = AfedDbStore.getInstance();
 
-export const GET = requireAuth(async (request: Request, context?: any) => {
+export const GET = requireAuth(async (request: Request, _session, context?: any) => {
   try {
     const params = context?.params ? await context.params : {};
     const modelId = params?.modelId;

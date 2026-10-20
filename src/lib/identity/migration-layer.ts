@@ -3,14 +3,18 @@ import { db } from '@thaiba/db';
 import { identity_sessions } from '@thaiba/db/schema';
 import { cryptoAuditWriter } from '@/lib/audit/crypto-writer';
 
-export function isDPoPToken(token: string): boolean {
+export function extractDPoPThumbprint(token: string): string | undefined {
   try {
     const decoded = decodeJwt(token);
     const cnf = decoded.cnf as { jkt?: unknown } | undefined;
-    return !!cnf?.jkt;
+    return typeof cnf?.jkt === 'string' && cnf.jkt.length > 0 ? cnf.jkt : undefined;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+export function isDPoPToken(token: string): boolean {
+  return !!extractDPoPThumbprint(token);
 }
 
 export async function getMigrationStats() {

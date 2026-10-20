@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar } from "@/components/ui/avatar";
 import {
@@ -10,9 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, Shield, User } from "lucide-react";
+import { LogOut, Settings, Shield, Sparkles, User } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
+
+const GuidedTour = dynamic(
+  () => import("@/components/dashboard/guided-tour").then((m) => m.GuidedTour),
+  { ssr: false }
+);
 
 type UserAvatarDropdownProps = {
   /** "icon" = avatar only (mobile top bar). "row" = full sidebar identity row with name + role. */
@@ -23,6 +30,7 @@ type UserAvatarDropdownProps = {
 
 export function UserAvatarDropdown({ variant = "icon", collapsed = false, align = "end" }: UserAvatarDropdownProps) {
   const { staff, logout } = useAuth();
+  const [tourActive, setTourActive] = useState(false);
 
   if (!staff) return null;
 
@@ -33,7 +41,7 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
       <DropdownMenuTrigger
         aria-label="User profile and settings menu"
         className={cn(
-          "group flex h-12 w-full items-center rounded-[18px] transition-all duration-300 outline-none hover:bg-foreground/[0.03] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring",
+          "group flex h-12 w-full items-center rounded-xl transition-all duration-200 outline-none hover:bg-foreground/[0.03] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
           collapsed && "justify-center"
         )}
       >
@@ -77,6 +85,7 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
     );
 
   return (
+    <>
     <DropdownMenu>
       {variant === "row" ? (
         trigger
@@ -107,12 +116,20 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
         </DropdownMenuItem>
         <DropdownMenuItem asChild inset>
           <Link
-            href="/admin/staff"
+            href={staff ? `/admin/staff/${staff.id}/edit` : "/admin/staff"}
             className="flex items-center gap-2 w-full"
           >
             <User className="h-4 w-4" />
             <span>My Profile</span>
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          inset
+          onSelect={() => setTourActive(true)}
+          className="flex items-center gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Take Tour</span>
         </DropdownMenuItem>
         {(staff.role === "super_admin" || staff.role === "admin") && (
           <>
@@ -141,5 +158,7 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <GuidedTour active={tourActive} onClose={() => setTourActive(false)} />
+    </>
   );
 }

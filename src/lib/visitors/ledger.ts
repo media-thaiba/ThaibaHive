@@ -6,23 +6,42 @@ import { gateLogs } from "@/db/schema";
  * Guarantees that concurrent QR scans, check-ins, check-outs, and lifecycle
  * updates on the exact same visitor execute strictly sequentially.
  */
-const visitorLocks = new Map<string, Promise<void>>();
+interface LockEntry {
+  promise: Promise<void>;
+  createdAt: number;
+}
+
+const visitorLocks = new Map<string, LockEntry>();
+const LOCK_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Periodic cleanup of stale locks
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of visitorLocks.entries()) {
+    if (now - entry.createdAt > LOCK_TTL_MS) {
+      visitorLocks.delete(id);
+    }
+  }
+}, 60 * 1000).unref(); // Run cleanup every minute without holding process open
 
 export async function withVisitorLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-  const currentLock = visitorLocks.get(id) ?? Promise.resolve();
+  const currentEntry = visitorLocks.get(id);
+  const currentLock = currentEntry?.promise ?? Promise.resolve();
   let release: () => void = () => {};
   const nextLock = new Promise<void>((resolve) => {
     release = resolve;
   });
+  const chained = currentLock.then(() => nextLock);
 
-  visitorLocks.set(id, currentLock.then(() => nextLock));
+  visitorLocks.set(id, { promise: chained, createdAt: Date.now() });
 
   try {
     await currentLock;
     return await fn();
   } finally {
     release();
-    if (visitorLocks.get(id) === nextLock) {
+    const entry = visitorLocks.get(id);
+    if (entry?.promise === chained) {
       visitorLocks.delete(id);
     }
   }
@@ -32,23 +51,42 @@ export async function withVisitorLock<T>(id: string, fn: () => Promise<T>): Prom
  * In-memory serialization mutex keyed by visitor pre-registration request ID.
  * Prevents concurrent host/admin approvals, rejections, or race transitions.
  */
-const requestLocks = new Map<string, Promise<void>>();
+interface RequestLockEntry {
+  promise: Promise<void>;
+  createdAt: number;
+}
+
+const requestLocks = new Map<string, RequestLockEntry>();
+const REQUEST_LOCK_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// Periodic cleanup of stale request locks
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of requestLocks.entries()) {
+    if (now - entry.createdAt > REQUEST_LOCK_TTL_MS) {
+      requestLocks.delete(id);
+    }
+  }
+}, 60 * 1000).unref(); // Run cleanup every minute without holding process open
 
 export async function withVisitorRequestLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-  const currentLock = requestLocks.get(id) ?? Promise.resolve();
+  const currentEntry = requestLocks.get(id);
+  const currentLock = currentEntry?.promise ?? Promise.resolve();
   let release: () => void = () => {};
   const nextLock = new Promise<void>((resolve) => {
     release = resolve;
   });
+  const chained = currentLock.then(() => nextLock);
 
-  requestLocks.set(id, currentLock.then(() => nextLock));
+  requestLocks.set(id, { promise: chained, createdAt: Date.now() });
 
   try {
     await currentLock;
     return await fn();
   } finally {
     release();
-    if (requestLocks.get(id) === nextLock) {
+    const entry = requestLocks.get(id);
+    if (entry?.promise === chained) {
       requestLocks.delete(id);
     }
   }

@@ -226,10 +226,11 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
     setError("");
     setLoading(true);
     try {
-      await login("admin@thaibahive.local", "password");
+      // Redirect to the Google OAuth initiation endpoint (B-05)
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- intentional full navigation to OAuth route
+      window.location.href = "/api/auth/google";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google authentication failed");
-    } finally {
       setLoading(false);
     }
   }
@@ -495,7 +496,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                 <label htmlFor="signup-invitationToken" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                   Invitation Code / Token
                 </label>
-                <span className="text-[9px] text-muted-foreground">Institutional Access</span>
+                <span className="text-[11px] text-muted-foreground">Institutional Access</span>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" aria-hidden="true" />
@@ -507,7 +508,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
                   className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-primary h-10 pl-10 pr-4 rounded-xl transition-all text-xs"
                 />
               </div>
-              <p className="text-[9px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 Account creation requires an invitation code issued by your campus administrator.
               </p>
             </div>
@@ -655,7 +656,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             {!recoverySent ? (
               <>
                 <div className="space-y-1.5">
-                  <label htmlFor="forgot-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <label htmlFor="forgot-email" className="text-xs font-semibold uppercase tracking-wider text-foreground">
                     Group Email
                   </label>
                   <div className="relative">

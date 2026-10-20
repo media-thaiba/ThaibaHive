@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     // Inspect Issuer from unverified XML payload for provider resolution
     let issuer = '';
     try {
-      const rawXml = Buffer.from(samlResponse, 'base64').toString('utf-8');
+      const rawXml = Buffer.from(samlResponse, 'base64').toString('utf-8').replace(/<!--[\s\S]*?-->/g, '');
       const issuerMatch = rawXml.match(/<(?:\w+:)?Issuer[^>]*>([^<]+)<\/(?:\w+:)?Issuer>/i);
       if (issuerMatch) {
         issuer = issuerMatch[1].trim();
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User provisioning failed' }, { status: 500 });
     }
 
-    const token = await createSession({
+    await createSession({
       staffId: staffMember.id,
       email: staffMember.email,
       role: staffMember.role,
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       institutionId,
     });
 
-    // Handle Mobile Handoff
+    // Handle Mobile Handoff (do not leak raw session token in URL query)
     if (relayState === 'mobile' || new URL(request.url).searchParams.get('mobile') === '1') {
       const { nonce } = await createMobileNonce({
         staffId: staffMember.id,
@@ -138,12 +138,12 @@ export async function POST(request: Request) {
         tokenVersion: staffMember.tokenVersion ?? 0,
         institutionId,
       });
-      return NextResponse.redirect(`thaibahive://auth/callback?nonce=${nonce}&token=${token}`);
+      return NextResponse.redirect(`thaibahive://auth/callback?nonce=${encodeURIComponent(nonce)}`);
     }
 
     // QA-11: only allow same-site path redirects (blocks `//evil` and `/\evil`).
     const redirectTarget =
-      relayState && isSafeInternalPath(relayState) ? relayState : '/dashboard';
+      relayState && isSafeInternalPath(relayState) ? relayState : '/';
     return NextResponse.redirect(new URL(redirectTarget, request.url));
   } catch (err: unknown) {
     console.error('[SAML ACS Error]:', err instanceof Error ? err.stack : err);

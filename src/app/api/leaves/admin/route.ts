@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { leaveRequests, staff, leaveTypes } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { canAccessStaff } from "@/lib/auth/department-scope";
-import { eq, desc, and, gte, lte, type SQL } from "drizzle-orm";
+import { eq, desc, and, gte, lte, inArray, type SQL } from "drizzle-orm";
 
 const APPROVER_ROLES = ["super_admin", "admin", "principal", "hod"];
 
@@ -26,7 +26,15 @@ export const GET = requireAuth(async (request: Request, session) => {
   if (scopedInstitutionId && scopedInstitutionId !== "global") {
     conditions.push(eq(leaveRequests.institutionId, scopedInstitutionId));
   }
-  if (status) conditions.push(eq(leaveRequests.status, status));
+  if (status) {
+    if (status.includes(",")) {
+      conditions.push(inArray(leaveRequests.status, status.split(",").map((s) => s.trim())));
+    } else if (status === "pending") {
+      conditions.push(inArray(leaveRequests.status, ["pending", "hod_approved"]));
+    } else {
+      conditions.push(eq(leaveRequests.status, status));
+    }
+  }
   if (startDate) conditions.push(gte(leaveRequests.startDate, startDate));
   if (endDate) conditions.push(lte(leaveRequests.endDate, endDate));
 

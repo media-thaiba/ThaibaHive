@@ -10,12 +10,27 @@ export const GET = requireAuth(async (request, session) => {
   const endDate = searchParams.get("endDate") || searchParams.get("to");
   const departmentId = searchParams.get("departmentId");
   const rawInst = searchParams.get("institutionId");
-  const institutionId = await resolveRequestInstitution(session, rawInst);
+  let institutionId: string | null = null;
+  if (rawInst) {
+    try {
+      institutionId = await resolveRequestInstitution(session, rawInst);
+    } catch {
+      if (session.role === "admin") {
+        institutionId = session.institutionId || null;
+      } else {
+        throw new Error("Forbidden: Cannot access logs of foreign institution");
+      }
+    }
+  }
 
   // Parse and validate pagination & search parameters
-  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+  const rawOffset = searchParams.get("offset");
+  let page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
   const limit = Math.max(1, parseInt(searchParams.get("limit") || "20", 10) || 20);
-  const offset = (page - 1) * limit;
+  const offset = rawOffset !== null ? Math.max(0, parseInt(rawOffset, 10) || 0) : (page - 1) * limit;
+  if (rawOffset !== null) {
+    page = Math.floor(offset / limit) + 1;
+  }
   const search = searchParams.get("search");
 
   if (session.role === "staff") {
@@ -48,7 +63,13 @@ export const GET = requireAuth(async (request, session) => {
       .limit(limit)
       .offset(offset)
       .all();
-    return NextResponse.json({ logs: ownLogs, total, page, limit });
+    return NextResponse.json({
+      logs: ownLogs,
+      total,
+      page,
+      limit,
+      pagination: { total, limit, offset },
+    });
   }
 
   let effectiveDepartmentIds: string[] = departmentId ? [departmentId] : [];
@@ -157,5 +178,11 @@ export const GET = requireAuth(async (request, session) => {
     .offset(offset)
     .all();
 
-  return NextResponse.json({ logs: allLogs, total, page, limit });
+  return NextResponse.json({
+    logs: allLogs,
+    total,
+    page,
+    limit,
+    pagination: { total, limit, offset },
+  });
 }, "attendance:read");

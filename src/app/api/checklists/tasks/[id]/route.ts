@@ -50,11 +50,11 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Checklist not found" }, { status: 404 });
   }
 
-  if (
-    session.role !== "super_admin" &&
-    session.role !== "admin" &&
-    !(await canAccessStaff(session.staffId, session.role, checklist.staffId))
-  ) {
+  const isOwner = checklist.staffId === session.staffId;
+  const isDepartmentManager = await canAccessStaff(session.staffId, session.role, checklist.staffId);
+  const isAdmin = session.role === "super_admin" || session.role === "admin";
+
+  if (!isAdmin && !isOwner && !isDepartmentManager) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -78,4 +78,4 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .get();
 
   return NextResponse.json({ task: updated });
-}, "checklists:update");
+}, "checklists:read");

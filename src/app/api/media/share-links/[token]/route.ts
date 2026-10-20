@@ -4,6 +4,10 @@ import { mediaShareLinks, mediaAssets, mediaFolders } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { verifyPassword } from "@/lib/auth";
+import { getJwtSecretBytes } from "@thaiba/auth";
+import { createHmac, timingSafeEqual } from "crypto";
+import { withPublicApm } from "@/lib/api/public-apm";
+import { signShareAuthCookie, verifyShareAuthCookie } from "@/lib/media/share-auth";
 
 const LOCKOUT_ATTEMPT_THRESHOLD = 10;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
@@ -47,7 +51,7 @@ async function verifyDescendantAndBuildBreadcrumbs(
   return null; // Exceeded depth or never reached rootFolderId
 }
 
-export async function GET(
+export const GET = withPublicApm(async function GET(
   req: NextRequest,
   context: { params: Promise<{ token: string }> }
 ) {
@@ -90,9 +94,10 @@ export async function GET(
       const url = new URL(req.url);
       const queryPassword = url.searchParams.get("password");
 
-      // Check cookie for session handoff
+      // Check HMAC-signed cookie for session handoff
       const cookieName = `share_auth_${token}`;
-      const hasValidCookie = req.cookies.get(cookieName)?.value === "true";
+      const cookieVal = req.cookies.get(cookieName)?.value;
+      const hasValidCookie = verifyShareAuthCookie(cookieVal, token, link.passwordHash);
 
       if (!queryPassword && !hasValidCookie) {
         return NextResponse.json(
@@ -197,9 +202,8 @@ export async function GET(
         downloadUrl,
       });
 
-      if (passwordSetCookie) {
-        // Path=/api/media ensures cookie is attached to both share routes and batch-download
-        response.cookies.set(`share_auth_${token}`, "true", {
+      if (passwordSetCookie && link.passwordHash) {
+        response.cookies.set(`share_auth_${token}`, signShareAuthCookie(token, link.passwordHash), {
           path: "/api/media",
           httpOnly: true,
           sameSite: "strict",
@@ -274,8 +278,8 @@ export async function GET(
       assets: readyAssets,
     });
 
-    if (passwordSetCookie) {
-      response.cookies.set(`share_auth_${token}`, "true", {
+    if (passwordSetCookie && link.passwordHash) {
+      response.cookies.set(`share_auth_${token}`, signShareAuthCookie(token, link.passwordHash), {
         path: "/api/media",
         httpOnly: true,
         sameSite: "strict",
@@ -290,4 +294,4 @@ export async function GET(
     const message = err instanceof Error ? err.message : "Failed to access share link";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

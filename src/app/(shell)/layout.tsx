@@ -39,16 +39,6 @@ export default function ShellLayout({
             Skip to main content
           </a>
           <div className="relative min-h-screen bg-background text-foreground transition-colors duration-200" data-hydrated={isHydrated}>
-            {/* Ambient subtle top depth — darker obsidian canvas parity */}
-            <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-              <div
-                className="absolute inset-x-0 -top-[200px] h-[400px] opacity-25"
-                style={{
-                  background:
-                    "radial-gradient(1000px 400px at 50% 0%, rgba(16, 185, 129, 0.06), transparent 70%)",
-                }}
-              />
-            </div>
 
             {/* Desktop floating sidebar */}
             <ErrorBoundary>
@@ -56,12 +46,12 @@ export default function ShellLayout({
             </ErrorBoundary>
 
             <div className="relative z-10 flex min-h-screen flex-col shell-main-wrapper">
-              {/* Mobile top bar — desktop navigation lives in the floating sidebar */}
+              {/* Top navigation header (Desktop & Mobile) */}
               <header
                 role="banner"
-                className="glass-header sticky top-0 z-[var(--z-sticky)] lg:hidden"
+                className="glass-header sticky top-0 z-[var(--z-sticky)] w-full"
               >
-                <div className="flex h-14 items-center gap-4 px-4">
+                <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
                   <ErrorBoundary>
                     <ShellNav onSearchOpen={() => setCmdOpen(true)} />
                   </ErrorBoundary>

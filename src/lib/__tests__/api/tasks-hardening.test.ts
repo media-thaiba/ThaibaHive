@@ -463,4 +463,94 @@ describe("Tasks & Workflow Projects Management Pipeline — Hardening", () => {
       expect(body.comment.content).toBe("Valid operational note on Task B1");
     });
   });
+
+  describe("6. completedAt Lifecycle — Transition Timestamps", () => {
+    let testTaskId: string;
+
+    beforeEach(async () => {
+      // Create a fresh task for each test
+      asUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Test Task for completedAt", status: "todo" }),
+      });
+      const res = await createTask(req);
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      testTaskId = body.task.id;
+    });
+
+    afterEach(async () => {
+      // Clean up
+      if (testTaskId) {
+        await db.delete(tasks).where(eq(tasks.id, testTaskId)).run();
+      }
+    });
+
+    it("sets completedAt when status transitions TO completed", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/tasks/${testTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed" }),
+      });
+      const res = await updateTask(req, { params: Promise.resolve({ id: testTaskId }) });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.task.status).toBe("completed");
+      expect(body.task.completedAt).not.toBeNull();
+      expect(new Date(body.task.completedAt).getTime()).toBeLessThanOrEqual(Date.now());
+    });
+
+    it("clears completedAt when status transitions FROM completed to todo", async () => {
+      // First ensure task is completed
+      await db.update(tasks).set({ status: "completed", completedAt: new Date().toISOString() }).where(eq(tasks.id, testTaskId)).run();
+
+      asUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/tasks/${testTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "todo" }),
+      });
+      const res = await updateTask(req, { params: Promise.resolve({ id: testTaskId }) });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.task.status).toBe("todo");
+      expect(body.task.completedAt).toBeNull();
+    });
+
+    it("clears completedAt when status transitions FROM completed to cancelled", async () => {
+      // First ensure task is completed
+      await db.update(tasks).set({ status: "completed", completedAt: new Date().toISOString() }).where(eq(tasks.id, testTaskId)).run();
+
+      asUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/tasks/${testTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      const res = await updateTask(req, { params: Promise.resolve({ id: testTaskId }) });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.task.status).toBe("cancelled");
+      expect(body.task.completedAt).toBeNull();
+    });
+
+    it("preserves completedAt when status is unchanged (no completedAt in update)", async () => {
+      const fixedTime = new Date("2024-01-15T10:00:00Z").toISOString();
+      await db.update(tasks).set({ status: "completed", completedAt: fixedTime }).where(eq(tasks.id, testTaskId)).run();
+
+      asUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/tasks/${testTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Updated title only" }),
+      });
+      const res = await updateTask(req, { params: Promise.resolve({ id: testTaskId }) });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.task.completedAt).toBe(fixedTime);
+    });
+  });
 });

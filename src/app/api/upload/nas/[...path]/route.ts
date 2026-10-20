@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createReadStream } from "fs";
 import { stat } from "fs/promises";
 import { isAbsolute, resolve, sep } from "path";
-import { verifySession } from "@/lib/auth";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { contentTypeFor, nodeStreamToWeb } from "@/lib/media/serve-file-utils";
 
 export const runtime = "nodejs";
@@ -13,22 +13,13 @@ const SAFE_SEGMENT = /^[A-Za-z0-9._:-]+$/;
  * Serve NAS-backed assets (`nas://{absolutePath}` file URLs).
  * Self-host only: roots come from NAS_ROOT_PATHS (path.delimiter-separated).
  * Not configured (e.g. Vercel) → always 404, inert by design.
- *
- * D9*: previously `nas://` file URLs rendered as dead links. Every request is
- * session-authenticated and the resolved path must be contained in one of the
- * configured NAS roots — `..`, backslash tricks, and drive-escape are blocked
- * by resolve + prefix containment.
  */
-export async function GET(
+export const GET = requireAuth(async (
   _request: Request,
-  { params }: { params: Promise<{ path: string[] }> }
-) {
+  session,
+  context?: { params: Promise<{ path: string[] }> }
+) => {
   try {
-    const session = await verifySession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
     const roots = (process.env.NAS_ROOT_PATHS || "")
       .split(process.platform === "win32" ? ";" : ":")
       .map((p) => p.trim())
@@ -37,17 +28,29 @@ export async function GET(
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    const { path: rawSegments } = await params;
+    const resolvedParams = context?.params ? await context.params : { path: [] };
+    const { path: rawSegments } = resolvedParams;
     if (!rawSegments?.length || rawSegments.length > 32) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 
-    // Rebuild the absolute path (handles both `nas://D:/x` and `nas:///srv/x`,
-    // plus Windows backslash URLs) before segment validation.
     const rawPath = rawSegments.join("/").replace(/\\/g, "/");
     const segments = rawPath.split("/").filter(Boolean);
     if (!segments.length || segments.some((s) => !SAFE_SEGMENT.test(s) || s === "." || s === "..")) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+    }
+
+    // Enforce tenant segment isolation when path contains a tenant_<id> folder
+    const tenantSegment = segments.find((s) => s.startsWith("tenant_"));
+    if (tenantSegment && session.role !== "super_admin") {
+      const targetInst = tenantSegment.replace(/^tenant_/, "");
+      const callerInst = session.institutionId;
+      if (targetInst !== "default" && (!callerInst || (callerInst !== "global" && callerInst !== targetInst))) {
+        return NextResponse.json(
+          { error: "Forbidden: NAS path belongs to another institution" },
+          { status: 403 }
+        );
+      }
     }
 
     let filePath: string | null = null;
@@ -78,10 +81,11 @@ export async function GET(
       headers: {
         "Content-Type": contentTypeFor(filePath),
         "Cache-Control": "private, no-transform, max-age=3600",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (error) {
     console.error("NAS file serve error:", error);
     return NextResponse.json({ error: "Failed to serve file" }, { status: 500 });
   }
-}
+}, "media:read");

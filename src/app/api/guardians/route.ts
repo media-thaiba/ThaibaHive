@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
-import { guardians } from "@thaiba/db/schema";
-import { eq } from "drizzle-orm";
+import { guardians, studentGuardians, students } from "@thaiba/db/schema";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 
@@ -16,20 +16,39 @@ const guardianCreateSchema = z.object({
   isPrimary: z.boolean().optional(),
 });
 
-import { studentGuardians } from "@thaiba/db/schema";
-
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const { searchParams } = new URL(request.url);
   const studentId = searchParams.get("studentId");
-  
+  const instScope =
+    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
+
   if (studentId) {
+    const whereClause = instScope
+      ? and(eq(studentGuardians.studentId, studentId), eq(students.institutionId, instScope))
+      : eq(studentGuardians.studentId, studentId);
+
     const rows = await db
       .select({ guardian: guardians })
       .from(guardians)
       .innerJoin(studentGuardians, eq(studentGuardians.guardianId, guardians.id))
-      .where(eq(studentGuardians.studentId, studentId))
+      .innerJoin(students, eq(studentGuardians.studentId, students.id))
+      .where(whereClause)
       .all();
-    return NextResponse.json({ guardians: rows.map(r => r.guardian) });
+    return NextResponse.json({ guardians: rows.map((r) => r.guardian) });
+  }
+
+  if (instScope) {
+    const rows = await db
+      .select({ guardian: guardians })
+      .from(guardians)
+      .innerJoin(studentGuardians, eq(studentGuardians.guardianId, guardians.id))
+      .innerJoin(students, eq(studentGuardians.studentId, students.id))
+      .where(eq(students.institutionId, instScope))
+      .all();
+    const uniqueGuardians = Array.from(
+      new Map(rows.map((r) => [r.guardian.id, r.guardian])).values()
+    );
+    return NextResponse.json({ guardians: uniqueGuardians });
   }
 
   const rows = await db.select().from(guardians).all();

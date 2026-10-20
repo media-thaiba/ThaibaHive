@@ -1,10 +1,46 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staffShifts, staff, shifts } from "@/db/schema";
+import { staffShifts, staff, shifts, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, desc } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { adminStaffShiftCreateSchema } from "@/lib/validation/schemas";
+import { eq, desc, and } from "drizzle-orm";
+import crypto from "crypto";
 
-export const GET = requireAuth(async () => {
+export const GET = requireAuth(async (_request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  const instScope =
+    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
+
+  if (instScope) {
+    const all = await db
+      .select({
+        id: staffShifts.id,
+        staffId: staffShifts.staffId,
+        shiftId: staffShifts.shiftId,
+        effectiveFrom: staffShifts.effectiveFrom,
+        effectiveTo: staffShifts.effectiveTo,
+        staffName: staff.firstName,
+        staffLastName: staff.lastName,
+        employeeId: staff.employeeId,
+        designation: staff.designation,
+        shiftName: shifts.name,
+        shiftStartTime: shifts.startTime,
+        shiftEndTime: shifts.endTime,
+      })
+      .from(staffShifts)
+      .innerJoin(staffInstitutions, eq(staffShifts.staffId, staffInstitutions.staffId))
+      .leftJoin(staff, eq(staffShifts.staffId, staff.id))
+      .leftJoin(shifts, eq(staffShifts.shiftId, shifts.id))
+      .where(eq(staffInstitutions.institutionId, instScope))
+      .orderBy(desc(staffShifts.effectiveFrom))
+      .all();
+
+    return NextResponse.json({ assignments: all });
+  }
+
   const all = await db
     .select({
       id: staffShifts.id,
@@ -29,15 +65,55 @@ export const GET = requireAuth(async () => {
   return NextResponse.json({ assignments: all });
 }, "attendance:manage");
 
-export const POST = requireAuth(async (request: Request, _session) => {
-  const body = await request.json();
-  const { staffId, shiftId, effectiveFrom, effectiveTo } = body;
+export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (!staffId || !shiftId || !effectiveFrom) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = adminStaffShiftCreateSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "staffId, shiftId, and effectiveFrom are required" },
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
       { status: 400 }
     );
+  }
+
+  const { staffId, shiftId, effectiveFrom, effectiveTo } = parsed.data;
+
+  // Verify shift exists
+  const shift = await db.select().from(shifts).where(eq(shifts.id, shiftId)).get();
+  if (!shift) {
+    return NextResponse.json({ error: "Shift not found" }, { status: 404 });
+  }
+
+  // Verify staff exists
+  const targetStaff = await db.select({ id: staff.id }).from(staff).where(eq(staff.id, staffId)).get();
+  if (!targetStaff) {
+    return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+  }
+
+  const instScope =
+    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
+  if (instScope) {
+    const member = await db
+      .select({ id: staffInstitutions.id })
+      .from(staffInstitutions)
+      .where(
+        and(
+          eq(staffInstitutions.staffId, staffId),
+          eq(staffInstitutions.institutionId, instScope)
+        )
+      )
+      .get();
+    if (!member) {
+      return NextResponse.json({ error: "Forbidden: Staff does not belong to your institution" }, { status: 403 });
+    }
   }
 
   try {
@@ -65,12 +141,38 @@ export const POST = requireAuth(async (request: Request, _session) => {
   }
 }, "attendance:manage");
 
-export const DELETE = requireAuth(async (request: Request, _session) => {
+export const DELETE = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
   if (!id) {
     return NextResponse.json({ error: "Assignment ID is required" }, { status: 400 });
+  }
+
+  const existing = await db.select().from(staffShifts).where(eq(staffShifts.id, id)).get();
+  if (!existing) {
+    return NextResponse.json({ error: "Shift assignment not found" }, { status: 404 });
+  }
+
+  const instScope =
+    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
+  if (instScope) {
+    const member = await db
+      .select({ id: staffInstitutions.id })
+      .from(staffInstitutions)
+      .where(
+        and(
+          eq(staffInstitutions.staffId, existing.staffId),
+          eq(staffInstitutions.institutionId, instScope)
+        )
+      )
+      .get();
+    if (!member) {
+      return NextResponse.json({ error: "Shift assignment not found" }, { status: 404 });
+    }
   }
 
   await db.delete(staffShifts).where(eq(staffShifts.id, id)).run();

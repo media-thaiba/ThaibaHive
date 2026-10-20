@@ -63,6 +63,7 @@ export interface InMemoryAlumniStore {
 export class AlumniDbStore {
   private static instance: AlumniDbStore;
   public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryAlumniStore = {
     profiles: new Map(),
     educations: new Map(),
@@ -89,6 +90,7 @@ export class AlumniDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.profiles.clear();
     this.memoryStore.educations.clear();
     this.memoryStore.experiences.clear();
@@ -104,6 +106,61 @@ export class AlumniDbStore {
     this.memoryStore.events.clear();
     this.memoryStore.eventRsvps.clear();
     this.memoryStore.auditLogs.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [
+        profs,
+        edus,
+        exps,
+        mentors,
+        mreqs,
+        msess,
+        jobs,
+        apps,
+        camps,
+        dons,
+        chaps,
+        mems,
+        evts,
+        rsvps,
+        audits,
+      ] = await Promise.all([
+        db.select().from(alumniProfiles),
+        db.select().from(alumniEducations),
+        db.select().from(alumniExperiences),
+        db.select().from(alumniMentorshipProfiles),
+        db.select().from(alumniMentorshipRequests),
+        db.select().from(alumniMentorshipSessions),
+        db.select().from(alumniJobPostings),
+        db.select().from(alumniJobApplications),
+        db.select().from(alumniDonationCampaigns),
+        db.select().from(alumniDonations),
+        db.select().from(alumniChapters),
+        db.select().from(alumniChapterMembers),
+        db.select().from(alumniEvents),
+        db.select().from(alumniEventRsvps),
+        db.select().from(alumniAuditLogs),
+      ]);
+      for (const r of profs) if (!this.memoryStore.profiles.has(r.id)) this.memoryStore.profiles.set(r.id, r as unknown as AlumniProfileItem);
+      for (const r of edus) if (!this.memoryStore.educations.has(r.id)) this.memoryStore.educations.set(r.id, r as unknown as AlumniEducationItem);
+      for (const r of exps) if (!this.memoryStore.experiences.has(r.id)) this.memoryStore.experiences.set(r.id, r as unknown as AlumniExperienceItem);
+      for (const r of mentors) if (!this.memoryStore.mentorshipProfiles.has(r.id)) this.memoryStore.mentorshipProfiles.set(r.id, r as unknown as AlumniMentorshipProfileItem);
+      for (const r of mreqs) if (!this.memoryStore.mentorshipRequests.has(r.id)) this.memoryStore.mentorshipRequests.set(r.id, r as unknown as AlumniMentorshipRequestItem);
+      for (const r of msess) if (!this.memoryStore.mentorshipSessions.has(r.id)) this.memoryStore.mentorshipSessions.set(r.id, r as unknown as AlumniMentorshipSessionItem);
+      for (const r of jobs) if (!this.memoryStore.jobPostings.has(r.id)) this.memoryStore.jobPostings.set(r.id, r as unknown as AlumniJobPostingItem);
+      for (const r of apps) if (!this.memoryStore.jobApplications.has(r.id)) this.memoryStore.jobApplications.set(r.id, r as unknown as AlumniJobApplicationItem);
+      for (const r of camps) if (!this.memoryStore.donationCampaigns.has(r.id)) this.memoryStore.donationCampaigns.set(r.id, r as unknown as AlumniDonationCampaignItem);
+      for (const r of dons) if (!this.memoryStore.donations.has(r.id)) this.memoryStore.donations.set(r.id, r as unknown as AlumniDonationItem);
+      for (const r of chaps) if (!this.memoryStore.chapters.has(r.id)) this.memoryStore.chapters.set(r.id, r as unknown as AlumniChapterItem);
+      for (const r of mems) if (!this.memoryStore.chapterMembers.has(r.id)) this.memoryStore.chapterMembers.set(r.id, r as unknown as AlumniChapterMemberItem);
+      for (const r of evts) if (!this.memoryStore.events.has(r.id)) this.memoryStore.events.set(r.id, r as unknown as AlumniEventItem);
+      for (const r of rsvps) if (!this.memoryStore.eventRsvps.has(r.id)) this.memoryStore.eventRsvps.set(r.id, r as unknown as AlumniEventRsvpItem);
+      for (const r of audits) if (!this.memoryStore.auditLogs.has(r.id)) this.memoryStore.auditLogs.set(r.id, r as unknown as AlumniAuditLogItem);
+    } catch {}
   }
 
   // ─── Alumni Profile Operations ───
@@ -282,6 +339,7 @@ export class AlumniDbStore {
   }
 
   public async getAlumniProfileById(id: string, institutionId?: string): Promise<AlumniProfileItem | null> {
+    await this.ensureHydrated();
     const profile = this.memoryStore.profiles.get(id);
     if (!profile) return null;
     if (institutionId && profile.institutionId !== institutionId) return null;
@@ -319,6 +377,7 @@ export class AlumniDbStore {
     limit?: number;
     offset?: number;
   }): Promise<{ items: AlumniProfileItem[]; total: number }> {
+    await this.ensureHydrated();
     let items = Array.from(this.memoryStore.profiles.values()).filter(
       (p) => p.institutionId === params.institutionId
     );

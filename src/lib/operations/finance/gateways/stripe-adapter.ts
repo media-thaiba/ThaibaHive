@@ -49,7 +49,18 @@ export class StripeAdapter implements PaymentGatewayAdapter {
   }
 
   public verifyPaymentSignature(params: VerifySignatureRequest): boolean {
-    return params.signature.startsWith('pi_') || params.signature.startsWith('ch_') || params.signature.length >= 10;
+    if (!this.secretKey || !params.signature) {
+      return false;
+    }
+    const body = `${params.orderId}|${params.paymentId}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', this.secretKey)
+      .update(body)
+      .digest('hex');
+    const sigBuf = Buffer.from(params.signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   }
 
   public async fetchPaymentStatus(paymentId: string): Promise<FetchPaymentResponse> {
@@ -114,14 +125,18 @@ export class StripeAdapter implements PaymentGatewayAdapter {
         .createHmac('sha256', this.webhookSecret)
         .update(signedPayload)
         .digest('hex');
-      isValid = expected === signature;
+      const sigBuf = Buffer.from(signature);
+      const expBuf = Buffer.from(expected);
+      isValid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
     } else {
       // Fallback direct body verification
       const expected = crypto
         .createHmac('sha256', this.webhookSecret)
         .update(rawBody)
         .digest('hex');
-      isValid = expected === signatureHeader;
+      const sigBuf = Buffer.from(signatureHeader);
+      const expBuf = Buffer.from(expected);
+      isValid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
     }
 
     const parsed = JSON.parse(rawBody || '{}');

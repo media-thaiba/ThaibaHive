@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       console.error("[PushTokenAPI] Registration error:", err);
       return NextResponse.json({ error: "Failed to register push token" }, { status: 500 });
     }
-  })(req);
+  }, "profile:read")(req);
 }
 
 export async function DELETE(req: NextRequest) {
@@ -109,5 +109,5 @@ export async function DELETE(req: NextRequest) {
       console.error("[PushTokenAPI] De-registration error:", err);
       return NextResponse.json({ error: "Failed to de-register push token" }, { status: 500 });
     }
-  })(req);
+  }, "profile:read")(req);
 }

@@ -149,13 +149,18 @@ export class SamlService {
       throw new Error('Security Violation: DTD/XXE entity expansion forbidden in SAML Response');
     }
 
-    // 2. Validate SAML Assertion presence
-    const assertionMatch =
-      xmlContent.match(/<(?:\w+:)?Assertion[\s\S]*?<\/(?:\w+:)?Assertion>/i);
-    if (!assertionMatch) {
+    // Strip XML comments prior to extraction to defeat XML Comment Injection (B-02)
+    const commentFreeXml = xmlContent.replace(/<!--[\s\S]*?-->/g, '');
+
+    // 2. Validate SAML Assertion presence (reject multiple Assertions to prevent XSW)
+    const allAssertions = commentFreeXml.match(/<(?:\w+:)?Assertion\b[\s\S]*?<\/(?:\w+:)?Assertion>/gi);
+    if (!allAssertions || allAssertions.length === 0) {
       throw new Error('Invalid SAML Response: Missing SAML Assertion block');
     }
-    const assertionBlock = assertionMatch[0];
+    if (allAssertions.length > 1) {
+      throw new Error('Security Violation: Multiple SAML Assertions forbidden (XML Signature Wrapping protection)');
+    }
+    const assertionBlock = allAssertions[0];
 
     // 3. Extract Assertion ID & Replay check
     const idMatch = assertionBlock.match(/\bID\s*=\s*["']([^"']+)["']/i);
@@ -178,10 +183,10 @@ export class SamlService {
     const shouldVerify = options?.enforceSignature ?? true;
 
     if (shouldVerify) {
-      this.verifyDigitalSignature(xmlContent, assertionBlock, config);
+      this.verifyDigitalSignature(commentFreeXml, assertionBlock, config, assertionId);
     }
 
-    // 6. Extract Claims & Attributes
+    // 6. Extract Claims & Attributes from comment-stripped assertion
     const claims = this.extractClaims(assertionBlock, config, assertionId);
     return claims;
   }
@@ -248,7 +253,8 @@ export class SamlService {
   private verifyDigitalSignature(
     fullXml: string,
     assertionXml: string,
-    config: SamlIdentityProviderConfig
+    config: SamlIdentityProviderConfig,
+    assertionId?: string
   ): void {
     // Search for Signature block inside assertion or at root
     const sigMatch =
@@ -267,6 +273,13 @@ export class SamlService {
       throw new Error('Security Violation: Missing SignedInfo in SAML Signature');
     }
     const signedInfoXml = signedInfoMatch[0];
+
+    if (assertionId) {
+      const refUriMatch = signedInfoXml.match(/<(?:\w+:)?Reference\b[^>]*\bURI\s*=\s*["']([^"']+)["']/i);
+      if (refUriMatch && refUriMatch[1] !== '' && refUriMatch[1] !== `#${assertionId}`) {
+        throw new Error(`Security Violation: SAML Signature Reference URI (${refUriMatch[1]}) does not match Assertion ID (#${assertionId})`);
+      }
+    }
 
     // Extract SignatureValue
     const sigValMatch = sigXml.match(/<(?:\w+:)?SignatureValue[^>]*>([\s\S]*?)<\/(?:\w+:)?SignatureValue>/i);
@@ -350,17 +363,19 @@ export class SamlService {
     config: SamlIdentityProviderConfig,
     assertionId: string
   ): SamlAssertionClaims {
+    const cleanAssertion = assertionXml.replace(/<!--[\s\S]*?-->/g, '');
+
     // Subject NameID
     const subjectMatch =
-      assertionXml.match(/<(?:\w+:)?NameID[^>]*>([^<]+)<\/(?:\w+:)?NameID>/i);
+      cleanAssertion.match(/<(?:\w+:)?NameID[^>]*>([^<]+)<\/(?:\w+:)?NameID>/i);
     const subjectId = subjectMatch ? subjectMatch[1].trim() : 'user@enterprise.org';
 
     // IssueInstant
-    const issueMatch = assertionXml.match(/\bIssueInstant\s*=\s*["']([^"']+)["']/i);
+    const issueMatch = cleanAssertion.match(/\bIssueInstant\s*=\s*["']([^"']+)["']/i);
     const issueInstant = issueMatch ? issueMatch[1] : new Date().toISOString();
 
     // SessionIndex
-    const sessionMatch = assertionXml.match(/<(?:\w+:)?AuthnStatement\b[^>]*\bSessionIndex\s*=\s*["']([^"']+)["']/i);
+    const sessionMatch = cleanAssertion.match(/<(?:\w+:)?AuthnStatement\b[^>]*\bSessionIndex\s*=\s*["']([^"']+)["']/i);
     const sessionIndex = sessionMatch ? sessionMatch[1] : undefined;
 
     // Attribute mapping from config
@@ -378,7 +393,7 @@ export class SamlService {
     const attrRegex = /<(?:\w+:)?Attribute\b([^>]*)>([\s\S]*?)<\/(?:\w+:)?Attribute>/gi;
     let attrMatch: RegExpExecArray | null;
 
-    while ((attrMatch = attrRegex.exec(assertionXml)) !== null) {
+    while ((attrMatch = attrRegex.exec(cleanAssertion)) !== null) {
       const attrTag = attrMatch[1];
       const attrBody = attrMatch[2];
       const nameMatch = attrTag.match(/(?:Name|AttributeName)\s*=\s*["']([^"']+)["']/i);

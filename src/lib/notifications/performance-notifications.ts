@@ -3,7 +3,7 @@ export interface PerformanceReminderOptions {
   staffName: string;
   cycleTitle: string;
   dueDate: string;
-  reminderType: "self_assessment" | "manager_review" | "final_signoff";
+  reminderType: "self_assessment" | "manager_review" | "peer_review" | "final_signoff";
 }
 
 export class PerformanceNotificationService {
@@ -19,6 +19,9 @@ export class PerformanceNotificationService {
     } else if (reminderType === "manager_review") {
       title = `Subordinate Review Pending: ${cycleTitle}`;
       body = `Hello ${staffName}, manager evaluations for your team members are due on ${dueDate}.`;
+    } else if (reminderType === "peer_review") {
+      title = `Peer Review Pending: ${cycleTitle}`;
+      body = `Hello ${staffName}, your peer evaluation for ${cycleTitle} is due on ${dueDate}.`;
     } else if (reminderType === "final_signoff") {
       title = `Performance Appraisal Completed`;
       body = `Hello ${staffName}, your performance appraisal for ${cycleTitle} is ready for review and sign-off.`;

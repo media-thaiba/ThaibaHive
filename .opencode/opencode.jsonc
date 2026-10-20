@@ -9,6 +9,26 @@
       "ecc": "allow",
       "ui-ux-pro-max": "allow",
       "design-system": "allow"
+    },
+    // Working-Tree Inviolability Protocol (AGENTS.md): destructive git and
+    // recursive deletes require explicit user confirmation ("ask").
+    // Deny rules would block even explicit user instructions; ask gates them.
+    "bash": {
+      "git stash*": "ask",
+      "git reset*": "ask",
+      "git restore*": "ask",
+      "git clean*": "ask",
+      "git checkout*": "ask",
+      "git rebase*": "ask",
+      "git merge*": "ask",
+      "git pull*": "ask",
+      "git apply*": "ask",
+      "git checkout-index*": "ask",
+      "git update-index*": "ask",
+      "git add*": "ask",
+      "git commit*": "ask",
+      "rm -rf*": "ask",
+      "Remove-Item*": "ask"
     }
   }
 }

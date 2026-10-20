@@ -33,16 +33,16 @@ export function BottomNav() {
                 )}
               >
                 {active && (
-                  <span className="absolute top-1 left-1/2 -translate-x-1/2 h-1 w-6 rounded-full bg-primary shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-scale-in" />
+                  <span className="absolute top-1 left-1/2 -translate-x-1/2 h-0.5 w-5 rounded-full bg-primary" />
                 )}
                 <Icon
                   className={cn(
-                    "h-5 w-5 transition-all duration-200",
+                    "h-5 w-5 transition-all duration-150",
                     active ? "stroke-[2.2]" : "stroke-[1.8]"
                   )}
                 />
                 <span className={cn(
-                  "text-[10px] font-medium leading-tight transition-colors duration-200",
+                  "text-[11px] font-medium leading-tight transition-colors duration-150",
                   active ? "text-primary" : ""
                 )}>
                   {item.label}

@@ -124,6 +124,9 @@ export async function verifySession(): Promise<SessionPayload | null> {
 
   try {
     const { payload } = await jwtVerify(token, getJwtSecretBytes("session"));
+    if (payload.purpose === "mobile_handoff") {
+      return null;
+    }
     const result = sessionPayloadSchema.safeParse(payload);
     if (!result.success) return null;
     const session = result.data;
@@ -137,10 +140,15 @@ export async function verifySession(): Promise<SessionPayload | null> {
     if (!user || !user.isActive) return null;
     if ((user.tokenVersion ?? 0) !== session.tokenVersion) return null;
 
-    // Fast revocation check
+    // Fast revocation check (checks both sessionId and userId revocations, B-11)
     try {
       const { revocationStore } = await import("@/lib/identity/revocation-store");
-      if (session.staffId && revocationStore.isRevoked(session.staffId)) {
+      if (
+        session.staffId &&
+        (revocationStore.isRevoked(session.staffId) ||
+          revocationStore.isRevoked(`sess_${session.staffId}`) ||
+          revocationStore.isUserRevoked(session.staffId))
+      ) {
         return null;
       }
     } catch {

@@ -809,7 +809,7 @@ export const visitors = sqliteTable("visitors", {
   checkOut: text("check_out"),
   status: text("status").notNull().default("checked_in"),
   notes: text("notes"),
-  institutionId: text("institution_id").references(() => institutions.id),
+  institutionId: text("institution_id").notNull().references(() => institutions.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   instIdx: index("idx_pg_visitors_institution").on(t.institutionId),

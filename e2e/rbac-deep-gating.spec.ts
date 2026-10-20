@@ -70,8 +70,8 @@ test.describe("Bottom Navigation Visibility by Role", () => {
         const gating = new RoleGatingPage(page);
         await page.goto("/");
 
-        // Primary nav items: My Work, Attendance, Tasks, Leaves
-        await gating.expectBottomNavLinkVisible("/my-work", NAV_VISIBILITY_MATRIX["/my-work/attendance"][role]);
+        // Primary nav items: Dashboard, Attendance, Tasks, Leaves
+        await gating.expectBottomNavLinkVisible("/", NAV_VISIBILITY_MATRIX["/my-work/attendance"][role]);
         await gating.expectBottomNavLinkVisible("/my-work/attendance", NAV_VISIBILITY_MATRIX["/my-work/attendance"][role]);
         await gating.expectBottomNavLinkVisible("/my-work/tasks", NAV_VISIBILITY_MATRIX["/my-work/tasks"][role]);
         await gating.expectBottomNavLinkVisible("/my-work/leaves", NAV_VISIBILITY_MATRIX["/my-work/leaves"][role]);

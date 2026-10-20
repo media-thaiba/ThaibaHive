@@ -23,7 +23,7 @@ import { eq, and, gte, lte, inArray, type SQL } from "drizzle-orm";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
-import { ExportColumn, ExportFormat, ExportOptions, ExportType } from "@/lib/export/types";
+import { ExportColumn, ExportFormat, ExportType, ExportOptions } from "@/lib/export/types";
 import { hasPermission } from "@thaiba/auth/roles";
 
 const MAX_EXPORT_ROWS = 5000;
@@ -49,7 +49,6 @@ const REQUIRED_PERMISSIONS: Record<ExportType, string> = {
   ai_insights: "analytics:manage",
   regional_analytics: "regional:view",
 };
-
 
 async function executeLimitedQuery<T>(queryObj: { limit?: (n: number) => { all(): Promise<T[]> }; all(): Promise<T[]> }): Promise<T[]> {
   try {
@@ -89,7 +88,9 @@ export const GET = requireAuth(async (request: Request, session) => {
   const dateFrom = getDateParam(searchParams, "dateFrom");
   const dateTo = getDateParam(searchParams, "dateTo");
   const requestedInstitutionId = searchParams.get("institutionId") || undefined;
-  const finalInstitutionId = await resolveRequestInstitution(session, requestedInstitutionId);
+  const resolvedInstitutionId = await resolveRequestInstitution(session, requestedInstitutionId);
+  const finalInstitutionId =
+    resolvedInstitutionId && resolvedInstitutionId !== "global" ? resolvedInstitutionId : undefined;
 
   const VALID_TYPES: ExportType[] = [
     "attendance",
@@ -117,7 +118,7 @@ export const GET = requireAuth(async (request: Request, session) => {
 
   // 1. RBAC Check (Domain-granular or finance:export fallback)
   const reqPermission = REQUIRED_PERMISSIONS[type];
-  const isSuperOrAdmin = session.role === "super_admin" || session.role === "admin";
+  const isSuperOrAdmin = session.role === "super_admin";
   const hasDomainPerm = hasPermission(session.role, reqPermission) || hasPermission(session.role, "finance:export");
 
   if (!isSuperOrAdmin && !hasDomainPerm) {
@@ -133,6 +134,9 @@ export const GET = requireAuth(async (request: Request, session) => {
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     allowedInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
+    if (session.institutionId && session.institutionId !== "global" && !allowedInstIds.includes(session.institutionId)) {
+      allowedInstIds.push(session.institutionId);
+    }
 
     if (allowedInstIds.length === 0) {
       return NextResponse.json({ error: "Forbidden: No institution assigned to staff" }, { status: 403 });
@@ -144,8 +148,6 @@ export const GET = requireAuth(async (request: Request, session) => {
   }
 
   let instName: string | undefined = undefined;
-
-
 
   if (finalInstitutionId) {
     const instRecord = await db
@@ -353,7 +355,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     }));
   }
 
-  // ── 4. Payroll Export ──────────────────────────────────────────────────────
+  // ── 4. Payroll Export (Batched attendance query — no N+1) ──────────────────
   if (type === "payroll") {
     exportTitle = "Payroll Summary Report";
     exportColumns = [
@@ -400,10 +402,13 @@ export const GET = requireAuth(async (request: Request, session) => {
     }
 
     const staffRows = await executeLimitedQuery<any>(query);
+    const staffIds = [...new Set(staffRows.map((s) => s.id).filter(Boolean))];
+    const logsByStaff = new Map<string, Array<{ status: string | null; lateMinutes: number | null; earlyExitMinutes: number | null }>>();
 
-    for (const s of staffRows) {
-      const logs = await db
+    if (staffIds.length > 0) {
+      const allLogs = await db
         .select({
+          staffId: attendanceLogs.staffId,
           status: attendanceLogs.status,
           lateMinutes: attendanceLogs.lateMinutes,
           earlyExitMinutes: attendanceLogs.earlyExitMinutes,
@@ -411,13 +416,22 @@ export const GET = requireAuth(async (request: Request, session) => {
         .from(attendanceLogs)
         .where(
           and(
-            eq(attendanceLogs.staffId, s.id),
+            inArray(attendanceLogs.staffId, staffIds),
             gte(attendanceLogs.date, calcFrom),
             lte(attendanceLogs.date, calcTo)
           )
         )
         .all();
 
+      for (const log of allLogs) {
+        const list = logsByStaff.get(log.staffId) ?? [];
+        list.push(log);
+        logsByStaff.set(log.staffId, list);
+      }
+    }
+
+    for (const s of staffRows) {
+      const logs = logsByStaff.get(s.id) ?? [];
       const daysPresent = logs.filter((l) => l.status === "present" || l.status === "half_day").length;
       const lateArrivals = logs.filter((l) => (l.lateMinutes ?? 0) > 0).length;
       const earlyDepartures = logs.filter((l) => (l.earlyExitMinutes ?? 0) > 0).length;

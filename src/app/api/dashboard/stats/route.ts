@@ -16,11 +16,14 @@ import {
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and, sql, desc, gte, inArray, or, isNull } from "drizzle-orm";
+import { getManagedStaffIds } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (request, session) => {
   try {
     const { staffId, role } = session;
-    const isAdmin = role === "super_admin" || role === "admin" || role === "principal" || role === "hod";
+    const isExecutive = role === "super_admin" || role === "admin" || role === "principal";
+    const isHod = role === "hod";
+    const managedStaffIds = isHod ? await getManagedStaffIds(staffId, "hod") : null;
     const today = new Date().toISOString().split("T")[0];
 
     const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
@@ -62,15 +65,26 @@ export const GET = requireAuth(async (request, session) => {
         .where(eq(tasks.assignedToId, staffId))
         .all(),
 
-      // 4. Pending leave counts (admin sees own institution, staff sees own)
-      isAdmin
+      // 4. Pending leave counts
+      isExecutive
         ? db.select({ count: sql<number>`count(*)` }).from(leaveRequests)
             .where(and(
-              eq(leaveRequests.status, "pending"),
+              inArray(leaveRequests.status, ["pending", "hod_approved"]),
               ...(activeScope ? [eq(leaveRequests.institutionId, activeScope)] : [])
             )).get()
+        : isHod
+        ? (managedStaffIds && managedStaffIds.length > 0
+            ? db.select({ count: sql<number>`count(*)` }).from(leaveRequests)
+                .where(and(
+                  eq(leaveRequests.status, "pending"),
+                  inArray(leaveRequests.staffId, managedStaffIds)
+                )).get()
+            : Promise.resolve({ count: 0 }))
         : db.select({ count: sql<number>`count(*)` }).from(leaveRequests)
-            .where(and(eq(leaveRequests.staffId, staffId), eq(leaveRequests.status, "pending"))).get(),
+            .where(and(
+              eq(leaveRequests.staffId, staffId),
+              inArray(leaveRequests.status, ["pending", "hod_approved"])
+            )).get(),
 
       // 5. Leave balances for current user
       db.select({
@@ -122,7 +136,7 @@ export const GET = requireAuth(async (request, session) => {
         .all(),
 
       // 9. Today's present count (for admin badge, scoped to institution staff)
-      isAdmin
+      isExecutive
         ? activeScope
           ? db.select({ count: sql<number>`count(DISTINCT ${attendanceLogs.staffId})` })
               .from(attendanceLogs)
@@ -229,5 +243,5 @@ export const GET = requireAuth(async (request, session) => {
     console.error("Dashboard stats error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}, "reports:read");
+});
 

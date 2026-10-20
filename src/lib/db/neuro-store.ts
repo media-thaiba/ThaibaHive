@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq, and } from 'drizzle-orm';
 import {
   neuroClusters,
   neuroNodes,
@@ -51,6 +52,8 @@ export interface InMemoryNeuroStore {
 
 export class NeuroDbStore {
   private static instance: NeuroDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryNeuroStore = {
     clusters: new Map(),
     nodes: new Map(),
@@ -76,6 +79,7 @@ export class NeuroDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.clusters.clear();
     this.memoryStore.nodes.clear();
     this.memoryStore.gpus.clear();
@@ -90,6 +94,101 @@ export class NeuroDbStore {
     this.memoryStore.grantAllocations.clear();
     this.memoryStore.ledgerTransactions.clear();
     this.memoryStore.auditLogs.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [clusters, nodes, gpus, jobs, checks, quotas, provs, spots, datasets, lineages, billings, txs, audits] = await Promise.all([
+        db.select().from(neuroClusters),
+        db.select().from(neuroNodes),
+        db.select().from(neuroGpus),
+        db.select().from(neuroJobs),
+        db.select().from(neuroJobCheckpoints),
+        db.select().from(neuroFairShareQuotas),
+        db.select().from(neuroCloudProviders),
+        db.select().from(neuroSpotPriceHistory),
+        db.select().from(neuroDatasetProvenance),
+        db.select().from(neuroMerkleLineageNodes),
+        db.select().from(neuroComputeBillingAccounts),
+        db.select().from(neuroBillingLedgerTransactions),
+        db.select().from(neuroAuditLogs),
+      ]);
+      for (const r of clusters) {
+        if (!this.memoryStore.clusters.has(r.id)) {
+          this.memoryStore.clusters.set(r.id, r as unknown as NeuroClusterItem);
+          this.memoryStore.clusters.set(r.clusterId, r as unknown as NeuroClusterItem);
+        }
+      }
+      for (const r of nodes) {
+        if (!this.memoryStore.nodes.has(r.id)) {
+          this.memoryStore.nodes.set(r.id, r as unknown as NeuroNodeItem);
+          this.memoryStore.nodes.set(r.nodeId, r as unknown as NeuroNodeItem);
+        }
+      }
+      for (const r of gpus) {
+        if (!this.memoryStore.gpus.has(r.id)) {
+          this.memoryStore.gpus.set(r.id, r as unknown as NeuroGpuItem);
+          this.memoryStore.gpus.set(r.gpuId, r as unknown as NeuroGpuItem);
+        }
+      }
+      for (const r of jobs) {
+        if (!this.memoryStore.jobs.has(r.id)) {
+          this.memoryStore.jobs.set(r.id, r as unknown as NeuroJobItem);
+          this.memoryStore.jobs.set(r.jobId, r as unknown as NeuroJobItem);
+        }
+      }
+      for (const r of checks) {
+        if (!this.memoryStore.checkpoints.has(r.id)) {
+          this.memoryStore.checkpoints.set(r.id, r as unknown as NeuroJobCheckpointItem);
+          this.memoryStore.checkpoints.set(r.checkpointId, r as unknown as NeuroJobCheckpointItem);
+        }
+      }
+      for (const r of quotas) {
+        if (!this.memoryStore.quotas.has(r.departmentId)) {
+          this.memoryStore.quotas.set(r.departmentId, r as unknown as NeuroFairShareQuotaItem);
+          this.memoryStore.quotas.set(r.id, r as unknown as NeuroFairShareQuotaItem);
+        }
+      }
+      for (const r of provs) {
+        if (!this.memoryStore.cloudProviders.has(r.providerKey)) {
+          this.memoryStore.cloudProviders.set(r.providerKey, r as unknown as NeuroCloudProviderItem);
+          this.memoryStore.cloudProviders.set(r.id, r as unknown as NeuroCloudProviderItem);
+        }
+      }
+      for (const r of spots) if (!this.memoryStore.spotPrices.has(r.id)) this.memoryStore.spotPrices.set(r.id, r as unknown as NeuroSpotPriceHistoryItem);
+      for (const r of datasets) {
+        if (!this.memoryStore.datasets.has(r.id)) {
+          this.memoryStore.datasets.set(r.id, r as unknown as NeuroDatasetProvenanceItem);
+          this.memoryStore.datasets.set(r.datasetId, r as unknown as NeuroDatasetProvenanceItem);
+        }
+      }
+      for (const r of lineages) {
+        if (!this.memoryStore.lineageNodes.has(r.nodeHash)) {
+          this.memoryStore.lineageNodes.set(r.nodeHash, r as unknown as NeuroMerkleLineageNodeItem);
+          this.memoryStore.lineageNodes.set(r.id, r as unknown as NeuroMerkleLineageNodeItem);
+        }
+      }
+      for (const r of billings) {
+        if (!this.memoryStore.billingAccounts.has(r.id)) {
+          this.memoryStore.billingAccounts.set(r.id, r as unknown as NeuroComputeBillingAccountItem);
+          this.memoryStore.billingAccounts.set(r.accountNumber, r as unknown as NeuroComputeBillingAccountItem);
+        }
+      }
+      for (const r of txs) {
+        if (!this.memoryStore.ledgerTransactions.has(r.id)) {
+          this.memoryStore.ledgerTransactions.set(r.id, r as unknown as NeuroBillingLedgerTransactionItem);
+          this.memoryStore.ledgerTransactions.set(r.transactionId, r as unknown as NeuroBillingLedgerTransactionItem);
+        }
+      }
+      for (const r of audits) {
+        if (!this.memoryStore.auditLogs.has(r.id)) {
+          this.memoryStore.auditLogs.set(r.id, r as unknown as NeuroAuditLogItem);
+          this.memoryStore.auditLogs.set(r.auditId, r as unknown as NeuroAuditLogItem);
+        }
+      }
+    } catch {}
   }
 
   // ─── 1. Clusters ───
@@ -121,6 +220,7 @@ export class NeuroDbStore {
   }
 
   async getClusterById(idOrClusterId: string, tenantId: string = 'global'): Promise<NeuroClusterItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.clusters.get(idOrClusterId);
     if (item && item.institutionId === tenantId) return item;
     for (const val of this.memoryStore.clusters.values()) {
@@ -132,6 +232,7 @@ export class NeuroDbStore {
   }
 
   async listClusters(tenantId: string = 'global'): Promise<NeuroClusterItem[]> {
+    await this.ensureHydrated();
     const unique = new Map<string, NeuroClusterItem>();
     for (const item of this.memoryStore.clusters.values()) {
       if (item.institutionId === tenantId) unique.set(item.id, item);
@@ -331,6 +432,7 @@ export class NeuroDbStore {
   }
 
   async getJobById(idOrJobId: string, tenantId: string = 'global'): Promise<NeuroJobItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.jobs.get(idOrJobId);
     if (item && item.institutionId === tenantId) return item;
     for (const val of this.memoryStore.jobs.values()) {
@@ -342,6 +444,7 @@ export class NeuroDbStore {
   }
 
   async listJobs(filters?: { status?: JobStatus; departmentId?: string; userId?: string }, tenantId: string = 'global'): Promise<NeuroJobItem[]> {
+    await this.ensureHydrated();
     const unique = new Map<string, NeuroJobItem>();
     for (const item of this.memoryStore.jobs.values()) {
       if (item.institutionId === tenantId) {
@@ -364,6 +467,14 @@ export class NeuroDbStore {
     };
     this.memoryStore.jobs.set(updated.id, updated);
     this.memoryStore.jobs.set(updated.jobId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(neuroJobs.id, updated.id), eq(neuroJobs.institutionId, tenantId))
+          : eq(neuroJobs.id, updated.id);
+        await db.update(neuroJobs).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 

@@ -152,9 +152,8 @@ async function handleRedeem(request: Request, session: SessionPayload) {
             and(
               eq(canteenTransactions.passId, fresh.id),
               eq(canteenTransactions.status, "completed"),
-              // Compare on the database clock so the window matches the exact
-              // clock that stamped the rows (UTC day boundary).
-              sql`date(${canteenTransactions.createdAt}) = date('now')`
+              // Dialect-portable ISO date prefix match (works in both SQLite and PostgreSQL)
+              sql`substr(${canteenTransactions.createdAt}, 1, 10) = ${today}`
             )
           )
           .all();

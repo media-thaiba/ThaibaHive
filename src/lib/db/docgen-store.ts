@@ -45,6 +45,8 @@ export interface InMemoryDocStore {
 }
 
 export class DocDbStore {
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private static instance: DocDbStore;
   private memoryStore: InMemoryDocStore = {
     templates: new Map(),
@@ -66,6 +68,7 @@ export class DocDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.templates.clear();
     this.memoryStore.records.clear();
     this.memoryStore.signatures.clear();
@@ -75,6 +78,43 @@ export class DocDbStore {
     this.memoryStore.deviceTokens.clear();
     this.memoryStore.pushLogs.clear();
     this.memoryStore.auditLogs.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [
+        tmpls,
+        recs,
+        sigs,
+        jobs,
+        expTmpls,
+        syncs,
+        tokens,
+        pushes,
+        audits,
+      ] = await Promise.all([
+        db.select().from(docTemplates),
+        db.select().from(docGeneratedRecords),
+        db.select().from(docVerificationSignatures),
+        db.select().from(exportJobs),
+        db.select().from(exportTemplates),
+        db.select().from(mobileSyncEvents),
+        db.select().from(mobileDeviceTokens),
+        db.select().from(mobilePushLogs),
+        db.select().from(docAuditLogs),
+      ]);
+      for (const r of tmpls) if (!this.memoryStore.templates.has(r.id)) this.memoryStore.templates.set(r.id, r as unknown as DocTemplateItem);
+      for (const r of recs) if (!this.memoryStore.records.has(r.id)) this.memoryStore.records.set(r.id, r as unknown as DocGeneratedRecordItem);
+      for (const r of sigs) if (!this.memoryStore.signatures.has(r.id)) this.memoryStore.signatures.set(r.id, r as unknown as DocVerificationSignatureItem);
+      for (const r of jobs) if (!this.memoryStore.exportJobs.has(r.id)) this.memoryStore.exportJobs.set(r.id, r as unknown as ExportJobItem);
+      for (const r of expTmpls) if (!this.memoryStore.exportTemplates.has(r.id)) this.memoryStore.exportTemplates.set(r.id, r as unknown as ExportTemplateItem);
+      for (const r of syncs) if (!this.memoryStore.syncEvents.has(r.id)) this.memoryStore.syncEvents.set(r.id, r as unknown as MobileSyncEventItem);
+      for (const r of tokens) if (!this.memoryStore.deviceTokens.has(r.id)) this.memoryStore.deviceTokens.set(r.id, r as unknown as MobileDeviceTokenItem);
+      for (const r of pushes) if (!this.memoryStore.pushLogs.has(r.id)) this.memoryStore.pushLogs.set(r.id, r as unknown as MobilePushLogItem);
+      for (const r of audits) if (!this.memoryStore.auditLogs.has(r.id)) this.memoryStore.auditLogs.set(r.id, r as unknown as DocAuditLogItem);
+    } catch {}
   }
 
   // ─── Template Operations ───
@@ -120,6 +160,7 @@ export class DocDbStore {
   }
 
   public async getTemplateById(id: string, institutionId?: string): Promise<DocTemplateItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.templates.get(id);
     if (!item) return null;
     if (institutionId && item.institutionId !== institutionId && item.institutionId !== 'global') {
@@ -140,6 +181,7 @@ export class DocDbStore {
   }
 
   public async listTemplates(institutionId: string, category?: DocCategory): Promise<DocTemplateItem[]> {
+    await this.ensureHydrated();
     const list: DocTemplateItem[] = [];
     for (const item of this.memoryStore.templates.values()) {
       if (item.institutionId === institutionId || item.institutionId === 'global') {
@@ -197,6 +239,7 @@ export class DocDbStore {
   }
 
   public async getGeneratedRecordById(id: string, institutionId?: string): Promise<DocGeneratedRecordItem | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.records.get(id);
     if (!item) return null;
     if (institutionId && item.institutionId !== institutionId) return null;
@@ -216,6 +259,7 @@ export class DocDbStore {
     institutionId: string,
     filters?: { recipientId?: string; documentType?: DocCategory; status?: DocRecordStatus }
   ): Promise<DocGeneratedRecordItem[]> {
+    await this.ensureHydrated();
     const list: DocGeneratedRecordItem[] = [];
     for (const item of this.memoryStore.records.values()) {
       if (item.institutionId === institutionId) {

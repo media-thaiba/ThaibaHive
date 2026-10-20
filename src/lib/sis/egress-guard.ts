@@ -45,7 +45,9 @@ export class EgressGuard {
       lower.endsWith(".local") ||
       lower.endsWith(".internal") ||
       lower.endsWith(".localhost") ||
-      lower.endsWith(".arpa")
+      lower.endsWith(".arpa") ||
+      /^0x[0-9a-f]+$/i.test(lower) ||
+      /^\d+$/.test(lower)
     ) {
       return true;
     }
@@ -64,7 +66,10 @@ export class EgressGuard {
     const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
     const match = lower.match(ipv4Regex);
     if (match) {
-      const [, o1, o2] = match.map(Number);
+      const [, o1, o2, o3, o4] = match.map(Number);
+      if ([o1, o2, o3, o4].some((o) => o > 255)) {
+        return true;
+      }
       if (
         o1 === 10 || // 10.0.0.0/8 (RFC 1918)
         o1 === 127 || // 127.0.0.0/8 (Loopback)
@@ -73,7 +78,7 @@ export class EgressGuard {
         (o1 === 169 && o2 === 254) || // 169.254.0.0/16 (Link-local / Cloud metadata)
         (o1 === 100 && o2 >= 64 && o2 <= 127) || // 100.64.0.0/10 (Carrier-grade NAT)
         (o1 === 192 && o2 === 0) || // 192.0.2.0/24 (TEST-NET-1)
-        (o1 === 198 && o2 === 51) || // 198.51.100.0/24 (TEST-NET-2)
+        (o1 === 198 && (o2 === 18 || o2 === 19 || o2 === 51)) || // 198.18.0.0/15 & TEST-NET-2
         (o1 === 203 && o2 === 0) || // 203.0.113.0/24 (TEST-NET-3)
         (o1 >= 224 && o1 <= 239) || // 224.0.0.0/4 (Multicast)
         o1 >= 240 || // 240.0.0.0/4 (Reserved)
@@ -84,15 +89,38 @@ export class EgressGuard {
       return false;
     }
 
+    // IPv4-mapped IPv6 (e.g., ::ffff:127.0.0.1 or ::ffff:7f00:1 or 0:0:0:0:0:ffff:...)
+    if (lower.includes("ffff:")) {
+      const afterFfff = lower.split("ffff:").pop() || "";
+      if (afterFfff.includes(".")) {
+        return this.isPrivateOrReservedIp(afterFfff);
+      }
+      const hexParts = afterFfff.split(":");
+      if (hexParts.length === 2) {
+        const hi = parseInt(hexParts[0], 16);
+        const lo = parseInt(hexParts[1], 16);
+        if (!Number.isNaN(hi) && !Number.isNaN(lo)) {
+          const ipv4 = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+          return this.isPrivateOrReservedIp(ipv4);
+        }
+      }
+      return true;
+    }
+
     // IPv6 Checks
     if (
       lower === "::1" ||
       lower === "::" ||
+      lower.startsWith("::") || // IPv4-compatible / unspecified
+      lower.startsWith("0:0:0:0:0:") ||
       lower.startsWith("fc") || // Unique local address (fc00::/7)
       lower.startsWith("fd") ||
       lower.startsWith("fe80") || // Link-local address (fe80::/10)
+      lower.startsWith("fec0") || // Site-local deprecated
       lower.startsWith("ff") || // Multicast address (ff00::/8)
-      lower.startsWith("2001:db8") // Documentation
+      lower.startsWith("2001:db8") || // Documentation
+      lower.startsWith("2002:") || // 6to4 tunneling
+      lower.startsWith("64:ff9b:") // NAT64
     ) {
       return true;
     }

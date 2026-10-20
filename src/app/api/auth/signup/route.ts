@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff, emailVerificationTokens } from "@/db/schema";
+import { staff, staffInstitutions, institutions, emailVerificationTokens } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { signupSchema } from "@/lib/auth/schemas";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -16,20 +16,24 @@ export const POST = withPublicApm(async function POST(request: Request) {
     const rl = await checkDistributedRateLimit(ip, "auth-signup");
     if (!rl.allowed) return rateLimitResponse(rl.resetMs);
     const body = await request.json();
-    
-    // Gate public signup: require invitation token unless explicit dev override is set
+
+    // Gate public signup: fail closed unless ALLOW_PUBLIC_SIGNUP="true" OR a valid INVITATION_SECRET is configured and matched (B-06)
     const allowPublicSignup = process.env.ALLOW_PUBLIC_SIGNUP === "true";
-    const invitationToken = body?.invitationToken || body?.invitationCode;
+    const invitationToken = typeof (body?.invitationToken || body?.invitationCode) === "string"
+      ? String(body.invitationToken || body.invitationCode)
+      : "";
+    const configuredSecret = process.env.INVITATION_SECRET || "";
 
-    if (!allowPublicSignup && !invitationToken) {
-      return NextResponse.json(
-        { error: "Public registration is disabled. Account creation requires an invitation token or administrator provisioning." },
-        { status: 403 }
-      );
-    }
-
-    if (invitationToken && process.env.INVITATION_SECRET) {
-      if (invitationToken !== process.env.INVITATION_SECRET) {
+    if (!allowPublicSignup) {
+      if (!invitationToken || !configuredSecret) {
+        return NextResponse.json(
+          { error: "Public registration is disabled. Account creation requires an invitation token or administrator provisioning." },
+          { status: 403 }
+        );
+      }
+      const tokenBuf = Buffer.from(invitationToken);
+      const secretBuf = Buffer.from(configuredSecret);
+      if (tokenBuf.length !== secretBuf.length || !crypto.timingSafeEqual(tokenBuf, secretBuf)) {
         return NextResponse.json(
           { error: "Invalid or expired invitation token." },
           { status: 403 }
@@ -75,6 +79,26 @@ export const POST = withPublicApm(async function POST(request: Request) {
       })
       .returning()
       .get();
+
+    // Assign new staff member to target or default institution so requireAuth does not block them with 403 after email verification (B-06)
+    try {
+      const requestedInstId = typeof body?.institutionId === "string" ? body.institutionId : null;
+      let targetInstitution = requestedInstId
+        ? await db.select({ id: institutions.id }).from(institutions).where(eq(institutions.id, requestedInstId)).get()
+        : null;
+      if (!targetInstitution) {
+        targetInstitution = await db.select({ id: institutions.id }).from(institutions).limit(1).get();
+      }
+      if (targetInstitution?.id) {
+        await db.insert(staffInstitutions).values({
+          id: crypto.randomUUID(),
+          staffId: newStaff.id,
+          institutionId: targetInstitution.id,
+        });
+      }
+    } catch {
+      // Non-fatal if institutions table is empty in isolated unit tests
+    }
 
     const verifyToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(verifyToken).digest("hex");

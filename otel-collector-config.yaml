@@ -46,7 +46,7 @@ exporters:
       attributes:
         - key: service.name
         - key: deployment.environment
-  tempo:
+  otlp/tempo:
     endpoint: "tempo:4317"
     tls:
       insecure: true
@@ -56,7 +56,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
-      exporters: [tempo]
+      exporters: [otlp/tempo]
     metrics:
       receivers: [otlp, prometheus]
       processors: [memory_limiter, batch, resource]
@@ -70,4 +70,4 @@ service:
       level: "info"
     metrics:
       level: "detailed"
-      address: "0.0.0.0:8888"
+      address: "0.0.0.0:8889"

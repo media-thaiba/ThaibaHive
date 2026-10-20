@@ -50,19 +50,19 @@ export type WorkspaceConfig = {
 export const workspaces: WorkspaceConfig[] = [
   {
     id: "my-work",
-    label: "My Work",
+    label: "My Space",
     icon: LayoutDashboard,
     color: "text-primary",
-    bgColor: "bg-primary/10",
+    bgColor: "bg-primary/15 dark:bg-primary/20",
     description: "Your personal dashboard, tasks, leaves, reports & approvals",
     order: 1,
   },
   {
     id: "school",
-    label: "School",
+    label: "Academics",
     icon: GraduationCap,
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-100",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bgColor: "bg-emerald-500/15 dark:bg-emerald-500/20",
     description: "Academics: students, classes, exams, grading & hall tickets",
     requiredRoles: ["teacher", "hod", "principal", "admin", "super_admin", "coordinator", "exam_coordinator"],
     order: 2,
@@ -71,18 +71,18 @@ export const workspaces: WorkspaceConfig[] = [
     id: "operations",
     label: "Operations",
     icon: Briefcase,
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-500/15 dark:bg-amber-500/20",
     description: "Finance, fleet, assets, procurement, reconciliation & payroll",
     requiredRoles: ["purchase", "accounts", "principal", "admin", "super_admin", "regional_admin"],
     order: 3,
   },
   {
     id: "admin",
-    label: "Administration",
+    label: "Admin",
     icon: Shield,
-    color: "text-violet-600",
-    bgColor: "bg-violet-100",
+    color: "text-violet-600 dark:text-violet-400",
+    bgColor: "bg-violet-500/15 dark:bg-violet-500/20",
     description: "Agents, hardware, audit ledgers, staff directory & security",
     requiredRoles: ["admin", "super_admin", "regional_admin", "regional_auditor"],
     order: 4,
@@ -97,7 +97,7 @@ export const getWorkspacesForRole = (role: StaffRole): WorkspaceConfig[] =>
 
 // --- My Work ---
 const myWorkItems: NavItem[] = [
-  { href: "/my-work", label: "Dashboard", desc: "Your personal overview with today's schedule & quick actions", icon: LayoutDashboard, workspace: "my-work" },
+  { href: "/", label: "Dashboard", desc: "Your personal overview with today's schedule & quick actions", icon: LayoutDashboard, workspace: "my-work" },
   { href: "/my-work/attendance", label: "Attendance", desc: "View your daily attendance history, punch logs & percentage", icon: Clock, workspace: "my-work" },
   { href: "/my-work/tasks", label: "Tasks", desc: "View and manage your assigned tasks on a drag-and-drop board", icon: CheckSquare, workspace: "my-work" },
   { href: "/my-work/leaves", label: "Leaves", desc: "Apply for leave, check balance & track approval status", icon: Calendar, workspace: "my-work" },
@@ -114,7 +114,6 @@ const myWorkItems: NavItem[] = [
   { href: "/my-work/availability", label: "Availability", desc: "Set your working-hours availability & time off", icon: CalendarClock, workspace: "my-work" },
   { href: "/my-work/recognition", label: "Recognition", desc: "Give kudos and celebrate peer achievements", icon: Award, workspace: "my-work" },
   { href: "/my-work/grievances", label: "Grievances", desc: "Raise and track workplace grievances", icon: AlertTriangle, workspace: "my-work" },
-  { href: "/my-work/settings", label: "Settings", desc: "Your profile, password, avatar & notification preferences", icon: Settings, workspace: "my-work" },
 ];
 
 // --- School ---
@@ -177,10 +176,10 @@ export const workspaceNavMap: Record<WorkspaceId, NavItem[]> = {
 
 // Flattened for backward compatibility
 export const navGroups = [
-  { label: "My Work", items: myWorkItems },
-  { label: "School", items: schoolItems },
+  { label: "My Space", items: myWorkItems },
+  { label: "Academics", items: schoolItems },
   { label: "Operations", items: operationsItems },
-  { label: "Administration", items: adminItems },
+  { label: "Admin", items: adminItems },
 ];
 
 export const primaryNav = myWorkItems.slice(0, 4);

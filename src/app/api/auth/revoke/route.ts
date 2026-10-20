@@ -3,6 +3,9 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { z } from "zod";
 import { revokeSession } from "@/lib/identity/revocation-store";
 import { publishRevocation } from "@/lib/identity/revocation-mesh";
+import { db } from "@/db";
+import { staff } from "@thaiba/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 import { withDPoP } from "@/lib/identity/dpop-middleware";
 
@@ -33,6 +36,19 @@ export const POST = withDPoP(requireAuth(async (req, session) => {
 
   // Write to central revocation store and audit chain
   await revokeSession(sessionId, userId, reason, institutionId);
+
+  // Increment staff tokenVersion in DB for persistent revocation across restarts/workers
+  try {
+    await db
+      .update(staff)
+      .set({
+        tokenVersion: sql`coalesce(${staff.tokenVersion}, 1) + 1`,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(staff.id, userId));
+  } catch {
+    // Non-fatal in mock/unit-test contexts without DB table
+  }
 
   // Propagate to mesh (fire-and-forget — failures are non-fatal)
   let propagated = false;

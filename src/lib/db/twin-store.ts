@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq, and } from 'drizzle-orm';
 import {
   twinFacilities,
   twinSpaces,
@@ -28,6 +29,8 @@ export interface InMemoryTwinStore {
 
 export class TwinDbStore {
   private static instance: TwinDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryTwinStore = {
     facilities: new Map(),
     spaces: new Map(),
@@ -49,6 +52,7 @@ export class TwinDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.facilities.clear();
     this.memoryStore.spaces.clear();
     this.memoryStore.models3d.clear();
@@ -59,6 +63,35 @@ export class TwinDbStore {
     this.memoryStore.maintenanceOrders.clear();
     this.memoryStore.wayfindingNodes.clear();
     this.memoryStore.wayfindingEdges.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [facs, spcs, models, sensors, telem, assets, geos, orders, wfn, wfe] = await Promise.all([
+        db.select().from(twinFacilities),
+        db.select().from(twinSpaces),
+        db.select().from(twin3dModels),
+        db.select().from(twinSensors),
+        db.select().from(twinTelemetry),
+        db.select().from(twinAssets),
+        db.select().from(twinGeofences),
+        db.select().from(twinMaintenanceOrders),
+        db.select().from(twinWayfindingNodes),
+        db.select().from(twinWayfindingEdges),
+      ]);
+      for (const r of facs) if (!this.memoryStore.facilities.has(r.facilityId)) this.memoryStore.facilities.set(r.facilityId, r);
+      for (const r of spcs) if (!this.memoryStore.spaces.has(r.spaceId)) this.memoryStore.spaces.set(r.spaceId, r);
+      for (const r of models) if (!this.memoryStore.models3d.has(r.modelId)) this.memoryStore.models3d.set(r.modelId, r);
+      for (const r of sensors) if (!this.memoryStore.sensors.has(r.sensorId)) this.memoryStore.sensors.set(r.sensorId, r);
+      for (const r of telem) if (!this.memoryStore.telemetry.has(r.telemetryId)) this.memoryStore.telemetry.set(r.telemetryId, r);
+      for (const r of assets) if (!this.memoryStore.assets.has(r.assetId)) this.memoryStore.assets.set(r.assetId, r);
+      for (const r of geos) if (!this.memoryStore.geofences.has(r.geofenceId)) this.memoryStore.geofences.set(r.geofenceId, r);
+      for (const r of orders) if (!this.memoryStore.maintenanceOrders.has(r.orderId)) this.memoryStore.maintenanceOrders.set(r.orderId, r);
+      for (const r of wfn) if (!this.memoryStore.wayfindingNodes.has(r.nodeId)) this.memoryStore.wayfindingNodes.set(r.nodeId, r);
+      for (const r of wfe) if (!this.memoryStore.wayfindingEdges.has(r.edgeId)) this.memoryStore.wayfindingEdges.set(r.edgeId, r);
+    } catch {}
   }
 
   // ─── Facilities ───
@@ -77,6 +110,7 @@ export class TwinDbStore {
   }
 
   async getFacilityById(facilityId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.facilities.get(facilityId);
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
@@ -85,6 +119,7 @@ export class TwinDbStore {
   }
 
   async listFacilities(tenantId: string = 'global'): Promise<any[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.facilities.values()).filter(
       (f) => tenantId === 'global' || f.institutionId === tenantId
     );
@@ -130,6 +165,14 @@ export class TwinDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.spaces.set(spaceId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(twinSpaces.spaceId, spaceId), eq(twinSpaces.institutionId, tenantId))
+          : eq(twinSpaces.spaceId, spaceId);
+        await db.update(twinSpaces).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 

@@ -10,7 +10,7 @@ const quickActions = [
   { icon: Smartphone, label: "Hardware Mgmt", color: "bg-blue-500", route: "/admin/hardware", permission: "admin:all" },
   { icon: Database, label: "Audit Ledgers", color: "bg-emerald-500", route: "/admin/audit", permission: "admin:audit" },
   { icon: Shield, label: "Security Center", color: "bg-red-500", route: "/admin/security", permission: "system:security:view" },
-  { icon: Settings, label: "Tenant Settings", color: "bg-amber-500", route: "/admin/tenant", permission: "admin:all" },
+  { icon: Settings, label: "Tenant Settings", color: "bg-amber-500", route: "/admin/institutions", permission: "admin:all" },
   { icon: Key, label: "Key Management", color: "bg-violet-500", route: "/admin/keys", permission: "system:admin" },
 ];
 

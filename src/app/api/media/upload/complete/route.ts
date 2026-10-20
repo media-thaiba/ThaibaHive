@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { db } from "@/db";
+import { db, isPostgres } from "@/db";
 import { mediaAssets, mediaFolders } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
@@ -103,7 +103,7 @@ export const POST = requireAuth(async (req, session) => {
         and(
           scopedAssetWhere,
           eq(mediaAssets.createdById, session.staffId),
-          sql`json_extract(${mediaAssets.metadata}, '$.clientEventId') = ${clientEventId}`
+          isPostgres ? sql`(${mediaAssets.metadata}::jsonb ->> 'clientEventId') = ${clientEventId}` : sql`json_extract(${mediaAssets.metadata}, '$.clientEventId') = ${clientEventId}`
         )
       )
       .get();
@@ -119,7 +119,7 @@ export const POST = requireAuth(async (req, session) => {
           scopedAssetWhere,
           eq(mediaAssets.createdById, session.staffId),
           folderId ? eq(mediaAssets.folderId, folderId) : sql`${mediaAssets.folderId} IS NULL`,
-          sql`json_extract(${mediaAssets.metadata}, '$.sha256') = ${sha256.toLowerCase()}`
+          isPostgres ? sql`(${mediaAssets.metadata}::jsonb ->> 'sha256') = ${sha256.toLowerCase()}` : sql`json_extract(${mediaAssets.metadata}, '$.sha256') = ${sha256.toLowerCase()}`
         )
       )
       .get();
@@ -170,7 +170,7 @@ export const POST = requireAuth(async (req, session) => {
           and(
             scopedAssetWhere,
             eq(mediaAssets.createdById, session.staffId),
-            sql`json_extract(${mediaAssets.metadata}, '$.clientEventId') = ${clientEventId}`
+            isPostgres ? sql`(${mediaAssets.metadata}::jsonb ->> 'clientEventId') = ${clientEventId}` : sql`json_extract(${mediaAssets.metadata}, '$.clientEventId') = ${clientEventId}`
           )
         )
         .get();

@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import { eq, and } from 'drizzle-orm';
 import {
   ecoEnergyAssets,
   ecoGenerationSources,
@@ -28,6 +29,8 @@ export interface InMemoryEcoStore {
 
 export class EcoDbStore {
   private static instance: EcoDbStore;
+  public useMemoryOnly: boolean = process.env.NODE_ENV === 'test';
+  private hydrated = false;
   private memoryStore: InMemoryEcoStore = {
     energyAssets: new Map(),
     generationSources: new Map(),
@@ -49,6 +52,7 @@ export class EcoDbStore {
   }
 
   public clearMemoryStore(): void {
+    this.hydrated = false;
     this.memoryStore.energyAssets.clear();
     this.memoryStore.generationSources.clear();
     this.memoryStore.storageBatteries.clear();
@@ -59,6 +63,35 @@ export class EcoDbStore {
     this.memoryStore.evFleetSessions.clear();
     this.memoryStore.esgReports.clear();
     this.memoryStore.carbonOffsets.clear();
+  }
+
+  private async ensureHydrated(): Promise<void> {
+    if (this.useMemoryOnly || this.hydrated || !db) return;
+    this.hydrated = true;
+    try {
+      const [assets, gens, bats, tariffs, telem, emits, evs, sess, esgs, offsets] = await Promise.all([
+        db.select().from(ecoEnergyAssets),
+        db.select().from(ecoGenerationSources),
+        db.select().from(ecoStorageBatteries),
+        db.select().from(ecoGridTariffs),
+        db.select().from(ecoTelemetryEnergy),
+        db.select().from(ecoCarbonEmissions),
+        db.select().from(ecoEvChargingStations),
+        db.select().from(ecoEvFleetSessions),
+        db.select().from(ecoEsgReports),
+        db.select().from(ecoCarbonOffsets),
+      ]);
+      for (const r of assets) if (!this.memoryStore.energyAssets.has(r.assetId)) this.memoryStore.energyAssets.set(r.assetId, r);
+      for (const r of gens) if (!this.memoryStore.generationSources.has(r.sourceId)) this.memoryStore.generationSources.set(r.sourceId, r);
+      for (const r of bats) if (!this.memoryStore.storageBatteries.has(r.batteryId)) this.memoryStore.storageBatteries.set(r.batteryId, r);
+      for (const r of tariffs) if (!this.memoryStore.gridTariffs.has(r.tariffId)) this.memoryStore.gridTariffs.set(r.tariffId, r);
+      for (const r of telem) if (!this.memoryStore.telemetryEnergy.has(r.telemetryId)) this.memoryStore.telemetryEnergy.set(r.telemetryId, r);
+      for (const r of emits) if (!this.memoryStore.carbonEmissions.has(r.emissionId)) this.memoryStore.carbonEmissions.set(r.emissionId, r);
+      for (const r of evs) if (!this.memoryStore.evChargingStations.has(r.stationId)) this.memoryStore.evChargingStations.set(r.stationId, r);
+      for (const r of sess) if (!this.memoryStore.evFleetSessions.has(r.sessionId)) this.memoryStore.evFleetSessions.set(r.sessionId, r);
+      for (const r of esgs) if (!this.memoryStore.esgReports.has(r.reportId)) this.memoryStore.esgReports.set(r.reportId, r);
+      for (const r of offsets) if (!this.memoryStore.carbonOffsets.has(r.offsetId)) this.memoryStore.carbonOffsets.set(r.offsetId, r);
+    } catch {}
   }
 
   // ─── Energy Assets ───
@@ -77,6 +110,7 @@ export class EcoDbStore {
   }
 
   async getEnergyAssetById(assetId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
     const item = this.memoryStore.energyAssets.get(assetId);
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
@@ -85,6 +119,7 @@ export class EcoDbStore {
   }
 
   async listEnergyAssets(tenantId: string = 'global', facilityId?: string): Promise<any[]> {
+    await this.ensureHydrated();
     return Array.from(this.memoryStore.energyAssets.values()).filter(
       (a) =>
         (tenantId === 'global' || a.institutionId === tenantId) &&
@@ -101,6 +136,14 @@ export class EcoDbStore {
       updatedAt: new Date().toISOString(),
     };
     this.memoryStore.energyAssets.set(assetId, updated);
+    try {
+      if (db && !this.useMemoryOnly) {
+        const whereClause = tenantId !== 'global'
+          ? and(eq(ecoEnergyAssets.assetId, assetId), eq(ecoEnergyAssets.institutionId, tenantId))
+          : eq(ecoEnergyAssets.assetId, assetId);
+        await db.update(ecoEnergyAssets).set({ ...updates, updatedAt: updated.updatedAt } as any).where(whereClause);
+      }
+    } catch {}
     return updated;
   }
 

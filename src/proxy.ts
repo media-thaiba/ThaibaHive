@@ -20,10 +20,23 @@ const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
 const exactPublicPaths = new Set([
   "/auth/login",
   "/auth/signup",
+  "/auth/forgot-password",
+  "/auth/mobile-handoff",
   "/api/auth/login",
   "/api/auth/signup",
+  "/api/auth/logout",
   "/api/auth/google",
+  "/api/auth/google/callback",
   "/api/auth/mobile-handoff",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password/validate",
+  "/api/auth/reset-password/complete",
+  "/api/auth/verify-email/confirm",
+  "/api/auth/verify-email/resend",
+  "/api/auth/webauthn/login/begin",
+  "/api/auth/webauthn/login/complete",
+  "/api/auth/webauthn/challenge",
+  "/api/auth/webauthn/verify",
   // SSO: IdP-initiated callbacks arrive unauthenticated with no session
   // cookie (SAML POST binding) or non-JSON content types. Rate limiting
   // and signature checks are enforced inside the routes themselves.
@@ -36,6 +49,10 @@ const exactPublicPaths = new Set([
   "/api/webhooks/edge-security",
   "/api/engage/voice",
   "/api/system/health",
+  "/api/system/health/ready",
+  "/api/system/metrics",
+  "/api/system/cleanup-nonces",
+  "/api/cron/presence-sweep",
   "/api/health",
   "/api/system/csp-report",
   "/api/system/update",
@@ -55,6 +72,8 @@ const prefixPublicPaths = [
   "/.well-known/",
   "/api/public/",
   "/api/media/share-links/",
+  "/auth/reset-password/",
+  "/auth/verify-email/",
   "/share/",
   "/verify/",
 ];
@@ -90,6 +109,30 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    const method = request.method;
+    const isWrite = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+    const isUploadRoute = pathname.startsWith("/api/upload") || pathname.startsWith("/api/media/upload");
+
+    // Enforce body size limit on ALL write API routes (including public routes, B-21)
+    if (pathname.startsWith("/api/") && isWrite) {
+      const maxLimit = isUploadRoute ? MAX_UPLOAD_BYTES : MAX_BODY_BYTES;
+      const contentLength = request.headers.get("content-length");
+      if (contentLength && parseInt(contentLength, 10) > maxLimit) {
+        return addSecurityHeaders(
+          request,
+          NextResponse.json(
+            { error: `Request body too large. Maximum size is ${isUploadRoute ? "50MB" : "5MB"}.` },
+            { status: 413 }
+          ),
+          pathname,
+          nonce
+        );
+      }
+    }
+
+    if (pathname === "/dashboard") {
+      return addSecurityHeaders(request, NextResponse.redirect(new URL("/", request.url)), pathname, nonce);
+    }
     const isProtectedPortal =
       pathname.startsWith("/portal/alumni") ||
       pathname.startsWith("/portal/facilities") ||
@@ -134,6 +177,9 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
     let verifiedRole: string | null = null;
     try {
       const { payload } = await jwtVerify(token, getJwtSecretBytes());
+      if (payload.purpose === "mobile_handoff") {
+        throw new Error("Mobile handoff nonce cannot be used as a general session token");
+      }
       verifiedRole = typeof payload.role === "string" ? payload.role : null;
     } catch {
       if (pathname.startsWith("/api/")) {
@@ -173,26 +219,8 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Enforce body size limit on write API routes
-    const method = request.method;
-    const isWrite = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+    // Block non-JSON/non-multipart content types on non-upload write API routes (allow urlencoded for SAML ACS)
     if (pathname.startsWith("/api/") && isWrite) {
-      const isUploadRoute = pathname.startsWith("/api/upload") || pathname.startsWith("/api/media/upload");
-      const maxLimit = isUploadRoute ? MAX_UPLOAD_BYTES : MAX_BODY_BYTES;
-      const contentLength = request.headers.get("content-length");
-      if (contentLength && parseInt(contentLength, 10) > maxLimit) {
-        return addSecurityHeaders(
-          request,
-          NextResponse.json(
-            { error: `Request body too large. Maximum size is ${isUploadRoute ? "50MB" : "5MB"}.` },
-            { status: 413 }
-          ),
-          pathname,
-          nonce
-        );
-      }
-
-      // Block non-JSON/non-multipart content types on non-upload write API routes (allow urlencoded for SAML ACS)
       const isSamlAcsRoute = pathname === "/api/auth/saml/acs";
       const contentType = request.headers.get("content-type");
       if (

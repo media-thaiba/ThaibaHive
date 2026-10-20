@@ -66,6 +66,7 @@ export class RevocationStore {
   private static _instance: RevocationStore;
   private readonly bloomFilter = new BloomFilter(10000);
   private readonly revokedSet = new Set<string>();
+  private readonly revokedUserIds = new Set<string>();
   private readonly records: RevocationRecord[] = [];
 
   private constructor() {}
@@ -81,6 +82,10 @@ export class RevocationStore {
   revoke(sessionId: string, userId: string, reason: string): void {
     this.bloomFilter.add(sessionId);
     this.revokedSet.add(sessionId);
+    if (userId) {
+      this.bloomFilter.add(`user:${userId}`);
+      this.revokedUserIds.add(userId);
+    }
     this.records.push({ sessionId, userId, reason, revokedAt: new Date().toISOString() });
     updateBloomSize(this.bloomFilter.getSizeBytes());
   }
@@ -99,6 +104,7 @@ export class RevocationStore {
   revokeUser(userId: string, reason: string): void {
     this.bloomFilter.add(`user:${userId}`);
     this.revokedSet.add(`user:${userId}`);
+    this.revokedUserIds.add(userId);
     this.records.push({ sessionId: `user:${userId}`, userId, reason, revokedAt: new Date().toISOString() });
     updateBloomSize(this.bloomFilter.getSizeBytes());
   }
@@ -106,6 +112,7 @@ export class RevocationStore {
   /** Un-revokes a user (for compensation / unlocking). */
   unrevokeUser(userId: string): void {
     this.revokedSet.delete(`user:${userId}`);
+    this.revokedUserIds.delete(userId);
   }
 
   /** Checks if a user is currently under security hold / revoked. */
@@ -113,7 +120,7 @@ export class RevocationStore {
     if (!this.bloomFilter.mightContain(`user:${userId}`)) {
       return false;
     }
-    return this.revokedSet.has(`user:${userId}`);
+    return this.revokedSet.has(`user:${userId}`) || this.revokedUserIds.has(userId);
   }
 
   /** Returns memory stats for observability. */
@@ -133,6 +140,7 @@ export class RevocationStore {
   _reset(): void {
     this.bloomFilter.clear();
     this.revokedSet.clear();
+    this.revokedUserIds.clear();
     this.records.length = 0;
     updateBloomSize(this.bloomFilter.getSizeBytes());
   }

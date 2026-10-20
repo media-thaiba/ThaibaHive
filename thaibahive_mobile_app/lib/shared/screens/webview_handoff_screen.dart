@@ -118,9 +118,27 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
         await cookieManager.setCookie(cookie);
       }
 
-      final targetUrl = location != null
-          ? '${AppConstants.webBaseUrl}$location'
-          : '${AppConstants.webBaseUrl}$redirectParam';
+      String targetUrl;
+      if (location != null && location.isNotEmpty) {
+        final uri = Uri.parse(location);
+        if (uri.hasScheme) {
+          final baseUri = Uri.parse(AppConstants.webBaseUrl);
+          targetUrl = uri.replace(
+            scheme: baseUri.scheme,
+            host: baseUri.host,
+            port: baseUri.hasPort ? baseUri.port : null,
+          ).toString();
+        } else {
+          final locPath = location.startsWith('/') ? location : '/$location';
+          targetUrl = '${AppConstants.webBaseUrl}$locPath';
+        }
+      } else {
+        final target = widget.targetPath.startsWith('/') ? widget.targetPath : '/${widget.targetPath}';
+        targetUrl = '${AppConstants.webBaseUrl}$target';
+      }
+      // url initialized above
+
+
 
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)

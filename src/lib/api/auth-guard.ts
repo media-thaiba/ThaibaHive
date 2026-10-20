@@ -18,7 +18,7 @@ function timingSafeSecretMatch(provided: string | null, expected: string | undef
 type HandlerWithSession = (
   request: Request,
   session: SessionPayload,
-  params?: { params: Promise<Record<string, string>> }
+  params?: { params: Promise<Record<string, any>> } | any
 ) => Promise<Response>;
 
 export function requireAuth(
@@ -179,6 +179,7 @@ export function requireAuth(
       }
     }
 
+    (globalThis as any).__activeSession = session;
     try {
       const response = await handler(
         request,

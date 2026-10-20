@@ -75,11 +75,22 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "You are not authorized to approve this leave request" }, { status: 403 });
   }
 
+  if (leave.status === "hod_approved" && session.role === "hod") {
+    return NextResponse.json(
+      { error: "Leave has already been recommended by HOD and is awaiting Principal approval" },
+      { status: 400 }
+    );
+  }
+
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   let nextStatus: string = status;
 
-  if (status === "approved" && (session.role === "hod" || session.role === "principal")) {
-    nextStatus = "hod_approved";
+  if (status === "approved") {
+    if (session.role === "hod") {
+      nextStatus = "hod_approved";
+    } else {
+      nextStatus = "approved";
+    }
   }
 
   updates.status = nextStatus;

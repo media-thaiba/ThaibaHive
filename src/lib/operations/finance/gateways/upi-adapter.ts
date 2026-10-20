@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   PaymentGatewayAdapter,
   CreateOrderRequest,
@@ -15,15 +16,18 @@ export class UpiAdapter implements PaymentGatewayAdapter {
   private vpa: string;
   private merchantName: string;
   private merchantCategoryCode: string;
+  private webhookSecret: string;
 
   constructor(
     vpa: string = process.env.INSTITUTION_UPI_VPA || 'thaiba.garden@icici',
     merchantName: string = process.env.INSTITUTION_UPI_NAME || 'Thaiba Garden Institutions',
-    merchantCategoryCode: string = '8220' // Educational Institutions
+    merchantCategoryCode: string = '8220', // Educational Institutions
+    webhookSecret: string = process.env.UPI_WEBHOOK_SECRET || ''
   ) {
     this.vpa = vpa;
     this.merchantName = merchantName;
     this.merchantCategoryCode = merchantCategoryCode;
+    this.webhookSecret = webhookSecret;
   }
 
   public async createOrder(params: CreateOrderRequest): Promise<CreateOrderResponse> {
@@ -51,7 +55,18 @@ export class UpiAdapter implements PaymentGatewayAdapter {
   }
 
   public verifyPaymentSignature(params: VerifySignatureRequest): boolean {
-    return params.signature.startsWith('UPI_') || params.signature.length >= 8;
+    if (!this.webhookSecret || !params.signature) {
+      return false;
+    }
+    const body = `${params.orderId}|${params.paymentId}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', this.webhookSecret)
+      .update(body)
+      .digest('hex');
+    const sigBuf = Buffer.from(params.signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   }
 
   public async fetchPaymentStatus(paymentId: string): Promise<FetchPaymentResponse> {
@@ -78,9 +93,31 @@ export class UpiAdapter implements PaymentGatewayAdapter {
 
   public async processWebhookPayload(
     rawBody: string,
-    _signature: string
+    signature: string
   ): Promise<WebhookEventPayload> {
     const parsed = JSON.parse(rawBody || '{}');
+    if (!this.webhookSecret || !signature) {
+      return {
+        eventId: parsed?.eventId || `upi_evt_${Date.now()}`,
+        eventType: 'upi.transaction.success',
+        gatewayPaymentId: parsed?.rrn || parsed?.txnId || 'mock_upi_rrn',
+        gatewayOrderId: parsed?.transactionRef,
+        amount: Number(parsed?.amount || 0),
+        currency: 'INR',
+        status: 'failed',
+        signatureVerified: false,
+        metadata: parsed,
+      };
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', this.webhookSecret)
+      .update(rawBody)
+      .digest('hex');
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSignature);
+    const isValid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
+
     return {
       eventId: parsed?.eventId || `upi_evt_${Date.now()}`,
       eventType: 'upi.transaction.success',
@@ -88,8 +125,8 @@ export class UpiAdapter implements PaymentGatewayAdapter {
       gatewayOrderId: parsed?.transactionRef,
       amount: Number(parsed?.amount || 0),
       currency: 'INR',
-      status: parsed?.status === 'SUCCESS' || parsed?.responseCode === '00' ? 'completed' : 'failed',
-      signatureVerified: true,
+      status: isValid && (parsed?.status === 'SUCCESS' || parsed?.responseCode === '00') ? 'completed' : 'failed',
+      signatureVerified: isValid,
       metadata: parsed,
     };
   }

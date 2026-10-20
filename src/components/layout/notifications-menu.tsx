@@ -33,7 +33,7 @@ export function NotificationsMenu({ layout = "header", collapsed = false }: Noti
       <DropdownMenuTrigger
         aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
         className={cn(
-          "group relative flex h-12 w-full items-center rounded-[18px] transition-all duration-300 outline-none hover:bg-foreground/[0.03] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring",
+          "group relative flex h-12 w-full items-center rounded-xl transition-all duration-200 outline-none hover:bg-foreground/[0.03] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
           collapsed && "justify-center"
         )}
         onClick={() => {
@@ -45,17 +45,17 @@ export function NotificationsMenu({ layout = "header", collapsed = false }: Noti
             <Bell
               size={20}
               className={cn(
-                "transition-colors duration-300",
-                unread > 0 ? "text-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "text-foreground/70 group-hover:text-foreground"
+                "transition-colors duration-200",
+                unread > 0 ? "text-primary" : "text-foreground/70 group-hover:text-foreground"
               )}
             />
             {unread > 0 && !collapsed && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black leading-none text-primary-foreground animate-scale-in">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground animate-scale-in">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
             {unread > 0 && collapsed && (
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
             )}
           </div>
           {!collapsed && (
@@ -80,7 +80,7 @@ export function NotificationsMenu({ layout = "header", collapsed = false }: Noti
       >
         <Bell className="h-[18px] w-[18px]" />
         {unread > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground animate-scale-in">
+          <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground animate-scale-in">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -136,7 +136,7 @@ export function NotificationsMenu({ layout = "header", collapsed = false }: Noti
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-foreground">{n.title}</p>
                       <p className="mt-0.5 text-muted-foreground line-clamp-2">{n.message}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
+                      <p className="mt-1 text-[11px] text-muted-foreground">
                         {new Date(n.createdAt).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",

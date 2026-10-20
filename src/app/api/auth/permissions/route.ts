@@ -13,6 +13,8 @@ export async function GET() {
   const permissions = getRolePermissions(role);
 
   return NextResponse.json({
+    staffId: session.staffId,
+    institutionId: session.institutionId,
     role,
     permissions,
   });

@@ -10,7 +10,12 @@ import { eq, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request: Request, session, context) => {
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  let scopedInstitutionId: string | null = null;
+  try {
+    scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  } catch {
+    scopedInstitutionId = session.institutionId || null;
+  }
 
   const row = await db
     .select({
@@ -74,7 +79,12 @@ export const GET = requireAuth(async (_request: Request, session, context) => {
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  let scopedInstitutionId: string | null = null;
+  try {
+    scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  } catch {
+    scopedInstitutionId = session.institutionId || null;
+  }
 
   const body = await request.json().catch(() => null);
   if (!body) {

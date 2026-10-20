@@ -3,43 +3,28 @@ import { db } from "@/db";
 import {
   checklistTemplates,
   checklistTemplateItems,
-  departments,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { checkRateLimit } from "@/lib/api/rate-limit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { pick } from "@/lib/api/pick";
 import { eq, asc } from "drizzle-orm";
 import { checklistUpdateSchema } from "@/lib/validation/schemas";
 
-async function findScopedChecklistTemplate(id: string, instScope: string | null) {
+async function findScopedChecklistTemplate(id: string) {
   const template = await db
     .select()
     .from(checklistTemplates)
     .where(eq(checklistTemplates.id, id))
     .get();
-  if (!template) return null;
-
-  if (instScope && template.departmentId) {
-    const dept = await db
-      .select({ institutionId: departments.institutionId })
-      .from(departments)
-      .where(eq(departments.id, template.departmentId))
-      .get();
-    if (dept && dept.institutionId && dept.institutionId !== instScope) {
-      return null;
-    }
-  }
-  return template;
+  return template || null;
 }
 
 export const GET = requireAuth(async (_request, session, context) => {
-  const rateLimitResponse = await checkRateLimit(session.staffId, "read");
-  if (rateLimitResponse) return rateLimitResponse;
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const { id } = await context!.params;
-  const instScope =
-    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
-  const template = await findScopedChecklistTemplate(id, instScope);
+  const template = await findScopedChecklistTemplate(id);
 
   if (!template) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -56,8 +41,8 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "checklists:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
-  const rateLimitResponse = await checkRateLimit(session.staffId, "write");
-  if (rateLimitResponse) return rateLimitResponse;
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const { id } = await context!.params;
 
@@ -73,9 +58,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request data" }, { status: 400 });
   }
 
-  const instScope =
-    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
-  const existing = await findScopedChecklistTemplate(id, instScope);
+  const existing = await findScopedChecklistTemplate(id);
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -98,14 +81,12 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 }, "org:manage");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
-  const rateLimitResponse = await checkRateLimit(session.staffId, "write");
-  if (rateLimitResponse) return rateLimitResponse;
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const { id } = await context!.params;
 
-  const instScope =
-    session.institutionId && session.institutionId !== "global" ? session.institutionId : null;
-  const template = await findScopedChecklistTemplate(id, instScope);
+  const template = await findScopedChecklistTemplate(id);
 
   if (!template) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -17,6 +17,8 @@ export interface FederatedIdentityPayload {
   attributes?: Record<string, any>;
 }
 
+const GLOBAL_PRIVILEGED_ROLES = new Set(['super_admin', 'system', 'regional_admin', 'regional_auditor']);
+
 export class FederatedUserMapper {
   /**
    * Maps external identity to a local staff user record, auto-provisioning via JIT if necessary.
@@ -55,8 +57,8 @@ export class FederatedUserMapper {
     // Role Mapping & Escalation Guard
     let rawRole = payload.roles && payload.roles.length > 0 ? payload.roles[0] : 'staff';
 
-    // Strict Negative Boundary: Block external IdP claims from unilaterally escalating to super_admin or system
-    if (rawRole === 'super_admin' || rawRole === 'system') {
+    // Strict Negative Boundary: Block external IdP claims from unilaterally escalating to super_admin, system, or regional roles
+    if (GLOBAL_PRIVILEGED_ROLES.has(rawRole)) {
       console.warn(`[Security Alert] JIT mapping blocked privilege escalation attempt to '${rawRole}' for subject ${payload.externalSubjectId}`);
       rawRole = 'admin';
     }
@@ -68,6 +70,24 @@ export class FederatedUserMapper {
     let mappedRole = rawRole;
 
     if (existingStaff) {
+      // Prevent cross-tenant account takeover or hijacking of global super_admin accounts via email collision (B-04)
+      if (GLOBAL_PRIVILEGED_ROLES.has(existingStaff.role)) {
+        throw new Error(`Security Violation: Privileged global account (${existingStaff.role}) cannot be auto-linked via tenant SSO`);
+      }
+
+      const existingInstMemberships = await db
+        .select()
+        .from(staffInstitutions)
+        .where(eq(staffInstitutions.staffId, existingStaff.id));
+
+      if (
+        Array.isArray(existingInstMemberships) &&
+        existingInstMemberships.length > 0 &&
+        !existingInstMemberships.some((m: { institutionId: string }) => m.institutionId === institutionId)
+      ) {
+        throw new Error('Security Violation: Cross-tenant account linking forbidden for existing staff member');
+      }
+
       targetUserId = existingStaff.id;
       mappedRole = existingStaff.role || mappedRole;
       // Federated IdP already proved email ownership — auto-verify on first SSO login

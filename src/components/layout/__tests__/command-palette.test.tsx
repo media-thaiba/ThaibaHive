@@ -166,5 +166,23 @@ describe("Web CommandPalette Universal Search Component", () => {
 
     expect(screen.getByText(/Retry/i)).toBeInTheDocument();
   });
+
+  it("routes workspace:my-work directly to '/'", async () => {
+    const onOpenChange = jest.fn();
+    render(<CommandPalette open={true} onOpenChange={onOpenChange} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.change(input, { target: { value: "workspace:my" } });
+
+    await waitFor(() => {
+      expect(screen.getByText("My Work")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(mockPush).toHaveBeenCalledWith("/");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });
 

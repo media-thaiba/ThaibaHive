@@ -5,8 +5,11 @@ import {
   tasks,
   attendanceLogs,
   performanceReviews,
+  staffInstitutions,
+  staffDepartments,
+  departments,
 } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { ensureRegionalTablesExist } from "./dw-etl-service";
 
 export interface HodRankingQueryOptions {
@@ -31,7 +34,7 @@ export interface HodRankingRecord {
 
 export class RegionalHodRankingService {
   /**
-   * Calculate regional HOD rankings and discipline analytics.
+   * Calculate regional HOD rankings and discipline analytics without polluting production tables.
    */
   static async calculateRankings(options: HodRankingQueryOptions): Promise<HodRankingRecord[]> {
     await ensureRegionalTablesExist();
@@ -47,73 +50,112 @@ export class RegionalHodRankingService {
       .where(eq(staff.role, "hod"))
       .all();
 
-    // Fallback list if DB has no explicit HOD staff registered
-    const targets = hodList.length > 0 ? hodList.map(h => ({
-      id: h.id,
-      name: `${h.firstName} ${h.lastName}`,
-      departmentId: "dept_cs",
-      institutionId: "inst_default",
-    })) : [
-      { id: "hod_01", name: "Dr. Ahmed Hassan", departmentId: "dept_cs", institutionId: "inst_alpha" },
-      { id: "hod_02", name: "Prof. Sarah Khan", departmentId: "dept_math", institutionId: "inst_beta" },
-      { id: "hod_03", name: "Dr. Muhammed Ali", departmentId: "dept_cs", institutionId: "inst_gamma" },
-    ];
-
     if (hodList.length === 0) {
-      for (const t of targets) {
-        await db.run(sql`INSERT OR IGNORE INTO institutions (id, name, code) VALUES (${t.institutionId}, ${t.institutionId}, ${t.institutionId})`);
-        await db.run(sql`INSERT OR IGNORE INTO staff (id, employee_id, first_name, last_name, email, role) VALUES (${t.id}, ${'EMP_' + t.id}, ${t.name}, 'HOD', ${t.id + '@test.com'}, 'hod')`);
-        await db.run(sql`INSERT OR IGNORE INTO staff_institutions (id, staff_id, institution_id) VALUES (${'si_' + t.id}, ${t.id}, ${t.institutionId})`);
+      return [];
+    }
+
+    const hodIds = hodList.map((h) => h.id);
+
+    // Batch-load institution and department mappings for all HODs
+    const [instMappings, deptMappings] = await Promise.all([
+      db
+        .select({ staffId: staffInstitutions.staffId, institutionId: staffInstitutions.institutionId })
+        .from(staffInstitutions)
+        .where(inArray(staffInstitutions.staffId, hodIds))
+        .all(),
+      db
+        .select({
+          staffId: staffDepartments.staffId,
+          departmentId: staffDepartments.departmentId,
+          deptName: departments.name,
+        })
+        .from(staffDepartments)
+        .leftJoin(departments, eq(staffDepartments.departmentId, departments.id))
+        .where(inArray(staffDepartments.staffId, hodIds))
+        .all(),
+    ]);
+
+    const instByStaff = new Map<string, string>();
+    for (const row of instMappings) {
+      if (!instByStaff.has(row.staffId)) {
+        instByStaff.set(row.staffId, row.institutionId);
       }
     }
+
+    const deptByStaff = new Map<string, { departmentId: string; deptName: string | null }>();
+    for (const row of deptMappings) {
+      if (!deptByStaff.has(row.staffId)) {
+        deptByStaff.set(row.staffId, { departmentId: row.departmentId, deptName: row.deptName });
+      }
+    }
+
+    const targets = hodList.map((h) => {
+      const deptInfo = deptByStaff.get(h.id);
+      return {
+        id: h.id,
+        name: `${h.firstName} ${h.lastName}`,
+        departmentId: deptInfo?.departmentId || null,
+        deptName: deptInfo?.deptName || null,
+        institutionId: instByStaff.get(h.id) || "inst_default",
+      };
+    });
+
+    const deptIds = [...new Set(targets.map((t) => t.departmentId).filter((id): id is string => !!id))];
+
+    const [allDeptTasks, allAtts, allReviews] = await Promise.all([
+      deptIds.length > 0
+        ? db
+            .select({ departmentId: tasks.departmentId, status: tasks.status })
+            .from(tasks)
+            .where(inArray(tasks.departmentId, deptIds))
+            .all()
+        : Promise.resolve([]),
+      db
+        .select({ staffId: attendanceLogs.staffId, status: attendanceLogs.status })
+        .from(attendanceLogs)
+        .where(inArray(attendanceLogs.staffId, hodIds))
+        .all(),
+      db
+        .select({ staffId: performanceReviews.staffId, rating: performanceReviews.rating })
+        .from(performanceReviews)
+        .where(inArray(performanceReviews.staffId, hodIds))
+        .all(),
+    ]);
 
     const computedItems = [];
 
     for (const h of targets) {
-      // 1. Task completion rate for HOD's department
       let taskCompletionRate = 85.0;
       if (h.departmentId) {
-        const deptTasks = await db
-          .select({ status: tasks.status })
-          .from(tasks)
-          .where(eq(tasks.departmentId, h.departmentId))
-          .all();
+        const deptTasks = allDeptTasks.filter((t) => t.departmentId === h.departmentId);
         if (deptTasks.length > 0) {
-          const completed = deptTasks.filter((t) => t.status === "completed").length;
+          const completed = deptTasks.filter((t) => t.status === "completed" || t.status === "done").length;
           taskCompletionRate = Math.round((completed / deptTasks.length) * 10000) / 100;
         }
       }
 
-      // 2. Attendance rate for HOD
       let attendanceRate = 95.0;
-      const atts = await db
-        .select({ status: attendanceLogs.status })
-        .from(attendanceLogs)
-        .where(eq(attendanceLogs.staffId, h.id))
-        .all();
+      const atts = allAtts.filter((a) => a.staffId === h.id);
       if (atts.length > 0) {
         const present = atts.filter((a) => a.status === "present").length;
         attendanceRate = Math.round((present / atts.length) * 10000) / 100;
       }
 
-      // 3. Review rating
       let reviewRating = 4.2;
-      const reviews = await db
-        .select({ rating: performanceReviews.rating })
-        .from(performanceReviews)
-        .where(eq(performanceReviews.staffId, h.id))
-        .all();
+      const reviews = allReviews.filter((r) => r.staffId === h.id);
       if (reviews.length > 0 && reviews[0].rating) {
         reviewRating = reviews[0].rating;
       }
 
-      // Discipline name
-      const discipline = options.discipline || (h.departmentId?.includes("math") ? "Mathematics" : "Computer Science");
+      const discipline =
+        options.discipline ||
+        h.deptName ||
+        (h.departmentId?.includes("math") ? "Mathematics" : "Computer Science");
 
-      // Composite score = (taskCompletionRate * 0.4) + (attendanceRate * 0.3) + ((reviewRating / 5) * 100 * 0.3)
-      const compositeScore = Math.round(
-        (taskCompletionRate * 0.4 + attendanceRate * 0.3 + (reviewRating / 5.0) * 100 * 0.3) * 100
-      ) / 100;
+      const compositeScore =
+        Math.round(
+          (taskCompletionRate * 0.4 + attendanceRate * 0.3 + (reviewRating / 5.0) * 100 * 0.3) * 100
+        ) / 100;
 
       computedItems.push({
         hodStaffId: h.id,
@@ -129,7 +171,6 @@ export class RegionalHodRankingService {
       });
     }
 
-    // Sort descending by composite score
     computedItems.sort((a, b) => b.compositeScore - a.compositeScore);
 
     const rankings: HodRankingRecord[] = [];
@@ -151,17 +192,20 @@ export class RegionalHodRankingService {
       };
 
       await db.delete(regionalHodRankings).where(eq(regionalHodRankings.id, recordId)).run();
-      await db.insert(regionalHodRankings).values({
-        id: recordId,
-        regionalGroupId: options.regionalGroupId,
-        institutionId: item.institutionId,
-        hodStaffId: item.hodStaffId,
-        discipline: item.discipline,
-        compositeScore: item.compositeScore,
-        rankPosition,
-        performanceFactors: JSON.stringify(item.performanceFactors),
-        evaluatedAt: new Date().toISOString(),
-      }).run();
+      await db
+        .insert(regionalHodRankings)
+        .values({
+          id: recordId,
+          regionalGroupId: options.regionalGroupId,
+          institutionId: item.institutionId,
+          hodStaffId: item.hodStaffId,
+          discipline: item.discipline,
+          compositeScore: item.compositeScore,
+          rankPosition,
+          performanceFactors: JSON.stringify(item.performanceFactors),
+          evaluatedAt: new Date().toISOString(),
+        })
+        .run();
 
       rankings.push(record);
     }

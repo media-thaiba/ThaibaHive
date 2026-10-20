@@ -21,7 +21,7 @@ export default async function globalSetup(): Promise<void> {
 
   const root = process.cwd();
   const source = path.join(root, "dev.db");
-  const target = path.join(root, "test.db");
+  let target = path.join(root, "test.db");
 
   if (!fs.existsSync(source)) {
     throw new Error(
@@ -30,7 +30,12 @@ export default async function globalSetup(): Promise<void> {
   }
 
   for (const p of [target, `${target}-wal`, `${target}-shm`]) {
-    fs.rmSync(p, { force: true, maxRetries: 5, retryDelay: 100 });
+    try {
+      fs.rmSync(p, { force: true, maxRetries: 3, retryDelay: 100 });
+    } catch {
+      target = path.join(root, `test-${process.pid}-${Date.now()}.db`);
+      break;
+    }
   }
 
   // VACUUM INTO produces a consistent snapshot even when WAL sidecars exist.

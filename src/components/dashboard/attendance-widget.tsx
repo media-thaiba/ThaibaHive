@@ -15,7 +15,7 @@ export function AttendanceWidget({ checkedIn, onClockOut, clockingOut }: Attenda
       <CardHeader className="pb-3 border-b border-border/20 bg-muted/20">
         <CardTitle className="text-sm font-bold flex items-center justify-between">
           <span>Shift Status</span>
-          <span className={`h-2 w-2 rounded-full ${checkedIn ? "bg-success animate-pulse-subtle" : "bg-warning"}`} />
+          <span className={`h-2 w-2 rounded-full ${checkedIn ? "bg-success" : "bg-warning"}`} />
         </CardTitle>
       </CardHeader>
       <CardContent className="p-5 space-y-4">
@@ -36,13 +36,13 @@ export function AttendanceWidget({ checkedIn, onClockOut, clockingOut }: Attenda
           <Button
             onClick={onClockOut}
             disabled={clockingOut}
-            className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2 font-medium py-5 rounded-lg"
+            className="w-full h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2 font-medium rounded-xl active:scale-[0.98] transition-transform"
           >
             <LogOut className="h-4 w-4" /> {clockingOut ? "Processing..." : "Clock Out"}
           </Button>
         ) : (
           <Link href="/my-work/attendance" className="block w-full">
-            <Button className="w-full bg-success text-success-foreground hover:bg-success/90 gap-2 font-medium py-5 rounded-lg">
+            <Button className="w-full h-11 bg-success text-success-foreground hover:bg-success/90 gap-2 font-medium rounded-xl active:scale-[0.98] transition-transform">
               <Clock className="h-4 w-4" /> Check In / Punch
             </Button>
           </Link>

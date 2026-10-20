@@ -58,7 +58,7 @@ export function consumeChallenge(challengeId: string): WebAuthnChallenge | null 
 }
 
 export function generateOTPCode(userId: string): string {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   otpCache.set(userId, {
     code,
     expiresAt: Date.now() + OTP_TTL_MS,
@@ -75,14 +75,14 @@ export function verifyOTPCode(userId: string, code: string): boolean {
     return false;
   }
 
-  if (entry.code === code) {
+  const entryBuf = Buffer.from(String(entry.code));
+  const codeBuf = Buffer.from(String(code || ""));
+  if (entryBuf.length === codeBuf.length && crypto.timingSafeEqual(entryBuf, codeBuf)) {
     otpCache.delete(userId);
     failedAttemptsMap.delete(userId);
     return true;
   }
 
-  const currentFailed = (failedAttemptsMap.get(userId) || 0) + 1;
-  failedAttemptsMap.set(userId, currentFailed);
   return false;
 }
 
