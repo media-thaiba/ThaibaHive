@@ -190,10 +190,10 @@ export const assetTagBindSchema = z.object({
 
 export const expenseClaimCreateSchema = z
   .object({
-    amount: z.number().positive().max(10_000_000, "Expense claim amount cannot exceed ₹10,000,000"),
-    category: z.string().min(1),
-    description: z.string().min(1),
-    receiptUrl: z.string().optional(),
+    amount: z.number().positive("Amount must be greater than 0").max(10_000_000, "Expense claim amount cannot exceed ₹10,000,000"),
+    category: z.string().trim().min(1, "Category is required").max(100, "Category too long"),
+    description: z.string().trim().min(1, "Description is required").max(2000, "Description too long"),
+    receiptUrl: z.string().trim().max(2000, "Receipt URL too long").optional().nullable(),
   })
   .refine(
     (data) => data.amount < 1000 || (data.receiptUrl && data.receiptUrl.trim().length > 0),
@@ -204,15 +204,15 @@ export const expenseClaimCreateSchema = z
   );
 
 export const expenseClaimUpdateSchema = z.object({
-  category: z.string().min(1).optional(),
-  description: z.string().min(1).optional(),
-  amount: z.number().positive().max(10_000_000).optional(),
-  receiptUrl: z.string().optional().nullable(),
+  category: z.string().trim().min(1).max(100).optional(),
+  description: z.string().trim().min(1).max(2000).optional(),
+  amount: z.number().positive("Amount must be greater than 0").max(10_000_000).optional(),
+  receiptUrl: z.string().trim().max(2000).optional().nullable(),
 });
 
 export const expenseClaimReviewSchema = z.object({
   status: z.enum(["pending_hod", "pending_finance", "approved", "disbursed", "rejected"]),
-  reviewNotes: z.string().optional().nullable(),
+  reviewNotes: z.string().trim().max(2000, "Review notes too long").optional().nullable(),
 }).refine(
   (data) => data.status !== "rejected" || (data.reviewNotes && data.reviewNotes.trim().length > 0),
   {

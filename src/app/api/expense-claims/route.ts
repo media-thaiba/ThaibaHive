@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { expenseClaims } from "@/db/schema";
@@ -9,6 +10,9 @@ import { getManagedStaffIds } from "@/lib/auth/department-scope";
 import { eq, desc, and, inArray, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const viewAll = searchParams.get("viewAll");
@@ -22,7 +26,7 @@ export const GET = requireAuth(async (request: Request, session) => {
 
   const conditions = [];
 
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   if (scopedInstitutionId !== "global") {
     conditions.push(eq(expenseClaims.institutionId, scopedInstitutionId));
   }
@@ -66,11 +70,17 @@ export const POST = requireAuth(async (request: Request, session) => {
   const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = expenseClaimCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0].message },
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
       { status: 400 }
     );
   }
@@ -84,12 +94,12 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
 
   const claim = await db
     .insert(expenseClaims)
     .values({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       staffId: session.staffId,
       amount,
       category,

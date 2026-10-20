@@ -3,14 +3,18 @@ import { db } from "@/db";
 import { expenseClaims, activityLogs, financialTransactions, staff, staffInstitutions } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { isManagedBy } from "@/lib/auth/department-scope";
 import { withFinanceLock } from "@/lib/finance/budget-ledger";
 import { eq, and, inArray } from "drizzle-orm";
 import { expenseClaimReviewSchema } from "@/lib/validation/schemas";
 
 export const GET = requireAuth(async (_request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
 
   const claim = await db
     .select({
@@ -59,16 +63,21 @@ export const GET = requireAuth(async (_request: Request, session, context) => {
 }, "finance:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const body = await request.json().catch(() => null);
-  if (!body) {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
   const result = expenseClaimReviewSchema.safeParse(body);
   if (!result.success) {
     return NextResponse.json(
-      { error: "Invalid data", details: result.error.flatten() },
+      { error: result.error.issues[0]?.message ?? "Invalid data", details: result.error.flatten() },
       { status: 400 }
     );
   }
@@ -81,7 +90,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const scopeWhere =
     scopedInstitutionId !== "global"
       ? and(eq(expenseClaims.id, id), eq(expenseClaims.institutionId, scopedInstitutionId))
@@ -218,8 +227,11 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 }, "finance:update");
 
 export const DELETE = requireAuth(async (_request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const scopeWhere =
     scopedInstitutionId !== "global"
       ? and(eq(expenseClaims.id, id), eq(expenseClaims.institutionId, scopedInstitutionId))
