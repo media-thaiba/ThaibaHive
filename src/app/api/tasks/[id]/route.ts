@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tasks, taskComments, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { pick } from "@/lib/api/pick";
 import { eq, and } from "drizzle-orm";
 import { canAccessTask } from "@/lib/auth/department-scope";
 import { resolveScopedInstitutionId, type SessionPayload } from "@/lib/auth";
+import { taskUpdateSchema } from "@/lib/validation/schemas";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { withTaskLock, canManageTask, verifyTaskStaffAffiliation, computeCompletedAt } from "@/lib/tasks/ledger";
 
 export const GET = requireAuth(async (_request, session, context) => {
   const { id } = await context!.params;
@@ -53,45 +55,76 @@ export const GET = requireAuth(async (_request, session, context) => {
   return NextResponse.json({ task, comments });
 }, "tasks:read");
 
-function computeCompletedAt(status: string | undefined, currentStatus: string | null): string | null {
-  if (status === undefined) return null;
-  if (status === "completed") return new Date().toISOString();
-  if (currentStatus === "completed" && status !== "completed") return new Date().toISOString();
-  return null;
-}
-
 async function handleUpdate(request: Request, session: SessionPayload, context?: { params: Promise<Record<string, string>> }) {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const body = await request.json();
-  const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  const whereClause = institutionId && institutionId !== "global"
-    ? and(eq(tasks.id, id), eq(tasks.institutionId, institutionId))
-    : eq(tasks.id, id);
-
-  const existing = await db.select().from(tasks).where(whereClause).get();
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const hasAccess = await canAccessTask(session.staffId, session.role, existing);
-  if (!hasAccess) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const fields = pick(body, ["title", "description", "status", "priority", "assignedToId", "dueDate"]);
-  const completedAt = computeCompletedAt(body.status, existing.status);
+  const parsed = taskUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
 
-  const updated = await db
-    .update(tasks)
-    .set({
-      ...fields,
-      ...(completedAt !== null ? { completedAt } : {}),
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
+
+  return await withTaskLock(id, async () => {
+    const whereClause = institutionId && institutionId !== "global"
+      ? and(eq(tasks.id, id), eq(tasks.institutionId, institutionId))
+      : eq(tasks.id, id);
+
+    const existing = await db.select().from(tasks).where(whereClause).get();
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const hasAccess = await canAccessTask(session.staffId, session.role, existing);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { title, description, status, priority, assignedToId, departmentId, dueDate, sortOrder } = parsed.data;
+
+    // Cross-tenant staff assignment check on update
+    if (assignedToId && existing.institutionId) {
+      const isAffiliated = await verifyTaskStaffAffiliation(assignedToId, existing.institutionId);
+      if (!isAffiliated) {
+        return NextResponse.json(
+          { error: "Assigned staff member is not affiliated with this task's institution" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const completedAt = computeCompletedAt(status, existing.completedAt);
+
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
-    })
-    .where(whereClause)
-    .returning()
-    .get();
+    };
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (status !== undefined) updateData.status = status;
+    if (priority !== undefined) updateData.priority = priority;
+    if (assignedToId !== undefined) updateData.assignedToId = assignedToId;
+    if (departmentId !== undefined) updateData.departmentId = departmentId;
+    if (dueDate !== undefined) updateData.dueDate = dueDate;
+    if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+    if (completedAt !== undefined) updateData.completedAt = completedAt;
 
-  return NextResponse.json({ task: updated });
+    const updated = await db
+      .update(tasks)
+      .set(updateData)
+      .where(whereClause)
+      .returning()
+      .get();
+
+    return NextResponse.json({ task: updated });
+  });
 }
 
 export const PUT = requireAuth(handleUpdate, "tasks:update");
@@ -105,16 +138,30 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     ? and(eq(tasks.id, id), eq(tasks.institutionId, institutionId))
     : eq(tasks.id, id);
 
-  const existing = await db.select().from(tasks).where(whereClause).get();
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return await withTaskLock(id, async () => {
+    const existing = await db.select().from(tasks).where(whereClause).get();
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const hasAccess = await canAccessTask(session.staffId, session.role, existing);
-  if (!hasAccess) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+    // Authorization: Must have management authority (admin, principal, hod, or original creator)
+    const canDelete = canManageTask(
+      session,
+      {
+        institutionId: existing.institutionId || "",
+        assignedById: existing.assignedById || "",
+        assignedToId: existing.assignedToId || "",
+      },
+      institutionId !== "global" ? institutionId : null
+    );
 
-  await db.delete(taskComments).where(eq(taskComments.taskId, id)).run();
-  await db.delete(tasks).where(whereClause).run();
-  return NextResponse.json({ success: true });
+    if (!canDelete) {
+      return NextResponse.json(
+        { error: "You do not have permission to delete this task" },
+        { status: 403 }
+      );
+    }
+
+    await db.delete(taskComments).where(eq(taskComments.taskId, id)).run();
+    await db.delete(tasks).where(whereClause).run();
+    return NextResponse.json({ success: true });
+  });
 }, "tasks:delete");
-

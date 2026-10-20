@@ -4,14 +4,26 @@ import { taskComments, tasks } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { eq } from "drizzle-orm";
 import { canAccessTask } from "@/lib/auth/department-scope";
+import { taskCommentSchema } from "@/lib/validation/schemas";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
 // "tasks:read" is used intentionally for this self-service write action — staff can comment on tasks they can read
 export const POST = requireAuth(async (request: Request, session, context) => {
-  const { id } = await context!.params;
-  const body = await request.json();
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (!body.content) {
-    return NextResponse.json({ error: "Content is required" }, { status: 400 });
+  const { id } = await context!.params;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = taskCommentSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
   const task = await db.select().from(tasks).where(eq(tasks.id, id)).get();
@@ -30,11 +42,10 @@ export const POST = requireAuth(async (request: Request, session, context) => {
       id: crypto.randomUUID(),
       taskId: id,
       staffId: session.staffId,
-      content: body.content,
+      content: parsed.data.content,
     })
     .returning()
     .get();
 
   return NextResponse.json({ comment }, { status: 201 });
 }, "tasks:read");
-

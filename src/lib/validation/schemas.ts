@@ -38,13 +38,42 @@ export const staffCreateSchema = z.object({
   ifscCode: z.string().optional(),
 });
 
+export const taskStatusEnum = z.enum(["todo", "in_progress", "review", "completed", "cancelled"]);
+export const taskPriorityEnum = z.enum(["low", "medium", "high", "urgent"]);
+
 export const taskCreateSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
-  assignedToId: z.string().optional(),
-  departmentId: z.string().optional(),
-  dueDate: z.string().optional(),
+  title: z.string().trim().min(1, "Title is required").max(200, "Title must not exceed 200 characters"),
+  description: z.string().trim().max(5000, "Description must not exceed 5000 characters").optional().nullable(),
+  priority: taskPriorityEnum.optional().default("medium"),
+  status: taskStatusEnum.optional().default("todo"),
+  assignedToId: z.string().trim().min(1).optional().nullable(),
+  departmentId: z.string().trim().min(1).optional().nullable(),
+  dueDate: z.string().trim().optional().nullable(),
+});
+
+export const taskUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().trim().max(5000).optional().nullable(),
+  priority: taskPriorityEnum.optional(),
+  status: taskStatusEnum.optional(),
+  assignedToId: z.string().trim().min(1).optional().nullable(),
+  departmentId: z.string().trim().min(1).optional().nullable(),
+  dueDate: z.string().trim().optional().nullable(),
+  sortOrder: z.coerce.number().int().min(0).max(1000000).optional(),
+});
+
+export const taskCommentSchema = z.object({
+  content: z.string().trim().min(1, "Comment content cannot be empty").max(5000, "Comment cannot exceed 5000 characters"),
+});
+
+export const taskReorderItemSchema = z.object({
+  id: z.string().trim().min(1, "Task id is required"),
+  status: taskStatusEnum,
+  sortOrder: z.coerce.number().int().min(0).max(1000000),
+});
+
+export const taskReorderSchema = z.object({
+  tasks: z.array(taskReorderItemSchema).min(1, "At least one task must be provided").max(100, "Maximum 100 tasks can be reordered at once"),
 });
 
 export const leaveCreateSchema = z.object({

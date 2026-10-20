@@ -7,6 +7,7 @@ import { taskCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { sendPushNotification } from "@/lib/notifications/push-service";
 import { desc, eq, and, or, inArray, asc, sql } from "drizzle-orm";
+import { verifyTaskStaffAffiliation, resolveActorInstitution } from "@/lib/tasks/ledger";
 
 export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
@@ -43,7 +44,7 @@ export const GET = requireAuth(async (request, session) => {
     .orderBy(asc(tasks.sortOrder), desc(tasks.createdAt));
 
   // RLS Access Filters:
-  // - super_admin/admin: see all
+  // - super_admin/admin: see all in scoped institution (or all globally if super_admin)
   // - principal: see all tasks in their institution, or assigned/created by them
   // - hod: see tasks in their managed departments, or assigned/created by them
   // - staff: see tasks assigned to/by them
@@ -172,19 +173,45 @@ export const POST = requireAuth(async (request: Request, session) => {
   const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = taskCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { title, description, priority, assignedToId, departmentId, dueDate } = parsed.data;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const { title, description, priority, status, assignedToId, departmentId, dueDate } = parsed.data;
+  
+  // Resolve effective institutional boundary for task
+  const callerInstitutionId = await resolveActorInstitution(session);
+  const scopedInstitutionId = await resolveScopedInstitutionId(callerInstitutionId || session.institutionId);
+  const targetInstId = scopedInstitutionId !== "global" ? scopedInstitutionId : (callerInstitutionId || null);
 
-  // Find the max sortOrder in the 'todo' list to insert the new task at the end
+  // Cross-tenant staff assignment check: if assignedToId is provided and task is scoped to an institution,
+  // verify assigned staff belongs to the target institution
+  if (assignedToId && targetInstId) {
+    const isAffiliated = await verifyTaskStaffAffiliation(assignedToId, targetInstId);
+    if (!isAffiliated) {
+      return NextResponse.json(
+        { error: "Assigned staff member is not affiliated with the target institution" },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Find the max sortOrder in the target status list to insert the new task at the end
   const maxRow = await db
     .select({ maxOrder: sql<number>`max(sort_order)` })
     .from(tasks)
-    .where(eq(tasks.status, "todo"))
+    .where(
+      targetInstId
+        ? and(eq(tasks.status, status || "todo"), eq(tasks.institutionId, targetInstId))
+        : eq(tasks.status, status || "todo")
+    )
     .get();
   
   const nextOrder = maxRow?.maxOrder !== undefined && maxRow.maxOrder !== null 
@@ -198,18 +225,19 @@ export const POST = requireAuth(async (request: Request, session) => {
       title,
       description: description || null,
       priority: priority || "medium",
+      status: status || "todo",
       assignedToId: assignedToId || null,
       assignedById: session.staffId,
       departmentId: departmentId || null,
       dueDate: dueDate || null,
       sortOrder: nextOrder,
-      institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
+      institutionId: targetInstId,
     })
     .returning()
     .get();
 
   if (task && task.assignedToId) {
-    after(async () => {
+    const triggerPush = async () => {
       try {
         await sendPushNotification({
           staffId: task.assignedToId!,
@@ -222,7 +250,14 @@ export const POST = requireAuth(async (request: Request, session) => {
       } catch (err) {
         console.error("[PushNotification] Task assignment push failed:", err);
       }
-    });
+    };
+
+    try {
+      after(triggerPush);
+    } catch {
+      // In standalone tests or execution environments where after() is called outside request scope
+      void triggerPush();
+    }
   }
 
   return NextResponse.json({ task }, { status: 201 });
