@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { vehicles, institutions } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { logActivity } from "@/lib/api/activity-log";
 import { vehicleCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc } from "drizzle-orm";
 
@@ -19,6 +21,7 @@ export const GET = requireAuth(async (request: Request, session) => {
       capacity: vehicles.capacity,
       fuelType: vehicles.fuelType,
       isActive: vehicles.isActive,
+      institutionId: vehicles.institutionId,
       institutionName: institutions.name,
       notes: vehicles.notes,
     })
@@ -36,7 +39,17 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "vehicles:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`vehicles:create:${session.staffId || ip}`, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = vehicleCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -48,6 +61,20 @@ export const POST = requireAuth(async (request: Request, session) => {
   const { registrationNumber, model, type, capacity, fuelType, notes } = parsed.data;
   const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
 
+  // Check duplicate registrationNumber
+  const existing = await db
+    .select({ id: vehicles.id })
+    .from(vehicles)
+    .where(eq(vehicles.registrationNumber, registrationNumber))
+    .get();
+
+  if (existing) {
+    return NextResponse.json(
+      { error: "Vehicle with this registration number already exists" },
+      { status: 409 }
+    );
+  }
+
   const vehicle = await db
     .insert(vehicles)
     .values({
@@ -57,11 +84,20 @@ export const POST = requireAuth(async (request: Request, session) => {
       type,
       capacity: capacity || 1,
       fuelType: fuelType || "petrol",
-      institutionId: institutionId || null,
+      institutionId: institutionId === "global" ? null : institutionId || null,
       notes: notes || null,
     })
     .returning()
     .get();
+
+  await logActivity({
+    request,
+    action: "create",
+    resourceType: "vehicle",
+    resourceId: vehicle.id,
+    staffId: session.staffId,
+    details: { registrationNumber: vehicle.registrationNumber, model: vehicle.model },
+  });
 
   return NextResponse.json({ vehicle }, { status: 201 });
 }, "vehicles:manage");

@@ -19,7 +19,7 @@ const customJestConfig = {
     "<rootDir>/e2e/",
     "<rootDir>/.stryker-tmp/",
   ],
-  modulePathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/.stryker-tmp/"],
+  modulePathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/.stryker-tmp/", "<rootDir>/scratch/"],
   maxWorkers: 1,
   coverageThreshold: {
     global: {

@@ -25,7 +25,10 @@ export const GET = withDPoP(
 
 export const POST = withDPoP(
   requireAuth(async (req: Request, session) => {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
     const parsed = fleetDispatchSchema.safeParse(body);
 
     if (!parsed.success) {

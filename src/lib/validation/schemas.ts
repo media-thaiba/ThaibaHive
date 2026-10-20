@@ -156,13 +156,13 @@ export const visitorCreateSchema = z.object({
 });
 
 export const vehicleCreateSchema = z.object({
-  registrationNumber: z.string().min(1),
-  model: z.string().min(1),
-  type: z.string().min(1),
-  capacity: z.number().int().positive().optional(),
-  fuelType: z.string().optional(),
+  registrationNumber: z.string().trim().min(1, 'Registration number is required').max(30, 'Registration number cannot exceed 30 characters'),
+  model: z.string().trim().min(1, 'Model is required').max(100, 'Model cannot exceed 100 characters'),
+  type: z.string().trim().min(1, 'Type is required').max(50, 'Type cannot exceed 50 characters'),
+  capacity: z.number().int().positive('Capacity must be positive').max(200, 'Capacity cannot exceed 200').optional().default(1),
+  fuelType: z.string().trim().max(50).optional().default('petrol'),
   institutionId: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
+  notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional().nullable(),
 });
 
 export const circularCreateSchema = z.object({
@@ -616,13 +616,50 @@ export const markEntryBatchSchema = z.object({
 // ─── Services Module Validation Schemas (Sprint-006) ───
 
 export const vehicleBookingSchema = z.object({
-  vehicleId: z.string().min(1),
-  date: z.string().min(1),
-  startTime: z.string().min(1),
-  endTime: z.string().optional(),
-  purpose: z.string().min(1),
-  destination: z.string().optional(),
-  notes: z.string().optional(),
+  vehicleId: z.string().trim().min(1, 'Vehicle ID is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (expected YYYY-MM-DD)'),
+  startTime: z.string().regex(/^\d{1,2}:\d{2}$/, 'Invalid start time format (expected HH:mm)'),
+  endTime: z.string().regex(/^\d{1,2}:\d{2}$/, 'Invalid end time format (expected HH:mm)').optional().nullable(),
+  purpose: z.string().trim().min(1, 'Purpose is required').max(500, 'Purpose cannot exceed 500 characters'),
+  destination: z.string().trim().max(200, 'Destination cannot exceed 200 characters').optional().nullable(),
+  notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional().nullable(),
+});
+
+export const vehicleBookingUpdateSchema = z.object({
+  status: z.enum(['approved', 'rejected', 'cancelled']),
+  notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional().nullable(),
+});
+
+export const vehicleLogCreateSchema = z.object({
+  vehicleId: z.string().trim().min(1, 'Vehicle ID is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (expected YYYY-MM-DD)'),
+  startOdometer: z.number().int().nonnegative('Start odometer cannot be negative').optional().nullable(),
+  endOdometer: z.number().int().nonnegative('End odometer cannot be negative').optional().nullable(),
+  distanceKm: z.number().nonnegative('Distance cannot be negative').optional().nullable(),
+  fuelLitres: z.number().nonnegative('Fuel litres cannot be negative').optional().nullable(),
+  fuelCost: z.number().nonnegative('Fuel cost cannot be negative').optional().nullable(),
+  route: z.string().trim().max(200, 'Route cannot exceed 200 characters').optional().nullable(),
+  notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional().nullable(),
+}).refine((data) => {
+  if (data.startOdometer !== undefined && data.startOdometer !== null &&
+      data.endOdometer !== undefined && data.endOdometer !== null) {
+    return data.endOdometer >= data.startOdometer;
+  }
+  return true;
+}, {
+  message: 'End odometer reading must be greater than or equal to start odometer',
+  path: ['endOdometer'],
+});
+
+export const fleetMaintenanceCreateSchema = z.object({
+  vehicleId: z.string().trim().min(1, 'Vehicle ID is required'),
+  maintenanceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (expected YYYY-MM-DD)'),
+  serviceType: z.enum(['oil_change', 'tire_replacement', 'engine_check', 'general', 'inspection', 'repair']),
+  cost: z.number().nonnegative('Cost cannot be negative').optional().default(0),
+  odometerReading: z.number().int().nonnegative('Odometer reading cannot be negative').optional().nullable(),
+  description: z.string().max(1000, 'Description cannot exceed 1000 characters').optional().nullable(),
+  performedBy: z.string().max(100, 'Performed by cannot exceed 100 characters').optional().nullable(),
+  institutionId: z.string().optional().nullable(),
 });
 
 export const canteenItemCreateSchema = z.object({
