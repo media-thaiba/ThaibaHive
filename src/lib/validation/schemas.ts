@@ -660,6 +660,47 @@ export const visitorPassVerifySchema = z.object({
   gatekeeperId: z.string().optional(),
 });
 
+export const visitorUpdateSchema = z.object({
+  status: z.enum(["checked_in", "checked_out"]).optional(),
+  checkOut: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), { message: "checkOut must be a valid datetime" })
+    .optional()
+    .nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+});
+
+export const visitorApprovalSchema = z.object({
+  requestId: z.string().min(1, "requestId is required"),
+  status: z.enum(["approved", "rejected", "cancelled"]),
+  rejectionReason: z.string().max(500).optional().nullable(),
+});
+
+export const visitorPassIssueSchema = z.object({
+  requestId: z.string().optional().nullable(),
+  visitorName: z.string().min(1, "visitorName is required").max(100),
+  visitorPhone: z.string().max(30).optional().default(""),
+  hostStaffId: z.string().min(1, "hostStaffId is required"),
+  purpose: z.string().max(255).optional().default("Campus Visit"),
+  validFrom: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), { message: "validFrom must be a valid datetime" }),
+  validUntil: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), { message: "validUntil must be a valid datetime" }),
+  institutionId: z.string().optional().nullable(),
+}).refine((data) => Date.parse(data.validUntil) > Date.parse(data.validFrom), {
+  message: "validUntil must be after validFrom",
+  path: ["validUntil"],
+});
+
+export const visitorVerifyActionSchema = z.object({
+  visitorId: z.string().min(1, "visitorId is required"),
+  action: z.enum(["check_in", "check_out"]),
+  deviceId: z.string().max(100).optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
+});
+
 // ─── Performance Reviews & HR Development Schemas (Sprint-007) ───
 
 export const performanceCycleCreateSchema = z.object({

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { visitorRequests } from "@/db/schema";
+import { visitorRequests, activityLogs } from "@/db/schema";
 import { requireAuth, resolveInstitutionContext } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@thaiba/auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { visitorPreRegisterSchema } from "@/lib/validation/schemas";
 import { validateHostStaff } from "@/lib/visitors/host-validation";
 import { desc, eq } from "drizzle-orm";
@@ -21,6 +22,9 @@ export const GET = requireAuth(async (request: Request, _session) => {
 }, "visitor:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(`visitor-prereg:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -64,6 +68,24 @@ export const POST = requireAuth(async (request: Request, session) => {
     })
     .returning()
     .get();
+
+  try {
+    await db.insert(activityLogs).values({
+      staffId: session.staffId,
+      action: "visitor_pre_registered",
+      resourceType: "visitor_request",
+      resourceId: requestRecord.id,
+      details: JSON.stringify({
+        requestId: requestRecord.id,
+        visitorName,
+        institutionId,
+        hostStaffId,
+        expectedDate,
+      }),
+    });
+  } catch (err) {
+    console.warn("[PreRegister] Activity log failed:", err);
+  }
 
   return NextResponse.json({ request: requestRecord }, { status: 201 });
 }, "visitor:issue");

@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitors, staff } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution, resolveInstitutionContext } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { visitorCreateSchema } from "@/lib/validation/schemas";
 import { validateHostStaff } from "@/lib/visitors/host-validation";
+import { recordGateLog } from "@/lib/visitors/ledger";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -18,7 +20,12 @@ export const GET = requireAuth(async (request: Request, session) => {
   }
 
   if (status) conditions.push(eq(visitors.status, status));
-  if (date) conditions.push(sql`date(${visitors.checkIn}) = ${date}`);
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json({ error: "Invalid date format. Expected YYYY-MM-DD" }, { status: 400 });
+    }
+    conditions.push(sql`date(${visitors.checkIn}) = ${date}`);
+  }
 
   const result = await db
     .select({
@@ -48,6 +55,9 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "visitors:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(`visitor-create:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const body = await request.json().catch(() => null);
   if (!body) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -79,6 +89,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     }
   }
 
+  const checkInTime = new Date().toISOString();
   const visitor = await db
     .insert(visitors)
     .values({
@@ -91,11 +102,20 @@ export const POST = requireAuth(async (request: Request, session) => {
       purpose,
       notes: notes || null,
       institutionId,
-      checkIn: new Date().toISOString(),
+      checkIn: checkInTime,
       status: "checked_in",
     })
     .returning()
     .get();
+
+  // Record physical gate log entry
+  await recordGateLog({
+    institutionId,
+    visitorName: name,
+    actionType: "check_in",
+    gatekeeperId: session.staffId,
+    notes: `Walk-in registration: ${purpose}`,
+  });
 
   return NextResponse.json({ visitor }, { status: 201 });
 }, "visitors:create");
