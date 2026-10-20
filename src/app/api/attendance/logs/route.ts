@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, staff, staffInstitutions, staffDepartments } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, desc, inArray, and, gte, lte, or, like, sql, type SQL } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get("startDate") || searchParams.get("from");
   const endDate = searchParams.get("endDate") || searchParams.get("to");
@@ -26,7 +30,7 @@ export const GET = requireAuth(async (request, session) => {
   // Parse and validate pagination & search parameters
   const rawOffset = searchParams.get("offset");
   let page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
-  const limit = Math.max(1, parseInt(searchParams.get("limit") || "20", 10) || 20);
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10) || 20));
   const offset = rawOffset !== null ? Math.max(0, parseInt(rawOffset, 10) || 0) : (page - 1) * limit;
   if (rawOffset !== null) {
     page = Math.floor(offset / limit) + 1;

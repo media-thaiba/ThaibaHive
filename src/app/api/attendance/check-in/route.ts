@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { checkInSchema } from "@/lib/validation/schemas";
 import {
   validateNfcCheckIn,
@@ -20,12 +21,21 @@ import { eq, and } from "drizzle-orm";
 const CHECK_IN_DEBOUNCE_MS = 60_000;
 
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
+
     const result = checkInSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { error: "Invalid payload parameters.", details: result.error.format() },
+        { error: result.error.issues[0]?.message ?? "Invalid payload parameters.", details: result.error.format() },
         { status: 400 }
       );
     }

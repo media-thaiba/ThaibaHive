@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { presenceLogs, attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { presenceLogEntrySchema, type PresenceLogEntryInput } from "@/lib/validation/schemas";
 import { isPresenceTrackingEnabled } from "@/lib/features";
@@ -26,8 +27,16 @@ function scopeInstitution(
 }
 
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
-    const body = await request.json();
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
 
     // Support single log or bulk upload
     const isBulk = Array.isArray(body.logs);

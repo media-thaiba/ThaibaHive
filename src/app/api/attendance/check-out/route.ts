@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveShift } from "@/lib/attendance/shifts";
 import { eq, and, isNull } from "drizzle-orm";
 import { checkoutPresenceSchema } from "@/lib/validation/schemas";
@@ -20,6 +21,9 @@ function localMidnight(isoDate: string): Date {
 }
 
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     // Optional presence payload — validated, then recomputed server-side.
     let presencePayload: ReturnType<typeof checkoutPresenceSchema.parse> | null =
@@ -27,7 +31,16 @@ export const POST = requireAuth(async (request, session) => {
     try {
       const raw = await request.text();
       if (raw && raw.trim().length > 0) {
-        const parsed = checkoutPresenceSchema.safeParse(JSON.parse(raw));
+        let parsedJson: unknown;
+        try {
+          parsedJson = JSON.parse(raw);
+        } catch {
+          return NextResponse.json(
+            { error: "Invalid JSON payload" },
+            { status: 400 }
+          );
+        }
+        const parsed = checkoutPresenceSchema.safeParse(parsedJson);
         if (!parsed.success) {
           const issue = parsed.error.issues[0];
           return NextResponse.json(
@@ -41,7 +54,7 @@ export const POST = requireAuth(async (request, session) => {
       }
     } catch {
       return NextResponse.json(
-        { error: "Invalid JSON body." },
+        { error: "Invalid JSON payload" },
         { status: 400 }
       );
     }

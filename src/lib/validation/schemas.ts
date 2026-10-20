@@ -451,15 +451,15 @@ export const pollVoteSchema = z.object({
 export const checkInSchema = z
   .object({
     method: z.enum(["nfc", "qr"]),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    accuracy: z.number().optional(),
-    wifiSsid: z.string().optional(),
-    nfcTagId: z.string().optional(),
-    qrCode: z.string().optional(),
+    latitude: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").optional().nullable(),
+    longitude: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").optional().nullable(),
+    accuracy: z.number().min(0, "Accuracy cannot be negative").max(10_000, "Accuracy cannot exceed 10,000m").optional().nullable(),
+    wifiSsid: z.string().trim().max(100, "WiFi SSID too long").optional().nullable(),
+    nfcTagId: z.string().trim().max(100, "NFC tag too long").optional().nullable(),
+    qrCode: z.string().trim().max(2000, "QR code too long").optional().nullable(),
     // NFC anti-replay (v3.42.0): client tap nonce + physical tap time.
-    nfcNonce: z.string().min(8).max(128).optional(),
-    tapAt: z.string().max(40).optional(),
+    nfcNonce: z.string().trim().min(8).max(128).optional().nullable(),
+    tapAt: z.string().trim().max(40).optional().nullable(),
   })
   .refine(
     (data) => {
