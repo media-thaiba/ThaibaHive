@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { nfcCards, nfcCardHistory, staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   if (session.staffId !== id) {
@@ -40,17 +44,26 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "staff:update");
 
 export const POST = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   if (session.staffId !== id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json();
-  const { tagId } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
-  if (!tagId || typeof tagId !== "string" || !tagId.trim()) {
-    return NextResponse.json({ error: "tagId is required" }, { status: 400 });
+  const { tagId } = (body as { tagId?: unknown }) || {};
+
+  if (!tagId || typeof tagId !== "string" || !tagId.trim() || tagId.trim().length > 100) {
+    return NextResponse.json({ error: "Valid tagId (max 100 chars) is required" }, { status: 400 });
   }
 
   const cleanTagId = tagId.trim();
@@ -131,17 +144,25 @@ export const POST = requireAuth(async (request: Request, session, context) => {
 }, "staff:update");
 
 export const DELETE = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   if (session.staffId !== id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const { reason } = body as { reason?: string };
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    body = {};
+  }
+  const { reason } = (body as { reason?: string }) || {};
 
-  if (!reason || typeof reason !== "string" || !reason.trim()) {
-    return NextResponse.json({ error: "A reason is required to unlink NFC card" }, { status: 400 });
+  if (!reason || typeof reason !== "string" || !reason.trim() || reason.trim().length > 500) {
+    return NextResponse.json({ error: "A valid reason (max 500 chars) is required to unlink NFC card" }, { status: 400 });
   }
 
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);

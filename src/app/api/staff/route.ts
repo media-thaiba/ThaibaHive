@@ -10,7 +10,7 @@ import { staffCreateSchema, paginationSchema } from "@/lib/validation/schemas";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 import { autoAssignOnboardingChecklists } from "@/lib/onboarding/auto-assign";
 import { encryptPiiField } from "@/lib/crypto/tenant-encryption";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, or, inArray, sql } from "drizzle-orm";
 
 const SAFE_STAFF_FIELDS = {
   id: staff.id,
@@ -27,13 +27,16 @@ const SAFE_STAFF_FIELDS = {
 } as const;
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   await resolveRequestInstitution(session, searchParams.get("institutionId"));
-  const pagination = paginationSchema.parse({
-    page: searchParams.get("page"),
-    limit: searchParams.get("limit"),
-  });
-  const { page, limit } = pagination;
+  
+  const rawPage = parseInt(searchParams.get("page") || "1", 10);
+  const rawLimit = parseInt(searchParams.get("limit") || "20", 10);
+  const page = isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+  const limit = Math.min(100, Math.max(1, isNaN(rawLimit) ? 20 : rawLimit));
   const offset = (page - 1) * limit;
 
   const accessibleIds = await getAccessibleStaffIds(session.staffId, session.role);
@@ -79,10 +82,16 @@ export const GET = requireAuth(async (request, session) => {
 }, "staff:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const rl = checkRateLimit(`staff-create:${session.staffId}`, { windowMs: 60_000, max: 15 });
+  const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = staffCreateSchema.safeParse(body);
   if (parsed.success && (parsed.data as any).institutionId) {
     await resolveRequestInstitution(session, (parsed.data as any).institutionId);
@@ -92,6 +101,26 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
   const { email, employeeId, firstName, lastName, phone, designation, role, password, departmentIds, institutionIds } = parsed.data;
   const targetRole = role || "staff";
+
+  // Pre-insert Collision Check on email and employeeId (409 Conflict)
+  const existingStaff = await db
+    .select({ id: staff.id, email: staff.email, employeeId: staff.employeeId })
+    .from(staff)
+    .where(
+      or(
+        sql`lower(${staff.email}) = lower(${email})`,
+        eq(staff.employeeId, employeeId)
+      )
+    )
+    .limit(1)
+    .get();
+
+  if (existingStaff) {
+    return NextResponse.json(
+      { error: "Staff with this email or employee ID already exists" },
+      { status: 409 }
+    );
+  }
 
   // ── Role-Creation Hierarchy & Privilege Escalation Guard (TH-001) ──────────
   if (targetRole === "super_admin" && session.role !== "super_admin") {

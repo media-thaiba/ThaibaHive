@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
@@ -46,6 +47,9 @@ function normalizeEmbeddingInput(embedding?: unknown, image?: unknown): string |
 }
 
 export const POST = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   if (session.staffId !== id) {
@@ -55,8 +59,14 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     }
   }
 
-  const body = await request.json().catch(() => ({}));
-  const { image, embedding } = body as { image?: unknown; embedding?: unknown };
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const { image, embedding } = (body as { image?: unknown; embedding?: unknown }) || {};
 
   const serializedEmbedding = normalizeEmbeddingInput(embedding, image);
   if (!serializedEmbedding) {

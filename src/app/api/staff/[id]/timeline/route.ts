@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, leaveRequests, tasks, dailyReports, staffRecognition, expenseClaims } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { eq, desc } from "drizzle-orm";
 
@@ -15,6 +16,9 @@ type TimelineItem = {
 };
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   const authorized = await canAccessStaff(session.staffId, session.role, id);

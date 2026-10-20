@@ -2,14 +2,19 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLog } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { hasPermission, type StaffRole } from "@thaiba/auth";
 import { pick } from "@/lib/api/pick";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { autoAssignOffboardingChecklists } from "@/lib/onboarding/auto-assign";
 import { encryptPiiField, decryptPiiField } from "@/lib/crypto/tenant-encryption";
+import { staffUpdateSchema } from "@/lib/validation/schemas";
 import { eq, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   const authorized = await canAccessStaff(session.staffId, session.role, id);
@@ -84,6 +89,9 @@ const SELF_UPDATABLE_FIELDS = new Set([
 ]);
 
 export const PUT = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   const authorized = await canAccessStaff(session.staffId, session.role, id);
@@ -91,13 +99,33 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
-  const { departmentIds, institutionIds, ...fields } = body;
+  const parsed = staffUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
+
+  const existingStaff = await db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(eq(staff.id, id))
+    .get();
+
+  if (!existingStaff) {
+    return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+  }
+
+  const { departmentIds, institutionIds, ...fields } = parsed.data;
   const safeFields: Record<string, unknown> = {};
   for (const key of UPDATABLE_FIELDS) {
     if (key in fields) {
-      const val = fields[key];
+      const val = (fields as Record<string, unknown>)[key];
       if (PII_FIELDS.has(key)) {
         safeFields[key] = typeof val === "string" ? encryptPiiField(val) : (val ?? null);
       } else {
@@ -162,6 +190,9 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
 }, "staff:update");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const isSelf = session.staffId === id;
 
@@ -179,13 +210,33 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     }
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = staffUpdateSchema.partial().safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
+
+  const existingStaff = await db
+    .select({ id: staff.id })
+    .from(staff)
+    .where(eq(staff.id, id))
+    .get();
+
+  if (!existingStaff) {
+    return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+  }
 
   const safeFields: Record<string, unknown> = {};
   const allowedFieldKeys = isSelf ? SELF_UPDATABLE_FIELDS : new Set(UPDATABLE_FIELDS);
   for (const key of UPDATABLE_FIELDS) {
-    if (key in body && allowedFieldKeys.has(key)) {
-      const val = body[key];
+    if (key in parsed.data && allowedFieldKeys.has(key)) {
+      const val = (parsed.data as Record<string, unknown>)[key];
       if (PII_FIELDS.has(key)) {
         safeFields[key] = typeof val === "string" ? encryptPiiField(val) : (val ?? null);
       } else {
@@ -201,7 +252,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     .returning()
     .get();
 
-  if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!result) return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
 
   const safeStaff = {
     ...pick(result, [
@@ -221,15 +272,32 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 });
 
 export const DELETE = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
+
+  if (session.staffId === id) {
+    return NextResponse.json({ error: "Cannot revoke your own account" }, { status: 400 });
+  }
 
   const authorized = await canAccessStaff(session.staffId, session.role, id);
   if (!authorized) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => ({}));
-  const { reason } = body as { reason?: string };
+  const target = await db.select({ id: staff.id }).from(staff).where(eq(staff.id, id)).get();
+  if (!target) {
+    return NextResponse.json({ error: "Staff member not found" }, { status: 404 });
+  }
+
+  let body: { reason?: string } = {};
+  try {
+    body = (await request.json()) as { reason?: string };
+  } catch {
+    body = {};
+  }
+  const { reason } = body;
 
   // 1. Deactivate staff account & release physical NFC tag and biometric avatar reference photo (PDPA retention cleanup)
   await db
