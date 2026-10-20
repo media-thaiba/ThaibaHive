@@ -116,6 +116,25 @@ export const POST = requireAuth(async (request: Request, session) => {
     }
   }
 
+  // Check if staff already has an assignment for this effective date
+  const existingAssignment = await db
+    .select({ id: staffShifts.id })
+    .from(staffShifts)
+    .where(
+      and(
+        eq(staffShifts.staffId, staffId),
+        eq(staffShifts.effectiveFrom, effectiveFrom)
+      )
+    )
+    .get();
+
+  if (existingAssignment) {
+    return NextResponse.json(
+      { error: "This staff member already has a shift assignment for this effective date" },
+      { status: 409 }
+    );
+  }
+
   try {
     const assignment = await db
       .insert(staffShifts)
@@ -131,7 +150,8 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     return NextResponse.json({ assignment }, { status: 201 });
   } catch (err: unknown) {
-    if (err instanceof Error && (err.message.includes("UNIQUE") || err.message.includes("unique"))) {
+    const errStr = `${String(err)} ${(err as any)?.cause ? String((err as any).cause) : ""}`;
+    if (errStr.includes("UNIQUE") || errStr.includes("unique") || errStr.includes("duplicate")) {
       return NextResponse.json(
         { error: "This staff member already has a shift assignment for this effective date" },
         { status: 409 }
