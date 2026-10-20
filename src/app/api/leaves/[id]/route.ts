@@ -6,6 +6,8 @@ import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
 import { deductLeaveDays, creditLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
 import { sendPushNotification } from "@/lib/notifications/push-service";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { leaveReviewSchema } from "@/lib/validation/schemas";
 import { eq, and, ne } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
@@ -27,8 +29,27 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "leaves:read");
 
 export const PUT = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const body = await request.json();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = leaveReviewSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message },
+      { status: 400 }
+    );
+  }
+
+  const { status, reviewNotes } = parsed.data;
 
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
@@ -54,40 +75,17 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "You are not authorized to approve this leave request" }, { status: 403 });
   }
 
-  if (body.status !== undefined) {
-    if (body.status !== "approved" && body.status !== "rejected") {
-      return NextResponse.json(
-        { error: "status must be 'approved' or 'rejected'" },
-        { status: 400 }
-      );
-    }
-  }
-
-  if (
-    body.reviewNotes !== undefined &&
-    body.reviewNotes !== null &&
-    (typeof body.reviewNotes !== "string" || body.reviewNotes.length > 2000)
-  ) {
-    return NextResponse.json(
-      { error: "reviewNotes must be a string of at most 2000 characters" },
-      { status: 400 }
-    );
-  }
-
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-  let nextStatus: string | undefined;
+  let nextStatus: string = status;
 
-  if (body.status) {
-    nextStatus = body.status;
-    if (body.status === "approved" && (session.role === "hod" || session.role === "principal")) {
-      nextStatus = "hod_approved";
-    }
-
-    updates.status = nextStatus;
-    updates.reviewedById = session.staffId;
-    updates.reviewedAt = new Date().toISOString();
-    updates.reviewNotes = (body.reviewNotes as string | undefined)?.trim() || null;
+  if (status === "approved" && (session.role === "hod" || session.role === "principal")) {
+    nextStatus = "hod_approved";
   }
+
+  updates.status = nextStatus;
+  updates.reviewedById = session.staffId;
+  updates.reviewedAt = new Date().toISOString();
+  updates.reviewNotes = reviewNotes || null;
 
   let updated;
   try {
@@ -140,8 +138,8 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
     );
   }
 
-  if (updated && body.status) {
-    after(async () => {
+  if (updated && status) {
+    const triggerPush = async () => {
       try {
         await sendPushNotification({
           staffId: updated.staffId,
@@ -154,13 +152,23 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
       } catch (err) {
         console.error("[PushNotification] Leave update failed:", err);
       }
-    });
+    };
+
+    try {
+      after(triggerPush);
+    } catch {
+      // In standalone tests or execution environments where after() is called outside request scope
+      void triggerPush();
+    }
   }
 
   return NextResponse.json({ leave: updated });
 }, "leaves:approve");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
@@ -192,4 +200,3 @@ export const DELETE = requireAuth(async (_request, session, context) => {
   }));
   return NextResponse.json({ success: true });
 }, "leaves:delete");
-

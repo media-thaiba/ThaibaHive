@@ -53,7 +53,13 @@ export const POST = requireAuth(async (request: Request, session) => {
   const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = leaveCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -144,7 +150,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         startDate,
         endDate,
         daysCount,
-        reason,
+        reason: reason || null,
         status: "pending",
         institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
       })

@@ -97,11 +97,16 @@ export const taskReorderSchema = z.object({
 });
 
 export const leaveCreateSchema = z.object({
-  leaveTypeId: z.string().min(1),
-  startDate: z.string().min(1),
-  endDate: z.string().min(1),
+  leaveTypeId: z.string().trim().min(1, "Leave type is required"),
+  startDate: z.string().trim().min(1, "Start date is required"),
+  endDate: z.string().trim().min(1, "End date is required"),
   daysCount: z.number().positive(),
-  reason: z.string().optional(),
+  reason: z.string().trim().max(2000, "Reason must not exceed 2000 characters").optional().nullable(),
+});
+
+export const leaveReviewSchema = z.object({
+  status: z.enum(["approved", "rejected"]),
+  reviewNotes: z.string().trim().max(2000, "Review notes must not exceed 2000 characters").optional().nullable(),
 });
 
 export const announcementCreateSchema = z.object({
