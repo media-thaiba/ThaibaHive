@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import {
@@ -8,10 +9,15 @@ import {
   checklistTemplates,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { checklistAssignmentCreateSchema } from "@/lib/validation/schemas";
 import { eq, desc, asc, sql, inArray } from "drizzle-orm";
 import { getAccessibleStaffIds, canAccessStaff } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (_request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   let query = db
     .select({
       id: staffChecklists.id,
@@ -48,15 +54,25 @@ export const GET = requireAuth(async (_request, session) => {
 }, "staff:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { staffId, templateId, type } = body;
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (!staffId || !templateId || !type) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = checklistAssignmentCreateSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "staffId, templateId, and type are required" },
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
       { status: 400 }
     );
   }
+
+  const { staffId, templateId, type, notes } = parsed.data;
 
   if (session.role !== "super_admin" && session.role !== "admin") {
     const hasAccess = await canAccessStaff(session.staffId, session.role, staffId);
@@ -85,7 +101,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Staff not found" }, { status: 404 });
   }
 
-  const checklistId = crypto.randomUUID();
+  const checklistId = randomUUID();
 
   const assignment = await db
     .insert(staffChecklists)
@@ -94,6 +110,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       staffId,
       templateId,
       type,
+      notes: notes ?? null,
       createdById: session.staffId,
     })
     .returning()
@@ -111,7 +128,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       .insert(staffChecklistTasks)
       .values(
         templateItems.map((item) => ({
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           checklistId,
           title: item.title,
           description: item.description,

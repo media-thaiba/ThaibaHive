@@ -7,10 +7,15 @@ import {
   checklistTemplates,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { checklistAssignmentUpdateSchema } from "@/lib/validation/schemas";
 import { eq, asc, sql } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   const assignment = await db
@@ -61,9 +66,27 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "staff:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const body = await request.json();
-  const { status, notes } = body;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = checklistAssignmentUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
+      { status: 400 }
+    );
+  }
+
+  const { status, notes } = parsed.data;
 
   const assignment = await db
     .select()
@@ -96,7 +119,9 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       updates.completedAt = new Date().toISOString();
     }
   }
-  if (notes !== undefined) updates.notes = notes;
+  if (notes !== undefined) {
+    updates.notes = notes;
+  }
 
   const updated = await db
     .update(staffChecklists)
@@ -108,9 +133,29 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   return NextResponse.json({ assignment: updated });
 }, "checklists:update");
 
+export const DELETE = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-export const DELETE = requireAuth(async (_request, _session, context) => {
   const { id } = await context!.params;
+
+  const assignment = await db
+    .select()
+    .from(staffChecklists)
+    .where(eq(staffChecklists.id, id))
+    .get();
+
+  if (!assignment) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (
+    session.role !== "super_admin" &&
+    session.role !== "admin" &&
+    !(await canAccessStaff(session.staffId, session.role, assignment.staffId))
+  ) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   await db
     .delete(staffChecklistTasks)

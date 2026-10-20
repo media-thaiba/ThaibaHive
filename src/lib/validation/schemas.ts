@@ -1565,12 +1565,70 @@ export const adminSubDepartmentUpdateSchema = z.object({
 });
 export type AdminSubDepartmentUpdateInput = z.infer<typeof adminSubDepartmentUpdateSchema>;
 
-export const checklistUpdateSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  type: z.string().min(1).max(50).optional(),
+export const checklistTemplateItemInputSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(200, "Title too long"),
   description: z.string().max(1000).optional().nullable(),
+  order: z.number().int().min(0).max(1000).optional(),
+});
+
+export const checklistTemplateCreateSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(200, "Name too long"),
+  type: z.enum(["onboarding", "offboarding"], {
+    errorMap: () => ({ message: "Type must be onboarding or offboarding" }),
+  }),
+  description: z.string().max(1000).optional().nullable(),
+  items: z.array(checklistTemplateItemInputSchema).max(100).optional(),
+});
+export type ChecklistTemplateCreateInput = z.infer<typeof checklistTemplateCreateSchema>;
+
+export const checklistUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  type: z.enum(["onboarding", "offboarding"]).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  isActive: z.boolean().optional(),
 });
 export type ChecklistUpdateInput = z.infer<typeof checklistUpdateSchema>;
+
+export const checklistAssignmentCreateSchema = z.object({
+  staffId: z.string().trim().min(1, "Staff ID is required").max(100),
+  templateId: z.string().trim().min(1, "Template ID is required").max(100),
+  type: z.enum(["onboarding", "offboarding"], {
+    errorMap: () => ({ message: "Type must be onboarding or offboarding" }),
+  }),
+  notes: z.string().max(2000).optional().nullable(),
+});
+export type ChecklistAssignmentCreateInput = z.infer<typeof checklistAssignmentCreateSchema>;
+
+export const checklistAssignmentUpdateSchema = z.object({
+  status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+export type ChecklistAssignmentUpdateInput = z.infer<typeof checklistAssignmentUpdateSchema>;
+
+export const checklistTaskUpdateSchema = z.object({
+  isCompleted: z.boolean({ required_error: "isCompleted is required" }),
+});
+export type ChecklistTaskUpdateInput = z.infer<typeof checklistTaskUpdateSchema>;
+
+export const checklistTemplateItemCreateSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().max(1000).optional().nullable(),
+  order: z.number().int().min(0).max(1000).optional(),
+});
+export type ChecklistTemplateItemCreateInput = z.infer<typeof checklistTemplateItemCreateSchema>;
+
+export const checklistTemplateItemUpdateSchema = z.object({
+  id: z.string().trim().min(1, "Item id is required").max(100),
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  order: z.number().int().min(0).max(1000).optional(),
+});
+export type ChecklistTemplateItemUpdateInput = z.infer<typeof checklistTemplateItemUpdateSchema>;
+
+export const checklistTemplateItemDeleteSchema = z.object({
+  id: z.string().trim().min(1, "Item id is required").max(100),
+});
+export type ChecklistTemplateItemDeleteInput = z.infer<typeof checklistTemplateItemDeleteSchema>;
 
 export const syncConflictResolveSchema = z.object({
   fields: z.record(z.string(), z.unknown()),

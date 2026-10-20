@@ -2,20 +2,33 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staffChecklistTasks, staffChecklists } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { checklistTaskUpdateSchema } from "@/lib/validation/schemas";
 import { eq } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
-  const { id } = await context!.params;
-  const body = await request.json();
-  const { isCompleted } = body;
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (isCompleted === undefined) {
+  const { id } = await context!.params;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = checklistTaskUpdateSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "isCompleted is required" },
+      { error: parsed.error.issues[0]?.message ?? "Invalid request data" },
       { status: 400 }
     );
   }
+
+  const { isCompleted } = parsed.data;
 
   const task = await db
     .select()
@@ -66,4 +79,3 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   return NextResponse.json({ task: updated });
 }, "checklists:update");
-
