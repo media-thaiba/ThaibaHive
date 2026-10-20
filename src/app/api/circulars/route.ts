@@ -11,6 +11,9 @@ import type { StaffRole } from "@/types";
 const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal", "hod"];
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const includeInactive = searchParams.get("includeInactive") === "true";
   const isAdmin = ADMIN_ROLES.includes(session.role as StaffRole);
@@ -132,13 +135,19 @@ export const GET = requireAuth(async (request, session) => {
 }, "circulars:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const rl = checkRateLimit(`circular-create:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = circularCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request data" }, { status: 400 });
   }
 
   const { title, description, fileUrl, fileType, fileSize, category, targetRole, targetDepartmentId, targetInstitutionId } = parsed.data;
@@ -195,17 +204,21 @@ export const POST = requireAuth(async (request: Request, session) => {
     .returning()
     .get();
 
-  // Trigger Notifications
-  await createNotificationsForTarget({
-    title: `New Document: ${title}`,
-    message: description || `A new document has been uploaded in ${category || "general"}.`,
-    type: "circular",
-    referenceType: "circular",
-    referenceId: circular.id,
-    targetRole: targetRole as StaffRole | undefined,
-    targetDepartmentId,
-    targetInstitutionId,
-  });
+  // Trigger Notifications (fail-soft)
+  try {
+    await createNotificationsForTarget({
+      title: `New Document: ${title}`,
+      message: description || `A new document has been uploaded in ${category || "general"}.`,
+      type: "circular",
+      referenceType: "circular",
+      referenceId: circular.id,
+      targetRole: targetRole as StaffRole | undefined,
+      targetDepartmentId: targetDepartmentId ?? undefined,
+      targetInstitutionId: targetInstitutionId ?? undefined,
+    });
+  } catch (err) {
+    console.warn("[Circulars] Failed to deliver circular notifications:", err);
+  }
 
   return NextResponse.json({ circular }, { status: 201 });
 }, "circulars:create");

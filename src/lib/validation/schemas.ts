@@ -175,7 +175,7 @@ export type EventUpdateInput = z.infer<typeof eventUpdateSchema>;
 export const eventRsvpSchema = z.object({
   eventId: z.string().trim().min(1, "Event ID is required").max(100, "Event ID too long"),
   status: z.enum(["attending", "maybe", "declined"], {
-    errorMap: () => ({ message: "Invalid RSVP status" }),
+    message: "Invalid RSVP status",
   }),
 });
 export type EventRsvpInput = z.infer<typeof eventRsvpSchema>;
@@ -300,26 +300,39 @@ export const vehicleCreateSchema = z.object({
 });
 
 export const circularCreateSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  fileUrl: z.string().min(1),
-  fileType: z.string().optional(),
-  fileSize: z.number().int().nonnegative().optional(),
-  category: z.string().optional(),
-  targetRole: z.string().optional(),
-  targetDepartmentId: z.string().optional(),
-  targetInstitutionId: z.string().optional(),
+  title: z.string().trim().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().trim().max(2000, "Description too long").optional().nullable(),
+  fileUrl: z.string().trim().min(1, "File URL is required").max(1000, "File URL too long"),
+  fileType: z.string().trim().max(100).optional().nullable(),
+  fileSize: z.number().int().nonnegative("File size cannot be negative").max(500_000_000, "File size cannot exceed 500MB").optional().nullable(),
+  category: z.string().trim().max(100).optional().default("general"),
+  targetRole: z.string().trim().max(50).optional().nullable(),
+  targetDepartmentId: z.string().trim().max(100).optional().nullable(),
+  targetInstitutionId: z.string().trim().max(100).optional().nullable(),
 });
+export type CircularCreateInput = z.infer<typeof circularCreateSchema>;
 
 export const circularUpdateSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-  category: z.string().optional(),
-  targetRole: z.string().optional().nullable(),
-  targetDepartmentId: z.string().optional().nullable(),
-  targetInstitutionId: z.string().optional().nullable(),
+  title: z.string().trim().min(1, "Title cannot be empty").max(200, "Title too long").optional(),
+  description: z.string().trim().max(2000, "Description too long").optional().nullable(),
+  category: z.string().trim().max(100).optional().nullable(),
+  targetRole: z.string().trim().max(50).optional().nullable(),
+  targetDepartmentId: z.string().trim().max(100).optional().nullable(),
+  targetInstitutionId: z.string().trim().max(100).optional().nullable(),
   isActive: z.boolean().optional(),
 });
+export type CircularUpdateInput = z.infer<typeof circularUpdateSchema>;
+
+export const circularComplianceUpdateSchema = z.object({
+  status: z.enum(["pending", "acknowledged", "in_progress", "completed", "compliant", "non_compliant"], {
+    message: "Invalid compliance status",
+  }),
+  coordinatorRemarks: z.string().trim().max(2000, "Remarks too long").optional().nullable(),
+  completionEvidenceUrl: z.string().trim().max(1000, "Evidence URL too long").optional().nullable(),
+  institutionId: z.string().trim().min(1).max(100).optional().nullable(),
+  verifiedById: z.string().trim().max(100).optional().nullable(),
+});
+export type CircularComplianceUpdateInput = z.infer<typeof circularComplianceUpdateSchema>;
 
 
 export const helpDeskTicketCreateSchema = z.object({

@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { circulars, circularDownloads, staff, staffInstitutions, departments } from "@/db/schema";
+import { circulars, circularDownloads, circularCampusCompliance, staff, staffInstitutions, departments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { canAccessCircular } from "@/lib/circulars/auth";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { circularUpdateSchema } from "@/lib/validation/schemas";
 import { eq, sql, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
   const circular = await db
@@ -50,12 +54,21 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "circulars:read");
 
 export const PATCH = requireAuth(async (request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
   const parsed = circularUpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid request data" }, { status: 400 });
   }
 
   const existing = await db.select().from(circulars).where(eq(circulars.id, id)).get();
@@ -63,7 +76,7 @@ export const PATCH = requireAuth(async (request, session, context) => {
     return NextResponse.json({ error: "Circular not found" }, { status: 404 });
   }
 
-  if (session.role !== "super_admin" && session.role !== "admin") {
+  if (session.role !== "super_admin") {
     const callerInsts = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
@@ -131,11 +144,14 @@ export const PATCH = requireAuth(async (request, session, context) => {
 }, "circulars:manage");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const existing = await db.select().from(circulars).where(eq(circulars.id, id)).get();
   if (!existing) return NextResponse.json({ error: "Circular not found" }, { status: 404 });
 
-  if (session.role !== "super_admin" && session.role !== "admin") {
+  if (session.role !== "super_admin") {
     const callerInsts = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
@@ -158,7 +174,10 @@ export const DELETE = requireAuth(async (_request, session, context) => {
     }
   }
 
-  await db.delete(circularDownloads).where(eq(circularDownloads.circularId, id)).run();
-  await db.delete(circulars).where(eq(circulars.id, id)).run();
+  await db.transaction(async (tx) => {
+    await tx.delete(circularDownloads).where(eq(circularDownloads.circularId, id)).run();
+    await tx.delete(circularCampusCompliance).where(eq(circularCampusCompliance.circularId, id)).run();
+    await tx.delete(circulars).where(eq(circulars.id, id)).run();
+  });
   return NextResponse.json({ success: true });
 }, "circulars:manage");

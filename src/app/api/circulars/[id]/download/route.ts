@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { circulars, circularDownloads } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { canAccessCircular } from "@/lib/circulars/auth";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session, context) => {
   const ip = extractIp(request);
@@ -12,6 +12,11 @@ export const GET = requireAuth(async (request, session, context) => {
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const { id } = await context!.params;
+
+  const institutionId = await resolveRequestInstitution(session, undefined);
+  const whereClause = institutionId && institutionId !== "global"
+    ? and(eq(circulars.id, id), eq(circulars.targetInstitutionId, institutionId))
+    : eq(circulars.id, id);
 
   const circular = await db
     .select({
@@ -26,7 +31,7 @@ export const GET = requireAuth(async (request, session, context) => {
       uploadedById: circulars.uploadedById,
     })
     .from(circulars)
-    .where(eq(circulars.id, id))
+    .where(whereClause)
     .get();
 
   if (!circular) {
