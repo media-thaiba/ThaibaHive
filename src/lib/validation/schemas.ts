@@ -296,14 +296,36 @@ export const bookingResourceCreateSchema = z.object({
 });
 
 export const pollCreateSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  question: z.string().min(1),
-  options: z.array(z.string()).min(2),
-  targetRole: z.string().optional(),
-  targetDepartmentId: z.string().optional(),
-  targetInstitutionId: z.string().optional(),
-  expiresAt: z.string().optional(),
+  title: z.string().trim().min(1, "Title is required").max(200, "Title must be 200 characters or less"),
+  description: z.string().trim().max(2000, "Description must be 2000 characters or less").optional().nullable(),
+  question: z.string().trim().min(1, "Question is required").max(500, "Question must be 500 characters or less"),
+  options: z
+    .array(z.string().trim().min(1, "Option text cannot be empty").max(200, "Option text must be 200 characters or less"))
+    .min(2, "At least two options are required")
+    .max(20, "Maximum of 20 options allowed")
+    .refine((items) => new Set(items).size === items.length, { message: "Options must be distinct" }),
+  targetRole: z.string().trim().max(50).optional().nullable(),
+  targetDepartmentId: z.string().trim().max(128).optional().nullable(),
+  targetInstitutionId: z.string().trim().max(128).optional().nullable(),
+  expiresAt: z.string().trim().optional().nullable(),
+});
+
+export const pollUpdateSchema = z.object({
+  title: z.string().trim().min(1, "Title cannot be empty").max(200, "Title must be 200 characters or less").optional(),
+  description: z.string().trim().max(2000, "Description must be 2000 characters or less").optional().nullable(),
+  question: z.string().trim().min(1, "Question cannot be empty").max(500, "Question must be 500 characters or less").optional(),
+  options: z
+    .array(z.string().trim().min(1, "Option text cannot be empty").max(200, "Option text must be 200 characters or less"))
+    .min(2, "At least two options are required")
+    .max(20, "Maximum of 20 options allowed")
+    .refine((items) => new Set(items).size === items.length, { message: "Options must be distinct" })
+    .optional(),
+  isActive: z.boolean().optional(),
+  expiresAt: z.string().trim().optional().nullable(),
+});
+
+export const pollVoteSchema = z.object({
+  selectedOption: z.number().int({ message: "Selected option must be an integer" }).min(0, { message: "Selected option cannot be negative" }),
 });
 
 export const checkInSchema = z

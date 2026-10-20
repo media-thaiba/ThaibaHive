@@ -1,77 +1,57 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { polls, pollResponses, staffDepartments } from "@/db/schema";
+import { polls, pollResponses } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { logActivity } from "@/lib/api/activity-log";
+import { pollVoteSchema } from "@/lib/validation/schemas";
+import {
+  withPollVoteLock,
+  parsePollOptions,
+  canAccessPoll,
+  resolvePollScope,
+} from "@/lib/polls/ledger";
 import { eq, and } from "drizzle-orm";
-
-function parsePollOptions(raw: unknown): unknown[] {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
 
 // "polls:read" is used intentionally for this self-service write action — staff can vote on polls they can read
 export const POST = requireAuth(async (request, session, context) => {
-  const { id } = await context!.params;
-  const body = await request.json().catch(() => ({}));
-  const { selectedOption } = body as { selectedOption?: unknown };
+  const params = context?.params ? await context.params : {};
+  const id = params.id;
+  if (!id) return NextResponse.json({ error: "Poll ID is required" }, { status: 400 });
 
-  const isNumericInput =
-    typeof selectedOption === "number" ||
-    (typeof selectedOption === "string" && /^\d+$/.test(selectedOption.trim()));
-
-  if (!isNumericInput) {
-    return NextResponse.json({ error: "Valid option index is required" }, { status: 400 });
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`polls:vote:${session.staffId || ip}`, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const optionIndex = Number(selectedOption);
-  if (!Number.isInteger(optionIndex) || optionIndex < 0) {
-    return NextResponse.json({ error: "Valid option index is required" }, { status: 400 });
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
+
+  // Pre-normalize numeric inputs
+  let rawOption = body.selectedOption;
+  if (typeof rawOption === "string" && /^\d+$/.test(rawOption.trim())) {
+    rawOption = Number(rawOption.trim());
+  }
+
+  const parsed = pollVoteSchema.safeParse({ selectedOption: rawOption });
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
+
+  const optionIndex = parsed.data.selectedOption;
 
   const poll = await db.select().from(polls).where(eq(polls.id, id)).get();
   if (!poll) {
     return NextResponse.json({ error: "Poll not found" }, { status: 404 });
   }
 
-  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
-  if (
-    poll.targetInstitutionId &&
-    scopedInstId &&
-    scopedInstId !== "global" &&
-    poll.targetInstitutionId !== scopedInstId
-  ) {
+  const scopedInstId = await resolvePollScope(session);
+  const hasAccess = await canAccessPoll(poll, session, scopedInstId);
+  if (!hasAccess) {
     return NextResponse.json({ error: "Poll not found" }, { status: 404 });
-  }
-
-  const isAdmin = ["super_admin", "admin", "principal"].includes(session.role);
-  if (!isAdmin) {
-    if (poll.targetRole && poll.targetRole !== session.role) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (poll.targetDepartmentId) {
-      const deptMembership = await db
-        .select()
-        .from(staffDepartments)
-        .where(
-          and(
-            eq(staffDepartments.staffId, session.staffId),
-            eq(staffDepartments.departmentId, poll.targetDepartmentId)
-          )
-        )
-        .get();
-      if (!deptMembership) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
   }
 
   if (!poll.isActive) {
@@ -86,29 +66,60 @@ export const POST = requireAuth(async (request, session, context) => {
     return NextResponse.json({ error: "Option index out of range" }, { status: 400 });
   }
 
-  const existing = await db
-    .select()
-    .from(pollResponses)
-    .where(and(eq(pollResponses.pollId, id), eq(pollResponses.staffId, session.staffId)))
-    .get();
+  return withPollVoteLock(id, session.staffId, async () => {
+    const existing = await db
+      .select()
+      .from(pollResponses)
+      .where(and(eq(pollResponses.pollId, id), eq(pollResponses.staffId, session.staffId)))
+      .get();
 
-  if (existing) {
-    await db
-      .update(pollResponses)
-      .set({ selectedOption: optionIndex, respondedAt: new Date().toISOString() })
-      .where(eq(pollResponses.id, existing.id))
-      .run();
-  } else {
-    await db
-      .insert(pollResponses)
-      .values({
-        id: crypto.randomUUID(),
-        pollId: id,
-        staffId: session.staffId,
+    if (existing) {
+      await db
+        .update(pollResponses)
+        .set({ selectedOption: optionIndex, respondedAt: new Date().toISOString() })
+        .where(eq(pollResponses.id, existing.id))
+        .run();
+    } else {
+      try {
+        await db
+          .insert(pollResponses)
+          .values({
+            id: crypto.randomUUID(),
+            pollId: id,
+            staffId: session.staffId,
+            selectedOption: optionIndex,
+            respondedAt: new Date().toISOString(),
+          })
+          .run();
+      } catch (err: unknown) {
+        // Fallback for constraint collision in parallel race conditions
+        const isConstraint =
+          err instanceof Error &&
+          (err.message.includes("UNIQUE") || err.message.includes("constraint") || err.message.includes("duplicate"));
+        if (isConstraint) {
+          await db
+            .update(pollResponses)
+            .set({ selectedOption: optionIndex, respondedAt: new Date().toISOString() })
+            .where(and(eq(pollResponses.pollId, id), eq(pollResponses.staffId, session.staffId)))
+            .run();
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    await logActivity({
+      request,
+      staffId: session.staffId,
+      action: "POLL_VOTE",
+      resourceType: "poll",
+      resourceId: id,
+      details: {
         selectedOption: optionIndex,
-      })
-      .run();
-  }
+        isVoteUpdate: Boolean(existing),
+      },
+    });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, selectedOption: optionIndex });
+  });
 }, "polls:read");

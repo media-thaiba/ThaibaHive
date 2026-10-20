@@ -1,19 +1,40 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { polls, pollResponses, staffDepartments, staffInstitutions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { eq, and, or, isNull, inArray } from "drizzle-orm";
-import type { StaffRole } from "@/types";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { parsePollOptions, resolvePollScope } from "@/lib/polls/ledger";
+import { eq, and, or, isNull, inArray, desc } from "drizzle-orm";
 
-const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal"];
+export const GET = requireAuth(async (request, session) => {
+  const { searchParams } = new URL(request.url);
+  const requestedInst = searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
 
-export const GET = requireAuth(async (_request, session) => {
-  const isAdmin = ADMIN_ROLES.includes(session.role as StaffRole);
+  let targetedPolls: Array<typeof polls.$inferSelect> = [];
 
-  let targetedPolls;
+  if (session.role === "super_admin") {
+    const targetFilter = requestedInst
+      ? or(eq(polls.targetInstitutionId, requestedInst), isNull(polls.targetInstitutionId))
+      : undefined;
 
-  if (isAdmin) {
-    targetedPolls = await db.select().from(polls).all();
+    targetedPolls = await db
+      .select()
+      .from(polls)
+      .where(targetFilter)
+      .orderBy(desc(polls.createdAt))
+      .all();
+  } else if (session.role === "admin" || session.role === "principal") {
+    // Institutional admins: restricted strictly to their active campus
+    const instCondition = scopedInstId && scopedInstId !== "global"
+      ? or(eq(polls.targetInstitutionId, scopedInstId), isNull(polls.targetInstitutionId))
+      : undefined;
+
+    targetedPolls = await db
+      .select()
+      .from(polls)
+      .where(instCondition)
+      .orderBy(desc(polls.createdAt))
+      .all();
   } else {
     // Standard Staff target audience filtering
     const userDepts = await db
@@ -29,6 +50,9 @@ export const GET = requireAuth(async (_request, session) => {
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     const instIds = userInsts.map((i) => i.institutionId).filter(Boolean);
+    if (scopedInstId && scopedInstId !== "global" && !instIds.includes(scopedInstId)) {
+      instIds.push(scopedInstId);
+    }
 
     const roleMatch = or(isNull(polls.targetRole), eq(polls.targetRole, session.role));
 
@@ -46,6 +70,7 @@ export const GET = requireAuth(async (_request, session) => {
       .select()
       .from(polls)
       .where(and(eq(polls.isActive, true), targetingClause))
+      .orderBy(desc(polls.createdAt))
       .all();
   }
 
@@ -60,24 +85,29 @@ export const GET = requireAuth(async (_request, session) => {
   const pollVotes = await Promise.all(
     targetedPolls.map(async (poll) => {
       const responses = await db
-        .select()
+        .select({ selectedOption: pollResponses.selectedOption })
         .from(pollResponses)
         .where(eq(pollResponses.pollId, poll.id))
         .all();
 
       const total = responses.length;
-      const opts = poll.options;
-      const votes = opts.map((opt, idx) => ({
-        option: opt,
-        count: responses.filter((r) => r.selectedOption === idx).length,
-        percentage: total > 0 ? Math.round((responses.filter((r) => r.selectedOption === idx).length / total) * 100) : 0,
-      }));
+      const opts = parsePollOptions(poll.options);
+      const votes = opts.map((opt, idx) => {
+        const count = responses.filter((r) => r.selectedOption === idx).length;
+        return {
+          option: opt,
+          count,
+          percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+        };
+      });
 
       const myIdx = myVoteIndex.get(poll.id);
-      const myVote = myIdx !== undefined ? opts[myIdx] : null;
+      const myVote = myIdx !== undefined && myIdx >= 0 && myIdx < opts.length ? opts[myIdx] : null;
 
       return {
         id: poll.id,
+        title: poll.title,
+        description: poll.description,
         question: poll.question,
         options: votes,
         totalVotes: total,
@@ -85,6 +115,7 @@ export const GET = requireAuth(async (_request, session) => {
         isActive: poll.isActive,
         expiresAt: poll.expiresAt,
         createdAt: poll.createdAt,
+        updatedAt: poll.updatedAt,
       };
     })
   );
