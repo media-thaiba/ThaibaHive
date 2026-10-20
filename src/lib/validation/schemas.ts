@@ -130,17 +130,55 @@ export const announcementUpdateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const eventCreateSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  eventType: z.enum(["holiday", "institution", "department", "meeting"]).optional().default("institution"),
-  startDate: z.string().min(1),
-  endDate: z.string().optional(),
-  location: z.string().optional(),
-  departmentId: z.string().optional(),
-  institutionId: z.string().optional(),
-  maxAttendees: z.number().int().positive().optional(),
+export const eventCreateSchema = z
+  .object({
+    title: z.string().trim().min(1, "Title is required").max(200, "Title too long"),
+    description: z.string().trim().max(2000, "Description too long").optional().nullable(),
+    eventType: z.enum(["holiday", "institution", "department", "meeting"]).optional().default("institution"),
+    startDate: z.string().min(1, "Start date is required"),
+    endDate: z.string().optional().nullable(),
+    location: z.string().trim().max(200, "Location too long").optional().nullable(),
+    departmentId: z.string().optional().nullable(),
+    institutionId: z.string().optional().nullable(),
+    maxAttendees: z.number().int().positive("Max attendees must be positive").max(50_000, "Max attendees cannot exceed 50,000").optional().nullable(),
+  })
+  .refine(
+    (data) => !data.endDate || new Date(data.startDate) <= new Date(data.endDate),
+    {
+      message: "End date must be after or equal to start date",
+      path: ["endDate"],
+    }
+  );
+
+export const eventUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1, "Title cannot be empty").max(200, "Title too long").optional(),
+    description: z.string().trim().max(2000, "Description too long").optional().nullable(),
+    eventType: z.enum(["holiday", "institution", "department", "meeting"]).optional(),
+    startDate: z.string().min(1).optional(),
+    endDate: z.string().optional().nullable(),
+    location: z.string().trim().max(200, "Location too long").optional().nullable(),
+    departmentId: z.string().optional().nullable(),
+    institutionId: z.string().optional().nullable(),
+    maxAttendees: z.number().int().positive("Max attendees must be positive").max(50_000, "Max attendees cannot exceed 50,000").optional().nullable(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    (data) => !data.startDate || !data.endDate || new Date(data.startDate) <= new Date(data.endDate),
+    {
+      message: "End date must be after or equal to start date",
+      path: ["endDate"],
+    }
+  );
+export type EventUpdateInput = z.infer<typeof eventUpdateSchema>;
+
+export const eventRsvpSchema = z.object({
+  eventId: z.string().trim().min(1, "Event ID is required").max(100, "Event ID too long"),
+  status: z.enum(["attending", "maybe", "declined"], {
+    errorMap: () => ({ message: "Invalid RSVP status" }),
+  }),
 });
+export type EventRsvpInput = z.infer<typeof eventRsvpSchema>;
 
 export const assetCreateSchema = z.object({
   name: z.string().trim().min(1, "Asset name is required").max(150, "Asset name cannot exceed 150 characters"),
@@ -285,12 +323,16 @@ export const circularUpdateSchema = z.object({
 
 
 export const helpDeskTicketCreateSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title cannot exceed 200 characters"),
+  title: z.string().min(1, "Title is required").max(200, "Title cannot exceed 200 characters").optional(),
+  subject: z.string().min(1).max(200).optional(),
   description: z.string().min(1, "Description is required").max(5000, "Description cannot exceed 5000 characters"),
-  category: z.enum(["it", "facilities", "academic", "hr", "finance", "general"]).optional().default("it"),
+  category: z.enum(["it", "facilities", "academic", "hr", "finance", "general", "hardware", "software"]).optional().default("it"),
   priority: z.enum(["low", "medium", "high", "critical"]).optional().default("medium"),
   assignedToId: z.string().optional().nullable(),
   institutionId: z.string().optional().nullable(),
+}).refine((data) => !!(data.title || data.subject), {
+  message: "Title is required",
+  path: ["title"],
 });
 
 export const helpDeskTicketUpdateSchema = z.object({
@@ -1480,7 +1522,7 @@ export const attendanceLocationCreateSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must not exceed 100 characters"),
   institutionId: z.string().trim().min(1).optional().nullable(),
   nfcTagId: z.string().trim().min(1).optional().nullable(),
-  qrSecret: z.string().trim().min(1).optional().nullable(),
+  qrSecret: z.string().trim().min(1).optional(),
   isActive: z.boolean().optional().default(true),
   latitude: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").optional().nullable(),
   longitude: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").optional().nullable(),
@@ -1498,7 +1540,7 @@ export const attendanceLocationUpdateSchema = z.object({
   name: z.string().trim().min(1, "Name cannot be empty").max(100, "Name must not exceed 100 characters").optional(),
   institutionId: z.string().trim().min(1).optional().nullable(),
   nfcTagId: z.string().trim().min(1).optional().nullable(),
-  qrSecret: z.string().trim().min(1).optional().nullable(),
+  qrSecret: z.string().trim().min(1).optional(),
   isActive: z.boolean().optional(),
   latitude: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").optional().nullable(),
   longitude: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").optional().nullable(),
@@ -1574,7 +1616,7 @@ export const checklistTemplateItemInputSchema = z.object({
 export const checklistTemplateCreateSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200, "Name too long"),
   type: z.enum(["onboarding", "offboarding"], {
-    errorMap: () => ({ message: "Type must be onboarding or offboarding" }),
+    message: "Type must be onboarding or offboarding",
   }),
   description: z.string().max(1000).optional().nullable(),
   items: z.array(checklistTemplateItemInputSchema).max(100).optional(),
@@ -1593,7 +1635,7 @@ export const checklistAssignmentCreateSchema = z.object({
   staffId: z.string().trim().min(1, "Staff ID is required").max(100),
   templateId: z.string().trim().min(1, "Template ID is required").max(100),
   type: z.enum(["onboarding", "offboarding"], {
-    errorMap: () => ({ message: "Type must be onboarding or offboarding" }),
+    message: "Type must be onboarding or offboarding",
   }),
   notes: z.string().max(2000).optional().nullable(),
 });
@@ -1606,7 +1648,7 @@ export const checklistAssignmentUpdateSchema = z.object({
 export type ChecklistAssignmentUpdateInput = z.infer<typeof checklistAssignmentUpdateSchema>;
 
 export const checklistTaskUpdateSchema = z.object({
-  isCompleted: z.boolean({ required_error: "isCompleted is required" }),
+  isCompleted: z.boolean({ message: "isCompleted is required" }),
 });
 export type ChecklistTaskUpdateInput = z.infer<typeof checklistTaskUpdateSchema>;
 
@@ -1643,7 +1685,7 @@ export const notificationBroadcastSchema = z.object({
 export type NotificationBroadcastInput = z.infer<typeof notificationBroadcastSchema>;
 
 export const deviceTokenRegisterSchema = z.object({
-  token: z.string({ required_error: "FCM registration token is required" }).trim().min(1, "FCM registration token is required").max(500, "Token too long"),
+  token: z.string({ message: "FCM registration token is required" }).trim().min(1, "FCM registration token is required").max(500, "Token too long"),
   platform: z.enum(["android", "ios", "web"]).default("web"),
   deviceName: z.string().trim().max(100).optional().nullable(),
 });
