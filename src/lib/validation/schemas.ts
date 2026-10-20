@@ -426,13 +426,13 @@ export const performanceReviewUpdateSchema = z.object({
 export const grievanceCreateSchema = z.object({
   isAnonymous: z.boolean().optional().default(true),
   category: z.enum(["workplace", "harassment", "infrastructure", "payroll", "management", "general"]).optional().default("general"),
-  subject: z.string().min(1, "Subject is required"),
-  description: z.string().min(1, "Description is required"),
+  subject: z.string().min(1, "Subject is required").max(200, "Subject cannot exceed 200 characters"),
+  description: z.string().min(1, "Description is required").max(4000, "Description cannot exceed 4000 characters"),
 });
 
 export const grievanceUpdateSchema = z.object({
   status: z.enum(["open", "in_review", "resolved", "dismissed"]).optional(),
-  response: z.string().optional(),
+  response: z.string().max(4000, "Response cannot exceed 4000 characters").optional(),
 }).refine(
   (data) => data.status !== undefined || data.response !== undefined,
   { message: "At least one of status or response must be provided" }
