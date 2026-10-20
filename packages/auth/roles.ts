@@ -378,7 +378,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "polls:read",
     "circulars:read", "circulars:create",
     "bookings:read", "bookings:create",
-    "helpdesk:read", "helpdesk:create",
+    "helpdesk:read", "helpdesk:create", "helpdesk:manage",
     "assets:read",
     "finance:create", "finance:update", "finance:read", "finance:fees:view", "finance:scholarships:view",
     "finance:tax:view", "finance:purchases:create", "finance:purchases:approve:tier1", "finance:payroll:view",

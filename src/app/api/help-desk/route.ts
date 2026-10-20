@@ -1,60 +1,50 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { helpDeskTickets, staff } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@/lib/auth";
+import { helpDeskTickets, staff, activityLogs } from "@/db/schema";
+import { requireAuth, resolveRequestInstitution, resolveInstitutionContext } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { helpDeskTicketCreateSchema } from "@/lib/validation/schemas";
-import { eq, and, desc } from "drizzle-orm";
-
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 10;
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
+import { eq, and, desc, or } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
-  
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
+  const rl = checkRateLimit(`helpdesk-get:${session.staffId}`, { windowMs: 60_000, max: 120 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const url = new URL(request.url);
   const requestedInst = url.searchParams.get("institutionId");
   const scopedInstitutionId = await resolveRequestInstitution(session, requestedInst);
   const conditions = [];
+
   if (scopedInstitutionId && scopedInstitutionId !== "global") {
     conditions.push(eq(helpDeskTickets.institutionId, scopedInstitutionId));
   }
 
-  const isAdminRole = ["super_admin", "admin"].includes(session.role);
-  if (!isAdminRole) {
-    conditions.push(eq(helpDeskTickets.submittedById, session.staffId));
+  const isManagerRole = ["super_admin", "admin", "principal", "hod"].includes(session.role);
+  if (!isManagerRole) {
+    // Non-managers only see tickets they submitted or are assigned to
+    conditions.push(
+      or(
+        eq(helpDeskTickets.submittedById, session.staffId),
+        eq(helpDeskTickets.assignedToId, session.staffId)
+      )
+    );
   }
 
   const all = await db
     .select({
       id: helpDeskTickets.id,
-      subject: helpDeskTickets.title,
+      title: helpDeskTickets.title,
       description: helpDeskTickets.description,
       category: helpDeskTickets.category,
       priority: helpDeskTickets.priority,
       status: helpDeskTickets.status,
+      submittedById: helpDeskTickets.submittedById,
+      assignedToId: helpDeskTickets.assignedToId,
+      institutionId: helpDeskTickets.institutionId,
       createdByName: staff.firstName,
       createdByLastName: staff.lastName,
       createdAt: helpDeskTickets.createdAt,
+      updatedAt: helpDeskTickets.updatedAt,
     })
     .from(helpDeskTickets)
     .leftJoin(staff, eq(helpDeskTickets.submittedById, staff.id))
@@ -66,32 +56,57 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "helpdesk:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
-  
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  const rl = checkRateLimit(`helpdesk-create:${session.staffId}`, { windowMs: 60_000, max: 20 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  
-  const body = await request.json();
+
   const parsed = helpDeskTicketCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  const { title, description, category, priority } = parsed.data;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
-  const ticket = await db.insert(helpDeskTickets).values({
-    id: crypto.randomUUID(),
-    title,
-    description,
-    category: category || "it",
-    priority: priority || "medium",
-    submittedById: session.staffId,
-    status: "open",
-    institutionId: scopedInstitutionId !== "global" ? scopedInstitutionId : null,
-  }).returning().get();
+  const { title, description, category, priority, assignedToId } = parsed.data;
+
+  // Resolve concrete institution context so tickets are correctly anchored
+  const institutionId = await resolveInstitutionContext(session, parsed.data.institutionId || null);
+
+  const ticket = await db
+    .insert(helpDeskTickets)
+    .values({
+      id: crypto.randomUUID(),
+      title,
+      description,
+      category: category || "it",
+      priority: priority || "medium",
+      submittedById: session.staffId,
+      assignedToId: assignedToId || null,
+      status: "open",
+      institutionId: institutionId || null,
+    })
+    .returning()
+    .get();
+
+  try {
+    await db.insert(activityLogs).values({
+      staffId: session.staffId,
+      action: "helpdesk_ticket_created",
+      resourceType: "helpdesk_ticket",
+      resourceId: ticket.id,
+      details: JSON.stringify({
+        ticketId: ticket.id,
+        title,
+        category: ticket.category,
+        priority: ticket.priority,
+        institutionId,
+      }),
+    });
+  } catch (err) {
+    console.warn("[HelpdeskCreate] Activity log failed:", err);
+  }
 
   return NextResponse.json({ ticket }, { status: 201 });
 }, "helpdesk:create");

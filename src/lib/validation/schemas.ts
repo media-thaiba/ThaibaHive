@@ -189,11 +189,25 @@ export const circularUpdateSchema = z.object({
 
 
 export const helpDeskTicketCreateSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().min(1),
-  category: z.string().optional(),
-  priority: z.string().optional(),
-  assignedToId: z.string().optional(),
+  title: z.string().min(1, "Title is required").max(200, "Title cannot exceed 200 characters"),
+  description: z.string().min(1, "Description is required").max(5000, "Description cannot exceed 5000 characters"),
+  category: z.enum(["it", "facilities", "academic", "hr", "finance", "general"]).optional().default("it"),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional().default("medium"),
+  assignedToId: z.string().optional().nullable(),
+  institutionId: z.string().optional().nullable(),
+});
+
+export const helpDeskTicketUpdateSchema = z.object({
+  title: z.string().min(1, "Title cannot be empty").max(200, "Title cannot exceed 200 characters").optional(),
+  description: z.string().min(1, "Description cannot be empty").max(5000, "Description cannot exceed 5000 characters").optional(),
+  category: z.enum(["it", "facilities", "academic", "hr", "finance", "general"]).optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  status: z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
+  assignedToId: z.string().optional().nullable(),
+});
+
+export const helpDeskCommentCreateSchema = z.object({
+  content: z.string().trim().min(1, "Content required").max(5000, "Comment cannot exceed 5000 characters"),
 });
 
 export const recognitionCreateSchema = z.object({
