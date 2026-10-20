@@ -1476,18 +1476,41 @@ export const attendancePunchSchema = z.object({
 });
 export type AttendancePunchInput = z.infer<typeof attendancePunchSchema>;
 
+export const attendanceLocationCreateSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(100, "Name must not exceed 100 characters"),
+  institutionId: z.string().trim().min(1).optional().nullable(),
+  nfcTagId: z.string().trim().min(1).optional().nullable(),
+  qrSecret: z.string().trim().min(1).optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+  latitude: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").optional().nullable(),
+  longitude: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").optional().nullable(),
+  radius: z.number().min(5, "Radius must be at least 5 meters").max(10000, "Radius cannot exceed 10,000 meters").optional().nullable(),
+  accuracy: z.number().min(1, "Accuracy threshold must be at least 1 meter").max(500, "Accuracy threshold cannot exceed 500 meters").optional().nullable(),
+  wifiSsids: z.string().trim().max(1000).optional().nullable(),
+}).refine(
+  (data) => (data.latitude == null && data.longitude == null) || (data.latitude != null && data.longitude != null),
+  { message: "Latitude and longitude must be provided together", path: ["longitude"] }
+);
+
+export type AttendanceLocationCreateInput = z.infer<typeof attendanceLocationCreateSchema>;
+
 export const attendanceLocationUpdateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  institutionId: z.string().min(1).optional(),
-  nfcTagId: z.string().min(1).optional().nullable(),
-  qrSecret: z.string().min(1).optional(),
+  name: z.string().trim().min(1, "Name cannot be empty").max(100, "Name must not exceed 100 characters").optional(),
+  institutionId: z.string().trim().min(1).optional().nullable(),
+  nfcTagId: z.string().trim().min(1).optional().nullable(),
+  qrSecret: z.string().trim().min(1).optional().nullable(),
   isActive: z.boolean().optional(),
-  latitude: z.number().finite().optional(),
-  longitude: z.number().finite().optional(),
-  radius: z.number().int().positive().optional(),
-  accuracy: z.number().int().positive().optional(),
-  wifiSsids: z.string().optional(),
-});
+  latitude: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90").optional().nullable(),
+  longitude: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180").optional().nullable(),
+  radius: z.number().min(5, "Radius must be at least 5 meters").max(10000, "Radius cannot exceed 10,000 meters").optional().nullable(),
+  accuracy: z.number().min(1, "Accuracy threshold must be at least 1 meter").max(500, "Accuracy threshold cannot exceed 500 meters").optional().nullable(),
+  wifiSsids: z.string().trim().max(1000).optional().nullable(),
+  deletedAt: z.string().nullable().optional(),
+}).refine(
+  (data) => (data.latitude === undefined && data.longitude === undefined) || (data.latitude == null && data.longitude == null) || (data.latitude != null && data.longitude != null),
+  { message: "Latitude and longitude must be provided together", path: ["longitude"] }
+);
+
 export type AttendanceLocationUpdateInput = z.infer<typeof attendanceLocationUpdateSchema>;
 
 export const leaveBalanceUpdateSchema = z.object({

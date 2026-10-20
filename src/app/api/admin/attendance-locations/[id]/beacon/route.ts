@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@/lib/auth";
 import { logActivity } from "@/lib/api/activity-log";
 import { eq, and, isNull } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { getEffectiveInstitutionId } from "@/lib/attendance/locations/utils";
 
 /**
  * BLE BEACON SECURITY CLASSIFICATION:
@@ -14,9 +15,18 @@ import { eq, and, isNull } from "drizzle-orm";
  * Primary attendance verification requires multi-factor GPS geofencing, shift rules, and device token nonces.
  */
 export const POST = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const body = await request.json().catch(() => ({}));
-  const { uuid, major, minor, txPower } = body as {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const { uuid, major, minor, txPower } = (body || {}) as {
     uuid?: string;
     major?: number;
     minor?: number;
@@ -27,7 +37,7 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Beacon UUID is required" }, { status: 400 });
   }
 
-  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstId = await getEffectiveInstitutionId(session);
   const location = await db
     .select()
     .from(attendanceLocations)
@@ -71,4 +81,4 @@ export const POST = requireAuth(async (request: Request, session, context) => {
   });
 
   return NextResponse.json({ success: true, location: updated });
-}, "org:manage");
+}, "attendance:manage");

@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLocations } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and, isNull } from "drizzle-orm";
 import { createHmac, randomBytes } from "crypto";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { getEffectiveInstitutionId } from "@/lib/attendance/locations/utils";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
-  const scopedInstId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstId = await getEffectiveInstitutionId(session);
 
   const location = await db
     .select()

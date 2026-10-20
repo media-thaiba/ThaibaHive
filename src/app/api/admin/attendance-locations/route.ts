@@ -4,11 +4,20 @@ import { attendanceLocations, institutions } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { eq, isNull, and } from "drizzle-orm";
 import { logActivity } from "@/lib/api/activity-log";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { attendanceLocationCreateSchema } from "@/lib/validation/schemas";
+import { getEffectiveInstitutionId } from "@/lib/attendance/locations/utils";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const requestedInst = url.searchParams.get("institutionId");
-  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
+  const effectiveInst = await getEffectiveInstitutionId(session);
+  const scopedInstId = effectiveInst !== "global" && effectiveInst !== null
+    ? effectiveInst
+    : await resolveRequestInstitution(session, requestedInst);
   const showDeleted = url.searchParams.get("showDeleted") === "true";
 
   const conditions = [];
@@ -41,41 +50,70 @@ export const GET = requireAuth(async (request: Request, session) => {
     .leftJoin(institutions, eq(attendanceLocations.institutionId, institutions.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(attendanceLocations.name);
+
   return NextResponse.json({ locations: all });
 }, "attendance:manage");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { name, institutionId: reqInst, nfcTagId, qrSecret, latitude, longitude, radius, accuracy, wifiSsids } = body;
-  const institutionId = await resolveRequestInstitution(session, reqInst);
-  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  if (latitude !== undefined && latitude !== null && latitude !== "") {
-    const lat = Number(latitude);
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      return NextResponse.json({ error: "Latitude must be a number between -90 and 90" }, { status: 400 });
-    }
+  const parsed = attendanceLocationCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-  if (longitude !== undefined && longitude !== null && longitude !== "") {
-    const lon = Number(longitude);
-    if (isNaN(lon) || lon < -180 || lon > 180) {
-      return NextResponse.json({ error: "Longitude must be a number between -180 and 180" }, { status: 400 });
-    }
+
+  const {
+    name,
+    institutionId: reqInst,
+    nfcTagId,
+    qrSecret,
+    latitude,
+    longitude,
+    radius,
+    accuracy,
+    wifiSsids,
+    isActive,
+  } = parsed.data;
+
+  const scopedInstId = await getEffectiveInstitutionId(session);
+  if (scopedInstId && scopedInstId !== "global" && reqInst && reqInst !== scopedInstId) {
+    return NextResponse.json({ error: "Cannot create locations for another institution" }, { status: 403 });
   }
-  if (radius !== undefined && radius !== null && radius !== "") {
-    const rad = Number(radius);
-    if (isNaN(rad) || rad <= 0) {
-      return NextResponse.json({ error: "Radius must be a positive number" }, { status: 400 });
-    }
+
+  const institutionId = scopedInstId && scopedInstId !== "global"
+    ? scopedInstId
+    : await resolveRequestInstitution(session, reqInst);
+
+  if (!institutionId || institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
   }
-  if (accuracy !== undefined && accuracy !== null && accuracy !== "") {
-    const acc = Number(accuracy);
-    if (isNaN(acc) || acc <= 0) {
-      return NextResponse.json({ error: "Accuracy must be a positive number" }, { status: 400 });
+
+  // NFC Tag collision check: ensure active location doesn't already hold this tag
+  if (nfcTagId) {
+    const conflict = await db
+      .select({ id: attendanceLocations.id })
+      .from(attendanceLocations)
+      .where(
+        and(
+          eq(attendanceLocations.nfcTagId, nfcTagId),
+          isNull(attendanceLocations.deletedAt)
+        )
+      )
+      .get();
+
+    if (conflict) {
+      return NextResponse.json(
+        { error: "An active location with this NFC tag already exists." },
+        { status: 409 }
+      );
     }
   }
 
@@ -90,10 +128,11 @@ export const POST = requireAuth(async (request: Request, session) => {
       institutionId: institutionId || null,
       nfcTagId: nfcTagId || null,
       qrSecret: secret,
-      latitude: latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : null,
-      longitude: longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : null,
-      radius: radius !== undefined && radius !== null && radius !== "" ? Number(radius) : null,
-      accuracy: accuracy !== undefined && accuracy !== null && accuracy !== "" ? Number(accuracy) : null,
+      isActive: isActive !== undefined ? isActive : true,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      radius: radius ?? (latitude != null ? 100 : null),
+      accuracy: accuracy ?? null,
       wifiSsids: wifiSsids || null,
     })
     .returning()
