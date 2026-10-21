@@ -387,7 +387,7 @@ export const helpDeskTicketCreateSchema = z.object({
 export const helpDeskTicketUpdateSchema = z.object({
   title: z.string().min(1, "Title cannot be empty").max(200, "Title cannot exceed 200 characters").optional(),
   description: z.string().min(1, "Description cannot be empty").max(5000, "Description cannot exceed 5000 characters").optional(),
-  category: z.enum(["it", "facilities", "academic", "hr", "finance", "general"]).optional(),
+  category: z.enum(["it", "facilities", "academic", "hr", "finance", "general", "hardware", "software"]).optional(),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
   status: z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
   assignedToId: z.string().optional().nullable(),

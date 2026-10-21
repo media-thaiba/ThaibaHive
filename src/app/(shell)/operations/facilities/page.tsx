@@ -204,7 +204,7 @@ export default function HelpDeskPage() {
         setForm({ subject: "", description: "", category: "it", priority: "medium" });
         fetchTickets();
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to submit ticket. Please try again." }));
         setError(d.error || "Failed to submit ticket. Please try again.");
       }
     } catch {
@@ -231,7 +231,7 @@ export default function HelpDeskPage() {
         toast.success("Comment added");
         loadTicketDetail(selected);
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to post comment" }));
         toast.error(d.error || "Failed to post comment");
       }
     } catch {
@@ -256,7 +256,7 @@ export default function HelpDeskPage() {
         fetchTickets();
         loadTicketDetail(selected);
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to update status" }));
         toast.error(d.error || "Failed to update status");
       }
     } catch {
@@ -281,7 +281,7 @@ export default function HelpDeskPage() {
         fetchTickets();
         loadTicketDetail(selected);
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to assign ticket" }));
         toast.error(d.error || "Failed to assign ticket");
       }
     } catch {
@@ -413,11 +413,11 @@ export default function HelpDeskPage() {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
-              <option value="">All Statuses</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
+              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
             </Select>
           </div>
 
@@ -436,14 +436,14 @@ export default function HelpDeskPage() {
                     <Badge variant={statusVariant[t.status]}>{t.status.replace("_", " ")}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
-                  <div className="flex justify-between items-center text-[10px] text-muted-foreground border-t pt-2 mt-2">
+                  <div className="flex justify-between items-center text-[11px] text-muted-foreground border-t pt-2 mt-2">
                     <span className="flex items-center gap-1">
                       <User className="h-3 w-3" /> By: {t.createdByName} {t.createdByLastName}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {t.createdAt?.split("T")[0]}
                     </span>
-                    <Badge variant={priorityVariant[t.priority]} className="text-[9px] py-0 px-1 capitalize">
+                    <Badge variant={priorityVariant[t.priority]} className="text-[11px] py-0 px-1 capitalize">
                       {t.priority}
                     </Badge>
                   </div>
@@ -491,7 +491,7 @@ export default function HelpDeskPage() {
                       
                       {/* Ticket Status Selector */}
                       <div className="space-y-1">
-                        <label htmlFor="ticket-status-select" className="text-[10px] text-muted-foreground">Update Ticket Status</label>
+                        <label htmlFor="ticket-status-select" className="text-[11px] text-muted-foreground">Update Ticket Status</label>
                         <Select
                           id="ticket-status-select"
                           value={ticketDetail.status}
@@ -507,20 +507,20 @@ export default function HelpDeskPage() {
 
                       {/* IT Assignee Selector */}
                       <div className="space-y-1">
-                        <label htmlFor="ticket-assignee-select" className="text-[10px] text-muted-foreground">Assign Staff Agent</label>
+                        <label htmlFor="ticket-assignee-select" className="text-[11px] text-muted-foreground">Assign Staff Agent</label>
                         <Select
                           id="ticket-assignee-select"
                           value={ticketDetail.assignedToId || ""}
                           disabled={updatingTicket}
                           onChange={(e) => handleAssigneeChange(e.target.value)}
                         >
-                          <option value="">Unassigned</option>
+                          <SelectItem value="">Unassigned</SelectItem>
                           {staffList
                             .filter((s) => s.role === "admin" || s.role === "super_admin")
                             .map((s) => (
-                              <option key={s.id} value={s.id}>
+                              <SelectItem key={s.id} value={s.id}>
                                 {s.firstName} {s.lastName}
-                              </option>
+                              </SelectItem>
                             ))}
                         </Select>
                       </div>
@@ -536,7 +536,7 @@ export default function HelpDeskPage() {
                     <div className="flex-1 overflow-y-auto space-y-2.5 my-2 max-h-[200px] pr-1">
                       {comments.map((c) => (
                         <div key={c.id} className="p-2 border rounded bg-muted/10 space-y-1">
-                          <div className="flex justify-between items-center text-[9px] text-muted-foreground">
+                          <div className="flex justify-between items-center text-[11px] text-muted-foreground">
                             <span className="font-semibold text-foreground">{c.authorName} {c.authorLastName}</span>
                             <span>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
@@ -544,7 +544,7 @@ export default function HelpDeskPage() {
                         </div>
                       ))}
                       {comments.length === 0 && (
-                        <p className="text-[10px] text-muted-foreground/60 italic text-center py-4">No comments posted yet.</p>
+                        <p className="text-[11px] text-muted-foreground/60 italic text-center py-4">No comments posted yet.</p>
                       )}
                     </div>
 

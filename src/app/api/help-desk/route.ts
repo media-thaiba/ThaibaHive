@@ -19,6 +19,24 @@ export const GET = requireAuth(async (request: Request, session) => {
     conditions.push(eq(helpDeskTickets.institutionId, scopedInstitutionId));
   }
 
+  const allowedStatuses = ["open", "in_progress", "resolved", "closed"] as const;
+  const statusParam = url.searchParams.get("status");
+  if (statusParam && allowedStatuses.includes(statusParam as (typeof allowedStatuses)[number])) {
+    conditions.push(eq(helpDeskTickets.status, statusParam));
+  }
+
+  const allowedCategories = ["it", "facilities", "academic", "hr", "finance", "general", "hardware", "software"] as const;
+  const categoryParam = url.searchParams.get("category");
+  if (categoryParam && allowedCategories.includes(categoryParam as (typeof allowedCategories)[number])) {
+    conditions.push(eq(helpDeskTickets.category, categoryParam));
+  }
+
+  const allowedPriorities = ["low", "medium", "high", "critical"] as const;
+  const priorityParam = url.searchParams.get("priority");
+  if (priorityParam && allowedPriorities.includes(priorityParam as (typeof allowedPriorities)[number])) {
+    conditions.push(eq(helpDeskTickets.priority, priorityParam));
+  }
+
   const isManagerRole = ["super_admin", "admin", "principal", "hod"].includes(session.role);
   if (!isManagerRole) {
     // Non-managers only see tickets they submitted or are assigned to

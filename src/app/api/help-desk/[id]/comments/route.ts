@@ -9,7 +9,17 @@ import { withTicketLock, canAccessTicket, isTerminalTicketStatus } from "@/lib/h
 import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request, session, context) => {
-  const { id } = await context!.params;
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const cand = parts[parts.length - 2] || parts[parts.length - 1];
+    if (cand && cand !== "help-desk" && cand !== "comments") {
+      id = cand;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Ticket ID is required" }, { status: 400 });
 
   const rl = checkRateLimit(`helpdesk-cmt:${session.staffId}`, { windowMs: 60_000, max: 40 });
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);

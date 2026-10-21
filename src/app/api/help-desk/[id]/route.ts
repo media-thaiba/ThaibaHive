@@ -8,8 +8,19 @@ import { helpDeskTicketUpdateSchema } from "@/lib/validation/schemas";
 import { withTicketLock, canAccessTicket, canManageTicket, isTerminalTicketStatus } from "@/lib/help-desk/ledger";
 import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, session, context) => {
-  const { id } = await context!.params;
+export const GET = requireAuth(async (request: Request, session, context) => {
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "help-desk") {
+      id = last;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Ticket ID is required" }, { status: 400 });
+
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
@@ -74,7 +85,17 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "helpdesk:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
-  const { id } = await context!.params;
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "help-desk") {
+      id = last;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Ticket ID is required" }, { status: 400 });
 
   const rl = checkRateLimit(`helpdesk-patch:${session.staffId}`, { windowMs: 60_000, max: 60 });
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
@@ -178,8 +199,18 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   });
 }, "helpdesk:manage");
 
-export const DELETE = requireAuth(async (_request, session, context) => {
-  const { id } = await context!.params;
+export const DELETE = requireAuth(async (request: Request, session, context) => {
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "help-desk") {
+      id = last;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Ticket ID is required" }, { status: 400 });
 
   const rl = checkRateLimit(`helpdesk-del:${session.staffId}`, { windowMs: 60_000, max: 20 });
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);

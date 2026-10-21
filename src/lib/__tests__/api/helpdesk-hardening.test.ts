@@ -572,4 +572,142 @@ describe("Helpdesk & Service Ticketing Pipeline — Hardening", () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe("Schema Category Parity, Dynamic URL Extraction & Server Filtering", () => {
+    it("allows updating ticket category to 'hardware' and 'software'", async () => {
+      const t = await db.insert(helpDeskTickets).values({
+        id: crypto.randomUUID(),
+        title: "Peripherals Failure",
+        description: "Broken projector cable",
+        category: "it",
+        status: "open",
+        submittedById: staffAId,
+        institutionId: instA,
+      }).returning().get();
+      createdTicketIds.push(t.id);
+
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["helpdesk:manage"],
+      });
+
+      // Update to hardware
+      const reqHw = makeJsonReq(`http://localhost:3000/api/help-desk/${t.id}`, { category: "hardware" }, "PATCH");
+      const resHw = await updateTicket(reqHw, contextParams(t.id));
+      expect(resHw.status).toBe(200);
+      const dataHw = await resHw.json();
+      expect(dataHw.ticket.category).toBe("hardware");
+
+      // Update to software
+      const reqSw = makeJsonReq(`http://localhost:3000/api/help-desk/${t.id}`, { category: "software" }, "PATCH");
+      const resSw = await updateTicket(reqSw, contextParams(t.id));
+      expect(resSw.status).toBe(200);
+      const dataSw = await resSw.json();
+      expect(dataSw.ticket.category).toBe("software");
+    });
+
+    it("extracts ticket ID from URL pathname when context params are missing", async () => {
+      const t = await db.insert(helpDeskTickets).values({
+        id: crypto.randomUUID(),
+        title: "URL Path Extraction Test",
+        description: "Checking fallback id extraction",
+        category: "general",
+        status: "open",
+        submittedById: staffAId,
+        institutionId: instA,
+      }).returning().get();
+      createdTicketIds.push(t.id);
+
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["helpdesk:read", "helpdesk:manage", "helpdesk:create"],
+      });
+
+      // GET detail with empty context params
+      const reqGet = makeJsonReq(`http://localhost:3000/api/help-desk/${t.id}`, null, "GET");
+      const resGet = await getTicketDetail(reqGet, { params: Promise.resolve({}) as any });
+      expect(resGet.status).toBe(200);
+      const dataGet = await resGet.json();
+      expect(dataGet.ticket.id).toBe(t.id);
+
+      // POST comment with empty context params
+      const reqCmt = makeJsonReq(`http://localhost:3000/api/help-desk/${t.id}/comments`, { content: "Fallback comment" }, "POST");
+      const resCmt = await addComment(reqCmt, { params: Promise.resolve({}) as any });
+      expect(resCmt.status).toBe(201);
+
+      // PATCH with empty context params
+      const reqPatch = makeJsonReq(`http://localhost:3000/api/help-desk/${t.id}`, { priority: "high" }, "PATCH");
+      const resPatch = await updateTicket(reqPatch, { params: Promise.resolve({}) as any });
+      expect(resPatch.status).toBe(200);
+
+      // Fail-closed when no ID in context or URL
+      const reqInvalid = new Request("http://localhost:3000/api/help-desk/", { method: "GET" });
+      const resInvalid = await getTicketDetail(reqInvalid, { params: Promise.resolve({}) as any });
+      expect(resInvalid.status).toBe(400);
+    });
+
+    it("filters tickets by status, category, and priority on server query parameters", async () => {
+      const t1 = await db.insert(helpDeskTickets).values({
+        id: crypto.randomUUID(),
+        title: "Filter Target 1",
+        description: "Desc 1",
+        category: "hardware",
+        priority: "critical",
+        status: "open",
+        submittedById: staffAId,
+        institutionId: instA,
+      }).returning().get();
+
+      const t2 = await db.insert(helpDeskTickets).values({
+        id: crypto.randomUUID(),
+        title: "Filter Target 2",
+        description: "Desc 2",
+        category: "software",
+        priority: "low",
+        status: "resolved",
+        submittedById: staffAId,
+        institutionId: instA,
+      }).returning().get();
+
+      createdTicketIds.push(t1.id, t2.id);
+
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["helpdesk:read"],
+      });
+
+      // Filter by category=hardware
+      const reqHw = makeJsonReq(`http://localhost:3000/api/help-desk?institutionId=${instA}&category=hardware`, null, "GET");
+      const resHw = await listTickets(reqHw);
+      expect(resHw.status).toBe(200);
+      const dataHw = await resHw.json();
+      const hwIds = dataHw.tickets.map((x: any) => x.id);
+      expect(hwIds).toContain(t1.id);
+      expect(hwIds).not.toContain(t2.id);
+
+      // Filter by status=resolved
+      const reqResolved = makeJsonReq(`http://localhost:3000/api/help-desk?institutionId=${instA}&status=resolved`, null, "GET");
+      const resResolved = await listTickets(reqResolved);
+      expect(resResolved.status).toBe(200);
+      const dataResolved = await resResolved.json();
+      const resIds = dataResolved.tickets.map((x: any) => x.id);
+      expect(resIds).toContain(t2.id);
+      expect(resIds).not.toContain(t1.id);
+
+      // Filter by priority=critical
+      const reqCrit = makeJsonReq(`http://localhost:3000/api/help-desk?institutionId=${instA}&priority=critical`, null, "GET");
+      const resCrit = await listTickets(reqCrit);
+      expect(resCrit.status).toBe(200);
+      const dataCrit = await resCrit.json();
+      const critIds = dataCrit.tickets.map((x: any) => x.id);
+      expect(critIds).toContain(t1.id);
+      expect(critIds).not.toContain(t2.id);
+    });
+  });
 });
