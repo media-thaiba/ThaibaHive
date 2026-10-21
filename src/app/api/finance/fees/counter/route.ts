@@ -1,6 +1,7 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { FeeDbStore } from '@/db/fee-store';
 import { CounterRegisterEngine } from '@/lib/operations/finance/counter/counter-register-engine';
 import {
@@ -9,7 +10,12 @@ import {
   recordCounterPaymentSchema,
 } from '@/lib/validation/fee-schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const status = (url.searchParams.get('status') as any) || undefined;
@@ -20,23 +26,31 @@ export const GET = requireAuth(async (request, session) => {
 }, 'finance:fees:view');
 
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const action = body.action || 'open';
     const store = FeeDbStore.getInstance();
     const engine = new CounterRegisterEngine(store);
 
     if (action === 'open') {
       const parsed = openCounterRegisterSchema.safeParse(body);
-  if (parsed.success && (parsed.data as any).institutionId) {
-    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
-  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }
 
+      const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
+
       const register = await engine.openShift(
-        parsed.data.institutionId,
+        institutionId,
         session.staffId || (session as any).userId || 'staff',
         parsed.data.counterName,
         parsed.data.openingFloat

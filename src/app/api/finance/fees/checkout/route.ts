@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { FeeDbStore } from '@/db/fee-store';
 import { GatewayAdapterFactory } from '@/lib/operations/finance/gateways/gateway-adapter-factory';
 import { createCheckoutOrderSchema } from '@/lib/validation/fee-schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const parsed = createCheckoutOrderSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });

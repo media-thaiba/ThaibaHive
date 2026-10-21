@@ -594,7 +594,7 @@ export class FeeDbStore {
     await this.ensureHydrated();
     const pay = this.memoryStore.payments.get(id);
     if (!pay) return null;
-    if (institutionId && pay.institutionId !== institutionId) {
+    if (institutionId && institutionId !== 'global' && pay.institutionId !== institutionId) {
       return null;
     }
     const txs = Array.from(this.memoryStore.paymentTransactions.values()).filter((t) => t.paymentId === id);
@@ -604,7 +604,7 @@ export class FeeDbStore {
   public async getPaymentByNumber(paymentNumber: string, institutionId?: string): Promise<FeePaymentItem | null> {
     for (const pay of this.memoryStore.payments.values()) {
       if (pay.paymentNumber === paymentNumber) {
-        if (!institutionId || pay.institutionId === institutionId) {
+        if (!institutionId || institutionId === 'global' || pay.institutionId === institutionId) {
           const txs = Array.from(this.memoryStore.paymentTransactions.values()).filter((t) => t.paymentId === pay.id);
           return { ...pay, transactions: txs };
         }
@@ -652,7 +652,7 @@ export class FeeDbStore {
   public async getReceiptByHash(receiptHash: string, institutionId?: string): Promise<FeeReceiptItem | null> {
     for (const rcpt of this.memoryStore.receipts.values()) {
       if (rcpt.receiptHash === receiptHash) {
-        if (!institutionId || rcpt.institutionId === institutionId) {
+        if (!institutionId || institutionId === 'global' || rcpt.institutionId === institutionId) {
           return rcpt;
         }
       }
@@ -663,7 +663,7 @@ export class FeeDbStore {
   public async getReceiptByPaymentId(paymentId: string, institutionId?: string): Promise<FeeReceiptItem | null> {
     for (const rcpt of this.memoryStore.receipts.values()) {
       if (rcpt.paymentId === paymentId) {
-        if (!institutionId || rcpt.institutionId === institutionId) {
+        if (!institutionId || institutionId === 'global' || rcpt.institutionId === institutionId) {
           return rcpt;
         }
       }

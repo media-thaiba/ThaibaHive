@@ -1,23 +1,30 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { FeeDbStore } from '@/db/fee-store';
 import { ReceiptGenerator } from '@/lib/operations/finance/receipts/receipt-generator';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const paymentId = url.searchParams.get('paymentId');
   const receiptHash = url.searchParams.get('hash');
   const studentId = url.searchParams.get('studentId');
 
   const store = FeeDbStore.getInstance();
+  const instFilter = session.institutionId && session.institutionId !== 'global' ? session.institutionId : undefined;
   if (receiptHash) {
-    const rcpt = await store.getReceiptByHash(receiptHash, session.institutionId || undefined);
+    const rcpt = await store.getReceiptByHash(receiptHash, instFilter);
     if (!rcpt) return NextResponse.json({ error: 'Receipt not found' }, { status: 404 });
     return NextResponse.json({ success: true, receipt: rcpt });
   }
 
   if (paymentId) {
-    const rcpt = await store.getReceiptByPaymentId(paymentId, session.institutionId || undefined);
+    const rcpt = await store.getReceiptByPaymentId(paymentId, instFilter);
     if (!rcpt) return NextResponse.json({ error: 'Receipt not found' }, { status: 404 });
     return NextResponse.json({ success: true, receipt: rcpt });
   }
@@ -33,8 +40,17 @@ export const GET = requireAuth(async (request, session) => {
 }, 'finance:fees:view');
 
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const { paymentId, studentName, studentRollNumber, programGrade, academicYear, components } = body;
 
     if (!paymentId) {
@@ -42,7 +58,8 @@ export const POST = requireAuth(async (request, session) => {
     }
 
     const store = FeeDbStore.getInstance();
-    const payment = await store.getPaymentById(paymentId, session.institutionId || undefined);
+    const instFilter = session.institutionId && session.institutionId !== 'global' ? session.institutionId : undefined;
+    const payment = await store.getPaymentById(paymentId, instFilter);
     if (!payment) {
       return NextResponse.json({ error: 'Payment record not found' }, { status: 404 });
     }

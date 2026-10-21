@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { withPublicApm } from "@/lib/api/public-apm";
+import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { FeeDbStore } from "@/db/fee-store";
 
-export const GET = withPublicApm(async (_req: Request, context: { params: Promise<Record<string, string>> }) => {
+export const GET = withPublicApm(async (req: Request, context: { params: Promise<Record<string, string>> }) => {
   try {
+    const ip = extractIp(req);
+    const rl = checkRateLimit(`fee-verify:${ip}`, "read");
+    if (!rl.allowed) {
+      return rateLimitResponse(rl.resetMs);
+    }
+
     const { hash } = await context.params;
     if (!hash || hash.trim().length === 0) {
       return NextResponse.json({ error: "Fee receipt hash is required" }, { status: 400 });

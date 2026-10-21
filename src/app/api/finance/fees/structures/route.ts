@@ -1,10 +1,16 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { FeeDbStore } from '@/db/fee-store';
 import { createFeeStructureSchema } from '@/lib/validation/fee-schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const academicYear = url.searchParams.get('academicYear') || undefined;
@@ -15,17 +21,37 @@ export const GET = requireAuth(async (request, session) => {
 }, 'finance:fees:view');
 
 export const POST = requireAuth(async (request, session) => {
-  try {
-    const body = await request.json();
-    const parsed = createFeeStructureSchema.safeParse(body);
-  if (parsed.success && (parsed.data as any).institutionId) {
-    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
-  }
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
-    }
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-    const store = FeeDbStore.getInstance();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = createFeeStructureSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
+  }
+
+  const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
+  const store = FeeDbStore.getInstance();
+
+  // Duplicate code collision guard within the same institution
+  const existingStructures = await store.listFeeStructures(institutionId);
+  const duplicate = existingStructures.find(
+    (s) => s.code.toLowerCase() === parsed.data.code.trim().toLowerCase()
+  );
+  if (duplicate) {
+    return NextResponse.json(
+      { error: `Fee structure with code '${parsed.data.code}' already exists in this institution` },
+      { status: 409 }
+    );
+  }
+
+  try {
     const id = `struct_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const now = new Date().toISOString();
 
@@ -46,7 +72,7 @@ export const POST = requireAuth(async (request, session) => {
 
     const created = await store.createFeeStructure({
       id,
-      institutionId: parsed.data.institutionId,
+      institutionId,
       name: parsed.data.name,
       code: parsed.data.code,
       academicYear: parsed.data.academicYear,

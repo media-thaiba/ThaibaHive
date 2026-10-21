@@ -1,12 +1,18 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { FeeDbStore } from '@/db/fee-store';
 import { ScholarshipEngine } from '@/lib/operations/finance/scholarships/scholarship-engine';
 import { ScholarshipApprovalWorkflow } from '@/lib/operations/finance/scholarships/scholarship-approval-workflow';
 import { applyConcessionSchema } from '@/lib/validation/fee-schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const type = url.searchParams.get('type') || 'scholarships'; // 'scholarships' | 'concessions'
@@ -22,23 +28,31 @@ export const GET = requireAuth(async (request, session) => {
 }, 'finance:scholarships:view');
 
 export const POST = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const action = body.action || 'apply';
     const store = FeeDbStore.getInstance();
 
     if (action === 'apply') {
       const parsed = applyConcessionSchema.safeParse(body);
-  if (parsed.success && (parsed.data as any).institutionId) {
-    await resolveRequestInstitution(session, (parsed.data as any).institutionId);
-  }
       if (!parsed.success) {
         return NextResponse.json({ error: 'Validation failed', details: parsed.error.format() }, { status: 400 });
       }
 
+      const institutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
+
       const engine = new ScholarshipEngine(store);
       const concession = await engine.submitConcessionApplication({
-        institutionId: parsed.data.institutionId,
+        institutionId,
         studentId: parsed.data.studentId,
         scholarshipId: parsed.data.scholarshipId || 'sch_general_grant',
         allocationId: parsed.data.allocationId,
