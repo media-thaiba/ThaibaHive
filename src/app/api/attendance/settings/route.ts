@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { presenceVerificationSettings, staffInstitutions } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution, TenantMismatchError } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { logActivity } from "@/lib/api/activity-log";
 
 import { verificationSettingsSchema } from "@/lib/validation/schemas";
 import { eq, and, isNull } from "drizzle-orm";
 import type { SessionPayload } from "@thaiba/auth";
+
+export const dynamic = "force-dynamic";
 
 const DEFAULT_SETTINGS = {
   isEnabled: true,
@@ -55,6 +58,9 @@ function calculateDiff(oldSettings: Record<string, unknown>, newSettings: Record
 }
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     const url = new URL(request.url);
     const rawInst = url.searchParams.get("institutionId");
@@ -112,13 +118,20 @@ export const GET = requireAuth(async (request, session) => {
   }
 }, "attendance:read");
 
-
 export const PUT = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const rawInst = body.institutionId ?? null;
     const institutionId = rawInst ? await resolveRequestInstitution(session, rawInst) : (isGlobalAdmin(session) ? null : await resolveRequestInstitution(session, null));
-
 
     // Authorization check
     if (institutionId) {
@@ -286,5 +299,3 @@ export const PUT = requireAuth(async (request, session) => {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }, "attendance:manage");
-
-

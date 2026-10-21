@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendanceLogs, staff } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { eq, gt, and, gte, lte, desc, sql, or, like } from "drizzle-orm";
+
+export const dynamic = "force-dynamic";
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * GET /api/attendance/violations — administrative read model for presence
@@ -17,6 +22,9 @@ import { eq, gt, and, gte, lte, desc, sql, or, like } from "drizzle-orm";
  * scope is the sanctioned admin bypass.
  */
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const rawInst = searchParams.get("institutionId");
   const institutionId = await resolveRequestInstitution(session, rawInst);
@@ -25,6 +33,17 @@ export const GET = requireAuth(async (request, session) => {
   const endDate = searchParams.get("to") || searchParams.get("endDate");
   const staffId = searchParams.get("staffId");
   const search = searchParams.get("search");
+
+  // Validate dates if supplied
+  if (startDate && !DATE_REGEX.test(startDate)) {
+    return NextResponse.json({ error: "startDate must be in YYYY-MM-DD format" }, { status: 400 });
+  }
+  if (endDate && !DATE_REGEX.test(endDate)) {
+    return NextResponse.json({ error: "endDate must be in YYYY-MM-DD format" }, { status: 400 });
+  }
+  if (startDate && endDate && startDate > endDate) {
+    return NextResponse.json({ error: "endDate must be on or after startDate" }, { status: 400 });
+  }
 
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
   const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50));
