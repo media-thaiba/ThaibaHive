@@ -901,12 +901,28 @@ export const teacherSubstitutionUpdateSchema = z.object({
 });
 
 export const academicYearCreateSchema = z.object({
-  name: z.string().trim().min(1, "name is required").max(100),
+  name: z.string().trim().min(2, "name must be at least 2 characters").max(100, "name cannot exceed 100 characters"),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "startDate must be in YYYY-MM-DD format"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "endDate must be in YYYY-MM-DD format"),
+  isActive: z.boolean().optional().default(true),
   institutionId: z.string().trim().max(100).optional().nullable(),
-}).refine((data) => data.startDate <= data.endDate, {
-  message: "endDate must be on or after startDate",
+}).refine((data) => data.startDate < data.endDate, {
+  message: "endDate must be on or after startDate (strictly after startDate)",
+  path: ["endDate"],
+});
+
+export const academicYearUpdateSchema = z.object({
+  name: z.string().trim().min(2, "name must be at least 2 characters").max(100, "name cannot exceed 100 characters").optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "startDate must be in YYYY-MM-DD format").optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "endDate must be in YYYY-MM-DD format").optional(),
+  isActive: z.boolean().optional(),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return data.startDate < data.endDate;
+  }
+  return true;
+}, {
+  message: "endDate must be on or after startDate (strictly after startDate)",
   path: ["endDate"],
 });
 

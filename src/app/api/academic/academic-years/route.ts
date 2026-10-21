@@ -6,6 +6,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { academicYearCreateSchema } from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 export const GET = requireAuth(async (request: Request, session) => {
   const rl = checkRateLimit(session.staffId, "read");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
@@ -14,9 +16,19 @@ export const GET = requireAuth(async (request: Request, session) => {
   const requestedInst = searchParams.get("institutionId");
   const scopedInstId = await resolveRequestInstitution(session, requestedInst);
 
-  let query = db.select().from(academicYears).$dynamic();
+  const conditions = [];
   if (scopedInstId !== "global") {
-    query = query.where(eq(academicYears.institutionId, scopedInstId));
+    conditions.push(eq(academicYears.institutionId, scopedInstId));
+  }
+
+  const isActiveParam = searchParams.get("isActive");
+  if (isActiveParam !== null) {
+    conditions.push(eq(academicYears.isActive, isActiveParam === "true"));
+  }
+
+  let query = db.select().from(academicYears).$dynamic();
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
   }
 
   const rows = await query.orderBy(academicYears.startDate).all();
@@ -51,7 +63,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   // Duplicate collision check within same institution
-  const existing = await db
+  const existingName = await db
     .select({ id: academicYears.id })
     .from(academicYears)
     .where(
@@ -62,9 +74,34 @@ export const POST = requireAuth(async (request: Request, session) => {
     )
     .get();
 
-  if (existing) {
+  if (existingName) {
     return NextResponse.json(
       { error: "An academic year with this name already exists in this institution" },
+      { status: 409 }
+    );
+  }
+
+  // Date overlap collision check within same institution
+  const existingYears = await db
+    .select({
+      id: academicYears.id,
+      name: academicYears.name,
+      startDate: academicYears.startDate,
+      endDate: academicYears.endDate,
+    })
+    .from(academicYears)
+    .where(eq(academicYears.institutionId, institutionId))
+    .all();
+
+  const overlapping = existingYears.find(
+    (ey) => validData.startDate <= ey.endDate && validData.endDate >= ey.startDate
+  );
+
+  if (overlapping) {
+    return NextResponse.json(
+      {
+        error: `Academic year dates overlap with existing session '${overlapping.name}' (${overlapping.startDate} to ${overlapping.endDate})`,
+      },
       { status: 409 }
     );
   }
@@ -76,6 +113,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       name: validData.name,
       startDate: validData.startDate,
       endDate: validData.endDate,
+      isActive: validData.isActive ?? true,
       institutionId,
     })
     .returning()
