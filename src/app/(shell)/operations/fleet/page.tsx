@@ -162,7 +162,7 @@ export default function VehiclesPage() {
         setVehicles((prev) => [res.data!.vehicle, ...prev]);
         setAddVehicleOpen(false);
       } else {
-        toast.error("Failed to add vehicle");
+        toast.error(res.error || "Failed to add vehicle");
       }
     } catch (err) {
       console.error("Add vehicle error:", err);
@@ -197,7 +197,7 @@ export default function VehiclesPage() {
         setBookings((prev) => [res.data!.booking, ...prev]);
         setBookVehicleOpen(false);
       } else {
-        toast.error("Failed to book vehicle");
+        toast.error(res.error || "Failed to book vehicle");
       }
     } catch (err) {
       console.error("Book vehicle error:", err);
@@ -237,7 +237,7 @@ export default function VehiclesPage() {
         setLogs((prev) => [res.data!.log, ...prev]);
         setLogTripOpen(false);
       } else {
-        toast.error("Failed to log trip");
+        toast.error(res.error || "Failed to log trip");
       }
     } catch (err) {
       console.error("Log trip error:", err);
@@ -254,7 +254,7 @@ export default function VehiclesPage() {
         toast.success("Booking cancelled");
         setBookings((prev) => prev.filter((b) => b.id !== id));
       } else {
-        toast.error("Failed to cancel booking");
+        toast.error(res.error || "Failed to cancel booking");
       }
     } catch (err) {
       console.error("Delete booking error:", err);
@@ -269,7 +269,7 @@ export default function VehiclesPage() {
         toast.success("Log deleted");
         setLogs((prev) => prev.filter((l) => l.id !== id));
       } else {
-        toast.error("Failed to delete log");
+        toast.error(res.error || "Failed to delete log");
       }
     } catch (err) {
       console.error("Delete log error:", err);

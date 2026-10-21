@@ -1,17 +1,27 @@
-import {  } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { vehicles,  } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { vehicles } from "@/db/schema";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit } from "@/lib/api/rate-limit";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
+import { eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`export:fleet:${session.staffId || ip}`, "read");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
   const url = new URL(request.url);
   const format = (url.searchParams.get("format") || "csv").toLowerCase();
+  const requestedInst = url.searchParams.get("institutionId");
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
 
-  const data = await db
+  let query = db
     .select({
       id: vehicles.id,
       registrationNumber: vehicles.registrationNumber,
@@ -22,7 +32,13 @@ export const GET = requireAuth(async (request: Request, _session) => {
       isActive: vehicles.isActive,
     })
     .from(vehicles)
-    .all();
+    .$dynamic();
+
+  if (scopedInstId !== "global") {
+    query = query.where(eq(vehicles.institutionId, scopedInstId));
+  }
+
+  const data = await query.all();
 
   const columns: ExportColumn[] = [
     { key: "registrationNumber", header: "Registration No." },
@@ -59,5 +75,4 @@ export const GET = requireAuth(async (request: Request, _session) => {
       "Content-Disposition": `attachment; filename="fleet-report.csv"`,
     },
   });
-
 }, "vehicles:read");

@@ -85,6 +85,18 @@ export class AimsDbStore {
     });
   }
 
+  public deleteDispatch(id: string): boolean {
+    if (this.store.fleetDispatches.has(id)) {
+      return this.store.fleetDispatches.delete(id);
+    }
+    for (const [key, val] of this.store.fleetDispatches.entries()) {
+      if (val.routeId === id || val.id === id) {
+        return this.store.fleetDispatches.delete(key);
+      }
+    }
+    return false;
+  }
+
   public getDispatches(campusId?: string): any[] {
     const list = Array.from(this.store.fleetDispatches.values());
     if (campusId) {

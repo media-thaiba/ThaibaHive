@@ -975,6 +975,26 @@ export const fleetMaintenanceCreateSchema = z.object({
   institutionId: z.string().optional().nullable(),
 });
 
+export const fleetRouteCreateSchema = z.object({
+  name: z.string().trim().min(1, "Route name is required").max(100, "Route name cannot exceed 100 characters"),
+  startLocation: z.string().trim().min(1, "Start location is required").max(200, "Start location cannot exceed 200 characters"),
+  endLocation: z.string().trim().min(1, "End location is required").max(200, "End location cannot exceed 200 characters"),
+  stopsJson: z.union([z.string(), z.array(z.unknown()), z.record(z.string(), z.unknown())]).optional().nullable(),
+  driverId: z.string().trim().optional().nullable(),
+  vehicleId: z.string().trim().optional().nullable(),
+  institutionId: z.string().trim().optional().nullable(),
+});
+
+export const fleetCheckinSchema = z.object({
+  vehicleId: z.string().trim().min(1, "Vehicle ID is required"),
+  action: z.enum(["start_trip", "end_trip"], {
+    message: "Action must be start_trip or end_trip",
+  }),
+  startOdometer: z.number().int().nonnegative("Start odometer cannot be negative").optional().nullable(),
+  endOdometer: z.number().int().nonnegative("End odometer cannot be negative").optional().nullable(),
+  route: z.string().trim().max(200, "Route cannot exceed 200 characters").optional().nullable(),
+});
+
 export const canteenItemCreateSchema = z.object({
   name: z.string().trim().min(1, "Item name is required").max(100, "Item name must not exceed 100 characters"),
   category: z.enum(["breakfast", "lunch", "snacks", "beverages"]).default("snacks"),

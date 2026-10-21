@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { fleetRoutes, vehicles } from "@/db/schema";
+import { fleetRoutes, vehicles, staff, staffInstitutions } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit } from "@/lib/api/rate-limit";
 import { logActivity } from "@/lib/api/activity-log";
-import { eq, desc } from "drizzle-orm";
+import { fleetRouteCreateSchema } from "@/lib/validation/schemas";
+import { eq, and, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
@@ -12,7 +13,18 @@ export const GET = requireAuth(async (request: Request, session) => {
   const scopedInstId = await resolveRequestInstitution(session, requestedInst);
 
   let query = db
-    .select()
+    .select({
+      id: fleetRoutes.id,
+      institutionId: fleetRoutes.institutionId,
+      name: fleetRoutes.name,
+      startLocation: fleetRoutes.startLocation,
+      endLocation: fleetRoutes.endLocation,
+      stopsJson: fleetRoutes.stopsJson,
+      driverId: fleetRoutes.driverId,
+      vehicleId: fleetRoutes.vehicleId,
+      isActive: fleetRoutes.isActive,
+      createdAt: fleetRoutes.createdAt,
+    })
     .from(fleetRoutes)
     .$dynamic();
 
@@ -37,24 +49,16 @@ export const POST = requireAuth(async (request: Request, session) => {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const { name, startLocation, endLocation, stopsJson, driverId, vehicleId } = body;
-
-  if (!name || !startLocation || !endLocation) {
-    return NextResponse.json({ error: "Missing required route fields" }, { status: 400 });
+  const parsed = fleetRouteCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid route parameters", details: parsed.error.format() },
+      { status: 400 }
+    );
   }
 
-  const scopedInstId = await resolveRequestInstitution(session, body.institutionId);
-
-  // If vehicle is specified, verify existence and tenant scoping
-  if (vehicleId) {
-    const vehicle = await db.select().from(vehicles).where(eq(vehicles.id, vehicleId)).get();
-    if (!vehicle) {
-      return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
-    }
-    if (scopedInstId !== "global" && vehicle.institutionId && vehicle.institutionId !== scopedInstId) {
-      return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
-    }
-  }
+  const { name, startLocation, endLocation, stopsJson, driverId, vehicleId } = parsed.data;
+  const scopedInstId = await resolveRequestInstitution(session, parsed.data.institutionId);
 
   const targetInstId = scopedInstId !== "global" ? scopedInstId : null;
   if (!targetInstId) {
@@ -64,15 +68,54 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
+  // If vehicle is specified, verify existence and tenant scoping
+  if (vehicleId) {
+    const vehicle = await db.select().from(vehicles).where(eq(vehicles.id, vehicleId)).get();
+    if (!vehicle) {
+      return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
+    }
+    if (vehicle.institutionId && vehicle.institutionId !== targetInstId) {
+      return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
+    }
+  }
+
+  // If driver is specified, verify existence and tenant scoping
+  if (driverId) {
+    const driver = await db.select({ id: staff.id }).from(staff).where(eq(staff.id, driverId)).get();
+    if (!driver) {
+      return NextResponse.json({ error: "Driver not found" }, { status: 404 });
+    }
+
+    if (targetInstId) {
+      const mapping = await db
+        .select({ staffId: staffInstitutions.staffId })
+        .from(staffInstitutions)
+        .where(
+          and(
+            eq(staffInstitutions.staffId, driverId),
+            eq(staffInstitutions.institutionId, targetInstId)
+          )
+        )
+        .get();
+
+      if (!mapping && session.role !== "super_admin") {
+        return NextResponse.json(
+          { error: "Assigned driver does not belong to this institution" },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   const route = await db
     .insert(fleetRoutes)
     .values({
       id: crypto.randomUUID(),
       institutionId: targetInstId,
-      name: String(name).trim(),
-      startLocation: String(startLocation).trim(),
-      endLocation: String(endLocation).trim(),
-      stopsJson: stopsJson ? JSON.stringify(stopsJson) : null,
+      name,
+      startLocation,
+      endLocation,
+      stopsJson: stopsJson ? (typeof stopsJson === "string" ? stopsJson : JSON.stringify(stopsJson)) : null,
       driverId: driverId || null,
       vehicleId: vehicleId || null,
       isActive: true,
@@ -86,7 +129,7 @@ export const POST = requireAuth(async (request: Request, session) => {
     resourceType: "fleet_route",
     resourceId: route.id,
     staffId: session.staffId,
-    details: { name, vehicleId, startLocation, endLocation },
+    details: { name, vehicleId, driverId, startLocation, endLocation },
   });
 
   return NextResponse.json({ route }, { status: 201 });

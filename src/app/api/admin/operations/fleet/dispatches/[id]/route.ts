@@ -4,8 +4,17 @@ import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 
 export const GET = withDPoP(
-  requireAuth(async (_req, _session, context) => {
-    const { id } = await context!.params;
+  requireAuth(async (req, _session, context) => {
+    const params = context?.params ? await context.params : {};
+    let id = params.id;
+    if (!id) {
+      const url = new URL(req.url);
+      id = url.pathname.split("/").pop();
+    }
+    if (!id) {
+      return NextResponse.json({ error: 'Dispatch route ID is required' }, { status: 400 });
+    }
+
     const store = AimsDbStore.getInstance();
     const dispatches = store.getDispatches();
     const dispatch = dispatches.find((d) => d.routeId === id || d.id === id);
@@ -20,13 +29,21 @@ export const GET = withDPoP(
 );
 
 export const DELETE = withDPoP(
-  requireAuth(async (_req, _session, context) => {
-    const { id } = await context!.params;
-    const store = AimsDbStore.getInstance();
-    const dispatches = store.getDispatches();
-    const exists = dispatches.some((d) => d.routeId === id || d.id === id);
+  requireAuth(async (req, _session, context) => {
+    const params = context?.params ? await context.params : {};
+    let id = params.id;
+    if (!id) {
+      const url = new URL(req.url);
+      id = url.pathname.split("/").pop();
+    }
+    if (!id) {
+      return NextResponse.json({ error: 'Dispatch route ID is required' }, { status: 400 });
+    }
 
-    if (!exists) {
+    const store = AimsDbStore.getInstance();
+    const deleted = store.deleteDispatch(id);
+
+    if (!deleted) {
       return NextResponse.json({ error: 'Dispatch route not found' }, { status: 404 });
     }
 

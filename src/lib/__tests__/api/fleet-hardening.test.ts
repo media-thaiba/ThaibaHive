@@ -57,6 +57,21 @@ import {
 import {
   POST as createMaintenance,
 } from "@/app/api/vehicles/maintenance/route";
+import {
+  GET as exportFleet,
+} from "@/app/api/export/fleet/route";
+import {
+  GET as listRoutes,
+  POST as createRoute,
+} from "@/app/api/vehicles/routes/route";
+import {
+  POST as fleetCheckin,
+} from "@/app/api/mobile/v1/fleet/checkin/route";
+import {
+  GET as getDispatchRoute,
+  DELETE as deleteDispatchRoute,
+} from "@/app/api/admin/operations/fleet/dispatches/[id]/route";
+import { AimsDbStore } from "@/lib/operations/persistence/aims-db-store";
 
 jest.mock("@thaiba/auth", () => {
   const actual = jest.requireActual("@thaiba/auth");
@@ -718,6 +733,239 @@ describe("Fleet & Vehicle Logistics Management Pipeline — Hardening", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data.error).toBe("Invalid JSON payload");
+    });
+  });
+
+  describe("Fleet Export Multi-Tenant Scoping", () => {
+    it("restricts export to tenant-scoped vehicles (Campus A cannot export Campus B)", async () => {
+      mockUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/export/fleet?format=csv&institutionId=${instA}`);
+      const res = await exportFleet(req);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      // Should include Campus A vehicle but NOT Campus B vehicle
+      expect(text).toContain(`KL-10-A-${suffix.toUpperCase()}`);
+      expect(text).not.toContain(`KL-11-B-${suffix.toUpperCase()}`);
+    });
+
+    it("allows super_admin to export global fleet across all campuses", async () => {
+      mockUser("super_admin", null, null);
+      const req = new Request("http://localhost/api/export/fleet?format=csv");
+      const res = await exportFleet(req);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain(`KL-10-A-${suffix.toUpperCase()}`);
+      expect(text).toContain(`KL-11-B-${suffix.toUpperCase()}`);
+    });
+  });
+
+  describe("Mobile Fleet Check-in Hardening & Invariants", () => {
+    it("rejects malformed or empty JSON checkin payload (400)", async () => {
+      mockUser("staff", staffA1Id, instA);
+      const req = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "invalid-json",
+      });
+      const res = await fleetCheckin(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid JSON payload");
+    });
+
+    it("rejects invalid check-in action (400)", async () => {
+      mockUser("staff", staffA1Id, instA);
+      const req = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicleId: vehicleA1Id,
+          action: "pause_trip", // invalid action
+        }),
+      });
+      const res = await fleetCheckin(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid trip check-in parameters");
+    });
+
+    it("rejects starting trip when an active trip is already in progress (409 Conflict)", async () => {
+      mockUser("staff", staffA1Id, instA);
+
+      // 1. Start first trip
+      const req1 = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicleId: vehicleA1Id,
+          action: "start_trip",
+          startOdometer: 10000,
+          route: "Morning Route",
+        }),
+      });
+      const res1 = await fleetCheckin(req1);
+      expect(res1.status).toBe(200);
+      const data1 = await res1.json();
+      expect(data1.success).toBe(true);
+      expect(data1.status).toBe("in_use");
+      createdLogIds.push(data1.log.id);
+
+      // 2. Attempt to start second trip without ending the first
+      const req2 = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicleId: vehicleA1Id,
+          action: "start_trip",
+          startOdometer: 10000,
+          route: "Afternoon Route",
+        }),
+      });
+      const res2 = await fleetCheckin(req2);
+      expect(res2.status).toBe(409);
+      const data2 = await res2.json();
+      expect(data2.error).toContain("A trip is already in progress");
+
+      // 3. Attempt to end trip with endOdometer < startOdometer (400)
+      const reqProgressionFail = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicleId: vehicleA1Id,
+          action: "end_trip",
+          endOdometer: 9990, // Less than start 10000!
+        }),
+      });
+      const resProgFail = await fleetCheckin(reqProgressionFail);
+      expect(resProgFail.status).toBe(400);
+      const dataProgFail = await resProgFail.json();
+      expect(dataProgFail.error).toContain("cannot be less than start odometer");
+
+      // 4. Properly end the trip
+      const reqEnd = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicleId: vehicleA1Id,
+          action: "end_trip",
+          endOdometer: 10025,
+        }),
+      });
+      const resEnd = await fleetCheckin(reqEnd);
+      expect(resEnd.status).toBe(200);
+      const dataEnd = await resEnd.json();
+      expect(dataEnd.success).toBe(true);
+      expect(dataEnd.status).toBe("available");
+      expect(dataEnd.log.distanceKm).toBe(25);
+    });
+
+    it("returns 404 when ending trip if no active trip exists for driver and vehicle", async () => {
+      mockUser("staff", staffA1Id, instA);
+      const req = new Request("http://localhost/api/mobile/v1/fleet/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicleId: vehicleA1Id,
+          action: "end_trip",
+          endOdometer: 10050,
+        }),
+      });
+      const res = await fleetCheckin(req);
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.error).toContain("No active trip found to end");
+    });
+  });
+
+  describe("Fleet Route Validation & Driver Assignment", () => {
+    it("rejects route creation with missing fields (400)", async () => {
+      mockUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/vehicles/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Campus Express",
+          // missing startLocation and endLocation
+        }),
+      });
+      const res = await createRoute(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid route parameters");
+    });
+
+    it("rejects assigning driver from a different institution (400)", async () => {
+      mockUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/vehicles/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          institutionId: instA,
+          name: "Inter-Campus Shuttle",
+          startLocation: "North Gate",
+          endLocation: "South Gate",
+          driverId: staffBId, // From Campus B!
+        }),
+      });
+      const res = await createRoute(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("Assigned driver does not belong to this institution");
+    });
+
+    it("successfully creates a fleet route with valid data (201)", async () => {
+      mockUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/vehicles/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          institutionId: instA,
+          name: "Campus North Express",
+          startLocation: "Main Terminal",
+          endLocation: "Science Block",
+          vehicleId: vehicleA1Id,
+          driverId: staffA1Id,
+          stopsJson: ["Stop 1", "Stop 2", "Stop 3"],
+        }),
+      });
+      const res = await createRoute(req);
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.route.name).toBe("Campus North Express");
+      createdRouteIds.push(data.route.id);
+    });
+  });
+
+  describe("Fleet Dispatch Deletion & Persistence (AIMS)", () => {
+    it("deletes dispatch from store and reflects in subsequent GET (404)", async () => {
+      mockUser("admin", adminAId, instA);
+      const store = AimsDbStore.getInstance();
+      const testRouteId = `route_dsp_${suffix}`;
+      store.saveDispatch({
+        routeId: testRouteId,
+        campusId: instA,
+        status: "SCHEDULED",
+        stops: [],
+      });
+
+      // 1. Verify dispatch exists
+      const getReq1 = new Request(`http://localhost/api/admin/operations/fleet/dispatches/${testRouteId}`);
+      const getRes1 = await getDispatchRoute(getReq1, { params: Promise.resolve({ id: testRouteId }) });
+      expect(getRes1.status).toBe(200);
+
+      // 2. Delete dispatch
+      const delReq = new Request(`http://localhost/api/admin/operations/fleet/dispatches/${testRouteId}`, {
+        method: "DELETE",
+      });
+      const delRes = await deleteDispatchRoute(delReq, { params: Promise.resolve({ id: testRouteId }) });
+      expect(delRes.status).toBe(200);
+      const delData = await delRes.json();
+      expect(delData.success).toBe(true);
+
+      // 3. Subsequent GET must return 404
+      const getReq2 = new Request(`http://localhost/api/admin/operations/fleet/dispatches/${testRouteId}`);
+      const getRes2 = await getDispatchRoute(getReq2, { params: Promise.resolve({ id: testRouteId }) });
+      expect(getRes2.status).toBe(404);
     });
   });
 });
