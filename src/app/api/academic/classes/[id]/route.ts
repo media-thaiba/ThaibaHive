@@ -3,9 +3,14 @@ import { db } from "@/db";
 import { classes, staff, academicYears } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { classUpdateSchema } from "@/lib/validation/schemas";
+import { eq, and, ne, isNull } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
@@ -38,9 +43,28 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "classes:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
-  const body = await request.json();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parseResult = classUpdateSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || "Validation failed" },
+      { status: 400 }
+    );
+  }
+
+  const validData = parseResult.data;
 
   const existing = institutionId && institutionId !== "global"
     ? await db.select().from(classes).where(and(eq(classes.id, id), eq(classes.institutionId, institutionId))).get()
@@ -50,11 +74,44 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Class not found" }, { status: 404 });
   }
 
-  const updatableFields = ["name", "section", "departmentId", "academicYearId", "teacherId"];
-  const safeFields: Record<string, unknown> = {};
-  for (const key of updatableFields) {
-    if (key in body) safeFields[key] = body[key];
+  // Duplicate collision check if name, section, or academicYearId changed
+  const targetName = validData.name ?? existing.name;
+  const targetSection = validData.section !== undefined ? validData.section : existing.section;
+  const targetYear = validData.academicYearId !== undefined ? validData.academicYearId : existing.academicYearId;
+
+  if (validData.name || validData.section !== undefined || validData.academicYearId !== undefined) {
+    const collisionConditions = [
+      existing.institutionId ? eq(classes.institutionId, existing.institutionId) : isNull(classes.institutionId),
+      eq(classes.name, targetName),
+      ne(classes.id, id),
+    ];
+    if (targetSection) {
+      collisionConditions.push(eq(classes.section, targetSection));
+    }
+    if (targetYear) {
+      collisionConditions.push(eq(classes.academicYearId, targetYear));
+    }
+
+    const collision = await db
+      .select({ id: classes.id })
+      .from(classes)
+      .where(and(...collisionConditions))
+      .get();
+
+    if (collision) {
+      return NextResponse.json(
+        { error: "Class with this name and section already exists in this academic year" },
+        { status: 409 }
+      );
+    }
   }
+
+  const safeFields: Record<string, unknown> = {};
+  if (validData.name !== undefined) safeFields.name = validData.name;
+  if (validData.section !== undefined) safeFields.section = validData.section;
+  if (validData.departmentId !== undefined) safeFields.departmentId = validData.departmentId;
+  if (validData.academicYearId !== undefined) safeFields.academicYearId = validData.academicYearId;
+  if (validData.teacherId !== undefined) safeFields.teacherId = validData.teacherId;
 
   const whereClause = institutionId && institutionId !== "global"
     ? and(eq(classes.id, id), eq(classes.institutionId, institutionId))
@@ -71,6 +128,9 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 }, "classes:update");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 

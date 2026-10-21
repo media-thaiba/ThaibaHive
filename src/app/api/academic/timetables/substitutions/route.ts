@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { teacherSubstitutions, timetableEntries, timetableSlots, classes, staff } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { teacherSubstitutionCreateSchema, teacherSubstitutionUpdateSchema } from "@/lib/validation/schemas";
 import { eq, and, desc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const rawInst = url.searchParams.get("institutionId");
   const institutionId = await resolveRequestInstitution(session, rawInst);
@@ -54,18 +59,27 @@ export const GET = requireAuth(async (request, session) => {
 }, "timetables:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const {
-    institutionId: reqInst,
-    timetableEntryId,
-    date,
-    originalTeacherId,
-    substituteTeacherId,
-    reason,
-    assignedById,
-  } = body;
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const institutionId = await resolveRequestInstitution(session, reqInst);
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parseResult = teacherSubstitutionCreateSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || "Validation failed" },
+      { status: 400 }
+    );
+  }
+
+  const validData = parseResult.data;
+
+  const institutionId = await resolveRequestInstitution(session, validData.institutionId);
   if (institutionId === "global") {
     return NextResponse.json(
       { error: "Explicit institutionId required" },
@@ -73,25 +87,47 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  if (!timetableEntryId || !date || !originalTeacherId || !substituteTeacherId) {
-    return NextResponse.json(
-      { error: "timetableEntryId, date, originalTeacherId, and substituteTeacherId are required" },
-      { status: 400 }
-    );
+  // Verify timetableEntryId exists
+  const entry = await db
+    .select({ id: timetableEntries.id })
+    .from(timetableEntries)
+    .where(eq(timetableEntries.id, validData.timetableEntryId))
+    .get();
+
+  if (!entry) {
+    return NextResponse.json({ error: "Timetable entry not found" }, { status: 404 });
   }
 
+  // Duplicate substitution guard
+  const existingSub = await db
+    .select({ id: teacherSubstitutions.id })
+    .from(teacherSubstitutions)
+    .where(
+      and(
+        eq(teacherSubstitutions.timetableEntryId, validData.timetableEntryId),
+        eq(teacherSubstitutions.date, validData.date)
+      )
+    )
+    .get();
+
+  if (existingSub) {
+    return NextResponse.json(
+      { error: "A substitution record already exists for this timetable entry and date" },
+      { status: 409 }
+    );
+  }
 
   const created = await db
     .insert(teacherSubstitutions)
     .values({
       id: `sub_${crypto.randomUUID().slice(0, 10)}`,
       institutionId,
-      timetableEntryId,
-      date,
-      originalTeacherId,
-      substituteTeacherId,
-      reason: reason || null,
-      assignedById: assignedById || null,
+      timetableEntryId: validData.timetableEntryId,
+      date: validData.date,
+      originalTeacherId: validData.originalTeacherId,
+      substituteTeacherId: validData.substituteTeacherId,
+      reason: validData.reason || null,
+      assignedById: validData.assignedById || null,
       status: "assigned",
     })
     .returning()
@@ -100,13 +136,26 @@ export const POST = requireAuth(async (request: Request, session) => {
   return NextResponse.json({ substitution: created }, { status: 201 });
 }, "timetables:manage");
 
-export const PATCH = requireAuth(async (request: Request, _session) => {
-  const body = await request.json();
-  const { id, status } = body;
+export const PATCH = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (!id || !status) {
-    return NextResponse.json({ error: "id and status are required" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
+
+  const parseResult = teacherSubstitutionUpdateSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || "Validation failed" },
+      { status: 400 }
+    );
+  }
+
+  const { id, status } = parseResult.data;
 
   const existing = await db.select().from(teacherSubstitutions).where(eq(teacherSubstitutions.id, id)).get();
   if (!existing) {

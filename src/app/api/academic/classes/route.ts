@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { classes, academicYears, staff } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
-import { eq, like, and } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { classCreateSchema } from "@/lib/validation/schemas";
+import { eq, like, and, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
   const requestedInst = url.searchParams.get("institutionId");
@@ -45,13 +50,50 @@ export const GET = requireAuth(async (request, session) => {
 }, "classes:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { name, section, institutionId: reqInst, departmentId, academicYearId, teacherId } = body;
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsedResult = classCreateSchema.safeParse(body);
+  if (!parsedResult.success) {
+    return NextResponse.json({ error: parsedResult.error.issues[0].message }, { status: 400 });
+  }
+
+  const { name, section, institutionId: reqInst, departmentId, academicYearId, teacherId } = parsedResult.data;
   const institutionId = await resolveRequestInstitution(session, reqInst);
   if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
 
-  if (!name) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  // Duplicate class check
+  const duplicateConditions = [
+    eq(classes.institutionId, institutionId),
+    sql`lower(${classes.name}) = lower(${name})`,
+    eq(classes.isActive, true),
+  ];
+  if (section) {
+    duplicateConditions.push(sql`lower(${classes.section}) = lower(${section})`);
+  }
+  if (academicYearId) {
+    duplicateConditions.push(eq(classes.academicYearId, academicYearId));
+  }
+
+  const existingClass = await db
+    .select({ id: classes.id, name: classes.name })
+    .from(classes)
+    .where(and(...duplicateConditions))
+    .limit(1)
+    .get();
+
+  if (existingClass && existingClass.name && existingClass.name.toLowerCase() === name.toLowerCase()) {
+    return NextResponse.json(
+      { error: "Class with this name and section already exists in the academic year" },
+      { status: 409 }
+    );
   }
 
   const result = await db
@@ -59,11 +101,11 @@ export const POST = requireAuth(async (request: Request, session) => {
     .values({
       id: crypto.randomUUID(),
       name,
-      section,
+      section: section || null,
       institutionId,
-      departmentId,
-      academicYearId,
-      teacherId,
+      departmentId: departmentId || null,
+      academicYearId: academicYearId || null,
+      teacherId: teacherId || null,
     })
     .returning()
     .get();

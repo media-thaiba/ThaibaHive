@@ -839,6 +839,77 @@ export const markModerateSchema = z.object({
   reason: z.string().trim().max(500).optional().nullable(),
 });
 
+// ─── Academic Classes & Timetables Schemas ───
+
+export const classCreateSchema = z.object({
+  name: z.string().trim().min(1, "Class name is required").max(100, "Class name too long"),
+  section: z.string().trim().max(20, "Section too long").optional().nullable(),
+  institutionId: z.string().trim().max(100).optional().nullable(),
+  departmentId: z.string().trim().max(100).optional().nullable(),
+  academicYearId: z.string().trim().max(100).optional().nullable(),
+  teacherId: z.string().trim().max(100).optional().nullable(),
+});
+
+export const classUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Class name cannot be empty").max(100).optional(),
+  section: z.string().trim().max(20).optional().nullable(),
+  departmentId: z.string().trim().max(100).optional().nullable(),
+  academicYearId: z.string().trim().max(100).optional().nullable(),
+  teacherId: z.string().trim().max(100).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export const timetableSlotCreateSchema = z.object({
+  name: z.string().trim().min(1, "Slot name is required").max(100, "Slot name too long"),
+  slotOrder: z.coerce.number().int().min(1).max(30).default(1),
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "startTime must be in HH:MM format"),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "endTime must be in HH:MM format"),
+  isBreak: z.boolean().optional().default(false),
+  institutionId: z.string().trim().max(100).optional().nullable(),
+}).refine((data) => data.startTime < data.endTime, {
+  message: "endTime must be strictly after startTime",
+  path: ["endTime"],
+});
+
+export const timetableEntryCreateSchema = z.object({
+  classId: z.string().trim().min(1, "classId is required").max(100),
+  slotId: z.string().trim().min(1, "slotId is required").max(100),
+  dayOfWeek: z.coerce.number().int().min(0, "dayOfWeek must be between 0 (Sunday) and 6 (Saturday)").max(6),
+  subjectName: z.string().trim().min(1, "subjectName is required").max(200),
+  teacherId: z.string().trim().max(100).optional().nullable(),
+  roomNumber: z.string().trim().max(50).optional().nullable(),
+  academicYearId: z.string().trim().max(100).optional().nullable(),
+  institutionId: z.string().trim().max(100).optional().nullable(),
+});
+
+export const teacherSubstitutionCreateSchema = z.object({
+  timetableEntryId: z.string().trim().min(1, "timetableEntryId is required").max(100),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be in YYYY-MM-DD format"),
+  originalTeacherId: z.string().trim().min(1, "originalTeacherId is required").max(100),
+  substituteTeacherId: z.string().trim().min(1, "substituteTeacherId is required").max(100),
+  reason: z.string().trim().max(500).optional().nullable(),
+  assignedById: z.string().trim().max(100).optional().nullable(),
+  institutionId: z.string().trim().max(100).optional().nullable(),
+}).refine((data) => data.originalTeacherId !== data.substituteTeacherId, {
+  message: "Substitute teacher cannot be the same as the original teacher",
+  path: ["substituteTeacherId"],
+});
+
+export const teacherSubstitutionUpdateSchema = z.object({
+  id: z.string().trim().min(1, "id is required").max(100),
+  status: z.enum(["assigned", "completed", "cancelled"]),
+});
+
+export const academicYearCreateSchema = z.object({
+  name: z.string().trim().min(1, "name is required").max(100),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "startDate must be in YYYY-MM-DD format"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "endDate must be in YYYY-MM-DD format"),
+  institutionId: z.string().trim().max(100).optional().nullable(),
+}).refine((data) => data.startDate <= data.endDate, {
+  message: "endDate must be on or after startDate",
+  path: ["endDate"],
+});
+
 // ─── Services Module Validation Schemas (Sprint-006) ───
 
 export const vehicleBookingSchema = z.object({
