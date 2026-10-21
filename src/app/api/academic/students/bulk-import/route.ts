@@ -2,59 +2,71 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, guardians, studentGuardians } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
-import { eq } from "drizzle-orm";
-
-interface StudentImportRow {
-  admissionNo: string;
-  firstName: string;
-  lastName: string;
-  gender?: string;
-  dateOfBirth?: string;
-  phone?: string;
-  email?: string;
-  bloodGroup?: string;
-  address?: string;
-  classId?: string;
-  academicYearId?: string;
-  guardianName?: string;
-  guardianPhone?: string;
-  guardianRelation?: string;
-}
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { studentBulkImportSchema } from "@/lib/validation/schemas";
+import { eq, and, sql } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { rows } = body as { rows: StudentImportRow[] };
-  let { institutionId } = body as { institutionId?: string };
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parseResult = studentBulkImportSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || "Validation failed" },
+      { status: 400 }
+    );
+  }
+
+  const validData = parseResult.data;
+  let institutionId = validData.institutionId;
 
   if (!institutionId) {
     institutionId = (session as any)?.institutionId || (session as any)?.institutionIds?.[0];
   }
 
-  if (!institutionId || !Array.isArray(rows) || rows.length === 0) {
-    return NextResponse.json({ error: "institutionId and non-empty rows array are required" }, { status: 400 });
+  if (!institutionId || institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
   }
 
+  const rows = validData.rows;
   const errors: { row: number; error: string }[] = [];
   const inserted: { id: string; admissionNo: string; name: string }[] = [];
+  const seenBatchAdmissionNos = new Set<string>();
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowNum = i + 1;
+    const normAdmissionNo = row.admissionNo.toLowerCase();
 
-    if (!row.admissionNo || !row.firstName || !row.lastName) {
-      errors.push({ row: rowNum, error: "admissionNo, firstName, and lastName are required" });
+    // Check intra-batch duplicate
+    if (seenBatchAdmissionNos.has(normAdmissionNo)) {
+      errors.push({ row: rowNum, error: `Admission No '${row.admissionNo}' is duplicated within this import batch` });
       continue;
     }
+    seenBatchAdmissionNos.add(normAdmissionNo);
 
-    // Check duplicate admissionNo for this institution
+    // Check duplicate admissionNo for this institution in DB
     const existing = await db
       .select({ id: students.id })
       .from(students)
-      .where(eq(students.admissionNo, row.admissionNo))
+      .where(
+        and(
+          eq(students.institutionId, institutionId),
+          sql`lower(${students.admissionNo}) = lower(${row.admissionNo})`
+        )
+      )
       .get();
 
     if (existing) {
-      errors.push({ row: rowNum, error: `Admission No '${row.admissionNo}' already exists in the system` });
+      errors.push({ row: rowNum, error: `Admission No '${row.admissionNo}' already exists in this institution` });
       continue;
     }
 

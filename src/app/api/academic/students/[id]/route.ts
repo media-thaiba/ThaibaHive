@@ -3,9 +3,14 @@ import { db } from "@/db";
 import { students, classes } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { studentUpdateSchema } from "@/lib/validation/schemas";
+import { eq, and, ne, sql } from "drizzle-orm";
 
 export const GET = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
@@ -46,9 +51,28 @@ export const GET = requireAuth(async (_request, session, context) => {
 }, "students:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
-  const body = await request.json();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parseResult = studentUpdateSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || "Validation failed" },
+      { status: 400 }
+    );
+  }
+
+  const validData = parseResult.data;
 
   const existing = institutionId && institutionId !== "global"
     ? await db.select().from(students).where(and(eq(students.id, id), eq(students.institutionId, institutionId))).get()
@@ -58,15 +82,33 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
 
-  const updatableFields = [
-    "firstName", "lastName", "dateOfBirth", "gender", "email", "phone",
-    "address", "avatarUrl", "bloodGroup", "classId", "academicYearId",
-    "emergencyContactName", "emergencyContactPhone",
-  ];
+  // Duplicate collision check if admissionNo is updated
+  if (validData.admissionNo && validData.admissionNo.toLowerCase() !== existing.admissionNo.toLowerCase()) {
+    const collision = await db
+      .select({ id: students.id })
+      .from(students)
+      .where(
+        and(
+          eq(students.institutionId, existing.institutionId),
+          sql`lower(${students.admissionNo}) = lower(${validData.admissionNo})`,
+          ne(students.id, id)
+        )
+      )
+      .get();
+
+    if (collision) {
+      return NextResponse.json(
+        { error: "Student with this admission number already exists in this institution" },
+        { status: 409 }
+      );
+    }
+  }
 
   const safeFields: Record<string, unknown> = {};
-  for (const key of updatableFields) {
-    if (key in body) safeFields[key] = body[key];
+  for (const [key, value] of Object.entries(validData)) {
+    if (value !== undefined) {
+      safeFields[key] = value;
+    }
   }
 
   const whereClause = institutionId && institutionId !== "global"
@@ -84,6 +126,9 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 }, "students:update");
 
 export const DELETE = requireAuth(async (_request, session, context) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = await context!.params;
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 

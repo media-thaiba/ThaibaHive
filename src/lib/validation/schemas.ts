@@ -2689,6 +2689,65 @@ export const checkoutPresenceSchema = z.object({
 });
 export type CheckoutPresenceInput = z.infer<typeof checkoutPresenceSchema>;
 
+// ============================================
+// Student Admissions & Enrollment Schemas
+// ============================================
+
+export const studentCreateSchema = z.object({
+  admissionNo: z.string().trim().min(1, "admissionNo is required").max(50, "admissionNo must not exceed 50 characters"),
+  studentId: z.string().trim().max(50, "studentId must not exceed 50 characters").optional().nullable(),
+  firstName: z.string().trim().min(1, "firstName is required").max(100, "firstName must not exceed 100 characters"),
+  lastName: z.string().trim().min(1, "lastName is required").max(100, "lastName must not exceed 100 characters"),
+  institutionId: z.string().trim().min(1).optional().nullable(),
+  classId: z.string().trim().max(100).optional().nullable(),
+  academicYearId: z.string().trim().max(100).optional().nullable(),
+  dateOfBirth: z.string().trim().max(30).optional().nullable(),
+  gender: z.string().trim().max(20).optional().nullable(),
+  email: z.string().trim().email("Invalid email address").max(255).optional().nullable(),
+  phone: z.string().trim().max(25, "phone must not exceed 25 characters").optional().nullable(),
+  address: z.string().trim().max(500, "address must not exceed 500 characters").optional().nullable(),
+  bloodGroup: z.string().trim().max(10).optional().nullable(),
+  emergencyContactName: z.string().trim().max(100).optional().nullable(),
+  emergencyContactPhone: z.string().trim().max(25).optional().nullable(),
+  nfcTagId: z.string().trim().max(100).optional().nullable(),
+  qrCode: z.string().trim().max(255).optional().nullable(),
+  avatarUrl: z.string().trim().max(500).optional().nullable(),
+});
+export type StudentCreateInput = z.infer<typeof studentCreateSchema>;
+
+export const studentUpdateSchema = studentCreateSchema
+  .partial()
+  .extend({
+    isActive: z.boolean().optional(),
+  });
+export type StudentUpdateInput = z.infer<typeof studentUpdateSchema>;
+
+export const studentBulkImportRowSchema = z.object({
+  admissionNo: z.string().trim().min(1, "admissionNo is required").max(50, "admissionNo must not exceed 50 characters"),
+  firstName: z.string().trim().min(1, "firstName is required").max(100, "firstName must not exceed 100 characters"),
+  lastName: z.string().trim().min(1, "lastName is required").max(100, "lastName must not exceed 100 characters"),
+  gender: z.string().trim().max(20).optional().nullable(),
+  dateOfBirth: z.string().trim().max(30).optional().nullable(),
+  phone: z.string().trim().max(25).optional().nullable(),
+  email: z.string().trim().email("Invalid email address").max(255).optional().nullable(),
+  bloodGroup: z.string().trim().max(10).optional().nullable(),
+  address: z.string().trim().max(500).optional().nullable(),
+  classId: z.string().trim().max(100).optional().nullable(),
+  academicYearId: z.string().trim().max(100).optional().nullable(),
+  guardianName: z.string().trim().max(100).optional().nullable(),
+  guardianPhone: z.string().trim().max(25).optional().nullable(),
+  guardianRelation: z.string().trim().max(50).optional().nullable(),
+});
+export type StudentBulkImportRow = z.infer<typeof studentBulkImportRowSchema>;
+
+export const studentBulkImportSchema = z.object({
+  institutionId: z.string().trim().optional().nullable(),
+  rows: z.array(studentBulkImportRowSchema)
+    .min(1, "At least one student row is required")
+    .max(500, "Maximum batch size is 500 rows"),
+});
+export type StudentBulkImportInput = z.infer<typeof studentBulkImportSchema>;
+
 
 
 

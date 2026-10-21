@@ -2,16 +2,21 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { students, classes } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
+import { studentCreateSchema } from "@/lib/validation/schemas";
 import { eq, like, or, and, sql, type SQL } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
   const requestedInst = url.searchParams.get("institutionId");
   const scopedInstId = await resolveRequestInstitution(session, requestedInst);
   const classId = url.searchParams.get("classId");
-  const page = parseInt(url.searchParams.get("page") || "1", 10);
-  const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+  const page = Math.max(parseInt(url.searchParams.get("page") || "1", 10), 1);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "20", 10), 1), 100);
   const offset = (page - 1) * limit;
 
   const conditions: (SQL | undefined)[] = [eq(students.isActive, true)];
@@ -23,7 +28,8 @@ export const GET = requireAuth(async (request, session) => {
       or(
         like(students.firstName, `%${search}%`),
         like(students.lastName, `%${search}%`),
-        like(students.admissionNo, `%${search}%`))
+        like(students.admissionNo, `%${search}%`)
+      )
     );
   }
   if (classId) {
@@ -61,39 +67,72 @@ export const GET = requireAuth(async (request, session) => {
 }, "students:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { admissionNo, firstName, lastName, email, phone, dateOfBirth, gender, classId, academicYearId, institutionId: reqInst } = body;
-  const institutionId = await resolveRequestInstitution(session, reqInst);
-  if (institutionId === "global") return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  if (!admissionNo || !firstName || !lastName) {
-    return NextResponse.json({ error: "admissionNo, firstName, and lastName are required" }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
+  const parseResult = studentCreateSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || "Validation failed" },
+      { status: 400 }
+    );
+  }
+
+  const validData = parseResult.data;
+  const institutionId = await resolveRequestInstitution(session, validData.institutionId);
+  if (institutionId === "global") {
+    return NextResponse.json({ error: "Explicit institutionId required" }, { status: 400 });
+  }
+
+  // Tenant-scoped duplicate admissionNo check
   const existing = await db
-    .select()
+    .select({ id: students.id })
     .from(students)
-    .where(eq(students.admissionNo, admissionNo))
+    .where(
+      and(
+        eq(students.institutionId, institutionId),
+        sql`lower(${students.admissionNo}) = lower(${validData.admissionNo})`
+      )
+    )
     .get();
 
   if (existing) {
-    return NextResponse.json({ error: "Student with this admission number already exists" }, { status: 409 });
+    return NextResponse.json(
+      { error: "Student with this admission number already exists in this institution" },
+      { status: 409 }
+    );
   }
 
   const result = await db
     .insert(students)
     .values({
       id: crypto.randomUUID(),
-      admissionNo,
-      firstName,
-      lastName,
-      email,
-      phone,
-      dateOfBirth,
-      gender,
-      classId,
-      academicYearId,
+      admissionNo: validData.admissionNo,
+      studentId: validData.studentId || null,
+      firstName: validData.firstName,
+      lastName: validData.lastName,
+      email: validData.email || null,
+      phone: validData.phone || null,
+      dateOfBirth: validData.dateOfBirth || null,
+      gender: validData.gender || null,
+      classId: validData.classId || null,
+      academicYearId: validData.academicYearId || null,
+      address: validData.address || null,
+      bloodGroup: validData.bloodGroup || null,
+      emergencyContactName: validData.emergencyContactName || null,
+      emergencyContactPhone: validData.emergencyContactPhone || null,
+      nfcTagId: validData.nfcTagId || null,
+      qrCode: validData.qrCode || null,
+      avatarUrl: validData.avatarUrl || null,
       institutionId,
+      isActive: true,
     })
     .returning()
     .get();
