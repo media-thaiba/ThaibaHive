@@ -76,7 +76,7 @@ export const GET = requireAuth(async (
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    const stream = createReadStream(filePath);
+    const stream = createReadStream(/*turbopackIgnore: true*/ filePath);
     return new NextResponse(nodeStreamToWeb(stream), {
       headers: {
         "Content-Type": contentTypeFor(filePath),

@@ -50,14 +50,16 @@ async function main() {
   const envFilePath = envFileFlag ? envFileFlag.split("=")[1] : undefined;
 
   const mergedEnv: Record<string, string | undefined> = { ...process.env };
-  if (envFilePath && fs.existsSync(envFilePath)) {
-    const loaded = parseEnvFile(fs.readFileSync(envFilePath, "utf8"));
+  if (fs.existsSync(".env")) {
+    const loaded = parseEnvFile(fs.readFileSync(".env", "utf8"));
     Object.assign(mergedEnv, loaded);
-  } else if (fs.existsSync(".env.production.local")) {
+  }
+  if (fs.existsSync(".env.production.local")) {
     const loaded = parseEnvFile(fs.readFileSync(".env.production.local", "utf8"));
     Object.assign(mergedEnv, loaded);
-  } else if (fs.existsSync(".env")) {
-    const loaded = parseEnvFile(fs.readFileSync(".env", "utf8"));
+  }
+  if (envFilePath && fs.existsSync(envFilePath)) {
+    const loaded = parseEnvFile(fs.readFileSync(envFilePath, "utf8"));
     Object.assign(mergedEnv, loaded);
   }
 

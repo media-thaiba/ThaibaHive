@@ -33,6 +33,12 @@ export function getJwtSecret(purpose: JwtSecretPurpose = "session"): string {
     );
   }
 
+  if (process.env.NODE_ENV === "production" && secret.length < 32) {
+    throw new Error(
+      "AUTH_JWT_SECRET is too short. Minimum 32 characters required in production for cryptographic security."
+    );
+  }
+
   if (secret.length < 16) {
     if (process.env.NODE_ENV !== "test") {
       throw new Error(

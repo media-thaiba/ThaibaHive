@@ -20,7 +20,7 @@ export const GET = requireAuth(async (request: Request, session: any, context: {
   if (!reconciliationId) {
     const url = new URL(request.url);
     const pathParts = url.pathname.split("/");
-    reconciliationId = pathParts[pathParts.length - 1] || url.searchParams.get("id") ?? undefined;
+    reconciliationId = pathParts[pathParts.length - 1] || (url.searchParams.get("id") ?? undefined);
   }
 
   if (!reconciliationId) {
