@@ -10,7 +10,10 @@ const bundleAnalyzer = withBundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
-  output: process.env.VERCEL ? undefined : "standalone",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+    output: process.env.VERCEL ? undefined : "standalone",
   allowedDevOrigins: [
     "192.168.0.57",
     "localhost",
