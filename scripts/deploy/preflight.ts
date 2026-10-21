@@ -56,6 +56,9 @@ async function main() {
   } else if (fs.existsSync(".env.production.local")) {
     const loaded = parseEnvFile(fs.readFileSync(".env.production.local", "utf8"));
     Object.assign(mergedEnv, loaded);
+  } else if (fs.existsSync(".env")) {
+    const loaded = parseEnvFile(fs.readFileSync(".env", "utf8"));
+    Object.assign(mergedEnv, loaded);
   }
 
   const envChecks = validatePreflightEnv(mergedEnv);

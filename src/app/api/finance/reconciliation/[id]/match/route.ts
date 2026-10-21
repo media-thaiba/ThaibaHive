@@ -29,7 +29,7 @@ export const PATCH = requireAuth(async (request: Request, session: any, context:
     const url = new URL(request.url);
     const pathParts = url.pathname.split("/");
     // pathname is .../reconciliation/[id]/match, so itemId is at index -2
-    itemId = pathParts[pathParts.length - 2] || url.searchParams.get("itemId") ?? undefined;
+    itemId = pathParts[pathParts.length - 2] || (url.searchParams.get("itemId") ?? undefined);
   }
 
   if (!itemId) {

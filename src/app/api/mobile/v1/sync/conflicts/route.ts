@@ -59,7 +59,7 @@ export const GET = requireAuth(async (request: Request, session) => {
 
     const rows = typeof (query as any).all === "function" ? await (query as any).all() : await query;
 
-    const conflicts = rows.map((row) => {
+    const conflicts = rows.map((row: any) => {
       let details: Record<string, unknown> = {};
       try {
         details = row.conflictDetailsJson ? JSON.parse(row.conflictDetailsJson) : {};

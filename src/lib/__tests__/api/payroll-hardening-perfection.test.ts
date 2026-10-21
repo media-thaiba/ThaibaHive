@@ -18,7 +18,8 @@ import { db, institutions, staff, payrollSalaryStructures, payrollRecords, payro
 import { eq, inArray } from 'drizzle-orm';
 import { GET as getStructures, POST as postStructure } from '@/app/api/finance/payroll/structures/route';
 import { GET as getRecords, PATCH as patchRecord } from '@/app/api/finance/payroll/records/route';
-import { POST as postGenerate, withPayrollBatchLock } from '@/app/api/finance/payroll/generate/route';
+import { POST as postGenerate } from '@/app/api/finance/payroll/generate/route';
+import { withPayrollBatchLock } from '@/lib/finance/payroll/payroll-lock';
 
 let mockRateLimitAllowed = true;
 jest.mock('@/lib/api/rate-limit', () => ({

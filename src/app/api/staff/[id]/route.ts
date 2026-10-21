@@ -269,7 +269,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   };
 
   return NextResponse.json({ staff: safeStaff });
-});
+}, "staff:update");
 
 export const DELETE = requireAuth(async (request: Request, session, context) => {
   const rl = checkRateLimit(session.staffId, "write");

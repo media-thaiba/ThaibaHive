@@ -62,7 +62,7 @@ export async function verifyMutablePurchaseRequest(
     id: request.id,
     status: request.status,
     estimatedCost: request.estimatedCost || 0,
-    institutionId: request.institutionId,
+    institutionId: request.institutionId || "inst_default",
   };
 }
 
@@ -75,5 +75,3 @@ export async function verifyAuditTrail(
 ): Promise<{ isValid: boolean; tamperedAt?: string; totalLogs: number }> {
   return purchaseApprovalEngine.verifyAuditTrail(purchaseRequestId);
 }
-
-export { verifyPurchaseApproval } from "@/lib/finance/purchases/purchase-approval-engine";

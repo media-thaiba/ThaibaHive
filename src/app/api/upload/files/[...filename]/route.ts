@@ -109,4 +109,4 @@ export const GET = requireAuth(async (
       { status: 500 }
     );
   }
-});
+}, "media:read");

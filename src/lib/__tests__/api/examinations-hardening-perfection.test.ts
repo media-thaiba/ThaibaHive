@@ -79,7 +79,7 @@ describe("Examinations Pipeline Perfection Suite", () => {
       admissionNo: `ADM_EX_${suffix}`,
       email: `candidate_${suffix}@thaiba.edu`,
       status: "active",
-    }).run();
+    } as any).run();
 
     // Seed Exam
     await db.insert(exams).values({
