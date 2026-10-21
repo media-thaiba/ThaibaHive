@@ -35,41 +35,47 @@ export interface TabulationSummaryOutput {
 
 export const DEFAULT_GRADE_SCALE_RULES: GradeScaleRule[] = [
   { minPercentage: 90, maxPercentage: 100, grade: "O", gpa: 10.0, description: "Outstanding" },
-  { minPercentage: 80, maxPercentage: 89.999, grade: "A+", gpa: 9.0, description: "Excellent" },
-  { minPercentage: 70, maxPercentage: 79.999, grade: "A", gpa: 8.0, description: "Very Good" },
-  { minPercentage: 60, maxPercentage: 69.999, grade: "B+", gpa: 7.0, description: "Good" },
-  { minPercentage: 50, maxPercentage: 59.999, grade: "B", gpa: 6.0, description: "Above Average" },
-  { minPercentage: 40, maxPercentage: 49.999, grade: "C", gpa: 5.0, description: "Average / Pass" },
-  { minPercentage: 0, maxPercentage: 39.999, grade: "F", gpa: 0.0, description: "Fail" },
+  { minPercentage: 80, maxPercentage: 90, grade: "A+", gpa: 9.0, description: "Excellent" },
+  { minPercentage: 70, maxPercentage: 80, grade: "A", gpa: 8.0, description: "Very Good" },
+  { minPercentage: 60, maxPercentage: 70, grade: "B+", gpa: 7.0, description: "Good" },
+  { minPercentage: 50, maxPercentage: 60, grade: "B", gpa: 6.0, description: "Above Average" },
+  { minPercentage: 40, maxPercentage: 50, grade: "C", gpa: 5.0, description: "Average / Pass" },
+  { minPercentage: 0, maxPercentage: 40, grade: "F", gpa: 0.0, description: "Fail" },
 ];
 
 /**
  * Calculates letter grade, GPA point, and description for a given percentage score.
+ * Safely resolves descending percentage intervals without floating-point gap vulnerabilities.
  */
 export function calculateGrade(
   percentage: number,
   rules: GradeScaleRule[] = DEFAULT_GRADE_SCALE_RULES
 ): { letterGrade: string; gpa: number; description: string } {
-  const roundedPercentage = Math.round(percentage * 100) / 100;
-  
-  const matchedRule = rules.find(
-    (r) => roundedPercentage >= r.minPercentage && roundedPercentage <= r.maxPercentage
-  );
+  const safePercentage = typeof percentage === "number" && !isNaN(percentage)
+    ? Math.max(0, Math.min(100, percentage))
+    : 0;
+  const roundedPercentage = Math.round(safePercentage * 100) / 100;
 
-  if (matchedRule) {
-    return {
-      letterGrade: matchedRule.grade,
-      gpa: matchedRule.gpa,
-      description: matchedRule.description || matchedRule.grade,
-    };
+  // Sort descending by minPercentage for robust half-open interval matching
+  const sortedRules = [...rules].sort((a, b) => b.minPercentage - a.minPercentage);
+
+  for (const rule of sortedRules) {
+    if (roundedPercentage >= rule.minPercentage) {
+      return {
+        letterGrade: rule.grade,
+        gpa: rule.gpa,
+        description: rule.description || rule.grade,
+      };
+    }
   }
 
   // Fallback for scores below lowest bound
-  if (roundedPercentage < (rules[rules.length - 1]?.minPercentage ?? 40)) {
-    return { letterGrade: "F", gpa: 0.0, description: "Fail" };
-  }
-
-  return { letterGrade: "O", gpa: 10.0, description: "Outstanding" };
+  const lowestRule = sortedRules[sortedRules.length - 1];
+  return {
+    letterGrade: lowestRule?.grade || "F",
+    gpa: lowestRule?.gpa || 0.0,
+    description: lowestRule?.description || "Fail",
+  };
 }
 
 /**
@@ -139,10 +145,15 @@ export function calculateStudentTabulation(
     }
 
     const subResult = calculateSubjectResult(sub, rules);
-    const weight = sub.creditWeight || 1;
+    const rawWeight = sub.creditWeight;
+    const weight = typeof rawWeight === "number" && Number.isFinite(rawWeight) && rawWeight > 0 ? rawWeight : 1;
 
-    totalObtained += sub.isAbsent ? 0 : (sub.marksObtained || 0);
-    totalMax += sub.maxMarks;
+    const safeObtained = sub.marksObtained !== null && sub.marksObtained !== undefined
+      ? Math.max(0, Math.min(sub.marksObtained, sub.maxMarks))
+      : 0;
+
+    totalObtained += sub.isAbsent ? 0 : safeObtained;
+    totalMax += Math.max(0, sub.maxMarks);
     weightedGpaSum += subResult.gpa * weight;
     totalCredits += weight;
 

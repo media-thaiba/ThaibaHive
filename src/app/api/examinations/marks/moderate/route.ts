@@ -27,7 +27,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   try {
     const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
-    const row = await db
+    const [row] = await db
       .select({
         entry: markEntries,
         schedule: examSchedules,
@@ -40,8 +40,7 @@ export const POST = requireAuth(async (request: Request, session) => {
         institutionId && institutionId !== "global"
           ? and(eq(markEntries.id, markEntryId), eq(exams.institutionId, institutionId))
           : eq(markEntries.id, markEntryId)
-      )
-      .get();
+      );
 
     if (!row) {
       return NextResponse.json({ error: "Target mark entry not found" }, { status: 404 });
@@ -65,9 +64,15 @@ export const POST = requireAuth(async (request: Request, session) => {
     };
 
     if (action === "approve") {
+      if (existing.status === "approved") {
+        return NextResponse.json(
+          { error: "Mark entry has already been approved" },
+          { status: 409 }
+        );
+      }
       updates.status = "approved";
     } else if (action === "adjust") {
-      if (adjustedMarks === undefined || adjustedMarks < 0 || (schedule && adjustedMarks > schedule.maxMarks)) {
+      if (adjustedMarks === undefined || adjustedMarks === null || adjustedMarks < 0 || (schedule && adjustedMarks > schedule.maxMarks)) {
         return NextResponse.json({ error: "Invalid adjusted marks value" }, { status: 400 });
       }
       updates.marksObtained = adjustedMarks;
@@ -80,7 +85,18 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Invalid moderation action" }, { status: 400 });
     }
 
-    await db.update(markEntries).set(updates).where(eq(markEntries.id, markEntryId));
+    const [updated] = await db
+      .update(markEntries)
+      .set(updates)
+      .where(and(eq(markEntries.id, markEntryId), eq(markEntries.status, existing.status)))
+      .returning();
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Mark entry status was modified by a concurrent request" },
+        { status: 409 }
+      );
+    }
 
     if (schedule) {
       await db.insert(examAuditLogs).values({

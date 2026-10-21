@@ -15,6 +15,23 @@ describe("Grade Calculator Engine", () => {
       expect(calculateGrade(45)).toEqual({ letterGrade: "C", gpa: 5.0, description: "Average / Pass" });
       expect(calculateGrade(35)).toEqual({ letterGrade: "F", gpa: 0.0, description: "Fail" });
     });
+
+    it("should handle floating-point boundary conditions without interval gaps", () => {
+      // 89.999% rounds to 90.00% -> "O"
+      expect(calculateGrade(89.999).letterGrade).toBe("O");
+      // 89.994% rounds to 89.99% -> "A+"
+      expect(calculateGrade(89.994).letterGrade).toBe("A+");
+      // Exactly 80.00% -> "A+"
+      expect(calculateGrade(80.00).letterGrade).toBe("A+");
+      // 79.999% rounds to 80.00% -> "A+"
+      expect(calculateGrade(79.999).letterGrade).toBe("A+");
+      // 79.994% rounds to 79.99% -> "A"
+      expect(calculateGrade(79.994).letterGrade).toBe("A");
+      // Out of bounds: > 100 clamped to 100 -> "O"
+      expect(calculateGrade(105).letterGrade).toBe("O");
+      // Out of bounds: < 0 clamped to 0 -> "F"
+      expect(calculateGrade(-5).letterGrade).toBe("F");
+    });
   });
 
   describe("calculateSubjectResult", () => {
@@ -44,6 +61,18 @@ describe("Grade Calculator Engine", () => {
       expect(result.letterGrade).toBe("F");
       expect(result.gpa).toBe(0.0);
     });
+
+    it("should clamp marks exceeding maxMarks to maxMarks", () => {
+      const result = calculateSubjectResult({
+        marksObtained: 120,
+        maxMarks: 100,
+        passMarks: 40,
+      });
+
+      expect(result.percentage).toBe(100);
+      expect(result.letterGrade).toBe("O");
+      expect(result.gpa).toBe(10.0);
+    });
   });
 
   describe("calculateStudentTabulation", () => {
@@ -61,6 +90,21 @@ describe("Grade Calculator Engine", () => {
       expect(tabulation.resultStatus).toBe("pass");
       expect(tabulation.failedSubjectsCount).toBe(0);
       expect(tabulation.gpa).toBeGreaterThan(8.0);
+    });
+
+    it("should safely handle zero, negative, or invalid credit weights", () => {
+      const subjects = [
+        { marksObtained: 80, maxMarks: 100, passMarks: 40, creditWeight: 0 }, // Should default to weight 1
+        { marksObtained: 90, maxMarks: 100, passMarks: 40, creditWeight: -2 }, // Should default to weight 1
+        { marksObtained: 70, maxMarks: 100, passMarks: 40, creditWeight: NaN }, // Should default to weight 1
+      ];
+
+      const tabulation = calculateStudentTabulation(subjects);
+
+      expect(tabulation.totalMarks).toBe(240);
+      expect(tabulation.percentage).toBe(80);
+      expect(tabulation.resultStatus).toBe("pass");
+      expect(tabulation.gpa).toBe(9.0);
     });
 
     it("should mark result as compartment when student fails exactly 1 subject", () => {

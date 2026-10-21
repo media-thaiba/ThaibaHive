@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { exams, examSchedules, markEntries, students,  } from "@thaiba/db/schema";
+import { exams, examSchedules, markEntries, students } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { hasPermission } from "@thaiba/auth";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { generateStudentReportCardPDF } from "@/lib/examinations/report-card-generator";
-import { calculateStudentTabulation } from "@/lib/examinations/grade-calculator";
+import { calculateStudentTabulation, calculateGrade } from "@/lib/examinations/grade-calculator";
 import { eq, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
@@ -28,7 +28,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     ? and(eq(exams.id, examId), eq(exams.institutionId, institutionId))
     : eq(exams.id, examId);
 
-  const exam = await db.select().from(exams).where(examWhere).get();
+  const [exam] = await db.select().from(exams).where(examWhere);
   if (!exam) {
     return NextResponse.json({ error: "Examination session not found" }, { status: 404 });
   }
@@ -37,7 +37,7 @@ export const GET = requireAuth(async (request: Request, session) => {
     ? and(eq(students.id, studentId), eq(students.institutionId, institutionId))
     : eq(students.id, studentId);
 
-  const studentObj = await db.select().from(students).where(studentWhere).get();
+  const [studentObj] = await db.select().from(students).where(studentWhere);
   if (!studentObj) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
@@ -83,19 +83,30 @@ export const GET = requireAuth(async (request: Request, session) => {
     const percentage = marksObtained !== null && s.maxMarks > 0 ? (marksObtained / s.maxMarks) * 100 : 0;
     const isPass = !isAbsent && marksObtained !== null && marksObtained >= s.passMarks;
 
+    const gradeInfo = calculateGrade(percentage);
+
     return {
       subjectName: s.subjectName,
       marksObtained: isAbsent ? null : marksObtained,
       maxMarks: s.maxMarks,
       passMarks: s.passMarks,
-      letterGrade: isPass ? (percentage >= 90 ? "O" : percentage >= 80 ? "A+" : percentage >= 70 ? "A" : "B+") : "F",
-      gpa: isPass ? (percentage >= 90 ? 10.0 : percentage >= 80 ? 9.0 : 8.0) : 0.0,
+      letterGrade: isPass ? gradeInfo.letterGrade : "F",
+      gpa: isPass ? gradeInfo.gpa : 0.0,
       isAbsent,
     };
   });
 
-  // Optional DOB password protection (e.g. DDMMYYYY)
-  const password = encrypt && studentObj.dateOfBirth ? studentObj.dateOfBirth.replace(/-/g, "") : undefined;
+  // Standard academic DOB password protection (DDMMYYYY format)
+  let password: string | undefined = undefined;
+  if (encrypt && studentObj.dateOfBirth) {
+    const parts = studentObj.dateOfBirth.split("-");
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      password = `${day}${month}${year}`;
+    } else {
+      password = studentObj.dateOfBirth.replace(/-/g, "");
+    }
+  }
 
   const pdfBuffer = await generateStudentReportCardPDF({
     studentId: studentObj.id,

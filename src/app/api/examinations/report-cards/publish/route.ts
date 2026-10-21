@@ -30,7 +30,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       ? and(eq(exams.id, cleanExamId), eq(exams.institutionId, scopedInstitutionId))
       : eq(exams.id, cleanExamId);
 
-    const exam = await db.select().from(exams).where(whereClause).get();
+    const [exam] = await db.select().from(exams).where(whereClause);
     if (!exam) {
       return NextResponse.json({ error: "Target examination session not found" }, { status: 404 });
     }
@@ -52,8 +52,19 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     const now = new Date().toISOString();
 
-    // 1. Update exam status to 'published'
-    await db.update(exams).set({ status: "published", updatedAt: now }).where(whereClause);
+    // 1. Update exam status to 'published' with concurrency guard
+    const updated = await db
+      .update(exams)
+      .set({ status: "published", updatedAt: now })
+      .where(and(whereClause, eq(exams.status, exam.status)))
+      .returning();
+
+    if (!updated || updated.length === 0) {
+      return NextResponse.json(
+        { error: "Examination results are already published or modified concurrently" },
+        { status: 409 }
+      );
+    }
 
     // 2. Stamp publication timestamp on tabulation registers
     await db

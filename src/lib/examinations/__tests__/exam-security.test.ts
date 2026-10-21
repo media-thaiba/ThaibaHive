@@ -13,9 +13,11 @@ jest.mock("@/db", () => ({
   db: {
     select: jest.fn(() => ({
       from: jest.fn(() => ({
-        where: jest.fn(() => ({
-          get: jest.fn().mockResolvedValue({ id: "exam_100", status: "evaluation" }),
-        })),
+        where: jest.fn(() => {
+          const res: any = Promise.resolve([{ id: "exam_100", status: "evaluation" }]);
+          res.get = jest.fn().mockResolvedValue({ id: "exam_100", status: "evaluation" });
+          return res;
+        }),
       })),
     })),
     insert: jest.fn(() => ({
@@ -23,7 +25,11 @@ jest.mock("@/db", () => ({
     })),
     update: jest.fn(() => ({
       set: jest.fn(() => ({
-        where: jest.fn().mockResolvedValue(true),
+        where: jest.fn(() => {
+          const res: any = Promise.resolve([{ id: "exam_100", status: "published" }]);
+          res.returning = jest.fn().mockResolvedValue([{ id: "exam_100", status: "published" }]);
+          return res;
+        }),
       })),
     })),
   },
