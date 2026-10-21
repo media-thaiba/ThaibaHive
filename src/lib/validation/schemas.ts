@@ -2764,6 +2764,23 @@ export const studentBulkImportSchema = z.object({
 });
 export type StudentBulkImportInput = z.infer<typeof studentBulkImportSchema>;
 
+export const bulkAttendanceRecordSchema = z.object({
+  studentId: z.string().trim().min(1, "Student ID is required"),
+  status: z.enum(["present", "absent", "late", "half_day", "holiday"]),
+  reason: z.string().max(2000, "Reason must not exceed 2000 characters").optional().nullable(),
+});
+
+export const bulkAttendanceSchema = z.object({
+  classId: z.string().trim().min(1, "Class ID is required"),
+  date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  records: z.array(bulkAttendanceRecordSchema)
+    .min(1, "At least one attendance record is required")
+    .max(500, "Maximum batch size is 500 records"),
+});
+
+export type BulkAttendanceRecordInput = z.infer<typeof bulkAttendanceRecordSchema>;
+export type BulkAttendanceInput = z.infer<typeof bulkAttendanceSchema>;
+
 
 
 
