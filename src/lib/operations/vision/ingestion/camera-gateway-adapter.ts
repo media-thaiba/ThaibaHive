@@ -1,6 +1,7 @@
 import { StreamHealthMonitor, StreamHealthMetrics } from './stream-health-monitor';
 import { OnvifProtocolParser, OnvifPtzPosition } from './onvif-protocol-parser';
 import { VisionDbStore } from '../../../db/vision-store';
+import { IncidentLedgerEngine } from '../incidents/incident-ledger-engine';
 
 export interface CameraConnectionConfig {
   cameraId: string;
@@ -67,6 +68,50 @@ export class CameraGatewayAdapter {
 
     const ptzCommand = OnvifProtocolParser.buildPtzAbsoluteMoveCommand(profileToken, position);
     return { success: true, ptzCommand };
+  }
+
+  public async reportCameraHealth(
+    cameraId: string,
+    telemetry: {
+      fps: number;
+      bitrateKbps: number;
+      packetLossPercent: number;
+      latencyMs: number;
+      luminanceVariance?: number;
+      facilityId?: string;
+    },
+    tenantId: string = 'global',
+    incidentLedger?: IncidentLedgerEngine
+  ): Promise<StreamHealthMetrics> {
+    const metrics = this.healthMonitor.recordHeartbeat(
+      cameraId,
+      telemetry.fps,
+      telemetry.bitrateKbps,
+      telemetry.packetLossPercent,
+      telemetry.latencyMs,
+      telemetry.luminanceVariance
+    );
+
+    await this.dbStore.updateCamera(
+      cameraId,
+      {
+        status: metrics.status,
+      },
+      tenantId
+    );
+
+    if (metrics.isOccluded || metrics.status === 'occluded') {
+      const ledger = incidentLedger || new IncidentLedgerEngine(this.dbStore);
+      await ledger.processThreatAlert({
+        cameraId,
+        threatType: 'camera_tampering',
+        confidenceScore: 0.95,
+        facilityId: telemetry.facilityId || 'fac_main',
+        institutionId: tenantId,
+      });
+    }
+
+    return metrics;
   }
 
   public getHealthMonitor(): StreamHealthMonitor {

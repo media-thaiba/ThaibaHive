@@ -6,17 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert } from '@/components/ui/alert';
+import { Select, SelectItem } from '@/components/ui/select';
 import { ShieldAlert, AlertTriangle } from 'lucide-react';
 
 interface LockdownModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmLockdown: (scope: string, facilityId: string, reason: string) => Promise<void>;
+  onConfirmLockdown: (scope: string, facilityId: string, reason: string, zoneId?: string) => Promise<void>;
 }
 
 export function LockdownModal({ isOpen, onClose, onConfirmLockdown }: LockdownModalProps) {
   const [scope, setScope] = useState('campus_wide');
   const [facilityId, setFacilityId] = useState('fac_main');
+  const [zoneId, setZoneId] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +29,19 @@ export function LockdownModal({ isOpen, onClose, onConfirmLockdown }: LockdownMo
       setError('Please provide a reason for initiating lockdown.');
       return;
     }
+    if (scope === 'facility' && !facilityId.trim()) {
+      setError('Please specify the target facility for facility lockdown.');
+      return;
+    }
+    if (scope === 'zone' && !zoneId.trim()) {
+      setError('Please specify the target zone ID for zone lockdown.');
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
-      await onConfirmLockdown(scope, facilityId, reason);
+      await onConfirmLockdown(scope, facilityId, reason, zoneId.trim() || undefined);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to trigger emergency lockdown.');
@@ -62,16 +72,16 @@ export function LockdownModal({ isOpen, onClose, onConfirmLockdown }: LockdownMo
 
           <div className="space-y-2">
             <Label htmlFor="scope">Lockdown Scope</Label>
-            <select
+            <Select
               id="scope"
               value={scope}
               onChange={(e) => setScope(e.target.value)}
-              className="w-full h-10 px-3 border border-slate-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="w-full"
             >
-              <option value="campus_wide">Campus-Wide Full Lockdown</option>
-              <option value="facility">Specific Facility Only</option>
-              <option value="zone">Single High-Risk Zone</option>
-            </select>
+              <SelectItem value="campus_wide">Campus-Wide Full Lockdown</SelectItem>
+              <SelectItem value="facility">Specific Facility Only</SelectItem>
+              <SelectItem value="zone">Single High-Risk Zone</SelectItem>
+            </Select>
           </div>
 
           {scope !== 'campus_wide' && (
@@ -83,6 +93,20 @@ export function LockdownModal({ isOpen, onClose, onConfirmLockdown }: LockdownMo
                 onChange={(e) => setFacilityId(e.target.value)}
                 placeholder="e.g. fac_science_block"
                 className="w-full"
+              />
+            </div>
+          )}
+
+          {scope === 'zone' && (
+            <div className="space-y-2">
+              <Label htmlFor="zoneId">Target Zone ID</Label>
+              <Input
+                id="zoneId"
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                placeholder="e.g. zone_north_gate or zone_lab_3"
+                className="w-full"
+                required
               />
             </div>
           )}

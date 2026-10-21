@@ -422,6 +422,10 @@ export class VisionDbStore {
   }
 
   // ─── Vehicle Whitelist ───
+  private normalizePlateKey(plate: string): string {
+    return (plate || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  }
+
   async createVehicleWhitelist(data: OptionalId<typeof visionVehicleWhitelist.$inferInsert>): Promise<any> {
     const record = {
       ...data,
@@ -429,7 +433,7 @@ export class VisionDbStore {
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString(),
     };
-    this.memoryStore.vehicleWhitelist.set(record.plateNumber.toUpperCase(), record);
+    this.memoryStore.vehicleWhitelist.set(this.normalizePlateKey(record.plateNumber), record);
     try {
       if (db) await db.insert(visionVehicleWhitelist).values(record as any);
     } catch {}
@@ -437,7 +441,19 @@ export class VisionDbStore {
   }
 
   async getVehicleWhitelistByPlate(plateNumber: string, tenantId: string = 'global'): Promise<any | null> {
-    const item = this.memoryStore.vehicleWhitelist.get(plateNumber.toUpperCase());
+    const key = this.normalizePlateKey(plateNumber);
+    let item = this.memoryStore.vehicleWhitelist.get(key);
+    if (!item) {
+      item = this.memoryStore.vehicleWhitelist.get(plateNumber.toUpperCase());
+    }
+    if (!item) {
+      for (const [k, v] of this.memoryStore.vehicleWhitelist.entries()) {
+        if (this.normalizePlateKey(k) === key) {
+          item = v;
+          break;
+        }
+      }
+    }
     if (item && (item.institutionId === tenantId || tenantId === 'global')) {
       return item;
     }

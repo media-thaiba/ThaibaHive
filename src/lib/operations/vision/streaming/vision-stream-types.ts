@@ -61,7 +61,7 @@ export interface VisionAlertEvent {
   institutionId?: string;
 }
 
-export type VisionCameraStatus = 'online' | 'degraded' | 'offline' | 'maintenance';
+export type VisionCameraStatus = 'online' | 'degraded' | 'offline' | 'maintenance' | 'occluded';
 
 export interface VisionCameraEvent {
   cameraId: string;

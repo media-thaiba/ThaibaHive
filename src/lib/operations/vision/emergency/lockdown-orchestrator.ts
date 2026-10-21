@@ -37,6 +37,22 @@ export class LockdownOrchestrator {
     merkleAuditHash: string;
   }> {
     const tenantId = params.tenantId || 'global';
+
+    // Prevent concurrent duplicate active lockdowns for the same scope/facility
+    const activeLockdowns = await this.dbStore.listLockdownEvents(tenantId, 'active');
+    const duplicate = activeLockdowns.find((l) => {
+      if (params.scope === 'campus_wide' && l.scope === 'campus_wide') return true;
+      if (params.scope === 'facility' && l.targetFacilityId === params.targetFacilityId) return true;
+      if (params.scope === 'zone' && l.targetZoneId === params.targetZoneId) return true;
+      return false;
+    });
+
+    if (duplicate) {
+      const conflictError: any = new Error(`An active lockdown already exists for ${params.scope} (lockdownId: ${duplicate.lockdownId})`);
+      conflictError.statusCode = 409;
+      throw conflictError;
+    }
+
     const { affectedZoneIds, totalDoorsLocked } = this.zoneMatrix.lockZones(
       params.scope,
       params.targetFacilityId,
@@ -78,16 +94,39 @@ export class LockdownOrchestrator {
     };
   }
 
-  public async liftLockdown(lockdownId: string, tenantId: string = 'global'): Promise<any> {
+  public async liftLockdown(
+    lockdownId: string,
+    tenantId: string = 'global',
+    liftedByUserId: string = 'system',
+    reason?: string
+  ): Promise<any> {
+    const existing = await this.dbStore.getLockdownEventById(lockdownId, tenantId);
+    if (!existing) {
+      return null;
+    }
+    if (existing.status === 'all_clear') {
+      const conflictError: any = new Error('Lockdown has already been lifted');
+      conflictError.statusCode = 409;
+      throw conflictError;
+    }
+
     this.zoneMatrix.unlockAll();
     this.egressController.restoreNormalLighting();
+
+    const timestamp = new Date().toISOString();
+    const allClearMerkleAuditHash = crypto
+      .createHash('sha256')
+      .update(`${lockdownId}:${liftedByUserId}:${reason || 'all_clear'}:${timestamp}:${existing.merkleAuditHash || ''}`)
+      .digest('hex');
 
     return this.dbStore.updateLockdownEvent(
       lockdownId,
       {
         status: 'all_clear',
-        allClearAt: new Date().toISOString(),
-      },
+        allClearAt: timestamp,
+        allClearByUserId: liftedByUserId,
+        allClearMerkleAuditHash,
+      } as any,
       tenantId
     );
   }

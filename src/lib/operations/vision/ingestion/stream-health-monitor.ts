@@ -25,6 +25,8 @@ export class StreamHealthMonitor {
     let status: StreamHealthMetrics['status'] = 'online';
     if (isOccluded) {
       status = 'occluded';
+    } else if (packetLossPercent >= 100 || (fps === 0 && packetLossPercent >= 50)) {
+      status = 'offline';
     } else if (packetLossPercent > 15.0 || fps < 10 || latencyMs > 800) {
       status = 'degraded';
     }

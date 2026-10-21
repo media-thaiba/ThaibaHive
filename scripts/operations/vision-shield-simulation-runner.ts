@@ -232,6 +232,15 @@ export async function runVisionShieldSimulation(options: { scenario?: string } =
     const lockdownOrchestrator = new LockdownOrchestrator(undefined, undefined, store);
     lockdownOrchestrator.getZoneMatrix().registerZone('zone_science', 'fac_science', 14);
 
+    // Ensure clean state for simulation tenant
+    const activeLockdowns = await store.listLockdownEvents('tenant_main', 'active');
+    for (const active of activeLockdowns) {
+      const lid = active.lockdownId || active.id;
+      if (lid) {
+        await lockdownOrchestrator.liftLockdown(lid, 'tenant_main', 'user_security_admin', 'Reset previous simulation drill');
+      }
+    }
+
     const lockResult = await lockdownOrchestrator.triggerLockdown({
       scope: 'facility',
       targetFacilityId: 'fac_science',
@@ -250,6 +259,9 @@ export async function runVisionShieldSimulation(options: { scenario?: string } =
     } else {
       stageResults.push({ stage: 7, name: 'Lockdown & ECO-MESH Sync', status: 'failed', details: 'Lockdown orchestration failed' });
     }
+
+    // Clean up drill lockdown so subsequent simulation runs remain idempotent
+    await lockdownOrchestrator.liftLockdown(lockResult.lockdownId, 'tenant_main', 'user_security_admin', 'Simulation drill completed');
   }
 
   // Stage 8: SafeCampus Merkle Audit Trail & Prometheus OpenMetrics

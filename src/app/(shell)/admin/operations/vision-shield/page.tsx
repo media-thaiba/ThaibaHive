@@ -17,13 +17,14 @@ export default function VisionShieldCockpitPage() {
   const [activeTab, setActiveTab] = useState('radar');
   const [isLockdownModalOpen, setIsLockdownModalOpen] = useState(false);
 
-  const handleConfirmLockdown = async (scope: string, facilityId: string, reason: string) => {
+  const handleConfirmLockdown = async (scope: string, facilityId: string, reason: string, zoneId?: string) => {
     const res = await fetch('/api/vision/lockdown', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         scope,
         targetFacilityId: facilityId,
+        targetZoneId: zoneId,
         reason,
         triggerEcoMeshIslanding: true,
       }),

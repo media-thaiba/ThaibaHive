@@ -196,7 +196,7 @@ const DetectionLayer = memo(function DetectionLayer({ boxes }: DetectionLayerPro
           >
             <span
               className={cn(
-                'absolute -top-[18px] left-0 rounded-sm bg-black/80 px-1 font-mono text-[9px] leading-[16px] tracking-wide',
+                'absolute -top-[18px] left-0 rounded-sm bg-black/80 px-1 font-mono text-[10px] leading-[16px] tracking-wide',
                 style.text
               )}
             >
@@ -230,6 +230,7 @@ const CameraFeed = memo(function CameraFeed({
 }: CameraFeedProps) {
   const status = camera.status ?? 'online';
   const offline = status === 'offline';
+  const occluded = status === 'occluded';
   const degraded = status === 'degraded';
   const resolution = camera.resolution ?? '1080p';
   const fps = offline ? 0 : effectiveFps(camera.fps, tick);
@@ -240,7 +241,22 @@ const CameraFeed = memo(function CameraFeed({
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black">
-      {offline ? (
+      {occluded ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 border-2 border-rose-600/80 z-10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-500 mb-2 animate-pulse">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <span className="font-mono text-xs font-bold tracking-wider text-rose-400 text-center">
+            CAMERA OCCLUSION / TAMPER DETECTED
+          </span>
+          <span className="font-mono text-[10px] tracking-wide text-slate-300 text-center mt-1">
+            LENS OBSTRUCTED — LUMINANCE VARIANCE &lt; 5.0
+          </span>
+          <Badge variant="destructive" className="mt-2 text-[10px] font-mono">
+            SECURITY DISPATCH ALERT
+          </Badge>
+        </div>
+      ) : offline ? (
         <div className="absolute inset-0 flex flex-col">
           <div className="flex-1" style={{ backgroundImage: SMPTE_BARS }} />
           <div className="flex h-[22%] items-center justify-center bg-[repeating-linear-gradient(0deg,#111_0_2px,#1a1a1a_2px_4px)]">
@@ -272,39 +288,41 @@ const CameraFeed = memo(function CameraFeed({
         </div>
       )}
 
-      {degraded && !offline && (
+      {degraded && !offline && !occluded && (
         <div className="absolute inset-0 animate-pulse bg-[repeating-linear-gradient(0deg,transparent_0_1px,rgba(255,255,255,0.06)_1px_2px)]" />
       )}
 
-      <div className="absolute left-2 top-2 flex items-center gap-1.5">
-        {offline ? (
+      <div className="absolute left-2 top-2 flex items-center gap-1.5 z-20">
+        {occluded ? (
+          <Badge variant="destructive" className="py-0 font-mono animate-pulse">TAMPER / OCCLUDED</Badge>
+        ) : offline ? (
           <Badge variant="destructive" className="py-0 font-mono">NO SIGNAL</Badge>
         ) : (
           <Badge variant={degraded ? 'warning' : 'success'} className="py-0 font-mono">
             {degraded ? 'DEGRADED' : 'LIVE'}
           </Badge>
         )}
-        {camera.recordingActive !== false && !offline && (
-          <span className="flex items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[9px] text-rose-400">
+        {camera.recordingActive !== false && !offline && !occluded && (
+          <span className="flex items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-mono text-[10px] text-rose-400">
             <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" /> REC
           </span>
         )}
       </div>
 
-      <div className="absolute right-2 top-2 flex items-center gap-1.5 font-mono text-[9px]">
+      <div className="absolute right-2 top-2 flex items-center gap-1.5 font-mono text-[10px] z-20">
         <span className="rounded-sm bg-black/70 px-1.5 py-0.5 text-slate-200">{resolution}</span>
         <span className="rounded-sm bg-black/70 px-1.5 py-0.5 text-slate-200">{fps} FPS</span>
         <span className="hidden sm:inline rounded-sm bg-black/70 px-1.5 py-0.5 text-slate-300">{bitrate} Mbps</span>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4">
+      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent px-2 pb-1.5 pt-4 z-20">
         <div className="min-w-0">
           <div className="truncate font-mono text-[10px] text-emerald-300">{camera.cameraId}</div>
           <div className={cn('truncate text-[11px] font-medium', focusMode ? 'text-white' : 'text-slate-100')}>
             {camera.name || camera.cameraId}
           </div>
         </div>
-        <span className="ml-2 shrink-0 font-mono text-[9px] text-slate-300">{clock}</span>
+        <span className="ml-2 shrink-0 font-mono text-[10px] text-slate-300">{clock}</span>
       </div>
     </div>
   );
@@ -718,7 +736,7 @@ export function CctvMatrixCard({
                     ptz={getPtz(camera.cameraId)}
                   />
                   {cams.length > 0 && (
-                    <span className="absolute bottom-10 right-2 flex items-center gap-1 rounded-sm bg-rose-600/90 px-1.5 py-0.5 font-mono text-[9px] text-white">
+                    <span className="absolute bottom-10 right-2 flex items-center gap-1 rounded-sm bg-rose-600/90 px-1.5 py-0.5 font-mono text-[10px] text-white">
                       <AlertTriangle className="h-3 w-3" />
                       {cams.length} ALERT{cams.length > 1 ? 'S' : ''}
                     </span>
