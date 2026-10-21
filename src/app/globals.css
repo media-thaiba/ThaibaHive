@@ -36,14 +36,14 @@
 
     /* Muted */
     --muted: 210 20% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 215 16% 40%;
 
     /* Accent */
     --accent: 160 84% 94%;
     --accent-foreground: 160 84% 20%;
 
     /* Destructive */
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 48%;
     --destructive-foreground: 0 0% 100%;
 
     /* Borders & Inputs */
@@ -59,11 +59,11 @@
     --brand-border: 160 84% 86%;
 
     /* Semantic Status Colors */
-    --success: 160 84% 36%;
+    --success: 160 84% 28%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --warning-foreground: 222 47% 11%;
+    --info: 217 91% 48%;
     --info-foreground: 0 0% 100%;
 
     /* Named Colors */
@@ -132,8 +132,8 @@
     --accent-foreground: 160 84% 65%;
 
     /* Destructive */
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 85% 65%;
+    --destructive-foreground: 222 47% 5%;
 
     /* Borders & Inputs - Obsidian Glass Rim (MediaHive parity: #1c2433) */
     --border: 222 25% 18%;
@@ -146,11 +146,11 @@
 
     /* Semantic Status Colors */
     --success: 160 84% 45%;
-    --success-foreground: 0 0% 100%;
+    --success-foreground: 222 47% 5%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning-foreground: 222 47% 5%;
     --info: 217 91% 60%;
-    --info-foreground: 0 0% 100%;
+    --info-foreground: 222 47% 5%;
 
     /* Named Colors */
     --color-slate: 210 40% 98%;
@@ -282,6 +282,11 @@
 @layer utilities {
 
   /* MediaHive micro-typography: section/eyebrow labels */
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 48px;
+  }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

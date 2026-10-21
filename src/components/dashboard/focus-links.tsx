@@ -9,7 +9,7 @@ export function FocusLinks() {
           <HelpCircle className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold group-hover:text-primary transition-colors">Help Desk</h3>
+          <h2 className="text-sm font-semibold group-hover:text-primary transition-colors">Help Desk</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Open a ticket for IT hardware, network, facilities or admin support.</p>
         </div>
       </Link>
@@ -18,7 +18,7 @@ export function FocusLinks() {
           <Clock className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold group-hover:text-primary transition-colors">Attendance Logs</h3>
+          <h2 className="text-sm font-semibold group-hover:text-primary transition-colors">Attendance Logs</h2>
           <p className="text-xs text-muted-foreground mt-0.5">View your direct punch timings, daily history, and monthly reports.</p>
         </div>
       </Link>

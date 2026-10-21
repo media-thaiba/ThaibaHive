@@ -45,7 +45,7 @@ async function logActivity(staffId: string, action: string, entityType: string, 
 
 export const GET = requireAuth(async (_request: Request, session, context) => {
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
 
   const purchase = await db
     .select({
@@ -103,7 +103,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   }
 
   const { status, notes } = body;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const scopeWhere =
     scopedInstitutionId !== "global"
       ? and(eq(purchaseRequests.id, id), eq(purchaseRequests.institutionId, scopedInstitutionId))
@@ -244,7 +244,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
 export const DELETE = requireAuth(async (_request: Request, session, context) => {
   const { id } = await context!.params;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const scopeWhere =
     scopedInstitutionId !== "global"
       ? and(eq(purchaseRequests.id, id), eq(purchaseRequests.institutionId, scopedInstitutionId))

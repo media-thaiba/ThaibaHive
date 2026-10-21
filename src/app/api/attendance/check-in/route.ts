@@ -72,10 +72,10 @@ export const POST = requireAuth(async (request, session) => {
       await validateNfcCheckIn(
         session.staffId,
         nfcTagId,
-        latitude,
-        longitude,
-        accuracy,
-        wifiSsid,
+        latitude ?? undefined,
+        longitude ?? undefined,
+        accuracy ?? undefined,
+        wifiSsid || undefined,
         { nonce: nfcNonce, tapAt, requireAntiReplay }
       );
       // Look up location by NFC tag to get geofence info
@@ -98,7 +98,7 @@ export const POST = requireAuth(async (request, session) => {
           { status: 400 }
         );
       }
-      await validateQrCheckIn(qrCode, latitude, longitude, accuracy, wifiSsid);
+      await validateQrCheckIn(qrCode, latitude ?? undefined, longitude ?? undefined, accuracy ?? undefined, wifiSsid || undefined);
       // Extract location ID from QR code payload
       try {
         const jsonStr = Buffer.from(qrCode, "base64url").toString("utf-8");

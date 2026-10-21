@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { purchaseApprovalTiers } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
-import { resolveInstitutionScopeForSession, resolveRequestInstitution } from "@/lib/auth/institution-scope";
+import { resolveInstitutionScopeForSession } from "@/lib/auth/institution-scope";
+import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 import { purchaseApprovalTierCreateSchema } from "@/lib/validation/schemas";
 import { eq, asc, and } from "drizzle-orm";
 
@@ -18,7 +19,7 @@ export const GET = requireAuth(async (request: Request, session: import("@thaiba
 
     let institutionId: string;
     try {
-      institutionId = await resolveRequestInstitution(session, requestedInst);
+      institutionId = await resolveScopedInstitutionId(requestedInst);
     } catch {
       institutionId =
         (session.institutionId && session.institutionId !== "global"
@@ -63,7 +64,7 @@ export const POST = requireAuth(async (request: Request, session: import("@thaib
   try {
     let resolvedInstitutionId: string;
     try {
-      resolvedInstitutionId = await resolveRequestInstitution(session, parsed.data.institutionId);
+      resolvedInstitutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
     } catch {
       resolvedInstitutionId =
         parsed.data.institutionId ||

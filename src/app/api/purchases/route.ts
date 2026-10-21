@@ -22,7 +22,7 @@ export const GET = requireAuth(async (request: Request, session) => {
 
   const conditions = [];
 
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   if (scopedInstitutionId !== "global") {
     conditions.push(eq(purchaseRequests.institutionId, scopedInstitutionId));
   }
@@ -80,7 +80,7 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   const { itemName, quantity, estimatedCost, justification } = parsed.data;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const effectiveInstitutionId = scopedInstitutionId !== "global" ? scopedInstitutionId : null;
 
   // If scoped to an institution, lock and verify against allocated budget ceiling

@@ -18,8 +18,12 @@ function timingSafeSecretMatch(provided: string | null, expected: string | undef
 type HandlerWithSession = (
   request: Request,
   session: SessionPayload,
-  params?: { params: Promise<Record<string, any>> } | any
+  params?: { params: Promise<Record<string, unknown>> } | unknown
 ) => Promise<Response>;
+
+interface GlobalWithActiveSession {
+  __activeSession?: SessionPayload;
+}
 
 export function requireAuth(
   handler: HandlerWithSession,
@@ -179,7 +183,9 @@ export function requireAuth(
       }
     }
 
-    (globalThis as any).__activeSession = session;
+    const activeGlobal = globalThis as unknown as GlobalWithActiveSession;
+    const prevSession = activeGlobal.__activeSession;
+    activeGlobal.__activeSession = session;
     try {
       const response = await handler(
         request,
@@ -230,6 +236,8 @@ export function requireAuth(
         })
       );
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    } finally {
+      activeGlobal.__activeSession = prevSession;
     }
   };
 }

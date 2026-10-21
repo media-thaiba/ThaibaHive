@@ -194,7 +194,7 @@ function SidebarLink({
         aria-current={active ? "page" : undefined}
         title={collapsed ? item.label : undefined}
         className={cn(
-          "group relative flex h-12 w-full items-center overflow-hidden rounded-xl transition-all duration-200 ease-out outline-none active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
+          "group relative flex h-12 w-full items-center overflow-hidden rounded-xl transition-all duration-200 ease-out outline-none active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring content-visibility-auto",
           active
             ? "bg-foreground/[0.06] shadow-xs"
             : "text-foreground/80 hover:bg-foreground/[0.03]"

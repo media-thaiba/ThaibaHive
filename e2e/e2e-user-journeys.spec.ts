@@ -83,6 +83,7 @@ test.describe("End-to-End User Journey Certification Suite", () => {
           email: testEmail,
           employeeId: testEmpId,
           role: "staff",
+          institutionIds: ["inst_campus_main"],
           aadhaar: "5544 3322 1100",
           pan: "ABCDE1234F",
           bankAccount: "987654321012",
@@ -115,8 +116,7 @@ test.describe("End-to-End User Journey Certification Suite", () => {
 
       try {
         // 1. Fetch tenant institution
-        const inst = await db.select().from(institutions).limit(1).get();
-        const instId = inst?.id || "inst-default";
+        const instId = "inst_campus_main";
 
         // 1. Create active performance cycle
         const cycleRes = await adminPage.request.post("/api/performance/cycles", {

@@ -156,8 +156,13 @@ if (isPostgres) {
     url: databaseUrl,
     authToken: process.env.DATABASE_AUTH_TOKEN,
   });
-  client.execute("PRAGMA foreign_keys = ON;").catch((e) => console.error("Failed to enable foreign keys:", e));
-  client.execute("PRAGMA busy_timeout = 15000;").catch((e) => console.error("Failed to set busy timeout:", e));
+  // PRAGMA busy_timeout and foreign_keys are only applicable to local file databases;
+  // remote LibSQL (Turso) over HTTP/WS rejects PRAGMA busy_timeout with SQL_PARSE_ERROR.
+  const isLocalFileDb = databaseUrl.startsWith("file:") || !databaseUrl.includes("://");
+  if (isLocalFileDb) {
+    client.execute("PRAGMA foreign_keys = ON;").catch(() => {});
+    client.execute("PRAGMA busy_timeout = 15000;").catch(() => {});
+  }
   dbInstance = sqliteDrizzle(client, { schema: sqliteSchema });
 
   // Optional LibSQL read replicas

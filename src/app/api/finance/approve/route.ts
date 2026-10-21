@@ -43,7 +43,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const now = new Date().toISOString();
   const userRole = session.role as Role;
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
 
   try {
     if (requestType === "expense") {

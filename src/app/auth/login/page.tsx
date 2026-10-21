@@ -7,28 +7,28 @@ import { LoginHeader } from "./_components/login-header";
 import { LoginForm } from "./_components/login-form";
 import type { AuthMode } from "./_components/login-header";
 
-// ── Theme definitions matching AuthMode ──
+// ── Theme definitions matching AuthMode (WCAG AA >= 4.5:1 with #ffffff text) ──
 const modeThemes = {
   signin: {
-    accent: "#10b981",
+    accent: "#047857",
     borderClass: "border-primary/25",
     shadowClass: "shadow-primary/5",
     subtitle: "CONNECTING TO THAIBAHIVE SECURE NODE",
   },
   signup: {
-    accent: "#059669",
+    accent: "#047857",
     borderClass: "border-emerald-500/25",
     shadowClass: "shadow-emerald-500/5",
     subtitle: "ENROLLING SECURE USER NODE",
   },
   google: {
-    accent: "#3b82f6",
+    accent: "#2563eb",
     borderClass: "border-blue-500/25",
     shadowClass: "shadow-blue-500/5",
     subtitle: "SYNCHRONIZING IDENTITY PROVIDER",
   },
   forgot: {
-    accent: "#f59e0b",
+    accent: "#b45309",
     borderClass: "border-amber-500/25",
     shadowClass: "shadow-amber-500/5",
     subtitle: "RECOVERING SECURE NODE KEYS",

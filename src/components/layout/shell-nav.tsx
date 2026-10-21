@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { WorkspaceId } from "@/config/navigation";
 import { Search, Settings, Sun, Moon, Monitor, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatarDropdown } from "@/components/layout/user-avatar-dropdown";
@@ -20,6 +21,22 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
   const { theme, setTheme } = useTheme();
   const { currentWorkspace, availableWorkspaces, allWorkspaces, setWorkspace } = useWorkspace();
   const [chatOpen, setChatOpen] = useState(false);
+
+  const handleWorkspaceSwitch = useCallback(
+    (workspaceId: WorkspaceId) => {
+      const targetHref = workspaceId === "my-work" ? "/" : `/${workspaceId}`;
+      setWorkspace(workspaceId);
+      router.push(targetHref);
+    },
+    [setWorkspace, router]
+  );
+
+  const toggleTheme = useCallback(() => {
+    const themes: Array<"light" | "dark" | "system"> = ["light", "dark", "system"];
+    const currentIndex = themes.indexOf(theme);
+    const nextTheme = themes[(currentIndex + 1) % themes.length];
+    setTheme(nextTheme);
+  }, [theme, setTheme]);
 
   return (
     <>
@@ -45,15 +62,11 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
       <div id="tour-workspace-switcher" className="hidden lg:flex items-center gap-1 p-1 rounded-2xl bg-muted/40 border border-border/60 shadow-xs">
         {availableWorkspaces.map((w, idx) => {
           const isActive = w.id === currentWorkspace.id;
-          const targetHref = w.id === "my-work" ? "/" : `/${w.id}`;
           return (
             <button
               key={w.id}
               type="button"
-              onClick={() => {
-                setWorkspace(w.id);
-                router.push(targetHref);
-              }}
+              onClick={() => handleWorkspaceSwitch(w.id)}
               title={`${w.label} (Ctrl+Shift+${idx + 1})`}
               className={cn(
                 "group relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 outline-none active:scale-95 focus-visible:ring-2 focus-visible:ring-ring shrink-0",
@@ -77,14 +90,10 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
       {/* Mobile Workspace Tabs - Segmented Pill Container (Mobile only) */}
       <div className="flex items-center gap-1 ml-2 sm:ml-4 mr-1 sm:mr-6 bg-muted/40 p-1 rounded-xl border border-border/50 max-w-[130px] xs:max-w-[180px] sm:max-w-none overflow-x-auto no-scrollbar shrink lg:hidden">
         {allWorkspaces.map((w) => {
-          const targetHref = w.id === "my-work" ? "/" : `/${w.id}`;
           return (
             <button
               key={w.id}
-              onClick={() => {
-                setWorkspace(w.id);
-                router.push(targetHref);
-              }}
+              onClick={() => handleWorkspaceSwitch(w.id)}
             className={cn(
               "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0",
               w.id === currentWorkspace.id
@@ -132,12 +141,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
 
         {/* Theme Toggle */}
         <button
-          onClick={() => {
-            const themes: Array<"light" | "dark" | "system"> = ["light", "dark", "system"];
-            const currentIndex = themes.indexOf(theme);
-            const nextTheme = themes[(currentIndex + 1) % themes.length];
-            setTheme(nextTheme);
-          }}
+          onClick={toggleTheme}
           aria-label={`Switch theme (current: ${theme})`}
           className="rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0"
         >

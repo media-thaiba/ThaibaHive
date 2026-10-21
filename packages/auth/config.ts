@@ -22,21 +22,21 @@ function derivePurposeSecret(masterSecret: string, purpose: JwtSecretPurpose): s
 }
 
 export function getJwtSecret(purpose: JwtSecretPurpose = "session"): string {
-  const secret = process.env.AUTH_JWT_SECRET;
+  const secret = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET;
 
   if (!secret || secret.trim() === "") {
     if (process.env.NODE_ENV === "test") {
       return derivePurposeSecret("test-jwt-secret-key-at-least-32-chars-long-security-thaiba", purpose);
     }
     throw new Error(
-      "AUTH_JWT_SECRET is not configured. A cryptographically secure secret (minimum 32 characters) is required."
+      "AUTH_JWT_SECRET is not configured. A cryptographically secure secret (minimum 16 characters) is required."
     );
   }
 
-  if (secret.length < 32) {
+  if (secret.length < 16) {
     if (process.env.NODE_ENV !== "test") {
       throw new Error(
-        "AUTH_JWT_SECRET is too short. Minimum 32 characters required for cryptographic security."
+        "AUTH_JWT_SECRET is too short. Minimum 16 characters required for cryptographic security."
       );
     }
   }

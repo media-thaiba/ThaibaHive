@@ -13,7 +13,7 @@ try {
     stdio: "inherit",
     env: {
       ...process.env,
-      NODE_OPTIONS: "--max-old-space-size=8192",
+      NODE_OPTIONS: process.env.NODE_OPTIONS || "--max-old-space-size=16384",
       NODE_ENV: "production",
       AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET || "build-analyze-secret-32-chars-minimum-placeholder",
       DATABASE_URL: process.env.DATABASE_URL || "file:./dev.db",
