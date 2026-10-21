@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {  } from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -197,45 +197,93 @@ export default function AssetsPage() {
 
   async function submitForm(e: React.FormEvent) {
     e.preventDefault();
-    if (editing) {
-      await fetch(`/api/assets/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      toast.success("Asset updated");
-    } else {
-      await fetch("/api/assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      toast.success("Asset created");
+    const payload = {
+      ...form,
+      purchaseCost: form.purchaseCost ? parseFloat(form.purchaseCost) : null,
+      assignedToId: form.assignedToId || null,
+      institutionId: form.institutionId || null,
+      warrantyEnd: form.warrantyEnd || null,
+      purchaseDate: form.purchaseDate || null,
+    };
+    try {
+      if (editing) {
+        const res = await fetch(`/api/assets/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          toast.success("Asset updated");
+          cancelForm();
+          loadData();
+        } else {
+          const err = await res.json().catch(() => ({ error: "Failed to update asset" }));
+          toast.error(err.error || "Failed to update asset");
+        }
+      } else {
+        const res = await fetch("/api/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          toast.success("Asset created");
+          cancelForm();
+          loadData();
+        } else {
+          const err = await res.json().catch(() => ({ error: "Failed to create asset" }));
+          toast.error(err.error || "Failed to create asset");
+        }
+      }
+    } catch {
+      toast.error("Failed to save asset");
     }
-    cancelForm();
-    loadData();
   }
 
   async function deleteAsset() {
     if (!selectedAsset) return;
-    await fetch(`/api/assets/${selectedAsset.id}`, { method: "DELETE" });
-    toast.success("Asset deleted");
-    setSelectedAsset(null);
-    loadData();
+    try {
+      const res = await fetch(`/api/assets/${selectedAsset.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Asset deleted");
+        setSelectedAsset(null);
+        loadData();
+      } else {
+        const err = await res.json().catch(() => ({ error: "Failed to delete asset" }));
+        toast.error(err.error || "Failed to delete asset");
+      }
+    } catch {
+      toast.error("Failed to delete asset");
+    }
   }
 
   async function addServiceRecord(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedAsset) return;
-    await fetch(`/api/assets/${selectedAsset.id}/service`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sForm),
-    });
-    toast.success("Service record added");
-    setSForm({ serviceDate: new Date().toISOString().split("T")[0], description: "", cost: "", servicedBy: "", notes: "" });
-    const res = await fetch(`/api/assets/${selectedAsset.id}`).then(r => r.json());
-    setSelectedAsset(res.asset);
+    const sPayload = {
+      ...sForm,
+      cost: sForm.cost ? parseFloat(sForm.cost) : null,
+      servicedBy: sForm.servicedBy || null,
+      notes: sForm.notes || null,
+    };
+    try {
+      const res = await fetch(`/api/assets/${selectedAsset.id}/service`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sPayload),
+      });
+      if (res.ok) {
+        toast.success("Service record added");
+        setSForm({ serviceDate: new Date().toISOString().split("T")[0], description: "", cost: "", servicedBy: "", notes: "" });
+        const dRes = await fetch(`/api/assets/${selectedAsset.id}`).then(r => r.json());
+        setSelectedAsset(dRes.asset);
+      } else {
+        const err = await res.json().catch(() => ({ error: "Failed to add service record" }));
+        toast.error(err.error || "Failed to add service record");
+      }
+    } catch {
+      toast.error("Failed to add service record");
+    }
   }
 
   function statusCount(status: string) {

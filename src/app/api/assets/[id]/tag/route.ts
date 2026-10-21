@@ -11,7 +11,12 @@ import { eq, and, ne } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    id = parts[parts.length - 2] || parts[parts.length - 1];
+  }
   if (!id) return NextResponse.json({ error: "Asset ID is required" }, { status: 400 });
 
   const body = await request.json().catch(() => null);

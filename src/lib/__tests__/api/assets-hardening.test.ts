@@ -488,4 +488,36 @@ describe("Asset & Inventory Management Pipeline — Hardening", () => {
       expect(data.asset.assignedToId).toBeNull();
     });
   });
+
+  describe("Schema Numeric Coercion & Dynamic Route Fallback", () => {
+    it("successfully creates asset with string-encoded numeric purchaseCost (coerced)", async () => {
+      mockUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Coerced Asset ${suffix}`,
+          type: "laptop",
+          institutionId: instA,
+          purchaseCost: "1850.75", // String from form input
+        }),
+      });
+
+      const res = await createAsset(req);
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.asset.purchaseCost).toBe(1850.75);
+      createdAssetIds.push(data.asset.id);
+    });
+
+    it("successfully extracts asset ID from URL pathname when context params are missing", async () => {
+      mockUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/assets/${assetA1AssignedToS1}`);
+      // Passing empty object context without params.id
+      const res = await getAssetDetail(req, { params: Promise.resolve({}) as any });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.asset.id).toBe(assetA1AssignedToS1);
+    });
+  });
 });

@@ -8,9 +8,14 @@ import { assetServiceCreateSchema } from "@/lib/validation/schemas";
 import { withAssetLock, canAccessAsset, isDecommissionedAsset } from "@/lib/assets/ledger";
 import { eq, desc } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, session, context) => {
+export const GET = requireAuth(async (request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    id = parts[parts.length - 2] || parts[parts.length - 1];
+  }
   if (!id) return NextResponse.json({ error: "Asset ID is required" }, { status: 400 });
 
   const scopedInstId = await resolveRequestInstitution(session, null);
@@ -38,7 +43,12 @@ export const GET = requireAuth(async (_request, session, context) => {
 
 export const POST = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    id = parts[parts.length - 2] || parts[parts.length - 1];
+  }
   if (!id) return NextResponse.json({ error: "Asset ID is required" }, { status: 400 });
 
   const scopedInstId = await resolveRequestInstitution(session, null);

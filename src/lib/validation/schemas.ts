@@ -216,7 +216,10 @@ export const assetCreateSchema = z.object({
   assignedToId: z.string().optional().nullable(),
   location: z.string().trim().max(150).optional().nullable(),
   purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid purchase date format (expected YYYY-MM-DD)").optional().nullable(),
-  purchaseCost: z.number().nonnegative("Purchase cost cannot be negative").max(100_000_000, "Purchase cost exceeds limit").optional().nullable(),
+  purchaseCost: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : typeof v === "string" ? Number(v) : v),
+    z.number().nonnegative("Purchase cost cannot be negative").max(100_000_000, "Purchase cost exceeds limit").optional().nullable()
+  ),
   warrantyEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid warranty end date format (expected YYYY-MM-DD)").optional().nullable(),
   status: z.enum(["available", "in_use", "under_maintenance", "decommissioned"]).optional().default("available"),
   notes: z.string().max(2000, "Notes cannot exceed 2000 characters").optional().nullable(),
@@ -231,7 +234,10 @@ export const assetUpdateSchema = z.object({
   assignedToId: z.string().optional().nullable(),
   location: z.string().trim().max(150).optional().nullable(),
   purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional().nullable(),
-  purchaseCost: z.number().nonnegative("Purchase cost cannot be negative").max(100_000_000).optional().nullable(),
+  purchaseCost: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : typeof v === "string" ? Number(v) : v),
+    z.number().nonnegative("Purchase cost cannot be negative").max(100_000_000).optional().nullable()
+  ),
   warrantyEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format").optional().nullable(),
   status: z.enum(["available", "in_use", "under_maintenance", "decommissioned"]).optional(),
   notes: z.string().max(2000).optional().nullable(),
@@ -240,7 +246,10 @@ export const assetUpdateSchema = z.object({
 export const assetServiceCreateSchema = z.object({
   serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid service date format (expected YYYY-MM-DD)"),
   description: z.string().trim().min(1, "Description is required").max(1000, "Description cannot exceed 1000 characters"),
-  cost: z.number().nonnegative("Service cost cannot be negative").max(10_000_000).optional().nullable(),
+  cost: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : typeof v === "string" ? Number(v) : v),
+    z.number().nonnegative("Service cost cannot be negative").max(10_000_000).optional().nullable()
+  ),
   servicedBy: z.string().trim().max(100).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
 });

@@ -13,9 +13,13 @@ import {
 } from "@/lib/assets/ledger";
 import { eq, desc, sql, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request, session, context) => {
+export const GET = requireAuth(async (request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    id = url.pathname.split("/").pop();
+  }
   if (!id) return NextResponse.json({ error: "Asset ID is required" }, { status: 400 });
 
   const scopedInstId = await resolveRequestInstitution(session, null);
@@ -68,7 +72,11 @@ export const GET = requireAuth(async (_request, session, context) => {
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    id = url.pathname.split("/").pop();
+  }
   if (!id) return NextResponse.json({ error: "Asset ID is required" }, { status: 400 });
 
   const scopedInstId = await resolveRequestInstitution(session, null);
@@ -171,8 +179,18 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 }, "assets:update");
 
 export const DELETE = requireAuth(async (request: Request, session, context) => {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`assets:delete:${session.staffId || ip}`, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    id = url.pathname.split("/").pop();
+  }
   if (!id) return NextResponse.json({ error: "Asset ID is required" }, { status: 400 });
 
   const scopedInstId = await resolveRequestInstitution(session, null);
