@@ -770,44 +770,73 @@ export const institutionUpdateSchema = z.object({
 });
 
 export const examCreateSchema = z.object({
-  title: z.string().min(1),
-  academicYear: z.string().min(1),
-  term: z.string().min(1),
-  startDate: z.string().min(1),
-  endDate: z.string().min(1),
-  gradeScaleId: z.string().optional(),
-  institutionId: z.string().optional(),
+  title: z.string().trim().min(1, "Title is required").max(200, "Title cannot exceed 200 characters"),
+  academicYear: z.string().trim().min(1, "Academic year is required").max(50, "Academic year too long"),
+  term: z.string().trim().min(1, "Term is required").max(50, "Term too long"),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "startDate must be in YYYY-MM-DD format"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "endDate must be in YYYY-MM-DD format"),
+  gradeScaleId: z.string().trim().max(100).optional().nullable(),
+  institutionId: z.string().trim().max(100).optional().nullable(),
+}).refine((data) => data.startDate <= data.endDate, {
+  message: "endDate must be on or after startDate",
+  path: ["endDate"],
+});
+
+export const examUpdateSchema = z.object({
+  title: z.string().trim().min(1, "Title cannot be empty").max(200, "Title cannot exceed 200 characters").optional(),
+  status: z.enum(["draft", "scheduled", "in_progress", "completed", "published", "archived"]).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "startDate must be in YYYY-MM-DD format").optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "endDate must be in YYYY-MM-DD format").optional(),
+  gradeScaleId: z.string().trim().max(100).optional().nullable(),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return data.startDate <= data.endDate;
+  }
+  return true;
+}, {
+  message: "endDate must be on or after startDate",
+  path: ["endDate"],
 });
 
 export const examScheduleCreateSchema = z.object({
-  examId: z.string().min(1),
-  courseId: z.string().optional(),
-  subjectName: z.string().min(1),
-  examDate: z.string().min(1),
-  startTime: z.string().min(1),
-  endTime: z.string().min(1),
-  durationMinutes: z.number().int().positive().default(180),
-  maxMarks: z.number().positive().default(100),
-  passMarks: z.number().positive().default(40),
-  roomNumber: z.string().optional(),
+  examId: z.string().trim().min(1, "examId is required").max(100),
+  courseId: z.string().trim().max(100).optional().nullable(),
+  subjectName: z.string().trim().min(1, "subjectName is required").max(200, "subjectName too long"),
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "examDate must be in YYYY-MM-DD format"),
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "startTime must be in HH:MM format"),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "endTime must be in HH:MM format"),
+  durationMinutes: z.number().int().positive().max(1440).default(180),
+  maxMarks: z.number().positive().max(1000).default(100),
+  passMarks: z.number().min(0).max(1000).default(40),
+  roomNumber: z.string().trim().max(50).optional().nullable(),
+}).refine((data) => data.passMarks <= data.maxMarks, {
+  message: "passMarks cannot exceed maxMarks",
+  path: ["passMarks"],
 });
 
 export const hallTicketIssueSchema = z.object({
-  examId: z.string().min(1),
-  studentId: z.string().min(1),
+  examId: z.string().trim().min(1, "examId is required").max(100),
+  studentId: z.string().trim().min(1, "studentId is required").max(100),
   overrideFeeLock: z.boolean().optional().default(false),
-  overrideReason: z.string().optional(),
+  overrideReason: z.string().trim().max(500).optional().nullable(),
 });
 
 export const markEntryBatchSchema = z.object({
-  examScheduleId: z.string().min(1),
+  examScheduleId: z.string().trim().min(1, "examScheduleId is required").max(100),
   doubleBlind: z.boolean().optional().default(false),
   entries: z.array(z.object({
-    studentId: z.string().min(1),
-    marksObtained: z.number().min(0).nullable().optional(),
+    studentId: z.string().trim().min(1, "studentId is required").max(100),
+    marksObtained: z.number().min(0).max(1000).nullable().optional(),
     isAbsent: z.boolean().optional().default(false),
-    remarks: z.string().optional(),
-  })).min(1),
+    remarks: z.string().trim().max(500).optional().nullable(),
+  })).min(1, "At least one mark entry is required").max(500, "Batch cannot exceed 500 entries"),
+});
+
+export const markModerateSchema = z.object({
+  markEntryId: z.string().trim().min(1, "markEntryId is required").max(100),
+  action: z.enum(["approve", "adjust", "return"]),
+  adjustedMarks: z.number().min(0).max(1000).optional().nullable(),
+  reason: z.string().trim().max(500).optional().nullable(),
 });
 
 // ─── Services Module Validation Schemas (Sprint-006) ───

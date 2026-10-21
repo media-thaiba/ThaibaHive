@@ -2,22 +2,33 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, tabulationRegisters, examAuditLogs } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await request.json();
-    const { examId } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
-    if (!examId) {
-      return NextResponse.json({ error: "Missing required parameter: examId" }, { status: 400 });
-    }
+  const { examId } = (body as { examId?: unknown }) || {};
 
+  if (!examId || typeof examId !== "string" || !examId.trim() || examId.trim().length > 100) {
+    return NextResponse.json({ error: "Missing or invalid required parameter: examId" }, { status: 400 });
+  }
+
+  try {
+    const cleanExamId = examId.trim();
     const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
     const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
-      ? and(eq(exams.id, examId), eq(exams.institutionId, scopedInstitutionId))
-      : eq(exams.id, examId);
+      ? and(eq(exams.id, cleanExamId), eq(exams.institutionId, scopedInstitutionId))
+      : eq(exams.id, cleanExamId);
 
     const exam = await db.select().from(exams).where(whereClause).get();
     if (!exam) {
@@ -48,14 +59,14 @@ export const POST = requireAuth(async (request: Request, session) => {
     await db
       .update(tabulationRegisters)
       .set({ publishedAt: now })
-      .where(eq(tabulationRegisters.examId, examId));
+      .where(eq(tabulationRegisters.examId, cleanExamId));
 
     // 3. Audit log
     await db.insert(examAuditLogs).values({
       id: `audit_${Date.now()}`,
-      examId,
+      examId: cleanExamId,
       entityType: "result",
-      entityId: examId,
+      entityId: cleanExamId,
       action: "publish_results",
       performedByStaffId: session.staffId,
       previousState: JSON.stringify({ status: exam.status }),
@@ -66,7 +77,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     return NextResponse.json({
       success: true,
-      examId,
+      examId: cleanExamId,
       status: "published",
       publishedAt: now,
     });

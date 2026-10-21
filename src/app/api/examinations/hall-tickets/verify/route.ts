@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { verifyQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { db } from "@/db";
@@ -7,14 +8,23 @@ import { hallTickets, exams } from "@thaiba/db/schema";
 import { eq } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await request.json();
-    const { qrPayload } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
-    if (!qrPayload) {
-      return NextResponse.json({ error: "Missing qrPayload parameter" }, { status: 400 });
-    }
+  const { qrPayload } = (body as { qrPayload?: unknown }) || {};
 
+  if (!qrPayload || typeof qrPayload !== "string" || !qrPayload.trim() || qrPayload.length > 2048) {
+    return NextResponse.json({ error: "Valid qrPayload parameter (max 2048 chars) is required" }, { status: 400 });
+  }
+
+  try {
     const verification = verifyQRPayload(qrPayload);
     if (!verification.valid) {
       return NextResponse.json({ valid: false, error: verification.error }, { status: 400 });

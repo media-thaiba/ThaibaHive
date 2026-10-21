@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { markEntries, students, examSchedules, exams } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const examScheduleId = searchParams.get("examScheduleId");
   const doubleBlind = searchParams.get("doubleBlind") === "true";
@@ -15,7 +19,7 @@ export const GET = requireAuth(async (request: Request, _session) => {
   }
 
   // Tenant boundary: the schedule's parent exam must belong to the caller's institution.
-  const institutionId = await resolveScopedInstitutionId(_session.institutionId);
+  const institutionId = await resolveScopedInstitutionId(session.institutionId);
   if (institutionId && institutionId !== "global") {
     const scoped = await db
       .select({ examInstitutionId: exams.institutionId })

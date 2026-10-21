@@ -2,18 +2,29 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { markEntries, examSchedules, examAuditLogs, exams } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
+import { markModerateSchema } from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await request.json();
-    const { markEntryId, action, adjustedMarks, reason } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
-    if (!markEntryId || !action) {
-      return NextResponse.json({ error: "Missing required parameters: markEntryId, action" }, { status: 400 });
-    }
+  const parsedResult = markModerateSchema.safeParse(body);
+  if (!parsedResult.success) {
+    return NextResponse.json({ error: parsedResult.error.issues[0].message }, { status: 400 });
+  }
+  const { markEntryId, action, adjustedMarks, reason } = parsedResult.data;
 
+  try {
     const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
     const row = await db

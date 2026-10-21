@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, examSchedules, gradeScales, hallTickets } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
+import { examUpdateSchema } from "@/lib/validation/schemas";
 import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = (await context?.params) || { id: "" };
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
@@ -35,8 +40,23 @@ export const GET = requireAuth(async (request: Request, session, context?: { par
 }, "exam:read");
 
 export const PATCH = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = (await context?.params) || { id: "" };
-  const body = await request.json();
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsedResult = examUpdateSchema.safeParse(body);
+  if (!parsedResult.success) {
+    return NextResponse.json({ error: parsedResult.error.issues[0].message }, { status: 400 });
+  }
+  const data = parsedResult.data;
 
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
@@ -52,7 +72,7 @@ export const PATCH = requireAuth(async (request: Request, session, context?: { p
   // or moving the exam window after results exist would silently rewrite outcomes.
   if (
     existing.status === "published" &&
-    (body.gradeScaleId !== undefined || body.startDate !== undefined || body.endDate !== undefined)
+    (data.gradeScaleId !== undefined || data.startDate !== undefined || data.endDate !== undefined)
   ) {
     return NextResponse.json(
       { error: "Cannot modify grade scale or exam dates on a published examination" },
@@ -64,11 +84,11 @@ export const PATCH = requireAuth(async (request: Request, session, context?: { p
     updatedAt: new Date().toISOString(),
   };
 
-  if (body.title !== undefined) updates.title = body.title;
-  if (body.status !== undefined) updates.status = body.status;
-  if (body.startDate !== undefined) updates.startDate = body.startDate;
-  if (body.endDate !== undefined) updates.endDate = body.endDate;
-  if (body.gradeScaleId !== undefined) updates.gradeScaleId = body.gradeScaleId;
+  if (data.title !== undefined) updates.title = data.title;
+  if (data.status !== undefined) updates.status = data.status;
+  if (data.startDate !== undefined) updates.startDate = data.startDate;
+  if (data.endDate !== undefined) updates.endDate = data.endDate;
+  if (data.gradeScaleId !== undefined) updates.gradeScaleId = data.gradeScaleId;
 
   await db.update(exams).set(updates).where(whereClause);
 
@@ -77,6 +97,9 @@ export const PATCH = requireAuth(async (request: Request, session, context?: { p
 }, "exam:create");
 
 export const DELETE = requireAuth(async (request: Request, session, context?: { params: Promise<Record<string, string>> }) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { id } = (await context?.params) || { id: "" };
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"

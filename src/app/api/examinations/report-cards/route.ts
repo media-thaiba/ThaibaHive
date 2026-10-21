@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exams, examSchedules, markEntries, students,  } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { hasPermission } from "@thaiba/auth";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { generateStudentReportCardPDF } from "@/lib/examinations/report-card-generator";
-import { calculateStudentTabulation,  } from "@/lib/examinations/grade-calculator";
+import { calculateStudentTabulation } from "@/lib/examinations/grade-calculator";
 import { eq, and, inArray } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");

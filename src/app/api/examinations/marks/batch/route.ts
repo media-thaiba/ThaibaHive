@@ -2,16 +2,30 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { markEntries, examSchedules, examAuditLogs, exams, students } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { markEntryBatchSchema } from "@/lib/validation/schemas";
 import { eq, and, inArray } from "drizzle-orm";
 import crypto from "crypto";
 
 export const POST = requireAuth(async (request: Request, session) => {
-  try {
-    const body = await request.json();
-    const parsed = markEntryBatchSchema.parse(body);
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsedResult = markEntryBatchSchema.safeParse(body);
+  if (!parsedResult.success) {
+    return NextResponse.json({ error: parsedResult.error.issues[0].message }, { status: 400 });
+  }
+  const parsed = parsedResult.data;
+
+  try {
     const schedule = await db
       .select()
       .from(examSchedules)
@@ -65,9 +79,7 @@ export const POST = requireAuth(async (request: Request, session) => {
       }
     }
 
-    const now = new Date().toISOString();
-    let processedCount = 0;
-
+    // Pre-validate all mark boundaries before beginning database transaction
     for (const entry of parsed.entries) {
       if (!entry.isAbsent && entry.marksObtained !== null && entry.marksObtained !== undefined) {
         if (entry.marksObtained < 0 || entry.marksObtained > schedule.maxMarks) {
@@ -79,76 +91,79 @@ export const POST = requireAuth(async (request: Request, session) => {
           );
         }
       }
-
-      const existing = await db
-        .select()
-        .from(markEntries)
-        .where(
-          and(
-            eq(markEntries.examScheduleId, parsed.examScheduleId),
-            eq(markEntries.studentId, entry.studentId)
-          )
-        )
-        .get();
-
-      const evaluatorToken = parsed.doubleBlind
-        ? `EVAL-${crypto.createHash("md5").update(`${entry.studentId}:${parsed.examScheduleId}`).digest("hex").substring(0, 8).toUpperCase()}`
-        : null;
-
-      if (existing) {
-        // Optimistic concurrency locking check: verify record is still in editable status
-        if (existing.status === "approved") {
-          return NextResponse.json(
-            { error: `Cannot modify approved mark entry for student ${entry.studentId}` },
-            { status: 400 }
-          );
-        }
-
-        await db
-          .update(markEntries)
-          .set({
-            marksObtained: entry.isAbsent ? null : entry.marksObtained,
-            isAbsent: entry.isAbsent ?? false,
-            doubleBlind: parsed.doubleBlind ?? false,
-            evaluatorToken: evaluatorToken || existing.evaluatorToken,
-            remarks: entry.remarks || existing.remarks,
-            enteredByStaffId: session.staffId,
-            updatedAt: now,
-          })
-          .where(eq(markEntries.id, existing.id));
-      } else {
-        await db.insert(markEntries).values({
-          id: `mark_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          examScheduleId: parsed.examScheduleId,
-          studentId: entry.studentId,
-          marksObtained: entry.isAbsent ? null : entry.marksObtained,
-          maxMarks: schedule.maxMarks,
-          isAbsent: entry.isAbsent ?? false,
-          evaluatorToken,
-          doubleBlind: parsed.doubleBlind ?? false,
-          remarks: entry.remarks || null,
-          status: "submitted",
-          enteredByStaffId: session.staffId,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-
-      processedCount++;
     }
 
-    // Audit log
-    await db.insert(examAuditLogs).values({
-      id: `audit_${Date.now()}`,
-      examId: schedule.examId,
-      entityType: "mark_entry",
-      entityId: parsed.examScheduleId,
-      action: "batch_mark_entry",
-      performedByStaffId: session.staffId,
-      previousState: null,
-      newState: JSON.stringify({ processedCount, doubleBlind: parsed.doubleBlind }),
-      reason: "Batch teacher mark entry submission",
-      timestamp: now,
+    const now = new Date().toISOString();
+    let processedCount = 0;
+
+    await db.transaction(async (tx) => {
+      for (const entry of parsed.entries) {
+        const existing = await tx
+          .select()
+          .from(markEntries)
+          .where(
+            and(
+              eq(markEntries.examScheduleId, parsed.examScheduleId),
+              eq(markEntries.studentId, entry.studentId)
+            )
+          )
+          .get();
+
+        const evaluatorToken = parsed.doubleBlind
+          ? `EVAL-${crypto.createHash("md5").update(`${entry.studentId}:${parsed.examScheduleId}`).digest("hex").substring(0, 8).toUpperCase()}`
+          : null;
+
+        if (existing) {
+          if (existing.status === "approved") {
+            throw new Error(`Cannot modify approved mark entry for student ${entry.studentId}`);
+          }
+
+          await tx
+            .update(markEntries)
+            .set({
+              marksObtained: entry.isAbsent ? null : entry.marksObtained,
+              isAbsent: entry.isAbsent ?? false,
+              doubleBlind: parsed.doubleBlind ?? false,
+              evaluatorToken: evaluatorToken || existing.evaluatorToken,
+              remarks: entry.remarks || existing.remarks,
+              enteredByStaffId: session.staffId,
+              updatedAt: now,
+            })
+            .where(eq(markEntries.id, existing.id));
+        } else {
+          await tx.insert(markEntries).values({
+            id: `mark_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            examScheduleId: parsed.examScheduleId,
+            studentId: entry.studentId,
+            marksObtained: entry.isAbsent ? null : entry.marksObtained,
+            maxMarks: schedule.maxMarks,
+            isAbsent: entry.isAbsent ?? false,
+            evaluatorToken,
+            doubleBlind: parsed.doubleBlind ?? false,
+            remarks: entry.remarks || null,
+            status: "submitted",
+            enteredByStaffId: session.staffId,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        processedCount++;
+      }
+
+      // Audit log inside transaction
+      await tx.insert(examAuditLogs).values({
+        id: `audit_${Date.now()}`,
+        examId: schedule.examId,
+        entityType: "mark_entry",
+        entityId: parsed.examScheduleId,
+        action: "batch_mark_entry",
+        performedByStaffId: session.staffId,
+        previousState: null,
+        newState: JSON.stringify({ processedCount, doubleBlind: parsed.doubleBlind }),
+        reason: "Batch teacher mark entry submission",
+        timestamp: now,
+      });
     });
 
     return NextResponse.json({ success: true, processedCount, updatedAt: now });

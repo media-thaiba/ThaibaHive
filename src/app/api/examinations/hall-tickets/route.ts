@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { hallTickets, exams, examAuditLogs, students } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { hallTicketIssueSchema } from "@/lib/validation/schemas";
 import { checkStudentFeeClearance, generateQRPayload } from "@/lib/examinations/hall-ticket-service";
 import { eq, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const studentId = searchParams.get("studentId");
@@ -35,9 +39,23 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "exam:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await request.json();
-    const parsed = hallTicketIssueSchema.parse(body);
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsedResult = hallTicketIssueSchema.safeParse(body);
+  if (!parsedResult.success) {
+    return NextResponse.json({ error: parsedResult.error.issues[0].message }, { status: 400 });
+  }
+  const parsed = parsedResult.data;
+
+  try {
     const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
     // Tenant boundary: target exam must belong to the caller's institution.

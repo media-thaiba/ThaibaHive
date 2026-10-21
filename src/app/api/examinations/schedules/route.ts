@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { examSchedules, exams } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { examScheduleCreateSchema } from "@/lib/validation/schemas";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(request.url);
   const examId = searchParams.get("examId");
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
@@ -35,9 +39,23 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "exam:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await request.json();
-    const parsed = examScheduleCreateSchema.parse(body);
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsedResult = examScheduleCreateSchema.safeParse(body);
+  if (!parsedResult.success) {
+    return NextResponse.json({ error: parsedResult.error.issues[0].message }, { status: 400 });
+  }
+  const parsed = parsedResult.data;
+
+  try {
     const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
     const examExists = institutionId && institutionId !== "global"
@@ -53,6 +71,26 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json(
         { error: "Cannot add schedules to a published or archived examination" },
         { status: 400 }
+      );
+    }
+
+    // Duplicate subject check
+    const duplicateSchedule = await db
+      .select({ id: examSchedules.id, subjectName: examSchedules.subjectName })
+      .from(examSchedules)
+      .where(
+        and(
+          eq(examSchedules.examId, parsed.examId),
+          sql`lower(${examSchedules.subjectName}) = lower(${parsed.subjectName})`
+        )
+      )
+      .limit(1)
+      .get();
+
+    if (duplicateSchedule && duplicateSchedule.subjectName && duplicateSchedule.subjectName.toLowerCase() === parsed.subjectName.toLowerCase()) {
+      return NextResponse.json(
+        { error: `Schedule for subject '${parsed.subjectName}' already exists in this examination` },
+        { status: 409 }
       );
     }
 
