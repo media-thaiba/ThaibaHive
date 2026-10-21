@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { db, financialReconciliations, eq, desc } from "@/db";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { financialReconciliationCreateSchema } from "@/lib/validation/schemas";
 import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session: any) => {
+  // Rate limiting
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     const { searchParams } = new URL(request.url);
     const institutionId = await resolveScopedInstitutionId(searchParams.get("institutionId"));
@@ -26,13 +31,24 @@ export const GET = requireAuth(async (request: Request, _session) => {
 }, "finance:reconciliation:view");
 
 export const POST = requireAuth(async (request: Request, session: any) => {
-  try {
-    const body = await request.json();
-    const parsed = financialReconciliationCreateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid payload" }, { status: 400 });
-    }
+  // Rate limiting
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
+  // Safe JSON parsing - return 400 for malformed JSON
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = financialReconciliationCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid payload" }, { status: 400 });
+  }
+
+  try {
     const institutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
     const result = await reconciliationEngine.createReconciliationSession({
       institutionId,

@@ -1,57 +1,133 @@
 import { NextResponse } from "next/server";
+import { db, financialReconciliationItems, financialReconciliations, eq, and } from "@/db";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { financialReconciliationItemMatchSchema } from "@/lib/validation/schemas";
-import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
-import { getUserInstitutionScope } from "@/lib/auth";
+import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const PATCH = requireAuth(
-  async (request: Request, _session: any, context?: any) => {
-    try {
-      const params = context?.params ? await context.params : {};
-      const id = params.id;
+const TERMINAL_MATCH_STATUSES = ["matched", "manual_override"] as const;
+const INVALID_REGRESSIONS: Record<string, string[]> = {
+  matched: ["unmatched"], // Once matched, cannot go back to unmatched
+  manual_override: ["unmatched", "variance"], // Manual override cannot regress
+  variance: ["matched"], // Variance cannot become matched
+};
 
-      if (!id) {
-        return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
-      }
+export const PATCH = requireAuth(async (request: Request, session: any, context: { params: Promise<{ id: string }> } | { params: { id: string } }) => {
+  // Rate limiting
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-      let body: unknown;
-      try {
-        body = await request.json();
-      } catch {
-        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-      }
-      const parsed = financialReconciliationItemMatchSchema.safeParse(body);
-      if (!parsed.success) {
-        return NextResponse.json(
-          { error: parsed.error.issues[0]?.message || "Invalid payload" },
-          { status: 400 }
-        );
-      }
+  // Dynamic route parameter fallback: params.id, URL pathname, query param
+  let itemId: string | undefined;
+  try {
+    const resolvedParams = "then" in context.params ? await context.params : context.params;
+    itemId = resolvedParams?.id;
+  } catch {
+    itemId = undefined;
+  }
+  if (!itemId) {
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split("/");
+    // pathname is .../reconciliation/[id]/match, so itemId is at index -2
+    itemId = pathParts[pathParts.length - 2] || url.searchParams.get("itemId") ?? undefined;
+  }
 
-      // Tenant guard: items outside the caller's institution scope are
-      // invisible (404), never mutable.
-      const scope = await getUserInstitutionScope();
-      const updated = await reconciliationEngine.manualMatchItem({
-        itemId: id,
-        matchStatus: parsed.data.matchStatus,
-        matchedWithId: parsed.data.matchedWithId,
-        varianceAmount: parsed.data.varianceAmount,
-        resolutionNotes: parsed.data.resolutionNotes,
-        institutionId: scope ?? undefined,
-      });
+  if (!itemId) {
+    return NextResponse.json({ error: "Missing reconciliation item ID" }, { status: 400 });
+  }
 
-      if (!updated) {
-        return NextResponse.json({ error: "Reconciliation item not found" }, { status: 404 });
-      }
+  // Safe JSON parsing
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
-      return NextResponse.json({ item: updated });
-    } catch (error: unknown) {
-      console.error("[Reconciliation Match Error]:", error instanceof Error ? error.stack : error);
+  const parsed = financialReconciliationItemMatchSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid payload" }, { status: 400 });
+  }
+
+  try {
+    const institutionId = await resolveScopedInstitutionId(null);
+
+    // Fetch the item and its parent session for tenant scoping
+    const [itemRow] = await db
+      .select()
+      .from(financialReconciliationItems)
+      .where(eq(financialReconciliationItems.id, itemId));
+
+    if (!itemRow) {
+      return NextResponse.json({ error: "Reconciliation item not found" }, { status: 404 });
+    }
+
+    const [sessionRow] = await db
+      .select()
+      .from(financialReconciliations)
+      .where(eq(financialReconciliations.id, itemRow.reconciliationId));
+
+    if (!sessionRow || sessionRow.institutionId !== institutionId) {
+      return NextResponse.json({ error: "Forbidden: institution scope mismatch" }, { status: 403 });
+    }
+
+    // State invariant: Once an item is in a terminal match status, reject invalid regressions
+    const currentStatus = itemRow.matchStatus;
+    const newStatus = parsed.data.matchStatus;
+
+    if (TERMINAL_MATCH_STATUSES.includes(currentStatus as any) && INVALID_REGRESSIONS[currentStatus]?.includes(newStatus)) {
       return NextResponse.json(
-        { error: "Failed to update reconciliation item match" },
-        { status: 500 }
+        { error: `Cannot change match status from '${currentStatus}' to '${newStatus}' - invalid state transition` },
+        { status: 409 }
       );
     }
-  },
-  "finance:reconciliation:execute"
-);
+
+    // If new status is terminal, ensure we don't allow regression later
+    const now = new Date().toISOString();
+    const [updated] = await db
+      .update(financialReconciliationItems)
+      .set({
+        matchStatus: newStatus,
+        matchedWithId: parsed.data.matchedWithId,
+        varianceAmount: parsed.data.varianceAmount ?? 0,
+        resolutionNotes: parsed.data.resolutionNotes,
+      })
+      .where(
+        and(
+          eq(financialReconciliationItems.id, itemId),
+          eq(financialReconciliationItems.reconciliationId, itemRow.reconciliationId)
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      return NextResponse.json({ error: "Failed to update reconciliation item" }, { status: 500 });
+    }
+
+    // Keep the session's matched/unmatched counters truthful after an override
+    const allItems = await db
+      .select()
+      .from(financialReconciliationItems)
+      .where(eq(financialReconciliationItems.reconciliationId, itemRow.reconciliationId));
+
+    const matchedCount = allItems.filter(
+      (i) => i.matchStatus === "matched" || i.matchStatus === "manual_override"
+    ).length;
+
+    await db
+      .update(financialReconciliations)
+      .set({
+        matchedItemCount: matchedCount,
+        unmatchedItemCount: allItems.length - matchedCount,
+        updatedAt: now,
+      })
+      .where(eq(financialReconciliations.id, itemRow.reconciliationId));
+
+    return NextResponse.json({ item: updated });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Reconciliation Item Match Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to update reconciliation item" }, { status });
+  }
+}, "finance:reconciliation:execute");

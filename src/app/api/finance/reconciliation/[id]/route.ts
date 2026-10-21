@@ -1,33 +1,45 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
-import { getUserInstitutionScope } from "@/lib/auth";
+import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(
-  async (_request: Request, _session: any, context?: any) => {
-    try {
-      const params = context?.params ? await context.params : {};
-      const id = params.id;
+export const GET = requireAuth(async (request: Request, session: any, context: { params: Promise<{ id: string }> } | { params: { id: string } }) => {
+  // Rate limiting
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-      if (!id) {
-        return NextResponse.json({ error: "Reconciliation ID is required" }, { status: 400 });
-      }
+  // Dynamic route parameter fallback: params.id, URL pathname, query param
+  let reconciliationId: string | undefined;
+  try {
+    const resolvedParams = "then" in context.params ? await context.params : context.params;
+    reconciliationId = resolvedParams?.id;
+  } catch {
+    reconciliationId = undefined;
+  }
+  if (!reconciliationId) {
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split("/");
+    reconciliationId = pathParts[pathParts.length - 1] || url.searchParams.get("id") ?? undefined;
+  }
 
-      // Scope first: a cross-tenant session must look nonexistent, not forbidden.
-      const scope = await getUserInstitutionScope();
-      const result = await reconciliationEngine.getReconciliation(id, scope ?? undefined);
-      if (!result) {
-        return NextResponse.json({ error: "Reconciliation session not found" }, { status: 404 });
-      }
+  if (!reconciliationId) {
+    return NextResponse.json({ error: "Missing reconciliation ID" }, { status: 400 });
+  }
 
-      return NextResponse.json(result);
-    } catch (error: unknown) {
-      console.error("[Reconciliation Session Fetch Error]:", error instanceof Error ? error.stack : error);
-      return NextResponse.json(
-        { error: "Failed to fetch reconciliation session" },
-        { status: 500 }
-      );
+  try {
+    const institutionId = await resolveScopedInstitutionId(null);
+    const result = await reconciliationEngine.getReconciliation(reconciliationId, institutionId);
+
+    if (!result) {
+      return NextResponse.json({ error: "Reconciliation not found" }, { status: 404 });
     }
-  },
-  "finance:reconciliation:view"
-);
+
+    return NextResponse.json(result);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[Reconciliation Fetch By ID Error]:", error instanceof Error ? error.stack : error);
+    const status = errorMsg.includes("scope mismatch") || errorMsg.includes("Forbidden") ? 403 : 500;
+    return NextResponse.json({ error: "Failed to fetch reconciliation" }, { status });
+  }
+}, "finance:reconciliation:view");
