@@ -1,28 +1,43 @@
 import { NextResponse } from "next/server";
-import { db, payrollSalaryStructures, eq } from "@/db";
+import { db, payrollSalaryStructures, eq, and } from "@/db";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { payrollSalaryStructureCreateSchema } from "@/lib/validation/schemas";
 import { payrollEngine } from "@/lib/finance/payroll/payroll-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     const { searchParams } = new URL(request.url);
-    const staffId = searchParams.get("staffId");
+    const requestedStaffId = searchParams.get("staffId");
     const institutionId = await resolveScopedInstitutionId(searchParams.get("institutionId"));
 
+    // Non-admin staff can only query their own salary structure
+    const staffId = session.role === "staff" ? session.staffId : requestedStaffId;
+
     if (staffId) {
+      const conditions: any[] = [eq(payrollSalaryStructures.staffId, staffId)];
+      if (institutionId && institutionId !== "global") {
+        conditions.push(eq(payrollSalaryStructures.institutionId, institutionId));
+      }
       const structures = await db
         .select()
         .from(payrollSalaryStructures)
-        .where(eq(payrollSalaryStructures.staffId, staffId));
+        .where(and(...conditions));
       return NextResponse.json({ structures });
     }
 
+    const conditions: any[] = [];
+    if (institutionId && institutionId !== "global") {
+      conditions.push(eq(payrollSalaryStructures.institutionId, institutionId));
+    }
     const structures = await db
       .select()
       .from(payrollSalaryStructures)
-      .where(eq(payrollSalaryStructures.institutionId, institutionId));
+      .where(conditions.length ? and(...conditions) : undefined);
 
     return NextResponse.json({ structures });
   } catch (error: unknown) {
@@ -33,14 +48,23 @@ export const GET = requireAuth(async (request: Request, _session) => {
   }
 }, "finance:payroll:view");
 
-export const POST = requireAuth(async (request: Request, _session) => {
-  try {
-    const body = await request.json();
-    const parsed = payrollSalaryStructureCreateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid payload" }, { status: 400 });
-    }
+export const POST = requireAuth(async (request: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = payrollSalaryStructureCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid payload" }, { status: 400 });
+  }
+
+  try {
     const institutionId = await resolveScopedInstitutionId(parsed.data.institutionId);
     const structure = await payrollEngine.createOrUpdateSalaryStructure({ ...parsed.data, institutionId });
     return NextResponse.json({ structure }, { status: 201 });
