@@ -1,6 +1,7 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { curriculumStore } from '@/lib/db/curriculum-store';
 import { planCreateSchema, planApprovalSchema } from '@/lib/validation/curriculum-schemas';
 import { PrerequisiteValidator } from '@/lib/operations/curriculum/graph/prerequisite-validator';
@@ -9,6 +10,9 @@ import { advisingMerkleAnchor } from '@/lib/operations/curriculum/security/advis
 export const dynamic = 'force-dynamic';
 
 export const GET = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(req.url);
   const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const planId = searchParams.get('planId') || undefined;
@@ -29,79 +33,97 @@ export const GET = requireAuth(async (req: Request, session: any) => {
 }, 'curriculum:plans:view');
 
 export const POST = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: unknown;
   try {
-    const body = await req.json();
-    const parsed = planCreateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
-    }
-
-    const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
-    const { courses: _courses, ...planData } = parsed.data;
-
-    // Create plan header
-    const plan = await curriculumStore.createDegreePlan({
-      ...planData,
-      institutionId: tenantId,
-    });
-
-    // Populate plan courses if supplied
-    if (parsed.data.courses && parsed.data.courses.length > 0) {
-      await curriculumStore.setPlanCourses(plan.planId, parsed.data.courses, tenantId);
-    }
-
-    // Validate plan
-    const allCourses = await curriculumStore.listCourses(tenantId);
-    const allPrereqs = await curriculumStore.listAllPrerequisites(tenantId);
-    const validator = new PrerequisiteValidator(allCourses, allPrereqs);
-
-    const fullPlan = await curriculumStore.getDegreePlan(plan.planId, tenantId);
-    const validation = validator.validatePlan(fullPlan!, fullPlan?.courses || []);
-
-    return NextResponse.json({ plan: fullPlan, validation }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
+
+  const parsed = planCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
+  }
+
+  const tenantId = await resolveRequestInstitution(session, parsed.data.institutionId);
+
+  // Verify program exists
+  const program = await curriculumStore.getProgramById(parsed.data.programId, tenantId);
+  if (!program) {
+    return NextResponse.json({ error: `Program '${parsed.data.programId}' not found in this institution` }, { status: 404 });
+  }
+
+  const { courses: _courses, ...planData } = parsed.data;
+
+  // Create plan header
+  const plan = await curriculumStore.createDegreePlan({
+    ...planData,
+    institutionId: tenantId,
+  });
+
+  // Populate plan courses if supplied
+  if (parsed.data.courses && parsed.data.courses.length > 0) {
+    await curriculumStore.setPlanCourses(plan.planId, parsed.data.courses, tenantId);
+  }
+
+  // Validate plan
+  const allCourses = await curriculumStore.listCourses(tenantId);
+  const allPrereqs = await curriculumStore.listAllPrerequisites(tenantId);
+  const validator = new PrerequisiteValidator(allCourses, allPrereqs);
+
+  const fullPlan = await curriculumStore.getDegreePlan(plan.planId, tenantId);
+  const validation = validator.validatePlan(fullPlan!, fullPlan?.courses || []);
+
+  return NextResponse.json({ plan: fullPlan, validation }, { status: 201 });
 }, 'curriculum:plans:edit');
 
 export const PATCH = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  const { searchParams } = new URL(req.url);
+  const planId = searchParams.get('planId');
+  if (!planId) return NextResponse.json({ error: 'Missing planId parameter' }, { status: 400 });
+
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
+
+  let body: unknown;
   try {
-    const { searchParams } = new URL(req.url);
-    const planId = searchParams.get('planId');
-    if (!planId) return NextResponse.json({ error: 'Missing planId parameter' }, { status: 400 });
-
-    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
-    const body = await req.json();
-    const parsed = planApprovalSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
-    }
-
-    let auditHash: string | undefined = undefined;
-    if (parsed.data.status === 'approved') {
-      const anchor = advisingMerkleAnchor.anchorAuditRecord({
-        auditId: `audit_plan_${Date.now()}`,
-        actionType: 'plan_approved',
-        planId,
-        performedByUserId: session?.staffId || 'advisor',
-        actorRole: session?.role || 'staff',
-        justification: parsed.data.justification || 'Degree plan approved by advisor',
-        auditTimestamp: new Date().toISOString(),
-      });
-      auditHash = anchor.merkleRoot;
-    }
-
-    const updated = await curriculumStore.updateDegreePlanStatus(
-      planId,
-      parsed.data.status,
-      parsed.data.advisorId || session?.staffId,
-      auditHash,
-      tenantId
-    );
-
-    if (!updated) return NextResponse.json({ error: 'Degree plan not found' }, { status: 404 });
-    return NextResponse.json({ plan: updated });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
+
+  const parsed = planApprovalSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
+  }
+
+  let auditHash: string | undefined = undefined;
+  if (parsed.data.status === 'approved') {
+    const anchor = advisingMerkleAnchor.anchorAuditRecord({
+      auditId: `audit_plan_${Date.now()}`,
+      actionType: 'plan_approved',
+      planId,
+      performedByUserId: session?.staffId || 'advisor',
+      actorRole: session?.role || 'staff',
+      justification: parsed.data.justification || 'Degree plan approved by advisor',
+      auditTimestamp: new Date().toISOString(),
+    });
+    auditHash = anchor.merkleRoot;
+  }
+
+  const updated = await curriculumStore.updateDegreePlanStatus(
+    planId,
+    parsed.data.status,
+    parsed.data.advisorId || session?.staffId,
+    auditHash,
+    tenantId
+  );
+
+  if (!updated) return NextResponse.json({ error: 'Degree plan not found' }, { status: 404 });
+  return NextResponse.json({ plan: updated });
 }, 'curriculum:plans:approve');

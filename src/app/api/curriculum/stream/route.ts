@@ -1,10 +1,14 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { advisingStream } from '@/lib/operations/curriculum/streaming/advising-stream-manager';
 
 export const dynamic = 'force-dynamic';
 
 export const GET = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get('sessionId');
   const institutionId = await resolveRequestInstitution(session, searchParams.get("institutionId"));

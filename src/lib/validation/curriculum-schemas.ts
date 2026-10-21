@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const programCreateSchema = z.object({
-  programCode: z.string().min(2),
-  title: z.string().min(3),
+  programCode: z.string().trim().min(2, "programCode must be at least 2 characters").max(50, "programCode must not exceed 50 characters"),
+  title: z.string().trim().min(3, "title must be at least 3 characters").max(200, "title must not exceed 200 characters"),
   departmentId: z.string().optional(),
   degreeType: z.enum(['bachelor', 'master', 'doctorate', 'associate', 'diploma']).default('bachelor'),
   totalCreditsRequired: z.number().int().min(30).max(240).default(120),
@@ -14,8 +14,8 @@ export const programCreateSchema = z.object({
 });
 
 export const courseCreateSchema = z.object({
-  courseCode: z.string().min(2),
-  title: z.string().min(3),
+  courseCode: z.string().trim().min(2, "courseCode must be at least 2 characters").max(50, "courseCode must not exceed 50 characters"),
+  title: z.string().trim().min(3, "title must be at least 3 characters").max(200, "title must not exceed 200 characters"),
   departmentId: z.string().optional(),
   credits: z.number().int().min(1).max(12).default(3),
   level: z.number().int().min(100).max(900).default(100),
@@ -31,12 +31,15 @@ export const courseCreateSchema = z.object({
 });
 
 export const prerequisiteCreateSchema = z.object({
-  courseId: z.string().min(1),
-  prerequisiteCourseId: z.string().min(1),
+  courseId: z.string().trim().min(1, "courseId is required"),
+  prerequisiteCourseId: z.string().trim().min(1, "prerequisiteCourseId is required"),
   type: z.enum(['hard_prerequisite', 'corequisite', 'advisory']).default('hard_prerequisite'),
   minimumGrade: z.string().default('C'),
   concurrencyAllowed: z.boolean().default(false),
   institutionId: z.string().default('global'),
+}).refine((data) => data.courseId !== data.prerequisiteCourseId, {
+  message: "Course cannot be a prerequisite of itself",
+  path: ["prerequisiteCourseId"],
 });
 
 export const planCreateSchema = z.object({

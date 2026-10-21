@@ -1,6 +1,7 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { curriculumStore } from '@/lib/db/curriculum-store';
 import { retentionAlertUpdateSchema } from '@/lib/validation/curriculum-schemas';
 import { EarlyInterventionWorkflow } from '@/lib/operations/curriculum/retention/early-intervention-workflow';
@@ -9,6 +10,9 @@ import { RiskFeatureExtractor } from '@/lib/operations/curriculum/retention/risk
 export const dynamic = 'force-dynamic';
 
 export const GET = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(req.url);
   const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const riskTier = searchParams.get('riskTier') || undefined;
@@ -19,8 +23,17 @@ export const GET = requireAuth(async (req: Request, session: any) => {
 }, 'curriculum:retention:view');
 
 export const POST = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const tenantId = await resolveRequestInstitution(session, body.institutionId || body.tenantId);
 
     const extractor = new RiskFeatureExtractor();
@@ -52,13 +65,23 @@ export const POST = requireAuth(async (req: Request, session: any) => {
 }, 'curriculum:retention:intervene');
 
 export const PATCH = requireAuth(async (req: Request, session: any) => {
-  try {
-    const { searchParams } = new URL(req.url);
-    const alertId = searchParams.get('alertId');
-    if (!alertId) return NextResponse.json({ error: 'Missing alertId parameter' }, { status: 400 });
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-    const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
-    const body = await req.json();
+  const { searchParams } = new URL(req.url);
+  const alertId = searchParams.get('alertId');
+  if (!alertId) return NextResponse.json({ error: 'Missing alertId parameter' }, { status: 400 });
+
+  const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const parsed = retentionAlertUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });

@@ -1,6 +1,7 @@
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { curriculumStore } from '@/lib/db/curriculum-store';
 import { advisingMessageSchema } from '@/lib/validation/curriculum-schemas';
 import { advisorMesh } from '@/lib/operations/curriculum/advising/advisor-mesh-orchestrator';
@@ -11,6 +12,9 @@ import { advisingMetrics } from '@/lib/operations/curriculum/telemetry/advising-
 export const dynamic = 'force-dynamic';
 
 export const GET = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   const { searchParams } = new URL(req.url);
   const tenantId = await resolveRequestInstitution(session, searchParams.get("tenantId"));
   const sessionId = searchParams.get('sessionId');
@@ -27,8 +31,17 @@ export const GET = requireAuth(async (req: Request, session: any) => {
 }, 'curriculum:advising:chat');
 
 export const POST = requireAuth(async (req: Request, session: any) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
+  let body: any;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  try {
     const parsed = advisingMessageSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
