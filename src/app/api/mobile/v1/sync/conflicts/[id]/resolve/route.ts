@@ -10,6 +10,7 @@ import {
   tasks,
 } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { hasPermission } from "@thaiba/auth";
 import type { StaffRole } from "@thaiba/auth";
@@ -29,6 +30,13 @@ const RESOLUTION_ALLOWED_FIELDS: Record<string, string[]> = {
 
 function mapField(field: string): string {
   return field === "due_date" ? "dueDate" : field;
+}
+
+async function execUpdate(query: any) {
+  if (typeof query?.run === "function") {
+    return await query.run();
+  }
+  return await query;
 }
 
 async function applyResolutionFields(
@@ -64,58 +72,64 @@ async function applyResolutionFields(
   switch (entityType) {
     case "task":
       values.updatedAt = new Date().toISOString();
-      await db
-        .update(tasks)
-        .set(values)
-        .where(
-          scope
-            ? and(eq(tasks.id, entityId), eq(tasks.institutionId, scope))
-            : eq(tasks.id, entityId)
-        )
-        .run();
+      await execUpdate(
+        db
+          .update(tasks)
+          .set(values)
+          .where(
+            scope
+              ? and(eq(tasks.id, entityId), eq(tasks.institutionId, scope))
+              : eq(tasks.id, entityId)
+          )
+      );
       return;
     case "leave":
       values.updatedAt = new Date().toISOString();
-      await db
-        .update(leaveRequests)
-        .set(values)
-        .where(and(eq(leaveRequests.id, entityId), eq(leaveRequests.staffId, staffId)))
-        .run();
+      await execUpdate(
+        db
+          .update(leaveRequests)
+          .set(values)
+          .where(and(eq(leaveRequests.id, entityId), eq(leaveRequests.staffId, staffId)))
+      );
       return;
     case "expense":
       values.updatedAt = new Date().toISOString();
-      await db
-        .update(expenseClaims)
-        .set(values)
-        .where(and(eq(expenseClaims.id, entityId), eq(expenseClaims.staffId, staffId)))
-        .run();
+      await execUpdate(
+        db
+          .update(expenseClaims)
+          .set(values)
+          .where(and(eq(expenseClaims.id, entityId), eq(expenseClaims.staffId, staffId)))
+      );
       return;
     case "purchase":
       values.updatedAt = new Date().toISOString();
-      await db
-        .update(purchaseRequests)
-        .set(values)
-        .where(
-          scope
-            ? and(eq(purchaseRequests.id, entityId), eq(purchaseRequests.institutionId, scope))
-            : eq(purchaseRequests.id, entityId)
-        )
-        .run();
+      await execUpdate(
+        db
+          .update(purchaseRequests)
+          .set(values)
+          .where(
+            scope
+              ? and(eq(purchaseRequests.id, entityId), eq(purchaseRequests.institutionId, scope))
+              : eq(purchaseRequests.id, entityId)
+          )
+      );
       return;
     case "reconciliation_item":
-      await db
-        .update(financialReconciliationItems)
-        .set(values)
-        .where(eq(financialReconciliationItems.id, entityId))
-        .run();
+      await execUpdate(
+        db
+          .update(financialReconciliationItems)
+          .set(values)
+          .where(eq(financialReconciliationItems.id, entityId))
+      );
       return;
     case "attendance": {
       // entityId is the event DATE for attendance conflicts
-      await db
-        .update(attendanceLogs)
-        .set(values)
-        .where(and(eq(attendanceLogs.staffId, staffId), eq(attendanceLogs.date, entityId)))
-        .run();
+      await execUpdate(
+        db
+          .update(attendanceLogs)
+          .set(values)
+          .where(and(eq(attendanceLogs.staffId, staffId), eq(attendanceLogs.date, entityId)))
+      );
       return;
     }
     default:
@@ -132,23 +146,27 @@ async function applyResolutionFields(
  * - NEEDS_REVIEW rows: `sync:manage` only.
  */
 export const POST = requireAuth(async (request: Request, session, ctx) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     const { id } = await ctx!.params;
     if (!id) {
       return NextResponse.json({ error: "Conflict ID is required" }, { status: 400 });
     }
 
-    const scope = await resolveScopedInstitutionId(session.institutionId);
+    const scope = await resolveScopedInstitutionId(session.institutionId, session);
     const scoped = scope && scope !== "global";
     const canManage = hasPermission(session.role as StaffRole, "sync:manage");
 
-    const row = await db
+    const query = db
       .select()
       .from(offlineSyncOutbox)
       .where(
         scoped ? and(eq(offlineSyncOutbox.id, id), eq(offlineSyncOutbox.tenantId, scope)) : eq(offlineSyncOutbox.id, id)
-      )
-      .get();
+      );
+
+    const row = typeof (query as any).get === "function" ? await (query as any).get() : (await query)[0];
 
     if (!row) {
       return NextResponse.json({ error: "Conflict not found" }, { status: 404 });
@@ -227,11 +245,24 @@ export const POST = requireAuth(async (request: Request, session, ctx) => {
     ];
     const updatedDetails = { ...details, resolutions: resolutionLog, resolvedAt: now };
 
-    await db
+    const updateQuery = db
       .update(offlineSyncOutbox)
       .set({ syncStatus: "SYNCED", conflictDetailsJson: JSON.stringify(updatedDetails) })
-      .where(eq(offlineSyncOutbox.id, row.id))
-      .run();
+      .where(and(eq(offlineSyncOutbox.id, row.id), eq(offlineSyncOutbox.syncStatus, row.syncStatus)));
+
+    if (typeof (updateQuery as any).returning === "function") {
+      const updated = await (updateQuery as any).returning();
+      if (Array.isArray(updated) && updated.length === 0) {
+        return NextResponse.json(
+          { error: "Conflict was modified or resolved by a concurrent request" },
+          { status: 409 }
+        );
+      }
+    } else if (typeof (updateQuery as any).run === "function") {
+      await (updateQuery as any).run();
+    } else {
+      await updateQuery;
+    }
 
     return NextResponse.json({
       success: true,

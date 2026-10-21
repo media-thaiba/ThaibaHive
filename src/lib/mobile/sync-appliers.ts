@@ -492,7 +492,7 @@ async function applyFinancePurchaseAction(
     approverId: ctx.staffId,
     approverRole: ctx.role,
     action: parsed.data.action,
-    comments: parsed.data.comments,
+    comments: parsed.data.comments ?? undefined,
     tierLevel: parsed.data.tierLevel,
   });
 }
@@ -502,8 +502,9 @@ async function applyFinanceReconciliationMatch(
   raw: Record<string, unknown>
 ): Promise<void> {
   if (
-    !hasPermission(ctx.role as AuthRole, "finance:reconcile") &&
-    !hasPermission(ctx.role as AuthRole, "expenses:approve")
+    !hasPermission(ctx.role as AuthRole, "finance:reconciliation:execute") &&
+    !hasPermission(ctx.role as AuthRole, "finance:reconciliation:manage") &&
+    !hasPermission(ctx.role as AuthRole, "finance:approve")
   ) {
     throw new Error("Forbidden: Insufficient permissions to reconcile financial items.");
   }
@@ -601,10 +602,6 @@ async function applyApprovalDecision(
   }
 
   if (type === "expense") {
-    if (!hasPermission(ctx.role as AuthRole, "expenses:approve")) {
-      throw new Error("Forbidden: Insufficient permissions to review expense claims.");
-    }
-
     const claim = await db
       .select()
       .from(expenseClaims)
@@ -617,6 +614,12 @@ async function applyApprovalDecision(
     if (!claim) throw new Error("Expense claim not found");
     if (!elevated && claim.staffId === ctx.staffId) {
       throw new Error("Requesters cannot review their own expense claims.");
+    }
+    if (
+      !hasPermission(ctx.role as AuthRole, "finance:approve") &&
+      !hasPermission(ctx.role as AuthRole, "approvals:approve")
+    ) {
+      throw new Error("Forbidden: Insufficient permissions to review expense claims.");
     }
 
     const validation = WorkflowEngine.validateTransition(

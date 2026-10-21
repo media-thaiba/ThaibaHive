@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { db } from "@/db";
 import { mobileSyncProcessed, offlineSyncOutbox } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { applySyncMutation } from "@/lib/mobile/sync-appliers";
 import {
@@ -34,6 +35,9 @@ export interface SyncConflictSummary {
 const resolver = new SyncConflictResolver();
 
 export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     let body: {
       deviceId?: string;
@@ -46,7 +50,14 @@ export const POST = requireAuth(async (request: Request, session) => {
       return NextResponse.json({ error: "Invalid JSON request payload" }, { status: 400 });
     }
 
-    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+    if (body.mutations && Array.isArray(body.mutations) && body.mutations.length > 500) {
+      return NextResponse.json(
+        { error: "Batch size exceeds limit of 500 mutations" },
+        { status: 400 }
+      );
+    }
+
+    const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
     const tenantId =
       scopedInstitutionId || session.institutionId || "global";
     const deviceId = typeof body.deviceId === "string" && body.deviceId ? body.deviceId : "unknown";
@@ -85,11 +96,14 @@ export const POST = requireAuth(async (request: Request, session) => {
       try {
         // Idempotency: already-processed client event IDs are acknowledged
         // without re-executing (safe replay after transport retries).
-        const alreadyProcessed = await db
+        const query = db
           .select({ clientEventId: mobileSyncProcessed.clientEventId })
           .from(mobileSyncProcessed)
-          .where(eq(mobileSyncProcessed.clientEventId, mut.id))
-          .get();
+          .where(eq(mobileSyncProcessed.clientEventId, mut.id));
+
+        const alreadyProcessed = typeof (query as any).get === "function"
+          ? await (query as any).get()
+          : (await query)[0];
 
         if (alreadyProcessed) {
           processedMutations.push(mut.id);
@@ -130,7 +144,7 @@ export const POST = requireAuth(async (request: Request, session) => {
             status: resolution.status,
             resolvedAt: null as string | null,
           };
-          await db
+          const outboxQuery = db
             .insert(offlineSyncOutbox)
             .values({
               id: crypto.randomUUID(),
@@ -143,8 +157,12 @@ export const POST = requireAuth(async (request: Request, session) => {
               clientTimestamp,
               syncStatus: resolution.status,
               conflictDetailsJson: JSON.stringify(conflictDetails),
-            })
-            .run();
+            });
+          if (typeof (outboxQuery as any).run === "function") {
+            await (outboxQuery as any).run();
+          } else {
+            await outboxQuery;
+          }
 
           conflicts.push({
             clientEventId: mut.id,
@@ -156,20 +174,62 @@ export const POST = requireAuth(async (request: Request, session) => {
 
         // Held mutations are terminal for the transport too — recorded so a
         // retry after a lost response cannot double-persist the conflict row.
-        await db
+        const processedQuery = db
           .insert(mobileSyncProcessed)
-          .values({ clientEventId: mut.id, staffId: session.staffId, action: mut.action })
-          .run();
+          .values({ clientEventId: mut.id, staffId: session.staffId, action: mut.action });
+        if (typeof (processedQuery as any).run === "function") {
+          await (processedQuery as any).run();
+        } else {
+          await processedQuery;
+        }
 
         // Every conflict id is ALSO in processedMutations (queue calls
         // markConflict, never retries it forever).
         processedMutations.push(mut.id);
       } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
         console.error(
           `Mobile sync mutation failed (action=${mut.action} id=${mut.id}):`,
-          error instanceof Error ? error.message : error
+          errorMsg
         );
         failedMutations.push(mut.id);
+
+        // Record failed non-transient mutation into DLQ outbox for administrator review
+        try {
+          if (db?.insert) {
+            const dlqDetails = {
+              institutionId: scopedInstitutionId || session.institutionId || null,
+              clientEventId: mut.id,
+              action: mut.action,
+              isDlq: true,
+              error: errorMsg,
+              failedAt: new Date().toISOString(),
+            };
+            const insertChain = db.insert(offlineSyncOutbox);
+            if (insertChain && typeof insertChain.values === "function") {
+              const dlqQuery = insertChain
+                .values({
+                  id: crypto.randomUUID(),
+                  tenantId,
+                  userId: session.staffId,
+                  deviceId,
+                  mutationType: derived?.mutationType || "UPDATE",
+                  entityType: derived?.entityType || "unknown",
+                  payloadJson: JSON.stringify(mut.payload || {}),
+                  clientTimestamp: mut.timestamp || new Date().toISOString(),
+                  syncStatus: "NEEDS_REVIEW",
+                  conflictDetailsJson: JSON.stringify(dlqDetails),
+                });
+              if (typeof (dlqQuery as any).run === "function") {
+                await (dlqQuery as any).run();
+              } else {
+                await dlqQuery;
+              }
+            }
+          }
+        } catch (dlqErr) {
+          console.error("Failed to persist DLQ record:", dlqErr);
+        }
       }
     }
 

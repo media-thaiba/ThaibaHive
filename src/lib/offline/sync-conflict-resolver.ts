@@ -113,10 +113,12 @@ export class SyncConflictResolver {
     return merged;
   }
 
+  private static readonly IMMUTABLE_FIELDS = ["id", "institutionId", "tenantId", "createdAt"];
+
   private mergeFields(serverData: Record<string, any>, clientData: Record<string, any>): Record<string, any> {
     const merged = { ...serverData };
     for (const [key, value] of Object.entries(clientData)) {
-      if (value !== undefined) {
+      if (value !== undefined && !SyncConflictResolver.IMMUTABLE_FIELDS.includes(key)) {
         merged[key] = value;
       }
     }

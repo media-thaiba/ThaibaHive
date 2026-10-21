@@ -4,6 +4,7 @@ import { SyncConflictResolver } from "@/lib/offline/sync-conflict-resolver";
 import { EventBus } from "@/lib/observability/event-bus";
 import { AnomalyDetector } from "@/lib/observability/anomaly-detector";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import zlib from "zlib";
 
 const resolver = new SyncConflictResolver();
@@ -45,7 +46,9 @@ function decompressProgressively(buffer: Buffer): Promise<Buffer> {
   });
 }
 
-export const POST = requireAuth(async (request: Request, _session) => {
+export const POST = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "write");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
   const contentEncoding = request.headers.get("content-encoding") || "";
   const isGzip = contentEncoding.includes("gzip");
 
@@ -101,6 +104,9 @@ export const POST = requireAuth(async (request: Request, _session) => {
   }
 
   const { deviceId, mutations } = parse.data;
+  if (mutations.length > 500) {
+    return NextResponse.json({ error: "Batch size exceeds limit of 500 mutations" }, { status: 400 });
+  }
   const results = [];
 
   for (const mutation of mutations) {

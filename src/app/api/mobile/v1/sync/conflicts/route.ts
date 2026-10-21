@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, isPostgres } from "@/db";
 import { offlineSyncOutbox } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { hasPermission } from "@thaiba/auth";
 import type { StaffRole } from "@thaiba/auth";
@@ -14,11 +15,17 @@ import { and, eq, gt, inArray, sql, type SQL } from "drizzle-orm";
  *   others' NEEDS_REVIEW items).
  */
 export const GET = requireAuth(async (request: Request, session) => {
+  const rl = checkRateLimit(session.staffId, "read");
+  if (!rl.allowed) return rateLimitResponse(rl.resetMs);
+
   try {
     const url = new URL(request.url);
     const since = url.searchParams.get("since");
+    if (since && isNaN(Date.parse(since))) {
+      return NextResponse.json({ error: "Invalid 'since' timestamp format" }, { status: 400 });
+    }
     const requestedUserId = url.searchParams.get("userId");
-    const scope = await resolveScopedInstitutionId(session.institutionId);
+    const scope = await resolveScopedInstitutionId(session.institutionId, session);
     const scoped = scope && scope !== "global";
 
     let userId = session.staffId;
@@ -45,11 +52,12 @@ export const GET = requireAuth(async (request: Request, session) => {
       conditions.push(gt(offlineSyncOutbox.createdAt, since));
     }
 
-    const rows = await db
+    const query = db
       .select()
       .from(offlineSyncOutbox)
-      .where(and(...conditions))
-      .all();
+      .where(and(...conditions));
+
+    const rows = typeof (query as any).all === "function" ? await (query as any).all() : await query;
 
     const conflicts = rows.map((row) => {
       let details: Record<string, unknown> = {};

@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { db } from "@/db";
 import {
   institutions,
@@ -167,7 +168,7 @@ describe("Mobile Sync Appliers Cross-Tenant Isolation", () => {
   it("allows a same-institution principal to advance the request", async () => {
     await applySyncMutation(ctxA2, "approval_approve", { type: "leave", id: leaveA2 });
 
-    expect(await getStatus(leaveA2)).toBe("hod_approved");
+    expect(await getStatus(leaveA2)).toBe("approved");
   });
 
   it("keeps global scope able to review across tenants", async () => {

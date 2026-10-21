@@ -179,7 +179,7 @@ describe("applySyncMutation — finance REST parity (D2-applier)", () => {
   });
 
   it("routes finance_reconciliation_match through the reconciliation engine", async () => {
-    await applySyncMutation(STAFF, "finance_reconciliation_match", {
+    await applySyncMutation(SCOPED_ADMIN, "finance_reconciliation_match", {
       itemId: "item_1",
       matchStatus: "manual_override",
       matchedWithId: "ext_9",
@@ -187,18 +187,29 @@ describe("applySyncMutation — finance REST parity (D2-applier)", () => {
       resolutionNotes: "Bank fee",
     });
 
-    expect(reconciliationEngine.manualMatchItem).toHaveBeenCalledWith({
-      itemId: "item_1",
-      matchStatus: "manual_override",
-      matchedWithId: "ext_9",
-      varianceAmount: 12.5,
-      resolutionNotes: "Bank fee",
-    });
+    expect(reconciliationEngine.manualMatchItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: "item_1",
+        matchStatus: "manual_override",
+        matchedWithId: "ext_9",
+        varianceAmount: 12.5,
+        resolutionNotes: "Bank fee",
+      })
+    );
+  });
+
+  it("blocks unauthorized staff without reconciliation permissions", async () => {
+    await expect(
+      applySyncMutation(STAFF, "finance_reconciliation_match", {
+        itemId: "item_1",
+        matchStatus: "matched",
+      })
+    ).rejects.toThrow("Insufficient permissions to reconcile financial items");
   });
 
   it("requires an itemId for reconciliation matches", async () => {
     await expect(
-      applySyncMutation(STAFF, "finance_reconciliation_match", {
+      applySyncMutation(SCOPED_ADMIN, "finance_reconciliation_match", {
         matchStatus: "matched",
       })
     ).rejects.toThrow("'itemId' is required");
