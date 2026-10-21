@@ -302,7 +302,7 @@ class SettingsScreen extends ConsumerWidget {
       context: context,
       applicationName: AppConstants.appName,
       applicationVersion: AppConstants.appVersion,
-      applicationLegalese: 'ThaibaHive - Unified Staff Management Platform',
+      applicationLegalese: 'ThaibaHive - Thaiba Family App',
       children: [
         const SizedBox(height: 8),
         const Text('Built with Flutter'),

@@ -23,7 +23,7 @@ class AuthHeader extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Unified Staff Management Platform',
+          'Thaiba Family App',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),

@@ -63,7 +63,7 @@ function passwordResetTemplate(firstName: string, resetUrl: string): string {
           <p style="word-break: break-all; color: #6366f1;">${resetUrl}</p>
         </div>
         <div class="footer">
-          <p>ThaibaHive — Unified Staff Management Platform</p>
+          <p>ThaibaHive — Thaiba Family App</p>
         </div>
       </div>
     </html>
@@ -164,7 +164,7 @@ function emailVerificationTemplate(firstName: string, verifyUrl: string): string
           <p style="word-break: break-all; color: #6366f1;">${verifyUrl}</p>
         </div>
         <div class="footer">
-          <p>ThaibaHive — Unified Staff Management Platform</p>
+          <p>ThaibaHive — Thaiba Family App</p>
         </div>
       </div>
     </body>

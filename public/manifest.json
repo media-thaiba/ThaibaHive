@@ -1,7 +1,7 @@
 {
-  "name": "ThaibaHive Unified Staff Management Platform",
+  "name": "ThaibaHive — Thaiba Family App",
   "short_name": "ThaibaHive",
-  "description": "Unified Staff Management, Attendance, Media & Operations Platform",
+  "description": "Thaiba Family App — For Staff, Management, Students & Parents",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0f172a",

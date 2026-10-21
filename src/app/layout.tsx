@@ -18,9 +18,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "ThaibaHive — Staff Management Platform",
+  title: "ThaibaHive — Thaiba Family App",
   description:
-    "Comprehensive staff management for Thaiba Garden Group of Institutions",
+    "Thaiba Family App — For Staff, Management, Students & Parents",
+  openGraph: {
+    title: "ThaibaHive — Thaiba Family App",
+    description: "Thaiba Family App — For Staff, Management, Students & Parents",
+    siteName: "ThaibaHive",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "ThaibaHive — Thaiba Family App",
+    description: "Thaiba Family App — For Staff, Management, Students & Parents",
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [
