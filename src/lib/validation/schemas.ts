@@ -1557,27 +1557,62 @@ export const taxRateOverrideCreateSchema = z.object({
   effectiveFrom: z.string().min(1),
   effectiveTo: z.string().optional(),
   isActive: z.boolean().default(true),
-});
+}).refine(
+  (data) => {
+    if (data.effectiveTo && data.effectiveFrom) {
+      return data.effectiveTo >= data.effectiveFrom;
+    }
+    return true;
+  },
+  {
+    message: "effectiveTo must be greater than or equal to effectiveFrom",
+    path: ["effectiveTo"],
+  }
+);
 export type TaxRateOverrideCreateInput = z.infer<typeof taxRateOverrideCreateSchema>;
+
+export const taxCalculationSchema = z.object({
+  amount: z.number().nonnegative("Amount must be non-negative"),
+  category: z.enum(["tuition", "hostel", "transport", "supplies", "services", "general"]),
+  institutionId: z.string().min(1).optional(),
+  jurisdictionId: z.string().min(1).optional(),
+  asOfDate: z.string().optional(),
+});
+export type TaxCalculationInput = z.infer<typeof taxCalculationSchema>;
 
 export const purchaseApprovalTierCreateSchema = z.object({
   institutionId: z.string().min(1).optional(),
   tierLevel: z.number().int().min(1).max(10),
-  name: z.string().min(1),
+  name: z.string().min(1).max(100),
   minAmount: z.number().min(0).default(0),
   maxAmount: z.number().positive().optional(),
   requiredRole: z.enum(["hod", "principal", "admin", "super_admin", "accounts", "purchase"]),
   requiresSequentialApproval: z.boolean().default(true),
-  autoEscalateHours: z.number().int().min(1).default(48),
+  autoEscalateHours: z.number().int().min(1).max(168).default(48),
 });
 export type PurchaseApprovalTierCreateInput = z.infer<typeof purchaseApprovalTierCreateSchema>;
+
+export const purchaseApprovalTierUpdateSchema = z.object({
+  tierLevel: z.number().int().min(1).max(10).optional(),
+  name: z.string().min(1).max(100).optional(),
+  minAmount: z.number().min(0).default(0).optional(),
+  maxAmount: z.number().positive().optional().nullable(),
+  requiredRole: z.enum(["hod", "principal", "admin", "super_admin", "accounts", "purchase"]).optional(),
+  requiresSequentialApproval: z.boolean().optional(),
+  autoEscalateHours: z.number().int().min(1).max(168).default(48).optional(),
+  isActive: z.boolean().optional(),
+});
+export type PurchaseApprovalTierUpdateInput = z.infer<typeof purchaseApprovalTierUpdateSchema>;
 
 export const purchaseApprovalActionSchema = z.object({
   purchaseRequestId: z.string().min(1),
   action: z.enum(["approved", "rejected", "escalated", "delegated"]),
-  comments: z.string().optional(),
+  comments: z.string().max(2000).optional().nullable(),
   tierLevel: z.number().int().min(1).optional(),
-});
+}).refine(
+  (data) => data.action !== "delegated" || data.tierLevel != null,
+  { message: "tierLevel is required when action is 'delegated'", path: ["tierLevel"] }
+);
 export type PurchaseApprovalActionInput = z.infer<typeof purchaseApprovalActionSchema>;
 
 export const payrollSalaryStructureCreateSchema = z.object({
