@@ -1,17 +1,26 @@
-import {  } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenTransactions } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveScopedInstitutions } from "@/lib/api/auth-guard";
+import { checkRateLimit } from "@/lib/api/rate-limit";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
+import { inArray } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`export:canteen:${session.staffId || ip}`, "read");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
   const url = new URL(request.url);
   const format = (url.searchParams.get("format") || "csv").toLowerCase();
+  const allowedInstitutions = await resolveScopedInstitutions(session, url.searchParams.get("institutionId"));
 
-  const data = await db
+  let query = db
     .select({
       id: canteenTransactions.id,
       passCode: canteenTransactions.passCode,
@@ -21,7 +30,13 @@ export const GET = requireAuth(async (request: Request, _session) => {
       createdAt: canteenTransactions.createdAt,
     })
     .from(canteenTransactions)
-    .all();
+    .$dynamic();
+
+  if (!allowedInstitutions.includes("global")) {
+    query = query.where(inArray(canteenTransactions.institutionId, allowedInstitutions));
+  }
+
+  const data = await query.all();
 
   const columns: ExportColumn[] = [
     { key: "passCode", header: "Meal Pass Code" },
@@ -58,5 +73,4 @@ export const GET = requireAuth(async (request: Request, _session) => {
       "Content-Disposition": `attachment; filename="canteen-ledger.csv"`,
     },
   });
-
 }, "canteen:read");

@@ -1027,6 +1027,11 @@ export const canteenRedeemSchema = z.object({
   idempotencyKey: z.string().trim().max(200).optional().nullable(),
 });
 
+export const canteenDietaryUpdateSchema = z.object({
+  studentId: z.string().trim().min(1, "Student ID is required").max(128, "Student ID cannot exceed 128 characters"),
+  dietaryFlags: z.string().trim().min(1, "Dietary flags are required").max(500, "Dietary flags cannot exceed 500 characters"),
+});
+
 export const visitorPreRegisterSchema = z.object({
   visitorName: z.string().min(1),
   visitorPhone: z.string().min(1),

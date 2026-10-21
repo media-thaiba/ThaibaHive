@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { db } from "@/db";
 import { mealNotifications, staff, staffInstitutions, institutions } from "@/db/schema";
 import { GET as getMeals } from "../route";

@@ -35,6 +35,12 @@ import {
   POST as createPass,
 } from "@/app/api/canteen/passes/route";
 import { POST as redeemMeal } from "@/app/api/canteen/redeem/route";
+import { DELETE as deleteMealNotification } from "@/app/api/canteen/[id]/route";
+import { GET as exportCanteen } from "@/app/api/export/canteen/route";
+import {
+  GET as getParentCanteenBalance,
+  POST as updateParentDietaryFlags,
+} from "@/app/api/mobile/v1/parent/canteen-balance/route";
 
 jest.mock("@thaiba/auth", () => {
   const actual = jest.requireActual("@thaiba/auth");
@@ -66,7 +72,7 @@ describe("Canteen & Meal Management Pipeline — Hardening", () => {
     });
     (hasPermission as unknown as jest.Mock).mockImplementation((_session: unknown, perm: string) => {
       if (role === "super_admin" || role === "admin") return true;
-      if (role === "staff" && (perm === "canteen:read" || perm === "canteen:create" || perm === "canteen:redeem")) {
+      if (role === "staff" && (perm === "canteen:read" || perm === "canteen:create" || perm === "canteen:redeem" || perm === "canteen:delete" || perm === "canteen:manage")) {
         return true;
       }
       return false;
@@ -381,6 +387,166 @@ describe("Canteen & Meal Management Pipeline — Hardening", () => {
         .where(eq(canteenMealPasses.passCode, passCode1))
         .get();
       expect(passRow?.balance).toBe(20);
+    });
+  });
+
+  describe("Canteen Sales Export Multi-Tenant Scoping", () => {
+    const txAId = `tx_exp_a_${suffix}`;
+    const txBId = `tx_exp_b_${suffix}`;
+    const passExpAId = `pass_exp_a_${suffix}`;
+    const passExpBId = `pass_exp_b_${suffix}`;
+
+    beforeAll(async () => {
+      // Seed passes and transactions in Campus A and Campus B
+      await db.insert(canteenMealPasses).values([
+        {
+          id: passExpAId,
+          institutionId: instA,
+          userId: studentAId,
+          passCode: `EXP_A_${suffix}`,
+          balance: 500,
+          status: "active",
+        },
+        {
+          id: passExpBId,
+          institutionId: instB,
+          userId: studentAId,
+          passCode: `EXP_B_${suffix}`,
+          balance: 500,
+          status: "active",
+        },
+      ]);
+
+      await db.insert(canteenTransactions).values([
+        {
+          id: txAId,
+          institutionId: instA,
+          passId: passExpAId,
+          passCode: `EXP_A_${suffix}`,
+          userId: studentAId,
+          itemsJson: "[]",
+          totalAmount: 150,
+          status: "completed",
+        },
+        {
+          id: txBId,
+          institutionId: instB,
+          passId: passExpBId,
+          passCode: `EXP_B_${suffix}`,
+          userId: studentAId,
+          itemsJson: "[]",
+          totalAmount: 250,
+          status: "completed",
+        },
+      ]);
+    });
+
+    afterAll(async () => {
+      await db.delete(canteenTransactions).where(inArray(canteenTransactions.id, [txAId, txBId]));
+      await db.delete(canteenMealPasses).where(inArray(canteenMealPasses.id, [passExpAId, passExpBId]));
+    });
+
+    it("restricts export to tenant-scoped transactions (Campus A cannot export Campus B)", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/export/canteen?format=csv&institutionId=${instA}`);
+      const res = await exportCanteen(req);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain(`EXP_A_${suffix}`);
+      expect(text).not.toContain(`EXP_B_${suffix}`);
+    });
+
+    it("allows super_admin to export global canteen ledger across all institutions", async () => {
+      asUser("super_admin", "super_admin_id", instA);
+      const req = new Request("http://localhost/api/export/canteen?format=csv");
+      const res = await exportCanteen(req);
+      expect(res.status).toBe(200);
+      const text = await res.text();
+      expect(text).toContain(`EXP_A_${suffix}`);
+      expect(text).toContain(`EXP_B_${suffix}`);
+    });
+  });
+
+  describe("Mobile Parent Canteen Balance & Dietary Hardening", () => {
+    it("safely handles empty or malformed JSON body on dietary update with 400 (not 500)", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/mobile/v1/parent/canteen-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "invalid-json",
+      });
+      const res = await updateParentDietaryFlags(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid JSON payload");
+    });
+
+    it("rejects dietary update with missing parameters (400)", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/mobile/v1/parent/canteen-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: studentAId,
+          // missing dietaryFlags
+        }),
+      });
+      const res = await updateParentDietaryFlags(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toContain("Missing required dietary parameters");
+    });
+
+    it("successfully updates dietary flags with valid payload (200)", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/mobile/v1/parent/canteen-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: studentAId,
+          dietaryFlags: "Nut-free, Halal",
+        }),
+      });
+      const res = await updateParentDietaryFlags(req);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.dietaryFlags).toBe("Nut-free, Halal");
+    });
+  });
+
+  describe("Dynamic Parameter Fallback on Canteen Deletion", () => {
+    const mealNotifId = `meal_notif_del_${suffix}`;
+
+    beforeAll(async () => {
+      await db.insert(mealNotifications).values({
+        id: mealNotifId,
+        staffId: studentAId,
+        date: "2028-12-01",
+        mealType: "lunch",
+        status: "eating",
+        institutionId: instA,
+      });
+    });
+
+    it("returns 404 on deleting non-existent meal notification", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request("http://localhost/api/canteen/non-existent-id", {
+        method: "DELETE",
+      });
+      const res = await deleteMealNotification(req, { params: Promise.resolve({ id: "non-existent-id" }) });
+      expect(res.status).toBe(404);
+    });
+
+    it("successfully deletes meal notification with params object", async () => {
+      asUser("admin", adminAId, instA);
+      const req = new Request(`http://localhost/api/canteen/${mealNotifId}`, {
+        method: "DELETE",
+      });
+      const res = await deleteMealNotification(req, { params: Promise.resolve({ id: mealNotifId }) });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
     });
   });
 });

@@ -152,6 +152,8 @@ export default function CanteenPage() {
       if (res.ok) {
         toast.success(`${MEAL_CONFIG[meal].label} preference saved`);
         fetchData();
+      } else {
+        toast.error(res.error || "Failed to save meal preference");
       }
     } catch {
       toast.error("Failed to save meal preference");

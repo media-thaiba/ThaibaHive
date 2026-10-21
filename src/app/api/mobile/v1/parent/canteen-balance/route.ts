@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { canteenMealPasses, canteenTransactions } from "@/db/schema";
 import { requireAuth, resolveScopedInstitutions } from "@/lib/api/auth-guard";
+import { checkRateLimit } from "@/lib/api/rate-limit";
+import { canteenDietaryUpdateSchema } from "@/lib/validation/schemas";
 import { and, eq, inArray, desc } from "drizzle-orm";
 
 function isManagerRole(role: string): boolean {
@@ -9,6 +11,12 @@ function isManagerRole(role: string): boolean {
 }
 
 export const GET = requireAuth(async (request: Request, session) => {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`canteen:parent:balance:${session.staffId || ip}`, "read");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+  }
+
   const url = new URL(request.url);
   const requestedStudentId = url.searchParams.get("studentId");
 
@@ -52,12 +60,26 @@ export const GET = requireAuth(async (request: Request, session) => {
 }, "canteen:read");
 
 export const POST = requireAuth(async (request: Request, session) => {
-  const body = await request.json();
-  const { studentId, dietaryFlags } = body;
-
-  if (!studentId || !dietaryFlags) {
-    return NextResponse.json({ error: "Missing required dietary parameters" }, { status: 400 });
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimit = checkRateLimit(`canteen:parent:balance:${session.staffId || ip}`, "write");
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
+
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const parsed = canteenDietaryUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Missing required dietary parameters", details: parsed.error.format() },
+      { status: 400 }
+    );
+  }
+
+  const { studentId, dietaryFlags } = parsed.data;
 
   if (studentId !== session.staffId && !isManagerRole(session.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

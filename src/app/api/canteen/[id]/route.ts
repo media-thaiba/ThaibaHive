@@ -7,11 +7,20 @@ import { eq, and } from "drizzle-orm";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 
-export const DELETE = requireAuth(async (_request, session, context) => {
+export const DELETE = requireAuth(async (request, session, context) => {
   const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
-  const { id } = await context!.params;
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    id = url.pathname.split("/").pop();
+  }
+  if (!id) {
+    return NextResponse.json({ error: "Meal notification ID is required" }, { status: 400 });
+  }
+
   const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId, session);
   const whereClause = scopedInstitutionId && scopedInstitutionId !== "global"
     ? and(eq(mealNotifications.id, id), eq(mealNotifications.institutionId, scopedInstitutionId))

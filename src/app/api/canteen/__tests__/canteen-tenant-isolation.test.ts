@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { db } from "@/db";
 import { mealNotifications, staff, staffInstitutions, institutions } from "@/db/schema";
 import { DELETE as deleteMeal } from "../[id]/route";
