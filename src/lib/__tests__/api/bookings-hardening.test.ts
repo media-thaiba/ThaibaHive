@@ -551,4 +551,136 @@ describe("Bookings Engine Hardening — Concurrency, Lifecycle, and Tenant Bound
       await db.delete(bookingResources).where(eq(bookingResources.id, data.resource.id)).run();
     });
   });
+
+  describe("Route Parameter Fallbacks, Allowlist Query Filters & Schema Bounds", () => {
+    let testBkId: string;
+
+    beforeAll(async () => {
+      testBkId = `bk_fb_${suffix}`;
+      await db.insert(bookings).values({
+        id: testBkId,
+        resourceId: resourceActiveA,
+        bookerId: bookerAId,
+        title: "Fallback Test Booking",
+        startTime: futureDay(10, 9, 0),
+        endTime: futureDay(10, 11, 0),
+        status: "pending",
+        institutionId: instA,
+      }).run();
+    });
+
+    afterAll(async () => {
+      await db.delete(bookings).where(eq(bookings.id, testBkId)).run();
+    });
+
+    it("extracts booking ID from URL pathname when context params are missing", async () => {
+      setSession({ staffId: bookerAId, role: "staff", institutionId: instA });
+
+      // GET detail with empty context params
+      const reqGet = new Request(`https://thaiba.edu/api/bookings/${testBkId}`, { method: "GET" });
+      const resGet = await getBookingDetail(reqGet, { params: Promise.resolve({}) as any });
+      expect(resGet.status).toBe(200);
+      const dataGet = await resGet.json();
+      expect(dataGet.booking.id).toBe(testBkId);
+
+      // PATCH with empty context params
+      const reqPatch = makeJsonReq(`https://thaiba.edu/api/bookings/${testBkId}`, { notes: "Updated via fallback" }, "PATCH");
+      const resPatch = await updateBooking(reqPatch, { params: Promise.resolve({}) as any });
+      expect(resPatch.status).toBe(200);
+      const dataPatch = await resPatch.json();
+      expect(dataPatch.booking.notes).toBe("Updated via fallback");
+
+      // Fail-closed when URL has no ID
+      const reqInvalid = new Request("https://thaiba.edu/api/bookings/", { method: "GET" });
+      const resInvalid = await getBookingDetail(reqInvalid, { params: Promise.resolve({}) as any });
+      expect(resInvalid.status).toBe(400);
+    });
+
+    it("filters bookings by status and institution query parameters on server", async () => {
+      const bkPending = `bk_flt_p_${suffix}`;
+      const bkApproved = `bk_flt_a_${suffix}`;
+
+      await db.insert(bookings).values([
+        {
+          id: bkPending,
+          resourceId: resourceActiveA,
+          bookerId: bookerAId,
+          title: "Pending Filter Target",
+          startTime: futureDay(11, 14, 0),
+          endTime: futureDay(11, 15, 0),
+          status: "pending",
+          institutionId: instA,
+        },
+        {
+          id: bkApproved,
+          resourceId: resourceActiveA,
+          bookerId: bookerAId,
+          title: "Approved Filter Target",
+          startTime: futureDay(12, 14, 0),
+          endTime: futureDay(12, 15, 0),
+          status: "approved",
+          institutionId: instA,
+        },
+      ]).run();
+
+      setSession({ staffId: adminAId, role: "admin", institutionId: instA });
+
+      // Query status=pending
+      const reqPending = new Request(`https://thaiba.edu/api/bookings?institutionId=${instA}&status=pending`, { method: "GET" });
+      const resPending = await listBookings(reqPending);
+      expect(resPending.status).toBe(200);
+      const dataPending = await resPending.json();
+      const pendingIds = dataPending.bookings.map((b: any) => b.id);
+      expect(pendingIds).toContain(bkPending);
+      expect(pendingIds).not.toContain(bkApproved);
+
+      // Query status=approved
+      const reqApproved = new Request(`https://thaiba.edu/api/bookings?institutionId=${instA}&status=approved`, { method: "GET" });
+      const resApproved = await listBookings(reqApproved);
+      expect(resApproved.status).toBe(200);
+      const dataApproved = await resApproved.json();
+      const approvedIds = dataApproved.bookings.map((b: any) => b.id);
+      expect(approvedIds).toContain(bkApproved);
+      expect(approvedIds).not.toContain(bkPending);
+
+      // Cleanup
+      await db.delete(bookings).where(inArray(bookings.id, [bkPending, bkApproved])).run();
+    });
+
+    it("rejects overlength title (> 150 chars) and HTML tags in booking creation", async () => {
+      setSession({ staffId: bookerAId, role: "staff", institutionId: instA });
+
+      // Overlength title
+      const reqOverlength = makeJsonReq("https://thaiba.edu/api/bookings", {
+        resourceId: resourceActiveA,
+        title: "x".repeat(151),
+        startTime: futureDay(13, 10, 0),
+        endTime: futureDay(13, 11, 0),
+      });
+      const resOverlength = await createBooking(reqOverlength);
+      expect(resOverlength.status).toBe(400);
+
+      // HTML tags in title
+      const reqHtml = makeJsonReq("https://thaiba.edu/api/bookings", {
+        resourceId: resourceActiveA,
+        title: "<script>alert('hack')</script>",
+        startTime: futureDay(13, 10, 0),
+        endTime: futureDay(13, 11, 0),
+      });
+      const resHtml = await createBooking(reqHtml);
+      expect(resHtml.status).toBe(400);
+    });
+
+    it("rejects overlength cancellation reason (> 500 chars) on PATCH", async () => {
+      setSession({ staffId: bookerAId, role: "staff", institutionId: instA });
+
+      const reqOverlengthReason = makeJsonReq(`https://thaiba.edu/api/bookings/${testBkId}`, {
+        status: "cancelled",
+        cancellationReason: "c".repeat(501),
+      }, "PATCH");
+
+      const res = await updateBooking(reqOverlengthReason, contextParams(testBkId));
+      expect(res.status).toBe(400);
+    });
+  });
 });

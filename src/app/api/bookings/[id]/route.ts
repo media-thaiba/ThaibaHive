@@ -10,8 +10,18 @@ import type { StaffRole } from "@/types";
 
 const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal", "hod"];
 
-export const GET = requireAuth(async (_request, session, context) => {
-  const { id } = await context!.params;
+export const GET = requireAuth(async (request: Request, session, context) => {
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "bookings") {
+      id = last;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Booking ID is required" }, { status: 400 });
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const booking = await db
@@ -60,8 +70,18 @@ export const GET = requireAuth(async (_request, session, context) => {
   return NextResponse.json({ booking });
 }, "bookings:read");
 
-export const PATCH = requireAuth(async (request, session, context) => {
-  const { id } = await context!.params;
+export const PATCH = requireAuth(async (request: Request, session, context) => {
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "bookings") {
+      id = last;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Booking ID is required" }, { status: 400 });
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const body = await request.json().catch(() => null);
@@ -168,8 +188,18 @@ export const PATCH = requireAuth(async (request, session, context) => {
   return NextResponse.json({ booking: updated });
 }, "bookings:create");
 
-export const DELETE = requireAuth(async (_request, session, context) => {
-  const { id } = await context!.params;
+export const DELETE = requireAuth(async (request: Request, session, context) => {
+  const params = context?.params ? await context.params : {};
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "bookings") {
+      id = last;
+    }
+  }
+  if (!id) return NextResponse.json({ error: "Booking ID is required" }, { status: 400 });
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
 
   const booking = await db

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings, bookingResources, staff } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { withBookingLock, hasOverlappingBooking, validateBookingTimes } from "@/lib/bookings/ledger";
@@ -14,9 +14,15 @@ export const GET = requireAuth(async (request: Request, session) => {
   const date = url.searchParams.get("date");
   const conditions = [];
 
-  const scopedInstitutionId = await resolveScopedInstitutionId(session.institutionId);
+  const scopedInstitutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   if (scopedInstitutionId && scopedInstitutionId !== "global") {
     conditions.push(eq(bookings.institutionId, scopedInstitutionId));
+  }
+
+  const allowedStatuses = ["pending", "approved", "confirmed", "rejected", "cancelled"] as const;
+  const statusParam = url.searchParams.get("status");
+  if (statusParam && allowedStatuses.includes(statusParam as (typeof allowedStatuses)[number])) {
+    conditions.push(eq(bookings.status, statusParam));
   }
 
   if (resourceId) conditions.push(eq(bookings.resourceId, resourceId));

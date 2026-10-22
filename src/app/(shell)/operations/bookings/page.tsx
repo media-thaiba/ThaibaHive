@@ -168,7 +168,7 @@ export default function BookingsPage() {
         setForm({ resourceId: "", title: "", startTime: "", endTime: "", description: "" });
         loadData();
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to book resource. Overlaps are not allowed." }));
         setError(d.error || "Failed to book resource. Overlaps are not allowed.");
         toast.error(d.error || "Booking overlap/conflict detected");
       }
@@ -207,7 +207,7 @@ export default function BookingsPage() {
         setResForm({ name: "", type: "room", capacity: "", location: "", description: "" });
         loadData();
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to create resource" }));
         setError(d.error || "Failed to create resource");
       }
     } catch {
@@ -228,7 +228,7 @@ export default function BookingsPage() {
         toast.success("Booking cancelled successfully");
         loadData();
       } else {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({ error: "Failed to cancel booking" }));
         toast.error(d.error || "Failed to cancel booking");
       }
     } catch {
@@ -371,11 +371,11 @@ export default function BookingsPage() {
                 onChange={(e) => setForm({ ...form, resourceId: e.target.value })}
                 required
               >
-                <option value="">Choose resource to book...</option>
+                <SelectItem value="">Choose resource to book...</SelectItem>
                 {resources.map((r) => (
-                  <option key={r.id} value={r.id}>
+                  <SelectItem key={r.id} value={r.id}>
                     {r.name} ({r.type}) {r.location ? ` - ${r.location}` : ""}
-                  </option>
+                  </SelectItem>
                 ))}
               </Select>
 
@@ -449,7 +449,7 @@ export default function BookingsPage() {
                 <Layers className="h-6 w-6 text-primary" />
                 <div>
                   <h3 className="font-semibold text-sm">All Resources</h3>
-                  <p className="text-[10px] text-muted-foreground">Show booking schedule for everything</p>
+                  <p className="text-[11px] text-muted-foreground">Show booking schedule for everything</p>
                 </div>
               </CardContent>
             </Card>
@@ -476,14 +476,14 @@ export default function BookingsPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm truncate">{r.name}</h3>
                     {r.location && (
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                         <MapPin className="h-3 w-3 shrink-0" /> {r.location}
                       </p>
                     )}
                     <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-[9px] py-0 capitalize">{r.type}</Badge>
+                      <Badge variant="outline" className="text-[11px] py-0 capitalize">{r.type}</Badge>
                       {r.capacity && (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                           <Users className="h-3 w-3" /> {r.capacity} capacity
                         </span>
                       )}
@@ -505,12 +505,12 @@ export default function BookingsPage() {
                   <div className="space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-sm truncate">{b.title}</h3>
-                      <Badge variant={statusVariant[b.status] || "secondary"} className="text-[9px] py-0 capitalize">
+                      <Badge variant={statusVariant[b.status] || "secondary"} className="text-[11px] py-0 capitalize">
                         {b.status}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">Resource: <span className="font-medium text-foreground">{b.resourceName}</span></p>
-                    <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
+                    <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
                       <span className="flex items-center gap-1 font-medium text-foreground">
                         <Users className="h-3.5 w-3.5" /> Booked by: {b.bookedByName ? `${b.bookedByName} ${b.bookedByLastName ?? ""}`.trim() : "Unknown"}
                       </span>

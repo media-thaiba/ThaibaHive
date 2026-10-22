@@ -414,8 +414,10 @@ export const canteenCreateSchema = z.object({
 
 export const bookingCreateSchema = z
   .object({
-    resourceId: z.string().min(1),
-    title: z.string().min(1),
+    resourceId: z.string().trim().min(1, "Resource ID is required"),
+    title: z.string().trim().min(1, "Title is required").max(150, "Title cannot exceed 150 characters").refine((val) => !/[<>]/.test(val), {
+      message: "Title cannot contain HTML markup",
+    }),
     startTime: z
       .string()
       .refine((v) => !Number.isNaN(Date.parse(v)), {
@@ -426,8 +428,8 @@ export const bookingCreateSchema = z
       .refine((v) => !Number.isNaN(Date.parse(v)), {
         message: "endTime must be a valid datetime",
       }),
-    notes: z.string().optional(),
-    description: z.string().optional(),
+    notes: z.string().trim().max(2000, "Notes cannot exceed 2000 characters").optional().nullable(),
+    description: z.string().trim().max(2000, "Description cannot exceed 2000 characters").optional().nullable(),
   })
   .refine((data) => Date.parse(data.endTime) > Date.parse(data.startTime), {
     message: "endTime must be after startTime",
@@ -435,19 +437,21 @@ export const bookingCreateSchema = z
   });
 
 export const bookingUpdateSchema = z.object({
-  title: z.string().min(1).optional(),
-  notes: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  title: z.string().trim().min(1, "Title cannot be empty").max(150, "Title cannot exceed 150 characters").refine((val) => !/[<>]/.test(val), {
+    message: "Title cannot contain HTML markup",
+  }).optional(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  description: z.string().trim().max(2000).optional().nullable(),
   status: z.enum(["cancelled", "pending", "approved", "rejected", "confirmed"]).optional(),
-  cancellationReason: z.string().optional().nullable(),
+  cancellationReason: z.string().trim().max(500, "Cancellation reason cannot exceed 500 characters").optional().nullable(),
 });
 
 export const bookingResourceCreateSchema = z.object({
-  name: z.string().min(1).max(120),
-  type: z.string().min(1),
+  name: z.string().trim().min(1, "Name is required").max(120, "Name cannot exceed 120 characters"),
+  type: z.string().trim().min(1, "Type is required").max(50, "Type cannot exceed 50 characters"),
   capacity: z.coerce.number().int().positive().optional().nullable(),
-  location: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  location: z.string().trim().max(200).optional().nullable(),
+  description: z.string().trim().max(1000).optional().nullable(),
   institutionId: z.string().optional().nullable(),
 });
 
