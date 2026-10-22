@@ -840,6 +840,7 @@ export const staffAvailability = sqliteTable("staff_availability", {
   id: text("id").primaryKey(),
   staffId: text("staff_id").notNull().unique().references(() => staff.id),
   status: text("status").notNull().default("available"),
+  expiresAt: text("expires_at"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
 
@@ -968,6 +969,18 @@ export const mealNotifications = sqliteTable("meal_notifications", {
   instIdx: index("idx_meal_notifications_institution").on(t.institutionId),
   dateMealIdx: index("idx_meal_notifications_date_meal").on(t.date, t.mealType),
 }));
+
+export const staffMealPreferences = sqliteTable("staff_meal_preferences", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().unique().references(() => staff.id),
+  defaultBreakfast: text("default_breakfast").notNull().default("eating"),
+  defaultLunch: text("default_lunch").notNull().default("eating"),
+  defaultDinner: text("default_dinner").notNull().default("eating"),
+  skipStartDate: text("skip_start_date"),
+  skipEndDate: text("skip_end_date"),
+  recurringSkipDays: text("recurring_skip_days"),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+});
 
 // ─── Approval Delegations ───
 
@@ -1233,6 +1246,7 @@ export const presence = sqliteTable("presence", {
   lastSeenAt: text("last_seen_at").notNull(),
   status: text("status").notNull().default("active"),
   statusText: text("status_text"),
+  expiresAt: text("expires_at"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
 

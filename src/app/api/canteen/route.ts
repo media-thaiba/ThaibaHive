@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { mealNotifications, staff } from "@/db/schema";
+import { mealNotifications, staff, staffMealPreferences } from "@/db/schema";
 import { requireAuth, resolveScopedInstitutions } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { canteenCreateSchema } from "@/lib/validation/schemas";
@@ -59,7 +59,31 @@ export const GET = requireAuth(async (request: Request, session) => {
     },
   };
 
-  return NextResponse.json({ notifications, summary });
+  const userPrefRow = await db
+    .select()
+    .from(staffMealPreferences)
+    .where(eq(staffMealPreferences.staffId, session.staffId))
+    .get();
+
+  let userPreferences = null;
+  if (userPrefRow) {
+    let recurring: number[] = [];
+    try {
+      recurring = JSON.parse(userPrefRow.recurringSkipDays || "[]");
+    } catch {
+      recurring = [];
+    }
+    userPreferences = {
+      defaultBreakfast: userPrefRow.defaultBreakfast,
+      defaultLunch: userPrefRow.defaultLunch,
+      defaultDinner: userPrefRow.defaultDinner,
+      skipStartDate: userPrefRow.skipStartDate,
+      skipEndDate: userPrefRow.skipEndDate,
+      recurringSkipDays: recurring,
+    };
+  }
+
+  return NextResponse.json({ notifications, summary, userPreferences });
 }, "canteen:read");
 
 export const POST = requireAuth(async (request: Request, session) => {

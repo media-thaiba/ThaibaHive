@@ -5,15 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectItem } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api/client";
 import { ensureArray } from "@/lib/utils";
 import { toast } from "sonner";
-import { Users, UtensilsCrossed, Search } from "lucide-react";
+import { UtensilsCrossed, Search, Settings2, Clock } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner";
 type MealStatus = "eating" | "skip" | "bring_guest";
@@ -35,6 +43,15 @@ type MealSummary = {
   guests: number;
 };
 
+type UserPreferences = {
+  defaultBreakfast: "eating" | "skip";
+  defaultLunch: "eating" | "skip";
+  defaultDinner: "eating" | "skip";
+  skipStartDate: string | null;
+  skipEndDate: string | null;
+  recurringSkipDays: number[];
+};
+
 type CanteenData = {
   notifications: MealNotification[];
   summary: {
@@ -42,6 +59,7 @@ type CanteenData = {
     lunch: MealSummary;
     dinner: MealSummary;
   };
+  userPreferences?: UserPreferences | null;
 };
 
 const MEAL_CONFIG: Record<MealType, { label: string; icon: string }> = {
@@ -62,6 +80,16 @@ const statusLabels: Record<MealStatus, string> = {
   bring_guest: "Guests",
 };
 
+const DAYS_OF_WEEK = [
+  { day: 0, label: "Sun" },
+  { day: 1, label: "Mon" },
+  { day: 2, label: "Tue" },
+  { day: 3, label: "Wed" },
+  { day: 4, label: "Thu" },
+  { day: 5, label: "Fri" },
+  { day: 6, label: "Sat" },
+];
+
 function today() {
   return new Date().toISOString().split("T")[0];
 }
@@ -76,10 +104,30 @@ export default function CanteenPage() {
   const [data, setData] = useState<CanteenData | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   const [teamSearch, setTeamSearch] = useState("");
   const [filterMealType, setFilterMealType] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+
+  const [userPrefs, setUserPrefs] = useState<UserPreferences>({
+    defaultBreakfast: "eating",
+    defaultLunch: "eating",
+    defaultDinner: "eating",
+    skipStartDate: null,
+    skipEndDate: null,
+    recurringSkipDays: [],
+  });
+
+  const [prefForm, setPrefForm] = useState<UserPreferences>({
+    defaultBreakfast: "eating",
+    defaultLunch: "eating",
+    defaultDinner: "eating",
+    skipStartDate: null,
+    skipEndDate: null,
+    recurringSkipDays: [],
+  });
 
   const [preferences, setPreferences] = useState<
     Record<MealType, { status: MealStatus; guestCount: number; notes: string }>
@@ -107,16 +155,66 @@ export default function CanteenPage() {
             dinner: { skip: 0, guests: 0 },
           },
         });
+
+        const activePrefs: UserPreferences = d.userPreferences || {
+          defaultBreakfast: "eating",
+          defaultLunch: "eating",
+          defaultDinner: "eating",
+          skipStartDate: null,
+          skipEndDate: null,
+          recurringSkipDays: [],
+        };
+        setUserPrefs(activePrefs);
+        setPrefForm(activePrefs);
+
         const myNotifs = notifications.filter((n) => n.staffId === staff?.id);
+
+        // Compute effective defaults for the selected date
+        const dayOfWeek = new Date(selectedDate).getDay();
+        const isInSkipPeriod = Boolean(
+          activePrefs.skipStartDate &&
+          activePrefs.skipEndDate &&
+          selectedDate >= activePrefs.skipStartDate &&
+          selectedDate <= activePrefs.skipEndDate
+        );
+        const isRecurringSkipDay = activePrefs.recurringSkipDays.includes(dayOfWeek);
+
         setPreferences((prev) => {
           const merged = { ...prev };
-          for (const n of myNotifs) {
-            merged[n.mealType as MealType] = {
-              status: n.status as MealStatus,
-              guestCount: n.guestCount || 0,
-              notes: n.notes || "",
-            };
-          }
+          (["breakfast", "lunch", "dinner"] as MealType[]).forEach((m) => {
+            const notif = myNotifs.find((n) => n.mealType === m);
+            if (notif) {
+              merged[m] = {
+                status: notif.status as MealStatus,
+                guestCount: notif.guestCount || 0,
+                notes: notif.notes || "",
+              };
+            } else {
+              // Apply defaults
+              let defaultStatus: MealStatus = "eating";
+              let defaultNotes = "";
+
+              if (isInSkipPeriod) {
+                defaultStatus = "skip";
+                defaultNotes = "Scheduled Period Skip";
+              } else if (isRecurringSkipDay) {
+                defaultStatus = "skip";
+                defaultNotes = "Regular Weekly Skip";
+              } else {
+                const key = m === "breakfast" ? "defaultBreakfast" : m === "lunch" ? "defaultLunch" : "defaultDinner";
+                defaultStatus = activePrefs[key] || "eating";
+                if (defaultStatus === "skip") {
+                  defaultNotes = "Default: Skip Meal";
+                }
+              }
+
+              merged[m] = {
+                status: defaultStatus,
+                guestCount: 0,
+                notes: defaultNotes,
+              };
+            }
+          });
           return merged;
         });
       }
@@ -162,6 +260,34 @@ export default function CanteenPage() {
     }
   }
 
+  async function handleSaveSchedulePreferences() {
+    setSavingSchedule(true);
+    try {
+      const res = await api.put("/api/canteen/preferences", prefForm);
+      if (res.ok) {
+        toast.success("Meal defaults & schedule saved");
+        setScheduleModalOpen(false);
+        fetchData();
+      } else {
+        toast.error(res.error || "Failed to save preferences");
+      }
+    } catch {
+      toast.error("Failed to save preferences");
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
+  function toggleRecurringDay(day: number) {
+    setPrefForm((prev) => {
+      const exists = prev.recurringSkipDays.includes(day);
+      const nextDays = exists
+        ? prev.recurringSkipDays.filter((d) => d !== day)
+        : [...prev.recurringSkipDays, day].sort();
+      return { ...prev, recurringSkipDays: nextDays };
+    });
+  }
+
   const notifications = data?.notifications ?? [];
   const filteredTeamNotifications = notifications.filter((n) => {
     if (filterMealType && n.mealType !== filterMealType) return false;
@@ -194,22 +320,56 @@ export default function CanteenPage() {
   ];
   if (canViewTeam) tabs.push({ key: "team", label: "Kitchen Summary" });
 
+  const activeDayOfWeek = new Date(selectedDate).getDay();
+  const isSelectedDateInSkipPeriod = Boolean(
+    userPrefs.skipStartDate &&
+    userPrefs.skipEndDate &&
+    selectedDate >= userPrefs.skipStartDate &&
+    selectedDate <= userPrefs.skipEndDate
+  );
+  const isSelectedDateRecurringSkip = userPrefs.recurringSkipDays.includes(activeDayOfWeek);
+
   return (
     <div className="flex-1 space-y-6 p-6 lg:p-8">
       <PageHeader
         title="Canteen & Meals"
-        description="Manage your daily meal preferences and view kitchen summary."
+        description="Manage your daily meal preferences, regular schedule, and kitchen headcount."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPrefForm(userPrefs);
+                setScheduleModalOpen(true);
+              }}
+              className="gap-1.5 text-xs h-9"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              Schedule & Defaults
+            </Button>
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto max-w-[160px]"
+              className="w-auto max-w-[150px] h-9"
             />
           </div>
         }
       />
+
+      {/* Schedule Banner if Active on Selected Date */}
+      {(isSelectedDateInSkipPeriod || isSelectedDateRecurringSkip) && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+          <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            {isSelectedDateInSkipPeriod
+              ? `Scheduled Skip Window Active (${userPrefs.skipStartDate} to ${userPrefs.skipEndDate})`
+              : "Recurring Weekly Skip Active for this day"}
+            . Daily meals default to <strong>Skip</strong> unless overridden below.
+          </span>
+        </div>
+      )}
 
       {/* Tabs */}
       {tabs.length > 1 && (
@@ -289,12 +449,25 @@ export default function CanteenPage() {
         <div className="space-y-4">
           {(["breakfast", "lunch", "dinner"] as MealType[]).map((meal) => {
             const pref = preferences[meal];
+            const explicit = notifications.find((n) => n.staffId === staff?.id && n.mealType === meal);
             return (
               <Card key={meal} className="animate-slide-up">
                 <CardHeader>
-                  <CardTitle className="text-base">
-                    {MEAL_CONFIG[meal].icon} {MEAL_CONFIG[meal].label}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                      {MEAL_CONFIG[meal].icon} {MEAL_CONFIG[meal].label}
+                    </CardTitle>
+                    {!explicit && pref.notes && (
+                      <Badge variant="secondary" className="text-[11px] font-normal">
+                        {pref.notes}
+                      </Badge>
+                    )}
+                    {explicit?.notes?.startsWith("Auto-skipped") && (
+                      <Badge variant="warning" className="text-[11px] font-normal">
+                        {explicit.notes}
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-3 mb-4">
@@ -310,54 +483,47 @@ export default function CanteenPage() {
                       size="sm"
                       onClick={() => updatePreference(meal, "status", "skip")}
                     >
-                      {"\uD83D\uDEAB"} Skip Meal
+                      {"\u274C"} Skip Meal
                     </Button>
                     <Button
-                      variant={pref.status === "bring_guest" ? "default" : "outline"}
+                      variant={pref.status === "bring_guest" ? "secondary" : "outline"}
                       size="sm"
                       onClick={() => updatePreference(meal, "status", "bring_guest")}
                     >
-                      {"\uD83D\uDC65"} Bringing Guests
+                      {"\uD83D\uDC65"} Bring Guest(s)
                     </Button>
                   </div>
 
                   {pref.status === "bring_guest" && (
-                    <div className="mb-4 flex items-center gap-3">
-                      <label className="text-sm font-medium">Extra guests:</label>
+                    <div className="mb-4 max-w-xs">
+                      <label className="text-xs font-medium mb-1 block">Number of Guests</label>
                       <Input
                         type="number"
                         min={1}
                         max={20}
                         value={pref.guestCount || 1}
                         onChange={(e) =>
-                          updatePreference(
-                            meal,
-                            "guestCount",
-                            Math.max(1, parseInt(e.target.value) || 1)
-                          )
+                          updatePreference(meal, "guestCount", parseInt(e.target.value) || 1)
                         }
-                        className="w-24"
                       />
                     </div>
                   )}
 
                   <div className="mb-4">
-                    <label className="text-sm font-medium text-muted-foreground">Notes</label>
+                    <label className="text-xs font-medium mb-1 block">Notes (optional)</label>
                     <Input
-                      type="text"
-                      placeholder="Any special requests..."
+                      placeholder="e.g. Dietary requirement, coming late..."
                       value={pref.notes}
                       onChange={(e) => updatePreference(meal, "notes", e.target.value)}
-                      className="mt-1"
                     />
                   </div>
 
                   <Button
+                    size="sm"
                     onClick={() => submitPreference(meal)}
                     disabled={submitting}
-                    size="sm"
                   >
-                    {submitting ? "Saving..." : "Save Preference"}
+                    {submitting ? "Saving..." : "Save for this date"}
                   </Button>
                 </CardContent>
               </Card>
@@ -367,44 +533,45 @@ export default function CanteenPage() {
       )}
 
       {/* Kitchen Summary Tab */}
-      {activeTab === "team" && (
-        <Card className="animate-slide-up">
+      {activeTab === "team" && canViewTeam && (
+        <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <UtensilsCrossed className="h-4 w-4" />
-                Kitchen Summary — {totalStaff} staff notified
-              </CardTitle>
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-base">Kitchen Summary & Roster</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {totalStaff} staff with recorded responses for {selectedDate}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    type="text"
                     placeholder="Search staff..."
                     value={teamSearch}
                     onChange={(e) => setTeamSearch(e.target.value)}
-                    className="w-full sm:w-56 pl-8"
+                    className="pl-8 w-44 h-9 text-xs"
                   />
                 </div>
                 <Select
                   value={filterMealType}
                   onChange={(e) => setFilterMealType(e.target.value)}
-                  className="w-36"
+                  className="w-32 h-9 text-xs"
                 >
-                  <option value="">All Meals</option>
-                  <option value="breakfast">Breakfast</option>
-                  <option value="lunch">Lunch</option>
-                  <option value="dinner">Dinner</option>
+                  <SelectItem value="">All Meals</SelectItem>
+                  <SelectItem value="breakfast">Breakfast</SelectItem>
+                  <SelectItem value="lunch">Lunch</SelectItem>
+                  <SelectItem value="dinner">Dinner</SelectItem>
                 </Select>
                 <Select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-36"
+                  className="w-32 h-9 text-xs"
                 >
-                  <option value="">All Status</option>
-                  <option value="eating">Eating</option>
-                  <option value="skip">Skip</option>
-                  <option value="bring_guest">Guests</option>
+                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="eating">Eating</SelectItem>
+                  <SelectItem value="skip">Skip</SelectItem>
+                  <SelectItem value="bring_guest">Guests</SelectItem>
                 </Select>
               </div>
             </div>
@@ -412,9 +579,13 @@ export default function CanteenPage() {
           <CardContent>
             {filteredTeamNotifications.length === 0 ? (
               <EmptyState
-                icon={<Users className="h-12 w-12" />}
-                title="No notifications"
-                description="No meal notifications found for this date."
+                icon={<UtensilsCrossed className="h-10 w-10 text-muted-foreground/40" />}
+                title="No meal notifications found"
+                description={
+                  teamSearch || filterMealType || filterStatus
+                    ? "Try adjusting your filters"
+                    : "No staff responses recorded for this date"
+                }
               />
             ) : (
               <div className="overflow-x-auto rounded-lg border">
@@ -477,6 +648,157 @@ export default function CanteenPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Schedule & Defaults Dialog */}
+      <Dialog open={scheduleModalOpen} onOpenChange={setScheduleModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Meal Preferences & Schedule</DialogTitle>
+            <DialogDescription>
+              Configure your default meal attendance, schedule recurring skip days, or set a temporary skip period.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* 1. Permanent Defaults */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                1. Default Daily Preference
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Choose your default status if you don&apos;t manually change it every day.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(["breakfast", "lunch", "dinner"] as MealType[]).map((meal) => {
+                  const key = meal === "breakfast" ? "defaultBreakfast" : meal === "lunch" ? "defaultLunch" : "defaultDinner";
+                  const val = prefForm[key];
+                  return (
+                    <div key={meal} className="rounded-lg border p-2 space-y-1">
+                      <div className="text-xs font-medium">
+                        {MEAL_CONFIG[meal].icon} {MEAL_CONFIG[meal].label}
+                      </div>
+                      <Select
+                        value={val}
+                        onChange={(e) =>
+                          setPrefForm((p) => ({
+                            ...p,
+                            [key]: e.target.value as "eating" | "skip",
+                          }))
+                        }
+                        className="text-xs h-8"
+                      >
+                        <SelectItem value="eating">Eating</SelectItem>
+                        <SelectItem value="skip">Skip Meal</SelectItem>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Recurring Weekly Skips */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                2. Regular Weekly Skips
+              </h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                Automatically mark all meals as &quot;Skip&quot; on selected days every week.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {DAYS_OF_WEEK.map(({ day, label }) => {
+                  const selected = prefForm.recurringSkipDays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleRecurringDay(day)}
+                      className={`px-3 py-1 text-xs rounded-md border font-medium transition-colors ${
+                        selected
+                          ? "bg-destructive/10 border-destructive text-destructive font-semibold"
+                          : "bg-card border-border/70 hover:bg-muted text-foreground/80"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. Date Range Temporary Skip */}
+            <div>
+              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                3. Skip for a Period of Time
+              </h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                Set a specific date window where you will not be dining.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] text-muted-foreground block mb-1">From Date</label>
+                  <Input
+                    type="date"
+                    value={prefForm.skipStartDate || ""}
+                    onChange={(e) =>
+                      setPrefForm((p) => ({
+                        ...p,
+                        skipStartDate: e.target.value || null,
+                      }))
+                    }
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted-foreground block mb-1">To Date</label>
+                  <Input
+                    type="date"
+                    value={prefForm.skipEndDate || ""}
+                    onChange={(e) =>
+                      setPrefForm((p) => ({
+                        ...p,
+                        skipEndDate: e.target.value || null,
+                      }))
+                    }
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+              {(prefForm.skipStartDate || prefForm.skipEndDate) && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPrefForm((p) => ({
+                      ...p,
+                      skipStartDate: null,
+                      skipEndDate: null,
+                    }))
+                  }
+                  className="text-[11px] text-destructive hover:underline mt-1.5"
+                >
+                  Clear date window
+                </button>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setScheduleModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveSchedulePreferences}
+              disabled={savingSchedule}
+            >
+              {savingSchedule ? "Saving..." : "Save Preferences"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

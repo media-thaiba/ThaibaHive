@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, Shield, Sparkles, User, Check } from "lucide-react";
+import { LogOut, Settings, Shield, Sparkles, User, Check, Clock } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
@@ -50,31 +50,44 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
   const currentStatus = currentPresence?.status || "active";
   const currentOption = STATUS_OPTIONS.find((o) => o.value === currentStatus) || STATUS_OPTIONS[0];
 
-  const handleUpdateStatus = useCallback(
-    async (newStatus: string) => {
-      if (newStatus === currentStatus || updatingStatus) return;
-      setUpdatingStatus(true);
-      try {
-        const res = await fetch("/api/presence/status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
-        });
-        if (res.ok) {
-          const opt = STATUS_OPTIONS.find((o) => o.value === newStatus);
-          toast.success(`Status updated to ${opt?.label ?? newStatus}`);
-          queryClient.invalidateQueries({ queryKey: ["presence"] });
-        } else {
-          toast.error("Failed to update status");
-        }
-      } catch {
-        toast.error("Failed to update status");
-      } finally {
-        setUpdatingStatus(false);
+  const handleUpdateStatus = async (newStatus: string, durationMinutes?: number | "eod") => {
+    if (updatingStatus) return;
+    if (newStatus === currentStatus && durationMinutes === undefined) return;
+    setUpdatingStatus(true);
+    try {
+      const payload: Record<string, unknown> = { status: newStatus };
+      if (newStatus !== "active" && durationMinutes !== undefined) {
+        payload.durationMinutes = durationMinutes;
+      } else if (newStatus !== "active" && currentStatus !== newStatus) {
+        // Default to 30 minutes when first switching to a non-active status
+        payload.durationMinutes = 30;
       }
-    },
-    [currentStatus, updatingStatus, queryClient]
-  );
+      const res = await fetch("/api/presence/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const opt = STATUS_OPTIONS.find((o) => o.value === newStatus);
+        const durDesc =
+          payload.durationMinutes === 30
+            ? " (30m)"
+            : payload.durationMinutes === 60
+            ? " (1h)"
+            : payload.durationMinutes === "eod"
+            ? " (until EOD)"
+            : "";
+        toast.success(`Status updated to ${opt?.label ?? newStatus}${durDesc}`);
+        queryClient.invalidateQueries({ queryKey: ["presence"] });
+      } else {
+        toast.error("Failed to update status");
+      }
+    } catch {
+      toast.error("Failed to update status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   if (!staff) return null;
 
@@ -194,6 +207,44 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
                 );
               })}
             </div>
+
+            {/* Auto-Clear Duration Presets (Visible when not active) */}
+            {currentStatus !== "active" && (
+              <div className="mt-2.5 pt-2 border-t border-border/50">
+                <div className="flex items-center justify-between mb-1 px-1">
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5" />
+                    Auto-clear:
+                  </span>
+                  {currentPresence?.expiresAt && (
+                    <span className="text-[10px] font-medium text-amber-500 truncate max-w-[120px]">
+                      Until {new Date(currentPresence.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    { label: "30m", value: 30 },
+                    { label: "1h", value: 60 },
+                    { label: "EOD", value: "eod" },
+                    { label: "Never", value: undefined },
+                  ].map((dur) => (
+                    <button
+                      key={dur.label}
+                      type="button"
+                      disabled={updatingStatus}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleUpdateStatus(currentStatus, dur.value as number | "eod" | undefined);
+                      }}
+                      className="px-1.5 py-1 text-[10px] font-medium rounded bg-muted/60 hover:bg-muted text-foreground/80 hover:text-foreground text-center transition-colors"
+                    >
+                      {dur.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <DropdownMenuSeparator />
 

@@ -18,6 +18,7 @@ import { WorkflowEngine } from "@/lib/finance/workflow-engine";
 import type { Role } from "@/lib/finance/models/approval-state";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { deductLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
+import { autoSkipMealsForLeave } from "@/lib/canteen/leave-integration";
 import { withBookingLock, hasOverlappingBooking } from "@/lib/bookings/ledger";
 import { withFinanceLock, checkInstitutionBudget } from "@/lib/finance/budget-ledger";
 import { eq, desc, or, and, inArray, ne } from "drizzle-orm";
@@ -841,6 +842,14 @@ export const PATCH = requireAuth(async (request, session) => {
               leaveTypeId: leave.leaveTypeId,
               year: leaveYearFor(leave.startDate),
               days: leave.daysCount,
+            });
+
+            // Auto-skip canteen meals for the duration of the approved leave
+            await autoSkipMealsForLeave(tx, {
+              staffId: leave.staffId,
+              startDate: leave.startDate,
+              endDate: leave.endDate,
+              institutionId: leave.institutionId,
             });
           }
 

@@ -28,6 +28,8 @@ export const GET = requireAuth(async (request: Request, session) => {
     conditions.push(ids.length > 0 ? inArray(staff.id, ids) : sql`false`);
   }
 
+  const nowIso = new Date().toISOString();
+
   let results = await db
     .select({
       staffId: staff.id,
@@ -35,7 +37,15 @@ export const GET = requireAuth(async (request: Request, session) => {
       lastName: staff.lastName,
       avatarUrl: staff.avatarUrl,
       designation: staff.designation,
-      status: sql<string>`COALESCE(${staffAvailability.status}, 'available')`,
+      status: sql<string>`
+        CASE 
+          WHEN ${staffAvailability.expiresAt} IS NOT NULL 
+               AND ${staffAvailability.expiresAt} <= ${nowIso}
+          THEN 'available'
+          ELSE COALESCE(${staffAvailability.status}, 'available')
+        END
+      `,
+      expiresAt: staffAvailability.expiresAt,
       updatedAt: staffAvailability.updatedAt,
     })
     .from(staff)

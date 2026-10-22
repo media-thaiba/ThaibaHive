@@ -45,6 +45,7 @@ export default function AvailabilityPage() {
   const [search, setSearch] = useState("");
   const [myStatus, setMyStatus] = useState("active");
   const [myStatusText, setMyStatusText] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState<number | "eod" | undefined>(30);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "busy" | "meeting" | "away">("all");
   const [saving, setSaving] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState<string | null>(null);
@@ -67,10 +68,17 @@ export default function AvailabilityPage() {
   const handleSaveStatus = useCallback(async () => {
     setSaving(true);
     try {
+      const payload: Record<string, unknown> = {
+        status: myStatus,
+        statusText: myStatusText || undefined,
+      };
+      if (myStatus !== "active" && durationMinutes !== undefined) {
+        payload.durationMinutes = durationMinutes;
+      }
       const res = await fetch("/api/presence/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: myStatus, statusText: myStatusText || undefined }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         toast.success("Status updated");
@@ -83,7 +91,7 @@ export default function AvailabilityPage() {
     } finally {
       setSaving(false);
     }
-  }, [myStatus, myStatusText]);
+  }, [myStatus, myStatusText, durationMinutes]);
 
   const myPresence = currentStaffId ? getPresence(currentStaffId) : undefined;
   const myStatusLabel = myPresence
@@ -133,11 +141,16 @@ export default function AvailabilityPage() {
 
       <Card>
         <CardContent className="pb-2">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="text-xs font-semibold text-foreground/80">Your Status</span>
             <Badge variant={myStatusVariant} className="text-xs px-2 py-1">
               {myStatusLabel}
             </Badge>
+            {myPresence?.expiresAt && myPresence.status !== "active" && (
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                Auto-clears at {new Date(myPresence.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+              </span>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Select value={myStatus} onChange={(e) => setMyStatus(e.target.value)}>
@@ -157,6 +170,32 @@ export default function AvailabilityPage() {
               {saving ? "Saving..." : "Update"}
             </Button>
           </div>
+
+          {/* Auto-Clear Duration Selection for non-active status */}
+          {myStatus !== "active" && (
+            <div className="mt-3 pt-3 border-t border-border/60 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Auto-clear duration:</span>
+              {[
+                { label: "30 Minutes", val: 30 },
+                { label: "1 Hour", val: 60 },
+                { label: "Until End of Day", val: "eod" },
+                { label: "Indefinite", val: undefined },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setDurationMinutes(preset.val as number | "eod" | undefined)}
+                  className={`px-2.5 py-1 text-xs rounded-md border font-medium transition-colors ${
+                    durationMinutes === preset.val
+                      ? "border-primary bg-primary/10 text-primary font-semibold"
+                      : "border-border/70 bg-card hover:bg-muted text-foreground/80"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

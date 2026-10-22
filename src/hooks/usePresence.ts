@@ -11,6 +11,7 @@ export type PresenceEntry = {
   lastSeenAt: string;
   status: string;
   statusText: string | null;
+  expiresAt?: string | null;
   firstName: string;
   lastName: string;
   avatarUrl: string | null;

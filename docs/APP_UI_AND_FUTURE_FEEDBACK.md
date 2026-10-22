@@ -2,7 +2,7 @@
 
 > **Document Status**: Active Living Roadmap  
 > **Last Updated**: October 22, 2026  
-> **Purpose**: Centralized log of test user feedback, UI/UX polish requests, and feature requests. Use this document to monitor progress, verify completed changes, and track pending items under the Feature Freeze & App Perfection Protocol.
+> **Purpose**: Centralized log of test user feedback, UI/UX polish requests, and feature requests. Use this document to monitor progress, verify completed changes, and track pending items.
 
 ---
 
@@ -19,10 +19,10 @@
 | 7 | Vercel production deployment memory & ignore fixes | DevOps / Build | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
 | 8 | Quick availability status switcher in profile dropdown | UI / UX | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
 | 9 | Move Search bar from top bar to sidebar (remove `Ctrl + K`) | UI / Layout | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
-| 10 | Status Auto-Clear Duration (30m, 1h, End of Day) | Presence | ⏳ **PENDING** | 2026-10-22 | — |
-| 11 | Canteen: User default meal setting ("Eating" vs "Skip Meal") | Canteen | ⏳ **PENDING** | 2026-10-22 | — |
-| 12 | Canteen: Skip meal for a specific period of time / recurring | Canteen | ⏳ **PENDING** | 2026-10-22 | — |
-| 13 | Canteen: Auto-skip meals when user is on approved leave | Automation | ⏳ **PENDING** | 2026-10-22 | — |
+| 10 | Status Auto-Clear Duration (30m, 1h, End of Day) | Presence | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
+| 11 | Canteen: User default meal setting ("Eating" vs "Skip Meal") | Canteen | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
+| 12 | Canteen: Skip meal for a specific period of time / recurring | Canteen | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
+| 13 | Canteen: Auto-skip meals when user is on approved leave | Automation | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
 | 14 | Android Passkey (WebAuthn / Credential Manager) integration | Mobile Auth | ⏳ **PENDING** | 2026-10-22 | — |
 
 ---
@@ -56,7 +56,7 @@
 * **Implementation**:
   * Configured Google Client IDs in `.env` (Web and Android IDs stored as environment variables).
   * Web login form uses `NEXT_PUBLIC_GOOGLE_CLIENT_IDS` with Google Identity Services (GIS) and embeds the official Google Sign-In button.
-  * Backend `/api/auth/google` verifies ID tokens against `GOOGLE_CLIENT_IDS` (validating both Web and Android mobile client audiences) and provides friendly feedback if an email is not in the staff directory.
+  * Backend `/api/auth/google` verifies ID tokens against both `GOOGLE_CLIENT_IDS` and `NEXT_PUBLIC_GOOGLE_CLIENT_IDS` (deduplicating and validating both Web and Android mobile client audiences) and provides friendly feedback if an email is not in the staff directory.
   * Native Android mobile app uses the Android Client ID via Google Play Services and sends tokens to the same backend endpoint.
 
 ### 6. Public Privacy Policy & Terms of Service
@@ -84,46 +84,46 @@
   * Styled as a minimal search input button with a search icon and simple text `"Search my space..."` when expanded, and a compact centered search icon when collapsed.
   * Omitted the `Ctrl + K` keyboard badge for a clean aesthetic while keeping global `Ctrl + K` shortcut listeners active in `src/app/(shell)/layout.tsx`.
 
----
-
-## ⏳ Pending / Future Feedback Items
-
 ### 10. Availability Auto-Clear Duration
 * **User Feedback**: *"For the period reminder for the status, we can go the recommended option 'Auto-Clear Duration' that the status auto-expires, and when the user selects 'Busy', 'In Meeting', or 'In a Break', they can choose the time period, is it for 30 minutes, for 1 hour, or until the end of the day."*
-* **Scope**:
-  * When selecting a busy/meeting/away status in the profile menu or availability page, present quick duration presets:
-    * ⏱️ 30 Minutes
-    * ⏱️ 1 Hour
-    * 🌅 Until End of Day (6:00 PM / midnight)
-    * ♾️ Until I change it
-  * Store expiration timestamp in presence record; automatically revert to "Active" when time elapses.
-* **Target Status**: In architectural design.
+* **Implementation**:
+  * Added `expiresAt` column to `presence` and `staffAvailability` tables across SQLite and PostgreSQL schemas.
+  * Updated `POST /api/presence/status` and `PUT /api/availability` to accept duration presets (`30`, `60`, `"eod"` for End of Day / 6:00 PM) and calculate ISO expiration timestamps.
+  * Added automatic expiration detection in `GET /api/presence` and `GET /api/availability`: when `expiresAt` is in the past, status automatically resolves to `active` / `available`.
+  * In `src/components/layout/user-avatar-dropdown.tsx`, added duration selector buttons (30m, 1h, EOD, Never) with active timer display.
+  * In `src/app/(shell)/my-work/availability/page.tsx`, added duration option buttons and expiry badges in the "My Availability" card.
 
 ### 11. Canteen: Default Meal Setting per User
-* **User Feedback**: *"We need an option to keep the default setting for a user as 'Eating' or 'Skip Meal' because some staff regularly skip meals."*
-* **Scope**:
-  * Allow staff to configure permanent default meal preferences in `/my-work/settings` or `/my-work/canteen` (e.g. "Default Breakfast: Skip", "Default Lunch: Eating").
-  * Pre-populates daily meal rosters without requiring manual daily clicks.
-* **Target Status**: Pending challenge gate confirmation under Feature Freeze.
+* **User Feedback**: *"We need an option to keep the default setting for a user as 'Eating' or 'Skip Meal' because some staff regularly skip meals. So, rather than updating or selecting the 'Skip Meal' every day in the app, they can set the default to 'Skip Meal'."*
+* **Implementation**:
+  * Created `staffMealPreferences` table storing `defaultBreakfast`, `defaultLunch`, and `defaultDinner` ("eating" or "skip").
+  * Built `GET /api/canteen/preferences` and `PUT /api/canteen/preferences` endpoints with Zod schema validation.
+  * In `src/app/(shell)/my-work/canteen/page.tsx`, added a "Meal Preferences & Schedule" dialog where staff can set their default daily choice for each meal without needing to manually toggle "Skip" every day.
 
-### 12. Canteen: Period / Recurring Meal Skips
+### 12. Canteen: Period & Recurring Meal Skips
 * **User Feedback**: *"Also, we can give an option that 'Skip Meal' for a period of time or 'Skip Meal' regularly."*
-* **Scope**:
-  * Date range selector (e.g. from Oct 24 to Oct 28: Skip Lunch).
-  * Recurring day-of-week rules (e.g. "Always skip dinner on Fridays").
-* **Target Status**: Pending challenge gate confirmation under Feature Freeze.
+* **Implementation**:
+  * Added `skipStartDate`, `skipEndDate`, and `recurringSkipDays` (day indexes 0=Sun..6=Sat) to `staffMealPreferences`.
+  * In `src/app/(shell)/my-work/canteen/page.tsx`, staff can pick a date window (e.g., Nov 1 to Nov 5) or select days of the week (e.g. Every Friday).
+  * The daily meal view evaluates precedence: explicit manual daily choice &gt; scheduled period skip &gt; recurring day skip &gt; user default meal preference.
+  * Shows context badges in the UI: "Scheduled Period Skip", "Regular Weekly Skip", or "Default: Skip Meal".
 
 ### 13. Canteen & Leave Auto-Integration
 * **User Feedback**: *"And also, when they are on leave, the 'Skip Meal' should automatically turn on."*
-* **Scope**:
-  * Event listener / trigger in `leaveApproval` action: When a leave request is marked `approved`, automatically mark all meals during that leave date window as `skip` in `canteenPreferences`.
-  * Adjusts kitchen headcount calculations automatically.
-* **Target Status**: Requires cross-module hook between Leave Management and Canteen.
+* **Implementation**:
+  * Created `src/lib/canteen/leave-integration.ts` with `autoSkipMealsForLeave` and `revertAutoSkippedMealsForLeave`.
+  * Integrated directly into the approval transaction in `src/app/api/leaves/[id]/route.ts` and `src/app/api/approvals/route.ts`: when leave is approved, all 3 daily meals for every day of the approved leave are automatically created/updated with `status: "skip"` and `notes: "Auto-skipped: On Approved Leave"`.
+  * If the leave request is deleted, auto-skipped meals for that period are cleaned up automatically.
+  * Unit tested with 100% pass rate in `src/app/api/canteen/__tests__/canteen-feedback-features.test.ts`.
+
+---
+
+## ⏳ Pending / Future Feedback Items
 
 ### 14. Mobile (Android) Passkey Support
 * **User Feedback**: *"Sign in with passkey is there in the web app, not in the android. How does it work ?"*
 * **Technical Analysis**:
   * Web uses W3C WebAuthn API (`navigator.credentials.get()`).
   * Android requires Google Credential Manager API (`androidx.credentials.CredentialManager`).
-  * Can be added to Flutter app using `local_auth` (local biometric check) or `passkeys_android` package paired with `/api/auth/webauthn/login/begin` and `/complete`.
+  * Can be added to Flutter mobile app using `local_auth` (local biometric check) or `passkeys_android` package paired with `/api/auth/webauthn/login/begin` and `/complete`.
 * **Target Status**: Planned for next mobile sprint.

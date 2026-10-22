@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId } from "@/lib/auth";
 import { isAuthorizedToViewLeave } from "@/lib/leaves/utils";
 import { deductLeaveDays, creditLeaveDays, leaveYearFor, LeaveLedgerError, withLeaveLedgerLock } from "@/lib/leaves/balance-ledger";
+import { autoSkipMealsForLeave, revertAutoSkippedMealsForLeave } from "@/lib/canteen/leave-integration";
 import { sendPushNotification } from "@/lib/notifications/push-service";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { leaveReviewSchema } from "@/lib/validation/schemas";
@@ -128,6 +129,14 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
           year: leaveYearFor(leave.startDate),
           days: leave.daysCount,
         });
+
+        // Auto-skip canteen meals during the approved leave dates
+        await autoSkipMealsForLeave(tx, {
+          staffId: leave.staffId,
+          startDate: leave.startDate,
+          endDate: leave.endDate,
+          institutionId: leave.institutionId,
+        });
       }
 
       return row;
@@ -205,6 +214,13 @@ export const DELETE = requireAuth(async (_request, session, context) => {
         leaveTypeId: leave.leaveTypeId,
         year: leaveYearFor(leave.startDate),
         days: leave.daysCount,
+      });
+
+      // Revert auto-skipped meals when approved leave is deleted
+      await revertAutoSkippedMealsForLeave(tx, {
+        staffId: leave.staffId,
+        startDate: leave.startDate,
+        endDate: leave.endDate,
       });
     }
     await tx.delete(leaveRequests).where(whereClause).run();
