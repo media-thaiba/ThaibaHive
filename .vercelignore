@@ -1,34 +1,34 @@
 # Vercel Ignore File
 
 # Ignore mobile app
-thaibahive_mobile_app/
+/thaibahive_mobile_app/
 
 # Ignore tests & tools
-e2e/
-test-results/
-playwright/
-jest/
-.stryker-tmp/
-scratch/
-load-tests/
-k6/
-reports/
-staging-reports/
-bundle-analysis/
-charts/
+/e2e/
+/test-results/
+/playwright/
+/jest/
+/.stryker-tmp/
+/scratch/
+/load-tests/
+/k6/
+/reports/
+/staging-reports/
+/bundle-analysis/
+/charts/
 
 # Ignore AI and dev agent workspaces
-.claude/
-.claude-flow/
-.opencode/
-.agent/
-.ai/
-.planning/
-.compliance-snapshots/
-.kilo/
-.swarm/
-.impeccable/
-.husky/
+/.claude/
+/.claude-flow/
+/.opencode/
+/.agent/
+/.ai/
+/.planning/
+/.compliance-snapshots/
+/.kilo/
+/.swarm/
+/.impeccable/
+/.husky/
 
 # Ignore dependencies and builds
 node_modules/
@@ -42,7 +42,7 @@ dev.db*
 *.db
 *.db-wal
 *.db-shm
-uploads/
+/uploads/
 stdout.txt
 stderr.txt
 *.log
