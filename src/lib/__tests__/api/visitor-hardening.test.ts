@@ -40,7 +40,11 @@ import {
 } from "@/app/api/visitors/verify/route";
 import { POST as issuePass } from "@/app/api/visitors/pass/issue/route";
 import { POST as processApproval } from "@/app/api/visitors/approvals/route";
-import { POST as preRegisterVisitor } from "@/app/api/visitors/pre-register/route";
+import {
+  GET as listPreRegistrations,
+  POST as preRegisterVisitor,
+} from "@/app/api/visitors/pre-register/route";
+import { GET as exportVisitors } from "@/app/api/export/visitors/route";
 
 jest.mock("@thaiba/auth", () => {
   const actual = jest.requireActual("@thaiba/auth");
@@ -566,6 +570,166 @@ describe("Visitor & Gatepass Security Management Pipeline — Hardening", () => 
 
       const res = await verifyGatePost(req);
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe("Multi-Tenant Export Isolation, Pre-Registration Scoping & Dynamic URL Fallbacks", () => {
+    it("scopes visitor export strictly to caller's verified institution", async () => {
+      const now = Date.now();
+      const validFrom = new Date(now - 1000).toISOString();
+      const validUntil = new Date(now + 4 * 3600000).toISOString();
+
+      const passA = await db.insert(visitorPasses).values({
+        id: crypto.randomUUID(),
+        institutionId: instA,
+        visitorName: "Visitor Alpha Unique",
+        visitorPhone: "+911111111111",
+        hostStaffId: hostAId,
+        purpose: "Alpha Visit",
+        qrSignature: "sig_a",
+        validFrom,
+        validUntil,
+        status: "approved",
+      }).returning().get();
+
+      const passB = await db.insert(visitorPasses).values({
+        id: crypto.randomUUID(),
+        institutionId: instB,
+        visitorName: "Visitor Beta Unique",
+        visitorPhone: "+912222222222",
+        hostStaffId: principalBId,
+        purpose: "Beta Visit",
+        qrSignature: "sig_b",
+        validFrom,
+        validUntil,
+        status: "approved",
+      }).returning().get();
+
+      createdPassIds.push(passA.id, passB.id);
+
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["visitor:read"],
+      });
+
+      const reqExport = makeJsonReq("http://localhost:3000/api/export/visitors?format=csv", null, "GET");
+      const resExport = await exportVisitors(reqExport);
+      expect(resExport.status).toBe(200);
+      const csvText = await resExport.text();
+
+      expect(csvText).toContain("Visitor Alpha Unique");
+      expect(csvText).not.toContain("Visitor Beta Unique");
+    });
+
+    it("scopes pre-registration request listing strictly to caller's verified institution", async () => {
+      const reqA = await db.insert(visitorRequests).values({
+        id: crypto.randomUUID(),
+        institutionId: instA,
+        visitorName: "Prereg Alpha Unique",
+        visitorPhone: "+911234567890",
+        hostStaffId: hostAId,
+        purpose: "Seminar",
+        expectedDate: "2026-11-01",
+        status: "pending",
+      }).returning().get();
+
+      const reqB = await db.insert(visitorRequests).values({
+        id: crypto.randomUUID(),
+        institutionId: instB,
+        visitorName: "Prereg Beta Unique",
+        visitorPhone: "+919876543210",
+        hostStaffId: principalBId,
+        purpose: "Conference",
+        expectedDate: "2026-11-02",
+        status: "pending",
+      }).returning().get();
+
+      createdRequestIds.push(reqA.id, reqB.id);
+
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["visitor:read"],
+      });
+
+      const reqList = makeJsonReq("http://localhost:3000/api/visitors/pre-register", null, "GET");
+      const resList = await listPreRegistrations(reqList);
+      expect(resList.status).toBe(200);
+      const dataList = await resList.json();
+      const names = dataList.requests.map((r: any) => r.visitorName);
+
+      expect(names).toContain("Prereg Alpha Unique");
+      expect(names).not.toContain("Prereg Beta Unique");
+    });
+
+    it("extracts visitor ID from URL pathname when context params are missing", async () => {
+      const v = await db.insert(visitors).values({
+        id: crypto.randomUUID(),
+        name: "URL Path Test Visitor",
+        purpose: "Fallback Verification",
+        institutionId: instA,
+        checkIn: new Date().toISOString(),
+        status: "checked_in",
+      }).returning().get();
+      createdVisitorIds.push(v.id);
+
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["visitors:read", "visitors:update", "visitors:manage"],
+      });
+
+      // GET detail with empty context params
+      const reqGet = makeJsonReq(`http://localhost:3000/api/visitors/${v.id}`, null, "GET");
+      const resGet = await getVisitorDetail(reqGet, { params: Promise.resolve({}) as any });
+      expect(resGet.status).toBe(200);
+      const dataGet = await resGet.json();
+      expect(dataGet.visitor.id).toBe(v.id);
+
+      // PATCH with empty context params
+      const reqPatch = makeJsonReq(`http://localhost:3000/api/visitors/${v.id}`, { notes: "Updated via fallback" }, "PATCH");
+      const resPatch = await updateVisitor(reqPatch, { params: Promise.resolve({}) as any });
+      expect(resPatch.status).toBe(200);
+
+      // Fail-closed when URL has no ID
+      const reqInvalid = makeJsonReq("http://localhost:3000/api/visitors/", null, "GET");
+      const resInvalid = await getVisitorDetail(reqInvalid, { params: Promise.resolve({}) as any });
+      expect(resInvalid.status).toBe(400);
+    });
+
+    it("enforces schema bounds and date format on pre-registration", async () => {
+      setSession({
+        staffId: principalAId,
+        role: "principal",
+        institutionId: instA,
+        permissions: ["visitor:issue"],
+      });
+
+      // Overlength visitor name
+      const reqOverlength = makeJsonReq("http://localhost:3000/api/visitors/pre-register", {
+        visitorName: "x".repeat(101),
+        visitorPhone: "+911234567890",
+        hostStaffId: hostAId,
+        purpose: "Valid Purpose",
+        expectedDate: "2026-11-01",
+      });
+      const resOverlength = await preRegisterVisitor(reqOverlength);
+      expect(resOverlength.status).toBe(400);
+
+      // Invalid expected date format
+      const reqBadDate = makeJsonReq("http://localhost:3000/api/visitors/pre-register", {
+        visitorName: "Valid Name",
+        visitorPhone: "+911234567890",
+        hostStaffId: hostAId,
+        purpose: "Valid Purpose",
+        expectedDate: "invalid-date",
+      });
+      const resBadDate = await preRegisterVisitor(reqBadDate);
+      expect(resBadDate.status).toBe(400);
     });
   });
 });

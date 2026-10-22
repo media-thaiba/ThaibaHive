@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { visitorRequests, activityLogs } from "@/db/schema";
-import { requireAuth, resolveInstitutionContext } from "@/lib/api/auth-guard";
-import { resolveScopedInstitutionId } from "@thaiba/auth";
+import { requireAuth, resolveInstitutionContext, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { visitorPreRegisterSchema } from "@/lib/validation/schemas";
 import { validateHostStaff } from "@/lib/visitors/host-validation";
 import { desc, eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
-  const instId = await resolveScopedInstitutionId(url.searchParams.get("institutionId"));
+  const instId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
   const requests = await db
     .select()
     .from(visitorRequests)

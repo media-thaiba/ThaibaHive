@@ -1,15 +1,20 @@
-import {  } from "next/server";
 import { db } from "@/db";
 import { visitorPasses } from "@/db/schema";
-import { requireAuth } from "@/lib/api/auth-guard";
+import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { csvFormatter } from "@/lib/export/csv-formatter";
 import { excelFormatter } from "@/lib/export/excel-formatter";
 import { pdfFormatter } from "@/lib/export/pdf-formatter";
 import { ExportColumn } from "@/lib/export/types";
+import { eq } from "drizzle-orm";
 
-export const GET = requireAuth(async (request: Request, _session) => {
+export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);
   const format = (url.searchParams.get("format") || "csv").toLowerCase();
+  const institutionId = await resolveRequestInstitution(session, url.searchParams.get("institutionId"));
+
+  const whereClause = institutionId && institutionId !== "global"
+    ? eq(visitorPasses.institutionId, institutionId)
+    : undefined;
 
   const data = await db
     .select({
@@ -22,6 +27,7 @@ export const GET = requireAuth(async (request: Request, _session) => {
       status: visitorPasses.status,
     })
     .from(visitorPasses)
+    .where(whereClause)
     .all();
 
   const columns: ExportColumn[] = [

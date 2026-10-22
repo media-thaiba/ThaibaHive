@@ -1042,15 +1042,19 @@ export const canteenDietaryUpdateSchema = z.object({
 });
 
 export const visitorPreRegisterSchema = z.object({
-  visitorName: z.string().min(1),
-  visitorPhone: z.string().min(1),
-  visitorEmail: z.string().email().optional().or(z.literal("")),
-  idType: z.string().optional(),
-  idNumber: z.string().optional(),
-  hostStaffId: z.string().min(1),
-  purpose: z.string().min(1),
-  expectedDate: z.string().min(1),
-  expectedTimeWindow: z.string().optional(),
+  visitorName: z.string().trim().min(1, "Visitor name is required").max(100, "Visitor name cannot exceed 100 characters").refine((val) => !/[<>]/.test(val), {
+    message: "Visitor name cannot contain HTML markup",
+  }),
+  visitorPhone: z.string().trim().min(1, "Visitor phone is required").max(30, "Visitor phone cannot exceed 30 characters"),
+  visitorEmail: z.string().email().optional().or(z.literal("")).nullable(),
+  idType: z.string().trim().max(50).optional().nullable(),
+  idNumber: z.string().trim().max(100).optional().nullable(),
+  hostStaffId: z.string().min(1, "Host staff ID is required"),
+  purpose: z.string().trim().min(1, "Purpose is required").max(255, "Purpose cannot exceed 255 characters").refine((val) => !/[<>]/.test(val), {
+    message: "Purpose cannot contain HTML markup",
+  }),
+  expectedDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid expected date format (expected YYYY-MM-DD)"),
+  expectedTimeWindow: z.string().trim().max(100).optional().nullable(),
 });
 
 export const visitorPassVerifySchema = z.object({

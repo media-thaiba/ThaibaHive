@@ -8,9 +8,17 @@ import { visitorUpdateSchema } from "@/lib/validation/schemas";
 import { withVisitorLock, recordGateLog } from "@/lib/visitors/ledger";
 import { eq, and } from "drizzle-orm";
 
-export const GET = requireAuth(async (_request: Request, session, context) => {
+export const GET = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "visitors") {
+      id = last;
+    }
+  }
   if (!id) return NextResponse.json({ error: "Visitor ID is required" }, { status: 400 });
 
   const institutionId = await resolveScopedInstitutionId(session.institutionId);
@@ -48,7 +56,15 @@ export const GET = requireAuth(async (_request: Request, session, context) => {
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "visitors") {
+      id = last;
+    }
+  }
   if (!id) return NextResponse.json({ error: "Visitor ID is required" }, { status: 400 });
 
   const rl = checkRateLimit(`visitor-patch:${session.staffId}`, { windowMs: 60_000, max: 60 });
@@ -144,9 +160,17 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   });
 }, "visitors:update");
 
-export const DELETE = requireAuth(async (_request, session, context) => {
+export const DELETE = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  const id = params.id;
+  let id = params.id;
+  if (!id) {
+    const url = new URL(request.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "visitors") {
+      id = last;
+    }
+  }
   if (!id) return NextResponse.json({ error: "Visitor ID is required" }, { status: 400 });
 
   const rl = checkRateLimit(`visitor-del:${session.staffId}`, { windowMs: 60_000, max: 20 });
