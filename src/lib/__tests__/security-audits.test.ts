@@ -187,7 +187,7 @@ describe("Security and Regression Audits", () => {
     ];
 
     it("should block general file traversal and non-UUID formats with 400", async () => {
-      (verifySession as jest.Mock).mockResolvedValue({ staffId: "123", role: "staff" });
+      (verifySession as jest.Mock).mockResolvedValue({ staffId: "123", role: "admin" });
 
       for (const fn of traversalFilenames) {
         const req = new Request(`http://localhost/api/upload/files/${fn}`);
@@ -241,7 +241,7 @@ describe("Security and Regression Audits", () => {
   // 6. Empty/unknown institution exports contain headers only.
   describe("6. Export empty/unknown institution short-circuit", () => {
     it("should return only CSV headers if institution has no staff", async () => {
-      (verifySession as jest.Mock).mockResolvedValue({ staffId: "123", role: "admin" });
+      (verifySession as jest.Mock).mockResolvedValue({ staffId: "123", role: "super_admin" });
       // Mock db.select() to return empty list of staff for the given institutionId
       mockDb.select().from().where.mockResolvedValueOnce([]);
 

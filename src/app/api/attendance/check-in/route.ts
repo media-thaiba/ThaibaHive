@@ -76,7 +76,7 @@ export const POST = requireAuth(async (request, session) => {
         longitude ?? undefined,
         accuracy ?? undefined,
         wifiSsid || undefined,
-        { nonce: nfcNonce, tapAt, requireAntiReplay }
+        { nonce: nfcNonce ?? undefined, tapAt: tapAt ?? undefined, requireAntiReplay }
       );
       // Look up location by NFC tag to get geofence info
       const location = await db

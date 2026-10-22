@@ -1,11 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mediaShareLinks, mediaAssets, mediaFolders } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { checkRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { verifyPassword } from "@/lib/auth";
-import { getJwtSecretBytes } from "@thaiba/auth";
-import { createHmac, timingSafeEqual } from "crypto";
 import { withPublicApm } from "@/lib/api/public-apm";
 import { signShareAuthCookie, verifyShareAuthCookie } from "@/lib/media/share-auth";
 
@@ -52,7 +50,7 @@ async function verifyDescendantAndBuildBreadcrumbs(
 }
 
 export const GET = withPublicApm(async function GET(
-  req: NextRequest,
+  req: Request,
   context: { params: Promise<{ token: string }> }
 ) {
   try {
@@ -96,7 +94,8 @@ export const GET = withPublicApm(async function GET(
 
       // Check HMAC-signed cookie for session handoff
       const cookieName = `share_auth_${token}`;
-      const cookieVal = req.cookies.get(cookieName)?.value;
+      const cookieHeader = req.headers.get("cookie") || "";
+      const cookieVal = cookieHeader.split("; ").find((c) => c.startsWith(`${cookieName}=`))?.split("=")[1];
       const hasValidCookie = verifyShareAuthCookie(cookieVal, token, link.passwordHash);
 
       if (!queryPassword && !hasValidCookie) {

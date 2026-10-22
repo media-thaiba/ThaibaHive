@@ -12,10 +12,13 @@ export default async function globalSetup(): Promise<void> {
 
   const configured = process.env.DATABASE_URL;
 
+  const isPostgres = configured?.startsWith("postgres://") || configured?.startsWith("postgresql://");
+  const isEphemeralTestDb = configured?.includes("test.db");
+
   // CI and postgres jobs already point at ephemeral databases (file:./test.db
-  // provisioned by db:migrate, or postgres://...). Only the persistent local
-  // dev.db (explicit or default fallback) needs a per-run snapshot.
-  if (configured && !configured.includes("dev.db")) {
+  // provisioned by db:migrate, or postgres://...). Remote LibSQL / Turso or local dev.db
+  // must snapshot into an isolated local test.db to prevent remote DB pollution and JSDOM fetch driver failures.
+  if (isPostgres || isEphemeralTestDb) {
     return;
   }
 

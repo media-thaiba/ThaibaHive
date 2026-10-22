@@ -112,3 +112,9 @@ test-*.db-shm
 
 # Local agent tooling
 .kilo/
+
+.vercel
+.env*
+
+dev.log
+*.log

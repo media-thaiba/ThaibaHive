@@ -15,25 +15,25 @@ function timingSafeSecretMatch(provided: string | null, expected: string | undef
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-type HandlerWithSession = (
+type HandlerWithSession<TParams = Record<string, string>> = (
   request: Request,
   session: SessionPayload,
-  params?: { params: Promise<Record<string, unknown>> } | unknown
+  context?: { params: Promise<TParams> }
 ) => Promise<Response>;
 
 interface GlobalWithActiveSession {
   __activeSession?: SessionPayload;
 }
 
-export function requireAuth(
-  handler: HandlerWithSession,
+export function requireAuth<TParams = Record<string, string>>(
+  handler: HandlerWithSession<TParams>,
   requiredPermission?: string
 ) {
   return async (
     request: Request,
     ...rest: unknown[]
   ) => {
-    const context = rest[0] as { params: Promise<Record<string, string>> } | undefined;
+    const context = rest[0] as { params: Promise<TParams> } | undefined;
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const urlObj = new URL(request.url);
     const normalizedPath = normalizeRoutePath(urlObj.pathname);
@@ -190,7 +190,7 @@ export function requireAuth(
       const response = await handler(
         request,
         session,
-        context as { params: Promise<Record<string, string>> } | undefined
+        context as { params: Promise<TParams> } | undefined
       );
       recordApm(response.status || 200);
 

@@ -132,7 +132,7 @@ async function seed() {
   }
   logger.info(`Created ${departmentData.length} departments.`);
 
-  const seedPassword = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD || crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   const passwordHashMgmt = await bcrypt.hash(seedPassword, 10);
   for (const s of managementStaff) {
     const existingStaff = await db.select().from(staff).where(eq(staff.email, s.email)).get();

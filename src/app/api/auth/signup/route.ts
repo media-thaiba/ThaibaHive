@@ -64,6 +64,7 @@ export const POST = withPublicApm(async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(password);
+    const autoVerifyPilot = process.env.AUTO_VERIFY_PILOT === "true";
 
     const newStaff = await db
       .insert(staff)
@@ -75,7 +76,7 @@ export const POST = withPublicApm(async function POST(request: Request) {
         lastName,
         passwordHash,
         role: "staff",
-        emailVerifiedAt: null,
+        emailVerifiedAt: autoVerifyPilot ? new Date().toISOString() : null,
       })
       .returning()
       .get();

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { mediaShareLinks, mediaAssets, mediaFolders } from "@/db/schema";
 import { eq, inArray, and } from "drizzle-orm";
@@ -87,7 +87,7 @@ async function collectFolderAssets(
   }
 }
 
-export const POST = withPublicApm(async function POST(req: NextRequest) {
+export const POST = withPublicApm(async function POST(req: Request) {
   try {
     const body = await req.json();
     const result = mediaBatchDownloadSchema.safeParse(body);
@@ -130,7 +130,8 @@ export const POST = withPublicApm(async function POST(req: NextRequest) {
       // Password check or HMAC-signed cookie check
       if (link.passwordHash) {
         const cookieName = `share_auth_${token}`;
-        const cookieVal = req.cookies.get(cookieName)?.value;
+        const cookieHeader = req.headers.get("cookie") || "";
+        const cookieVal = cookieHeader.split("; ").find((c) => c.startsWith(`${cookieName}=`))?.split("=")[1];
         const hasValidCookie = verifyShareAuthCookie(cookieVal, token, link.passwordHash);
 
         if (!hasValidCookie) {

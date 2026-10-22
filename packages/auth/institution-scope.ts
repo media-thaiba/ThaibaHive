@@ -38,12 +38,16 @@ export async function getStaffInstitutionMemberships(staffId: string): Promise<s
   }
 }
 
+interface GlobalWithActiveSession {
+  __activeSession?: SessionPayload;
+}
+
 /**
  * Returns the primary institutionId for the current session user.
  * Returns null if the user has a global role or has no memberships.
  */
 export async function getUserInstitutionScope(sessionParam?: SessionPayload | null): Promise<string | null> {
-  const session = sessionParam !== undefined ? sessionParam : ((globalThis as any).__activeSession || (await verifySession()));
+  const session = sessionParam !== undefined ? sessionParam : (((globalThis as unknown as GlobalWithActiveSession).__activeSession) || (await verifySession()));
   if (!session) return null;
 
   if (isGlobalScopeRole(session.role)) {
@@ -73,7 +77,7 @@ export async function resolveScopedInstitutionId(
   requestedInstitutionId?: string | null,
   sessionParam?: SessionPayload | null
 ): Promise<string> {
-  const session = sessionParam !== undefined ? sessionParam : ((globalThis as any).__activeSession || (await verifySession()));
+  const session = sessionParam !== undefined ? sessionParam : (((globalThis as unknown as GlobalWithActiveSession).__activeSession) || (await verifySession()));
   if (!session) {
     throw new TenantMismatchError("Unauthorized: Active session required to resolve institution scope.");
   }

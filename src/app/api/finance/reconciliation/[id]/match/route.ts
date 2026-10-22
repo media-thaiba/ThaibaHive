@@ -12,7 +12,7 @@ const INVALID_REGRESSIONS: Record<string, string[]> = {
   variance: ["matched"], // Variance cannot become matched
 };
 
-export const PATCH = requireAuth(async (request: Request, session: any, context: { params: Promise<{ id: string }> } | { params: { id: string } }) => {
+export const PATCH = requireAuth(async (request: Request, session: any, context?: any) => {
   // Rate limiting
   const rl = checkRateLimit(session.staffId, "write");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
@@ -20,7 +20,7 @@ export const PATCH = requireAuth(async (request: Request, session: any, context:
   // Dynamic route parameter fallback: params.id, URL pathname, query param
   let itemId: string | undefined;
   try {
-    const resolvedParams = "then" in context.params ? await context.params : context.params;
+    const resolvedParams = context?.params ? ("then" in context.params ? await context.params : context.params) : undefined;
     itemId = resolvedParams?.id;
   } catch {
     itemId = undefined;

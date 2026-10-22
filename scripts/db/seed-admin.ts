@@ -42,13 +42,14 @@ async function main() {
       designation: "Managing Director",
       role: "super_admin",
       isActive: true,
+      emailVerifiedAt: now,
       passwordHash,
       createdAt: now,
       updatedAt: now,
     }).run();
     console.log(`[seed-admin] Created ${email} (ID: ${directorId})`);
   } else {
-    await db.update(staff).set({ passwordHash, role: "super_admin", isActive: true, updatedAt: now }).where(eq(staff.email, email)).run();
+    await db.update(staff).set({ passwordHash, role: "super_admin", isActive: true, emailVerifiedAt: now, updatedAt: now }).where(eq(staff.email, email)).run();
     console.log(`[seed-admin] Updated password and role for ${email}`);
   }
 
@@ -68,7 +69,7 @@ async function main() {
   // 2. Also reset test-superadmin@thaibahive.local to the same known password
   const existingSuperadmin = await db.select().from(staff).where(eq(staff.email, "test-superadmin@thaibahive.local")).get();
   if (existingSuperadmin) {
-    await db.update(staff).set({ passwordHash, role: "super_admin", isActive: true, updatedAt: now }).where(eq(staff.email, "test-superadmin@thaibahive.local")).run();
+    await db.update(staff).set({ passwordHash, role: "super_admin", isActive: true, emailVerifiedAt: now, updatedAt: now }).where(eq(staff.email, "test-superadmin@thaibahive.local")).run();
     console.log(`[seed-admin] Updated password for test-superadmin@thaibahive.local to ${password}`);
   }
 

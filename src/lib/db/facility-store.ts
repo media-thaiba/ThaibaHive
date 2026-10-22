@@ -1,5 +1,5 @@
 import { db } from '@thaiba/db';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   facilityEquipment,
   facilityTelemetrySensors,

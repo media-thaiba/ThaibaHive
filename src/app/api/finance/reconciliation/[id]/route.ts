@@ -4,7 +4,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { reconciliationEngine } from "@/lib/finance/reconciliation/reconciliation-engine";
 import { resolveScopedInstitutionId } from "@/lib/finance/institution-context";
 
-export const GET = requireAuth(async (request: Request, session: any, context: { params: Promise<{ id: string }> } | { params: { id: string } }) => {
+export const GET = requireAuth(async (request: Request, session: any, context?: any) => {
   // Rate limiting
   const rl = checkRateLimit(session.staffId, "read");
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
@@ -12,7 +12,7 @@ export const GET = requireAuth(async (request: Request, session: any, context: {
   // Dynamic route parameter fallback: params.id, URL pathname, query param
   let reconciliationId: string | undefined;
   try {
-    const resolvedParams = "then" in context.params ? await context.params : context.params;
+    const resolvedParams = context?.params ? ("then" in context.params ? await context.params : context.params) : undefined;
     reconciliationId = resolvedParams?.id;
   } catch {
     reconciliationId = undefined;

@@ -15,7 +15,7 @@ import { eq, desc, sql, and } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session, context) => {
   const params = context?.params ? await context.params : {};
-  let id = params.id;
+  let id: string | undefined = params.id;
   if (!id) {
     const url = new URL(request.url);
     id = url.pathname.split("/").pop();
@@ -72,7 +72,7 @@ export const GET = requireAuth(async (request, session, context) => {
 
 export const PATCH = requireAuth(async (request: Request, session, context) => {
   const params = context?.params ? await context.params : {};
-  let id = params.id;
+  let id: string | undefined = params.id;
   if (!id) {
     const url = new URL(request.url);
     id = url.pathname.split("/").pop();
@@ -186,7 +186,7 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
   }
 
   const params = context?.params ? await context.params : {};
-  let id = params.id;
+  let id: string | undefined = params.id;
   if (!id) {
     const url = new URL(request.url);
     id = url.pathname.split("/").pop();

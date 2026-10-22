@@ -23,7 +23,7 @@ import {
   purchaseApprovalLogs,
 } from "@/db";
 import { verifySession } from "@thaiba/auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { POST as approvalPost } from "@/app/api/finance/purchases/approvals/route";
 import { GET as tiersGet, POST as tiersPost } from "@/app/api/finance/purchases/tiers/route";
 import { GET as verifyGet } from "@/app/api/finance/purchases/approvals/[id]/verify/route";
@@ -99,7 +99,6 @@ describe("Purchase Approvals & Procurement Tiers Pipeline — Hardening Suite", 
       requiredRole: role,
       requiresSequentialApproval: true,
       autoEscalateHours: 48,
-      isActive: true,
     }).returning().get();
 
   const seedRequest = async (overrides: Partial<{ id: string; institutionId: string; requesterId: string; amount: number; status: string }> = {}) =>
@@ -197,7 +196,6 @@ describe("Purchase Approvals & Procurement Tiers Pipeline — Hardening Suite", 
         requiredRole: role,
         requiresSequentialApproval: true,
         autoEscalateHours: 48,
-        isActive: true,
       }).returning().get();
 
     const seedRequest = async (overrides: Partial<{ id: string; institutionId: string; requesterId: string; amount: number; status: string }> = {}) =>
@@ -232,6 +230,11 @@ describe("Purchase Approvals & Procurement Tiers Pipeline — Hardening Suite", 
         ],
       });
 
+      await db.delete(staffInstitutions).where(inArray(staffInstitutions.institutionId, ["instA", "instB"])).catch(() => {});
+      await db.delete(purchaseApprovalTiers).where(inArray(purchaseApprovalTiers.institutionId, ["instA", "instB"])).catch(() => {});
+      await db.delete(staff).where(inArray(staff.id, ["userA", "userB", "approver1", "approver2"])).catch(() => {});
+      await db.delete(institutions).where(inArray(institutions.id, ["instA", "instB"])).catch(() => {});
+
       await db.insert(institutions).values([
         { id: "instA", name: `Inst A ${suffix}`, code: `IA${suffix.slice(-5)}` },
         { id: "instB", name: `Inst B ${suffix}`, code: `IB${suffix.slice(-5)}` },
@@ -249,8 +252,8 @@ describe("Purchase Approvals & Procurement Tiers Pipeline — Hardening Suite", 
         { id: `si_ap2_${suffix}`, staffId: "approver2", institutionId: "instB" },
       ]);
       await db.insert(purchaseApprovalTiers).values([
-        { id: `tier1_${suffix}`, institutionId: "instA", tierLevel: 1, name: "HOD Approval", minAmount: 0, maxAmount: 10000, requiredRole: "hod", requiresSequentialApproval: true, autoEscalateHours: 48, isActive: true },
-        { id: `tier2_${suffix}`, institutionId: "instA", tierLevel: 2, name: "Principal Approval", minAmount: 10001, maxAmount: 100000, requiredRole: "principal", requiresSequentialApproval: true, autoEscalateHours: 48, isActive: true },
+        { id: `tier1_${suffix}`, institutionId: "instA", tierLevel: 1, name: "HOD Approval", minAmount: 0, maxAmount: 10000, requiredRole: "hod", requiresSequentialApproval: true, autoEscalateHours: 48 },
+        { id: `tier2_${suffix}`, institutionId: "instA", tierLevel: 2, name: "Principal Approval", minAmount: 10001, maxAmount: 100000, requiredRole: "principal", requiresSequentialApproval: true, autoEscalateHours: 48 },
       ]);
     });
 

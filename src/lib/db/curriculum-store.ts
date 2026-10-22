@@ -1,5 +1,4 @@
 import { db } from '@thaiba/db';
-import { eq, and } from 'drizzle-orm';
 import {
   curriculumPrograms,
   curriculumCourses,

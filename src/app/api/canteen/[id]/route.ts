@@ -12,7 +12,7 @@ export const DELETE = requireAuth(async (request, session, context) => {
   if (!rl.allowed) return rateLimitResponse(rl.resetMs);
 
   const params = context?.params ? await context.params : {};
-  let id = params.id;
+  let id: string | undefined = params.id;
   if (!id) {
     const url = new URL(request.url);
     id = url.pathname.split("/").pop();

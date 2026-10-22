@@ -6,7 +6,7 @@ import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { pick } from "@/lib/api/pick";
 import { hashPassword } from "@/lib/auth";
-import { staffCreateSchema, paginationSchema } from "@/lib/validation/schemas";
+import { staffCreateSchema } from "@/lib/validation/schemas";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 import { autoAssignOnboardingChecklists } from "@/lib/onboarding/auto-assign";
 import { encryptPiiField } from "@/lib/crypto/tenant-encryption";

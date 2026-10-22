@@ -4,7 +4,7 @@ import { studentAttendanceLogs, attendanceRegister, classes, students } from "@/
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { resolveInstitutionScopeForSession } from "@/lib/auth/institution-scope";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { bulkAttendanceSchema } from "@/lib/validation/schemas";
 import { withAttendanceBulkLock, verifyStudentEnrollment } from "@/lib/academic-attendance/ledger";
 
@@ -50,14 +50,6 @@ export const POST = requireAuth(async (request: Request, session) => {
   }
 
   // Verify caller has permission to manage this class's attendance
-  const { role, staffId } = session;
-  const isManager = ["super_admin", "admin", "principal", "hod"].includes(session.role);
-  const isAssignedTeacher = await db
-    .select()
-    .from(students)
-    .where(and(eq(students.classId, classId), eq(students.id, session.staffId)))
-    .get();
-
   const canManage = ["super_admin", "admin"].includes(session.role) ||
     (["principal", "hod"].includes(session.role) && session.institutionId === classRecord.institutionId) ||
     (session.role === "staff" && !!await db.select().from(students).where(and(eq(students.classId, classId), eq(students.id, session.staffId))).get());
@@ -74,11 +66,9 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   // Use per-class-date mutex to serialize concurrent bulk operations
   const result = await withAttendanceBulkLock(classId, date, async () => {
-    const now = new Date().toISOString();
     const inserted = [];
 
     for (const record of records) {
-      const existingId = crypto.randomUUID();
       await db
         .insert(studentAttendanceLogs)
         .values({

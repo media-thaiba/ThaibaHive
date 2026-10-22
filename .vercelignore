@@ -8,12 +8,34 @@ e2e/
 test-results/
 playwright/
 jest/
+.stryker-tmp/
+scratch/
+load-tests/
+k6/
+reports/
+staging-reports/
+bundle-analysis/
+charts/
+
+# Ignore AI and dev agent workspaces
+.claude/
+.claude-flow/
+.opencode/
+.agent/
+.ai/
+.planning/
+.compliance-snapshots/
+.kilo/
+.swarm/
+.impeccable/
+.husky/
 
 # Ignore dependencies and builds
 node_modules/
 .next/
 out/
 build/
+.git/
 
 # Ignore database and assets
 dev.db*
@@ -23,6 +45,8 @@ dev.db*
 uploads/
 stdout.txt
 stderr.txt
+*.log
+dev.log
 .env*.local
 .env
 .vercel

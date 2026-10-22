@@ -6,7 +6,7 @@ import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 export const GET = withDPoP(
   requireAuth(async (req, _session, context) => {
     const params = context?.params ? await context.params : {};
-    let id = params.id;
+    let id: string | undefined = params.id;
     if (!id) {
       const url = new URL(req.url);
       id = url.pathname.split("/").pop();
@@ -31,7 +31,7 @@ export const GET = withDPoP(
 export const DELETE = withDPoP(
   requireAuth(async (req, _session, context) => {
     const params = context?.params ? await context.params : {};
-    let id = params.id;
+    let id: string | undefined = params.id;
     if (!id) {
       const url = new URL(req.url);
       id = url.pathname.split("/").pop();

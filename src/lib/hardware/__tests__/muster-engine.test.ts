@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { MusterEngine } from "../muster-engine";
 import { GeofenceEngine } from "../geofence-engine";
 import { db } from "@/db";

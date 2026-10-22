@@ -12,10 +12,9 @@ function safeCompareStrings(a: string, b: string): boolean {
 
 export const POST = withPublicApm(async function POST(
   request: Request,
-  ...rest: unknown[]
+  context: { params: Promise<Record<string, string>> }
 ) {
   try {
-    const context = rest[0] as { params?: Promise<{ provider: string }> | { provider: string } } | undefined;
     const params = await context?.params;
     const provider = (params?.provider || 'generic').toLowerCase();
     const rawBody = await request.text();
