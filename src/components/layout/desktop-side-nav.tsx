@@ -73,7 +73,7 @@ export function DesktopSideNav({ onSearchOpen: _onSearchOpen }: DesktopSideNavPr
         left:
           "max(1.5rem, calc((100vw - var(--content-max-width, 80rem)) / 2 - var(--current-sidebar-width, 260px) - 1.5rem))",
       }}
-      className="fixed top-1/2 z-40 hidden max-h-[calc(100vh-3rem)] w-fit -translate-y-1/2 select-none flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/90 backdrop-blur-2xl shadow-lg lg:flex dark:border-white/10 dark:shadow-[0_16px_36px_rgba(0,0,0,0.45)]"
+      className="fixed top-20 z-40 hidden max-h-[calc(100vh-3rem)] w-fit select-none flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/90 backdrop-blur-2xl shadow-lg lg:flex dark:border-white/10 dark:shadow-[0_16px_36px_rgba(0,0,0,0.45)]"
       aria-label="Main navigation"
     >
       {/* 1. Brand Header */}

@@ -13,6 +13,7 @@ import {
 } from "./lib/security/security-headers";
 
 import { getJwtSecretBytes } from "@thaiba/auth/config";
+import { resolveLegacyRedirect } from "./lib/navigation/legacy-redirects";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -132,6 +133,16 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
 
     if (pathname === "/dashboard") {
       return addSecurityHeaders(request, NextResponse.redirect(new URL("/", request.url)), pathname, nonce);
+    }
+
+    const legacyDest = resolveLegacyRedirect(pathname);
+    if (legacyDest) {
+      return addSecurityHeaders(
+        request,
+        NextResponse.redirect(new URL(legacyDest, request.url), 308),
+        pathname,
+        nonce
+      );
     }
     const isProtectedPortal =
       pathname.startsWith("/portal/alumni") ||

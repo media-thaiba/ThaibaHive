@@ -29,6 +29,11 @@ export const LEGACY_REDIRECTS: LegacyRedirect[] = [
   { source: "/examinations/report-cards/:path*", destination: "/school/grades/:path*" },
   { source: "/examinations/:path*", destination: "/school/examinations/:path*" },
   { source: "/academic/:path*", destination: "/school/:path*" },
+  { source: "/school/circulars/:path*", destination: "/my-work/circulars/:path*" },
+  { source: "/school/events/:path*", destination: "/my-work/events/:path*" },
+  { source: "/school/polls/:path*", destination: "/my-work/polls/:path*" },
+  { source: "/school/announcements/:path*", destination: "/my-work/announcements/:path*" },
+  { source: "/my-work/complaints/:path*", destination: "/my-work/grievances/:path*" },
 
   // --- Admin renames (specific first) ---
   { source: "/admin/security/identity/:path*", destination: "/admin/keys/:path*" },
@@ -77,3 +82,30 @@ export const LEGACY_REDIRECTS: LegacyRedirect[] = [
 
 /** Legacy top-level folders that intentionally have no redirect (allowlist). */
 export const LEGACY_ALLOWLIST = ["checklists", "reviews", "portal", "parent", "research", "workspace"] as const;
+
+/**
+ * Resolves a runtime pathname against LEGACY_REDIRECTS.
+ * Returns the destination URL string or null if no redirect matches.
+ */
+export function resolveLegacyRedirect(pathname: string): string | null {
+  for (const { source, destination } of LEGACY_REDIRECTS) {
+    if (source.endsWith("/:path*")) {
+      const sourceBase = source.slice(0, -":path*".length - 1);
+      const prefix = source.slice(0, -":path*".length);
+      const destBase = destination.replace("/:path*", "");
+
+      if (pathname === sourceBase) {
+        return destBase;
+      }
+      if (pathname.startsWith(prefix)) {
+        const subpath = pathname.slice(prefix.length);
+        return destination.includes(":path*")
+          ? destination.replace(":path*", subpath)
+          : `${destBase}/${subpath}`;
+      }
+    } else if (pathname === source) {
+      return destination;
+    }
+  }
+  return null;
+}

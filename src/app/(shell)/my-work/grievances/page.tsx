@@ -63,7 +63,7 @@ export default function GrievancesPage() {
       if (res.ok) {
         setGrievances(ensureArray<Grievance>(res.data?.grievances));
       } else {
-        toast.error("Failed to load grievances");
+        toast.error("Failed to load complaints");
       }
     } catch {
       toast.error("Failed to load grievances");
@@ -104,13 +104,13 @@ export default function GrievancesPage() {
         description: form.description,
       });
       if (res.ok) {
-        toast.success("Grievance submitted successfully");
+        toast.success("Complaint submitted successfully");
         setSubmitOpen(false);
         resetForm();
         fetchGrievances();
       }
     } catch {
-      toast.error("Failed to submit grievance");
+        toast.error("Failed to submit complaint");
     } finally {
       setSubmitting(false);
     }
@@ -188,16 +188,16 @@ export default function GrievancesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
-            Grievance &amp; Workplace Feedback
-          </h1>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <MessageSquare className="h-6 w-6 text-primary" />
+              Complaints &amp; Workplace Feedback
+            </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Submit suggestions, concerns, or anonymous feedback to help improve the workplace.
           </p>
         </div>
         <Button onClick={() => setSubmitOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" /> Submit Grievance
+          <Plus className="h-4 w-4 mr-1.5" /> Submit Complaint
         </Button>
       </div>
 

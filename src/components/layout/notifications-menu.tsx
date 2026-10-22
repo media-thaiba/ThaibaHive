@@ -23,9 +23,9 @@ export function NotificationsMenu({ layout = "header", collapsed = false }: Noti
 
   const hrefMap: Record<string, string> = {
     announcement: "/my-work/announcements",
-    event: "/school/events",
-    circular: "/school/circulars",
-    poll: "/school/polls",
+    event: "/my-work/events",
+    circular: "/my-work/circulars",
+    poll: "/my-work/polls",
   };
 
   const trigger =

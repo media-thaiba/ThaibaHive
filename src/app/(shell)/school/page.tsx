@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Users, Layers, GraduationCap as ExamIcon, CalendarDays, CalendarCheck, Award,
   type LucideIcon,
@@ -8,6 +8,8 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { Select, SelectItem } from "@/components/ui/select";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { SkeletonCard } from "@/components/ui/skeleton";
 
@@ -20,19 +22,49 @@ const quickActions = [
   { icon: Award, label: "Grades", color: "bg-amber-500", route: "/school/grades", permission: "exam.marks.enter" },
 ];
 
+type Institution = { id: string; name: string };
+
 export default function SchoolDashboard() {
   const [stats, setStats] = useState({ totalStudents: 0, totalClasses: 0, activeYears: 0 });
   const [loading, setLoading] = useState(true);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
+
+  const buildUrl = useCallback(
+    (base: string) => {
+      if (!selectedInstitutionId) return base;
+      const separator = base.includes("?") ? "&" : "?";
+      return `${base}${separator}institutionId=${encodeURIComponent(selectedInstitutionId)}`;
+    },
+    [selectedInstitutionId],
+  );
 
   useEffect(() => {
     let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/institutions");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setInstitutions((data as { institutions?: Institution[] }).institutions ?? []);
+        }
+      } catch {
+        // Institutions list unavailable; selector falls back to "All Institutions"
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
+  useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const [studentsRes, classesRes, yearsRes] = await Promise.all([
-          fetch("/api/academic/students?limit=1"),
-          fetch("/api/academic/classes"),
-          fetch("/api/academic/academic-years"),
+          fetch(buildUrl("/api/academic/students?limit=1")),
+          fetch(buildUrl("/api/academic/classes")),
+          fetch(buildUrl("/api/academic/academic-years")),
         ]);
         if (!studentsRes.ok || !classesRes.ok || !yearsRes.ok) {
           throw new Error("Dashboard fetch returned a non-ok response");
@@ -54,11 +86,10 @@ export default function SchoolDashboard() {
         if (!cancelled) setLoading(false);
       }
     })();
-
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [buildUrl]);
 
   const statCards = [
     { title: "Total Students", value: stats.totalStudents, icon: Users, color: "bg-blue-100", iconColor: "text-blue-500" },
@@ -68,12 +99,27 @@ export default function SchoolDashboard() {
 
   return (
     <div className="space-y-6 p-4 lg:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Academic Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage students, classes, exams & grades</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Academic Dashboard"
+        description="Manage students, classes, exams & grades"
+        actions={
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-semibold text-foreground/60 uppercase tracking-wider">
+              Institution
+            </span>
+            <Select
+              value={selectedInstitutionId ?? ""}
+              onChange={(e) => setSelectedInstitutionId(e.target.value || null)}
+              className="w-64 text-sm"
+            >
+              <SelectItem value="">All Institutions</SelectItem>
+              {institutions.map((inst) => (
+                <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
+              ))}
+            </Select>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {loading

@@ -122,8 +122,8 @@ export function GrievanceList({
         {grievances.length === 0 ? (
           <EmptyState
             icon={<Inbox className="h-12 w-12" />}
-            title="No grievances found"
-            description="No submissions match the selected filter. Submit a new grievance to get started."
+            title="No complaints found"
+            description="No complaints match the selected filter. Submit a new complaint to get started."
           />
         ) : (
           grievances.map((g) => (

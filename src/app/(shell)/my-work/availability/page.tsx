@@ -30,6 +30,14 @@ const STATUS_OPTIONS = [
   { value: "away", label: "Away" },
 ] as const;
 
+const FILTER_CHIPS: { value: "all" | "active" | "busy" | "meeting" | "away"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "busy", label: "Busy" },
+  { value: "meeting", label: "In a Meeting" },
+  { value: "away", label: "Away" },
+];
+
 export default function AvailabilityPage() {
   const { getPresence, loaded: presenceLoaded } = usePresence();
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -37,6 +45,7 @@ export default function AvailabilityPage() {
   const [search, setSearch] = useState("");
   const [myStatus, setMyStatus] = useState("active");
   const [myStatusText, setMyStatusText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "busy" | "meeting" | "away">("all");
   const [saving, setSaving] = useState(false);
   const [currentStaffId, setCurrentStaffId] = useState<string | null>(null);
 
@@ -76,8 +85,26 @@ export default function AvailabilityPage() {
     }
   }, [myStatus, myStatusText]);
 
+  const myPresence = currentStaffId ? getPresence(currentStaffId) : undefined;
+  const myStatusLabel = myPresence
+    ? myPresence.status === "active"
+      ? "Online"
+      : myPresence.status === "busy"
+        ? "Busy"
+        : myPresence.status === "meeting"
+          ? "In a Meeting"
+          : myPresence.status === "away"
+            ? "Away"
+            : "Offline"
+    : "Offline";
+  const myStatusVariant = myPresence?.online ? "success" : "secondary";
+
   const filtered = staff
     .filter((s) => {
+      if (statusFilter !== "all") {
+        const p = getPresence(s.id);
+        if (p?.status !== statusFilter) return false;
+      }
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -105,7 +132,13 @@ export default function AvailabilityPage() {
       />
 
       <Card>
-        <CardContent>
+        <CardContent className="pb-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-semibold text-foreground/80">Your Status</span>
+            <Badge variant={myStatusVariant} className="text-xs px-2 py-1">
+              {myStatusLabel}
+            </Badge>
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <Select value={myStatus} onChange={(e) => setMyStatus(e.target.value)}>
               {STATUS_OPTIONS.map((opt) => (
@@ -127,14 +160,34 @@ export default function AvailabilityPage() {
         </CardContent>
       </Card>
 
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, department, or role..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-8"
-        />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto">
+          <span className="text-xs font-semibold text-foreground/80">Filter by status</span>
+          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1">
+            {FILTER_CHIPS.map((chip) => (
+              <button
+                key={chip.value}
+                onClick={() => setStatusFilter(chip.value)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                  statusFilter === chip.value
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, department, or role..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
       </div>
 
       {loading ? (

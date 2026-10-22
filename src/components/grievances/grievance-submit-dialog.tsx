@@ -45,7 +45,7 @@ export function GrievanceSubmitDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Submit Grievance / Feedback</DialogTitle>
+          <DialogTitle>Submit Complaint / Feedback</DialogTitle>
           <DialogDescription>
             Your submission will be treated confidentially. You may choose to submit anonymously.
           </DialogDescription>
@@ -95,7 +95,7 @@ export function GrievanceSubmitDialog({
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea
-              placeholder="Describe your grievance or feedback in detail..."
+              placeholder="Describe your complaint or feedback in detail..."
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               rows={5}

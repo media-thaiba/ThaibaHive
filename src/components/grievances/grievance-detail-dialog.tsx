@@ -48,7 +48,7 @@ export function GrievanceDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Grievance Details</DialogTitle>
+          <DialogTitle>Complaint Details</DialogTitle>
           <DialogDescription>
             {selected?.isAnonymous
               ? "This submission is anonymous."

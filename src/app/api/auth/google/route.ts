@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!staffMember) {
       console.warn(`[Auth] Google login failed: User ${email} does not exist in the staff database.`);
       return NextResponse.json(
-        { error: "Invalid Google token" },
+        { error: "No campus account found for this Google email. Please contact your administrator." },
         { status: 401 }
       );
     }
