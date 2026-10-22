@@ -49,7 +49,7 @@ android {
 
     defaultConfig {
         applicationId = "com.thaiba.hive"
-        minSdk = flutter.minSdkVersion
+        minSdk = 28
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

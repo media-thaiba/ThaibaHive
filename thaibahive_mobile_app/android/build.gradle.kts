@@ -29,6 +29,22 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+subprojects {
+    plugins.withId("com.android.library") {
+        val android = project.extensions.findByName("android")
+        if (android != null) {
+            try {
+                val getNs = android.javaClass.getMethod("getNamespace")
+                if (getNs.invoke(android) == null) {
+                    val setNs = android.javaClass.getMethod("setNamespace", String::class.java)
+                    val ns = if (project.name == "passkeys_android") "com.corbado.passkeys_android" else "com.plugin.${project.name.replace('-', '_')}"
+                    setNs.invoke(android, ns)
+                }
+            } catch (_: Throwable) {}
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
