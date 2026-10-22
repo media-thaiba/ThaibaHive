@@ -5,10 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
+import 'package:thaibahive_mobile/core/services/passkey_service.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 
-enum AuthMode { signIn, signUp, google, forgotPassword }
+enum AuthMode { signIn, signUp, google, passkey, forgotPassword }
 
 class LoginScreen extends ConsumerStatefulWidget {
   final String? initialMode;
@@ -174,6 +175,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool _isSubmittingReset = false;
 
+  Future<void> _handlePasskeyLogin() async {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your email before using Passkey.'),
+          backgroundColor: Colors.amber,
+        ),
+      );
+      return;
+    }
+    final passkeyService = PasskeyService();
+    final available = await passkeyService.isAvailable();
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Passkey is not available on this device. Use password or Google Sign-In.'),
+            backgroundColor: Colors.amber,
+          ),
+        );
+      }
+      return;
+    }
+    await ref.read(authProvider.notifier).loginWithPasskey(_emailController.text.trim());
+  }
+
   Future<void> _handleForgotPassword() async {
     if (_isSubmittingReset) return;
     if (!_formKey.currentState!.validate()) return;
@@ -217,7 +244,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _formKey.currentState?.reset();
     });
   }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -264,6 +290,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         subtitleText = 'SYNCHRONIZING SECURE IDENTITY PROVIDER';
         descriptionText = 'Authorize your Thaiba Garden workspace nodes using Google OAuth secure session handoff.';
         break;
+      case AuthMode.passkey:
+        accentColor = const Color(0xFF7C4DFF); // Violet
+        subtitleText = 'ANDROID CREDENTIAL MANAGER / PASSKEY';
+        descriptionText = 'Authenticate using your device passkey (fingerprint, face, or screen lock) via Google Password Manager.';
+        break;
       case AuthMode.forgotPassword:
         accentColor = const Color(0xFFF59E0B); // Orange/Amber
         subtitleText = 'RECOVERING SECURE NODE KEYS';
@@ -276,11 +307,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final double green2Size = _currentMode == AuthMode.signUp ? 520.0 : 480.0;
     final double limeSize = _currentMode == AuthMode.google ? 400.0 : 360.0;
     final double amberSize = _currentMode == AuthMode.forgotPassword ? 280.0 : 240.0;
+    final double violetSize = _currentMode == AuthMode.passkey ? 380.0 : 340.0;
 
     final double green1Opacity = _currentMode == AuthMode.signIn ? 1.0 : 0.45;
     final double green2Opacity = _currentMode == AuthMode.signUp ? 1.0 : 0.45;
     final double limeOpacity = _currentMode == AuthMode.google ? 1.0 : 0.45;
     final double amberOpacity = _currentMode == AuthMode.forgotPassword ? 1.0 : 0.45;
+    final double violetOpacity = _currentMode == AuthMode.passkey ? 1.0 : 0.45;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E1012),
@@ -336,6 +369,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: const Color(0xFFF59E0B).withOpacity(amberOpacity),
                     ),
                   ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    width: violetSize,
+                    height: violetSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF7C4DFF).withOpacity(violetOpacity),
+                    ),
+                  ),
                   Container(
                     width: 128,
                     height: 128,
@@ -376,10 +419,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Header
-                      Text(
-                        _currentMode == AuthMode.signIn ? 'ACCESS WORKSPACE' :
-                        _currentMode == AuthMode.signUp ? 'CREATE PROFILE' :
-                        _currentMode == AuthMode.google ? 'GOOGLE FEDERATION' : 'FORGOT KEY',
+                        Text(
+                          _currentMode == AuthMode.signIn ? 'ACCESS WORKSPACE' :
+                          _currentMode == AuthMode.signUp ? 'CREATE PROFILE' :
+                          _currentMode == AuthMode.google ? 'GOOGLE FEDERATION' :
+                          _currentMode == AuthMode.passkey ? 'PASSKEY LOGIN' : 'FORGOT KEY',
                         style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           color: Colors.white,
@@ -634,6 +678,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: isLoading ? null : () => _changeMode(AuthMode.passkey),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[300],
+                side: const BorderSide(color: Color(0xFF1E2022)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              ),
+              icon: const Icon(Icons.login_rounded, color: Color(0xFF7C4DFF), size: 24),
+              label: const Text(
+                'Sign In with Passkey',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
           ],
         );
 
@@ -855,6 +914,98 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   if (!isLoading) ...[
                     const SizedBox(width: 8),
                     const Icon(Icons.arrow_forward_rounded, size: 16),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: isLoading ? null : () => _changeMode(AuthMode.signIn),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[300],
+                side: const BorderSide(color: Color(0xFF1E2022)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              ),
+              child: const Text(
+                'Back to local credentials',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ],
+        );
+      case AuthMode.passkey:
+        return Column(
+          key: const ValueKey('passkeyForm'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF121316).withOpacity(0.4),
+                border: Border.all(color: Colors.white.withOpacity(0.04)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C4DFF).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.login_rounded, color: Color(0xFF7C4DFF), size: 32),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Sign in with your device passkey.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.4),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Uses fingerprint, face, or screen lock via Google Password Manager.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildLabel('EMAIL'),
+            const SizedBox(height: 6),
+            _buildTextFormField(
+              controller: _emailController,
+              hintText: 'admin@thaibahive.local',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              validator: _validateEmail,
+              accentColor: accentColor,
+              onFieldSubmitted: (_) => _handlePasskeyLogin(),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: isLoading ? null : _handlePasskeyLogin,
+              style: FilledButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: accentColor.withOpacity(0.5),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                elevation: 0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    isLoading ? 'Authenticating...' : 'Sign In with Passkey',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  if (!isLoading) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.login_rounded, size: 16),
                   ],
                 ],
               ),

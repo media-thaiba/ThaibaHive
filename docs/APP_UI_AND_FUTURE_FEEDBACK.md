@@ -23,7 +23,7 @@
 | 11 | Canteen: User default meal setting ("Eating" vs "Skip Meal") | Canteen | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
 | 12 | Canteen: Skip meal for a specific period of time / recurring | Canteen | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
 | 13 | Canteen: Auto-skip meals when user is on approved leave | Automation | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
-| 14 | Android Passkey (WebAuthn / Credential Manager) integration | Mobile Auth | ⏳ **PENDING** | 2026-10-22 | — |
+| 14 | Android Passkey (WebAuthn / Credential Manager) integration | Mobile Auth | ✅ **DONE** | 2026-10-22 | 2026-10-22 |
 
 ---
 
@@ -76,6 +76,19 @@
 ### 8. 1-Click Status Switcher in Profile Menu
 * **User Feedback**: *"Can we add that option in the dashboard itself so that users can easily change their status if needed, rather than going to the availability page?"*
 * **Implementation**: In `src/components/layout/user-avatar-dropdown.tsx`, embedded a quick availability status switcher (Active, Busy, In Meeting, Away) with dynamic presence dot coloring on the user's avatar. Available from every page in the application.
+
+### 9. Android Passkey (WebAuthn / Credential Manager)
+* **User Feedback**: *"Sign in with passkey is there in the web app, not in the android. How does it work ?"*
+* **Implementation**:
+  * **Backend**: Hardened [`src/app/api/auth/webauthn/login/complete/route.ts`](src/app/api/auth/webauthn/login/complete/route.ts) to return session `token` in body for mobile clients presenting `x-client-platform: mobile` header, matching the Google auth route pattern (`F-12`). Existing `/api/auth/webauthn/login/begin` already supports email-based challenge issuance for passkey login.
+  * **Flutter Mobile**: Added `passkeys_android: ^1.1.1` dependency to `pubspec.yaml`.
+  * **`lib/core/services/passkey_service.dart`**: New `PasskeyService` wrapping `passkeys_android` (Google Credential Manager API). Exposes `isAvailable()`, `isRegistered()`, `getKey()` (login assertion), `createKey()` (registration attestation), and local registration state persistence via `FlutterSecureStorage`.
+  * **`lib/features/auth/data/auth_repository.dart`**: Added `loginWithPasskey(email)` (begin → device assertion → complete → session token), `registerPasskeyBegin()`, and `registerPasskeyComplete(attestation)` methods, all sending `X-Client-Platform: mobile` header.
+  * **`lib/features/auth/data/auth_state.dart`**: Added `loginWithPasskey(email)` to `AuthNotifier` with standard loading/error/authenticated state transitions and FCM re-registration on success.
+  * **`lib/features/auth/presentation/login_screen.dart`**: Added `AuthMode.passkey`, "Sign In with Passkey" button on the sign-in form, and a dedicated passkey login form with email input and passkey authenticate button.
+  * **`lib/features/auth/presentation/passkey_enrollment_screen.dart`**: New screen for authenticated users to register a device passkey (challenge → device creation → server attestation → local mark registered).
+  * **`lib/app/router.dart`**: Added `/auth/passkey/enroll` route (`passkeyEnroll`).
+* **Scope Note**: Web uses W3C WebAuthn API (`navigator.credentials.get()`); Android uses Google Credential Manager API via `passkeys_android` package, paired with `/api/auth/webauthn/login/begin` and `/complete`. The Android Client ID from Item 5 is reserved for Google Play Services in the Flutter build — web GIS strictly uses the Web Client ID.
 
 ### 9. Move Search from Top Bar to Sidebar (Minimal, No `Ctrl + K`)
 * **User Feedback**: *"Another thing is that the search my space option can be moved from the top bar to the side bar. No need to show the `Ctrl + K` in the search bar to make it minimal, just the option to search and simple text."*

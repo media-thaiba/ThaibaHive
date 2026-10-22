@@ -13,6 +13,7 @@ import '../features/action_center/controller.dart';
 import '../features/action_center/action_producers.dart';
 import '../features/action_center/tray.dart';
 import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/passkey_enrollment_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
 import '../features/today/presentation/today_screen.dart';
 import '../features/notices/presentation/notices_screen.dart';
@@ -83,6 +84,7 @@ import '../features/agent_hub/presentation/agent_hub_screen.dart';
 import '../features/agent_hub/presentation/plugin_detail_screen.dart';
 import '../features/sync/presentation/sync_status_screen.dart';
 import '../features/chat/presentation/channel_list_screen.dart';
+import '../shared/widgets/update_banner.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/hardware/presentation/guard_patrol_screen.dart';
 import '../features/hardware/presentation/hardware_radar_screen.dart';
@@ -112,6 +114,11 @@ GoRouter buildRouter() {
           final redirect = state.uri.queryParameters['redirect'];
           return LoginScreen(initialMode: mode, redirect: redirect);
         },
+      ),
+      GoRoute(
+        path: '/auth/passkey/enroll',
+        name: 'passkeyEnroll',
+        builder: (_, __) => const PasskeyEnrollmentScreen(),
       ),
       GoRoute(
         path: '/auth/diagnostics',
@@ -1124,6 +1131,17 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
         children: [
           // Main navigation content
           widget.navigationShell,
+
+          // Persistent In-App OTA Update Banner (Mounted like MediaHive shell)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: UpdateBanner(),
+            ),
+          ),
 
           // Action Center Tray overlay (visible items; Today branch only)
           if (onTodayBranch && visibleActionCount > 0)

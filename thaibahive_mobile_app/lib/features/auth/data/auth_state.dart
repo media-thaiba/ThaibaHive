@@ -180,6 +180,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> loginWithPasskey(String email) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    try {
+      final response = await _repository.loginWithPasskey(email);
+      await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
+      if (response.refreshToken != null) {
+        await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
+      }
+      await _storage.write(key: 'remember_me', value: 'true');
+      _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
+      state = AuthState(
+        status: AuthStatus.authenticated,
+        user: response.user,
+        token: response.token,
+      );
+      await _onLoginSuccess();
+    } on AppException catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
+    } on DioException catch (e) {
+      final appEx = AppException.fromDioException(e);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: 'Passkey login failed: $e');
+    }
+  }
+
 
   Future<void> signup(Map<String, dynamic> data) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
