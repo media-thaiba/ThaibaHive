@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores";
 import { PermissionGate } from "@/components/ui/permission-gate";
@@ -15,7 +15,7 @@ type DesktopSideNavProps = {
   onSearchOpen?: () => void;
 };
 
-export function DesktopSideNav({ onSearchOpen: _onSearchOpen }: DesktopSideNavProps) {
+export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
   const pathname = usePathname();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
@@ -125,6 +125,23 @@ export function DesktopSideNav({ onSearchOpen: _onSearchOpen }: DesktopSideNavPr
 
       {/* 2. Content Area */}
       <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto py-5">
+        {/* Minimal Search Button (No Ctrl+K badge) */}
+        <div className={cn("mb-3 px-4", collapsed && "px-2")}>
+          <button
+            type="button"
+            onClick={onSearchOpen}
+            aria-label="Search my space"
+            title="Search my space"
+            className={cn(
+              "group flex items-center rounded-xl border border-border/70 bg-muted/40 text-xs text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground active:scale-[0.98]",
+              collapsed ? "h-10 w-10 justify-center mx-auto" : "w-full gap-2.5 px-3 py-2"
+            )}
+          >
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground" />
+            {!collapsed && <span className="truncate">Search my space...</span>}
+          </button>
+        </div>
+
         {/* Main Navigation */}
         <nav
           className="space-y-4 px-4"

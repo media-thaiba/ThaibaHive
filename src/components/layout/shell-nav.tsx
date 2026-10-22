@@ -112,17 +112,13 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
 
       {/* Right side: Search, Chat, Notifications, Theme, Settings, Profile */}
       <div className="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
-        {/* Search */}
+        {/* Mobile Search (Desktop search moved to sidebar) */}
         <button
           onClick={onSearchOpen}
           aria-label="Search"
-          className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 shrink-0"
+          className="flex lg:hidden items-center justify-center rounded-xl p-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-150 min-w-[36px] min-h-[36px] shrink-0"
         >
-          <Search className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">Search {currentWorkspace.label}...</span>
-          <kbd className="hidden sm:inline rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[11px] font-medium text-muted-foreground">
-            Ctrl K
-          </kbd>
+          <Search className="h-[18px] w-[18px]" />
         </button>
 
         {/* Chat Drawer Toggle */}

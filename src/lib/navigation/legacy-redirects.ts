@@ -33,7 +33,7 @@ export const LEGACY_REDIRECTS: LegacyRedirect[] = [
   { source: "/school/events/:path*", destination: "/my-work/events/:path*" },
   { source: "/school/polls/:path*", destination: "/my-work/polls/:path*" },
   { source: "/school/announcements/:path*", destination: "/my-work/announcements/:path*" },
-  { source: "/my-work/complaints/:path*", destination: "/my-work/grievances/:path*" },
+  { source: "/my-work/grievances/:path*", destination: "/my-work/complaints/:path*" },
 
   // --- Admin renames (specific first) ---
   { source: "/admin/security/identity/:path*", destination: "/admin/keys/:path*" },

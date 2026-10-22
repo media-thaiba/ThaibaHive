@@ -20,12 +20,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Google ID token is required" }, { status: 400 });
     }
 
-    const allowedClientIds = process.env.GOOGLE_CLIENT_IDS
-      ? process.env.GOOGLE_CLIENT_IDS.split(",").map(c => c.trim())
-      : [];
+    const rawIds = [process.env.GOOGLE_CLIENT_IDS, process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS]
+      .filter(Boolean)
+      .join(",");
+    const allowedClientIds = Array.from(
+      new Set(rawIds.split(",").map(c => c.trim()).filter(Boolean))
+    );
 
     if (allowedClientIds.length === 0) {
-      console.error("GOOGLE_CLIENT_IDS is not configured — rejecting Google auth");
+      console.error("Neither GOOGLE_CLIENT_IDS nor NEXT_PUBLIC_GOOGLE_CLIENT_IDS is configured — rejecting Google auth");
       return NextResponse.json({ error: "Google authentication is not configured" }, { status: 503 });
     }
 
