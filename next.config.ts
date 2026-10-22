@@ -59,6 +59,8 @@ const nextConfig: NextConfig = {
   compress: true,
 
   experimental: {
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
     optimizePackageImports: [
       "lucide-react",
       "@radix-ui/react-icons",
