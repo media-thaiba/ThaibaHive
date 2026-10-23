@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
+import 'package:thaibahive_mobile/core/services/logger_service.dart';
 import 'package:thaibahive_mobile/core/services/passkey_service.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
@@ -105,6 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Submission Handlers
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+    logger.info('[LoginScreen] User submitted login credentials for: ${_emailController.text.trim()} (rememberMe: $_rememberMe)');
     await ref.read(authProvider.notifier).login(
           _emailController.text.trim(),
           _passwordController.text,
@@ -120,6 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       return;
     }
+    logger.info('[LoginScreen] User submitted signup request for: ${_emailController.text.trim()}');
     await ref.read(authProvider.notifier).signup({
       'first_name': _firstNameController.text.trim(),
       'last_name': _lastNameController.text.trim(),
@@ -131,7 +134,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
+    logger.info('[LoginScreen] User clicked "Continue with Google"');
     if (!AppConstants.isGoogleSignInConfigured && !kDebugMode) {
+      logger.warning('[LoginScreen] Google Sign-In is not configured for this build.');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -146,6 +151,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     try {
       final clientId = AppConstants.googleWebClientId;
+      logger.info('[LoginScreen] Initializing GoogleSignIn with serverClientId: $clientId');
       final googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
         serverClientId: clientId.isNotEmpty ? clientId : null,
@@ -153,20 +159,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       try {
         await googleSignIn.signOut();
       } catch (_) {}
+      logger.info('[LoginScreen] Displaying Google Account Picker...');
       final account = await googleSignIn.signIn();
-      if (account == null) return; // User cancelled
+      if (account == null) {
+        logger.info('[LoginScreen] Google Sign-In was cancelled or dismissed by user.');
+        return;
+      }
+      logger.info('[LoginScreen] Google account chosen: ${account.email}. Fetching authentication credentials...');
       final authDetails = await account.authentication;
       final idToken = authDetails.idToken;
       if (idToken == null || idToken.isEmpty) {
+        logger.error('[LoginScreen] Google Sign-In returned null or empty idToken.');
         throw Exception('Google Sign-In failed: No ID token returned by Google Services. Please ensure Google Play Services is updated.');
       }
+      logger.info('[LoginScreen] Obtained Google ID token (${idToken.length} chars). Federating with backend...');
       await ref.read(authProvider.notifier).loginWithGoogle(idToken);
-    } catch (e) {
+    } catch (e, stack) {
+      logger.error('[LoginScreen] Google Sign-In exception: $e', e, stack);
+      String userFriendlyMessage = 'Google Sign-In failed: $e';
+      final errStr = e.toString();
+      final bool isCode10 = errStr.contains('10') || errStr.contains('DEVELOPER_ERROR') || errStr.contains('f1.d: 10');
+
+      if (isCode10) {
+        logger.error(
+          '[LoginScreen] [CRITICAL] Google Sign-In Developer Error (Code 10).\n'
+          'Root Cause: Package name "com.thaiba.hive" and Keystore SHA-1 certificate fingerprint are not registered in Google Cloud Console OAuth 2.0 Android Client IDs.\n'
+          'Required Fingerprints:\n'
+          '- Release Keystore SHA-1: 2A:7A:C1:AF:B2:DE:8A:F9:34:DD:CD:56:86:93:A0:48:6E:44:8F:AD\n'
+          '- Debug Keystore SHA-1: FE:91:95:3F:5F:3D:B0:F0:D3:4B:E2:4B:A3:BE:1E:EB:84:95:98:A5'
+        );
+        userFriendlyMessage =
+            'Google Sign-In configuration error (Code 10: Developer Error).\n'
+            'The release SHA-1 certificate fingerprint must be registered in Google Cloud Console. Check Diagnostics for details, or use email/password to sign in.';
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Google Sign-In failed: $e'),
+            content: Text(userFriendlyMessage),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 7),
+            action: SnackBarAction(
+              label: 'Diagnostics',
+              textColor: Colors.white,
+              onPressed: () => context.push('/auth/diagnostics'),
+            ),
           ),
         );
       }
@@ -176,7 +213,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isSubmittingReset = false;
 
   Future<void> _handlePasskeyLogin() async {
-    if (_emailController.text.trim().isEmpty) {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      logger.warning('[LoginScreen] User tapped passkey without entering email.');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter your email before using Passkey.'),
@@ -185,9 +224,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
       return;
     }
+    logger.info('[LoginScreen] Checking passkey availability for $email...');
     final passkeyService = PasskeyService();
     final available = await passkeyService.isAvailable();
     if (!available) {
+      logger.warning('[LoginScreen] Passkey hardware/service is not available on this device.');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -198,7 +239,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       return;
     }
-    await ref.read(authProvider.notifier).loginWithPasskey(_emailController.text.trim());
+    logger.info('[LoginScreen] Initiating loginWithPasskey for $email...');
+    await ref.read(authProvider.notifier).loginWithPasskey(email);
   }
 
   Future<void> _handleForgotPassword() async {

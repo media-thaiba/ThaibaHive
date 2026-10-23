@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
+import 'package:thaibahive_mobile/core/services/logger_service.dart';
 import 'package:thaibahive_mobile/core/network/api_exception.dart';
 import 'package:thaibahive_mobile/core/services/fcm_service.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
@@ -114,6 +115,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> login(String email, String password, {bool rememberMe = false}) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    logger.info('[AuthState] login initiated for $email');
     try {
       final response = await _repository.login(email, password, rememberMe: rememberMe);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
@@ -136,13 +138,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+      logger.info('[AuthState] login succeeded for $email. User ID: ${response.user.id}, Role: ${response.user.role}');
       await _onLoginSuccess();
     } on AppException catch (e) {
+      logger.error('[AuthState] login AppException: ${e.message}');
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
     } on DioException catch (e) {
       final appEx = AppException.fromDioException(e);
+      logger.error('[AuthState] login DioException: ${appEx.message}');
       state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
-    } catch (e) {
+    } catch (e, stack) {
+      logger.error('[AuthState] login unexpected error: $e', e, stack);
       state = state.copyWith(status: AuthStatus.error, errorMessage: 'Login failed: $e');
     }
   }
@@ -157,6 +163,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> loginWithGoogle(String idToken) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    logger.info('[AuthState] loginWithGoogle: sending ID token to backend /auth/google...');
     try {
       final response = await _repository.loginWithGoogle(idToken);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
@@ -170,19 +177,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+      logger.info('[AuthState] loginWithGoogle succeeded! User: ${response.user.email}, Role: ${response.user.role}');
       await _onLoginSuccess();
     } on AppException catch (e) {
+      logger.error('[AuthState] loginWithGoogle AppException: ${e.message}');
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
     } on DioException catch (e) {
       final appEx = AppException.fromDioException(e);
+      logger.error('[AuthState] loginWithGoogle DioException: ${appEx.message}');
       state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
-    } catch (e) {
+    } catch (e, stack) {
+      logger.error('[AuthState] loginWithGoogle unexpected error: $e', e, stack);
       state = state.copyWith(status: AuthStatus.error, errorMessage: 'Google login failed: $e');
     }
   }
 
   Future<void> loginWithPasskey(String email) async {
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    logger.info('[AuthState] loginWithPasskey: challenging passkey for $email...');
     try {
       final response = await _repository.loginWithPasskey(email);
       await _storage.write(key: AppConstants.storageTokenKey, value: response.token);
@@ -196,13 +208,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: response.user,
         token: response.token,
       );
+      logger.info('[AuthState] loginWithPasskey succeeded for ${response.user.email}');
       await _onLoginSuccess();
     } on AppException catch (e) {
+      logger.error('[AuthState] loginWithPasskey AppException: ${e.message}');
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
     } on DioException catch (e) {
       final appEx = AppException.fromDioException(e);
+      logger.error('[AuthState] loginWithPasskey DioException: ${appEx.message}');
       state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, stack) {
+      logger.error('[AuthState] loginWithPasskey PlatformException: ${e.code} - ${e.message}', e, stack);
       if (e.code == 'cancelled' || (e.message?.toLowerCase().contains('cancel') ?? false)) {
         state = state.copyWith(
           status: AuthStatus.error,
@@ -211,7 +227,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else {
         state = state.copyWith(status: AuthStatus.error, errorMessage: 'Passkey error: ${e.message ?? e.code}');
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logger.error('[AuthState] loginWithPasskey unexpected error: $e', e, stack);
       if (e.toString().toLowerCase().contains('cancel')) {
         state = state.copyWith(
           status: AuthStatus.error,
@@ -251,6 +268,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    logger.info('[AuthState] Logging out user...');
     try {
       await _repository.logout();
     } catch (_) {}
@@ -261,6 +279,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     updateCachedAuthToken(null);
     state = const AuthState(status: AuthStatus.unauthenticated);
     await FCMService().onUserLogout();
+    logger.info('[AuthState] Logout completed. Session cleared.');
   }
 
   void clearError() {

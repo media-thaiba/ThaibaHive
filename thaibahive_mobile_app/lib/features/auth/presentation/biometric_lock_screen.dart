@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/services/biometric_service.dart';
+import '../../../core/services/logger_service.dart';
 import '../../../models/user_model.dart';
 import '../data/auth_repository.dart';
+import '../data/auth_state.dart';
 import '../data/biometric_provider.dart';
 import '../../settings/data/settings_provider.dart';
 
@@ -44,6 +46,7 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
       _errorMessage = null;
     });
 
+    logger.info('[BiometricLockScreen] User triggered biometric authentication');
     final result = await _service.authenticate(
       localizedReason: 'Authenticate to access your ThaibaHive account',
     );
@@ -55,8 +58,10 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
     });
 
     if (result.success) {
+      logger.info('[BiometricLockScreen] Biometric authentication successful, unlocking app');
       ref.read(biometricLockProvider.notifier).unlock(GoRouter.of(context));
     } else {
+      logger.warning('[BiometricLockScreen] Biometric authentication unsuccessful: ${result.status} - ${result.errorMessage}');
       if (result.status == BiometricResultStatus.noBiometricsEnrolled) {
         await ref.read(biometricLockProvider.notifier).autoDisableBiometrics();
         setState(() {
@@ -68,9 +73,9 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
           _showPasswordFallback = true;
           _errorMessage = result.errorMessage ?? 'Biometrics locked due to multiple failed attempts. Please enter your password.';
         });
-      } else if (result.errorMessage != null) {
+      } else {
         setState(() {
-          _errorMessage = result.errorMessage;
+          _errorMessage = result.errorMessage ?? 'Authentication cancelled or not recognized. Tap to try again or enter your password.';
         });
       }
     }
@@ -93,6 +98,7 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
     try {
       final currentUser = ref.read(currentUserProvider);
       final email = currentUser?.email;
+      logger.info('[BiometricLockScreen] Attempting password unlock fallback for ${email ?? "current user"}');
 
       if (email != null && email.isNotEmpty) {
         final authRepo = ref.read(authRepositoryProvider);
@@ -110,8 +116,10 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
         _isAuthenticating = false;
       });
 
+      logger.info('[BiometricLockScreen] Password fallback successful, unlocking app');
       ref.read(biometricLockProvider.notifier).unlock(GoRouter.of(context));
-    } catch (e) {
+    } catch (e, stack) {
+      logger.error('[BiometricLockScreen] Password fallback failed: $e', e, stack);
       if (!mounted) return;
       setState(() {
         _isAuthenticating = false;
@@ -270,6 +278,42 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
                       ),
                     ),
                   ],
+                  const SizedBox(height: 24),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Sign Out'),
+                          content: const Text('Are you sure you want to sign out and return to the login screen?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                              child: const Text('Sign Out'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true && mounted) {
+                        logger.info('[BiometricLockScreen] User opted to sign out from lock screen');
+                        await ref.read(authProvider.notifier).logout();
+                        ref.read(biometricLockProvider.notifier).unlock(null);
+                        if (mounted) {
+                          GoRouter.of(context).go('/auth/login');
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.logout_rounded, size: 16, color: Colors.white54),
+                    label: const Text(
+                      'Sign Out / Switch Account',
+                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                  ),
                 ],
               ),
             ),

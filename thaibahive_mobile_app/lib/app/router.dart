@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/constants.dart';
 import 'capability_registry.dart' as caps;
+import '../core/services/logger_service.dart';
 import 'theme.dart';
 import '../features/auth/data/auth_state.dart';
 import '../models/user_model.dart';
@@ -94,11 +95,36 @@ import '../shared/transitions/page_transitions.dart';
 
 final _storage = const FlutterSecureStorage();
 
+class DiagnosticsNavigatorObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    final routeName = route.settings.name ?? route.settings.arguments?.toString() ?? 'route';
+    final prevName = previousRoute?.settings.name ?? 'initial';
+    logger.info('NAVIGATION: Pushed $routeName (previous: $prevName)');
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    final routeName = route.settings.name ?? 'route';
+    final currentName = previousRoute?.settings.name ?? 'none';
+    logger.info('NAVIGATION: Popped $routeName (current: $currentName)');
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    logger.info('NAVIGATION: Replaced ${oldRoute?.settings.name} with ${newRoute?.settings.name}');
+  }
+}
+
 /// Build the router with dynamic tabs based on user capabilities
 GoRouter buildRouter() {
   return GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: true,
+    observers: [DiagnosticsNavigatorObserver()],
     redirect: _authGuard,
     routes: [
       // Public routes
@@ -1059,6 +1085,7 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isLoggedIn = token != null && token.isNotEmpty;
 
   if (!isLoggedIn && !isAuthRoute) {
+    logger.info('AUTH GUARD: Unauthenticated access to ${state.matchedLocation} -> redirecting to login');
     final target = state.uri.toString();
     if (target.isNotEmpty && target != '/' && target != '/today' && target != '/dashboard') {
       return '/auth/login?redirect=${Uri.encodeComponent(target)}';
@@ -1067,6 +1094,7 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   }
 
   if (isLoggedIn && isAuthRoute) {
+    logger.info('AUTH GUARD: Already authenticated -> redirecting from ${state.matchedLocation}');
     final redirectParam = state.uri.queryParameters['redirect'];
     if (redirectParam != null && redirectParam.isNotEmpty && redirectParam.startsWith('/')) {
       return redirectParam;
