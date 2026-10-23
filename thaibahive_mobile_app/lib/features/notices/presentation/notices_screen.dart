@@ -24,10 +24,10 @@ class NoticesScreen extends ConsumerStatefulWidget {
 class _NoticesScreenState extends ConsumerState<NoticesScreen> {
   int _segment = 0;
 
-  static const _segments = [
-    ButtonSegment(value: 0, label: Text('Circulars')),
-    ButtonSegment(value: 1, label: Text('Announcements')),
-    ButtonSegment(value: 2, label: Text('Polls')),
+  static const List<String> _segments = [
+    'Circulars',
+    'Announcements',
+    'Polls',
   ];
 
   @override
@@ -48,19 +48,55 @@ class _NoticesScreenState extends ConsumerState<NoticesScreen> {
       }
     });
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Notices')),
       body: Column(
         children: [
+          // VisionOS/Cupertino-style pill tab bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: SegmentedButton<int>(
-              segments: _segments,
-              selected: {_segment},
-              showSelectedIcon: false,
-              onSelectionChanged: (selection) {
-                setState(() => _segment = selection.first);
-              },
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+              child: ToggleButtons(
+                isSelected: List.generate(_segments.length, (i) => i == _segment),
+                onPressed: (index) => setState(() => _segment = index!),
+                fillColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+                color: theme.colorScheme.onSurfaceVariant,
+                selectedColor: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(14),
+                borderColor: Colors.transparent,
+                selectedBorderColor: Colors.transparent,
+                constraints: const BoxConstraints(
+                  minHeight: 40,
+                  minWidth: 80,
+                ),
+                children: _segments.map((label) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                        color: _segment == _segments.indexOf(label)
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ),
           Expanded(

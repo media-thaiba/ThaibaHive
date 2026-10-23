@@ -1,8 +1,8 @@
 {
   "latestVersion": "3.42.1+16",
   "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.1/app-release.apk",
-  "releaseNotes": "Support for Android passkey login, meal preferences, availability auto-clear, and UI refinements.",
+  "releaseNotes": "UI overhaul to MediaHive standard, fixed /dashboard navigation routing, persistent login fix, and app version badge in settings.",
   "forceUpdate": false,
-  "sha256": "a5549379b6cc06b0b4f2919f0ceb8f18627c781ba1f9d00e2cced03242164a8d",
-  "fileSize": 490736931
+  "sha256": "89bddf62e9cdc7e9d6ced4c6378c6d263d660c4971efcf7266b4851a8e5fed28",
+  "fileSize": 490835271
 }

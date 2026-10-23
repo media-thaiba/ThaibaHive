@@ -52,7 +52,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with SingleTicker
     final isLoggedIn = token != null && token.isNotEmpty;
 
     if (isLoggedIn) {
-      context.go('/dashboard');
+      context.go('/today');
     } else {
       context.go('/auth/login');
     }

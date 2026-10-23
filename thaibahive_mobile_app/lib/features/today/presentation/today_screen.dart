@@ -217,41 +217,85 @@ class TodayHubContent extends ConsumerWidget {
         .toList();
     if (urgent.isEmpty) return const SizedBox.shrink();
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       key: const ValueKey('today-section-urgent_actions'),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Theme.of(context).colorScheme.error,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Urgent Approvals Required',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.error,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.priority_high_rounded,
+                      size: 14,
+                      color: Color(0xFFF59E0B),
                     ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'URGENT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: const Color(0xFFF59E0B),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const Spacer(),
               TextButton(
                 onPressed: () => context.push('/approvals'),
-                child: Text('View all (${urgent.length})'),
+                child: Text(
+                  'View all (${urgent.length})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Urgent Approvals Required',
+            style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
           ),
           const SizedBox(height: 12),
           ...urgent.take(2).map((action) => _ActionListTile(action: action)),
@@ -261,7 +305,14 @@ class TodayHubContent extends ConsumerWidget {
               child: Center(
                 child: TextButton(
                   onPressed: () => context.push('/approvals'),
-                  child: Text('+${urgent.length - 2} more'),
+                  child: Text(
+                    '+${urgent.length - 2} more',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
                 ),
               ),
             ),

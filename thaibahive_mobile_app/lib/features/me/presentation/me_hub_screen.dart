@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
+import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
 import 'package:thaibahive_mobile/shared/widgets/app_card.dart';
@@ -176,6 +177,43 @@ class MeHubScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+
+            // App version badge at the bottom of My Hub
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: Color(0xFF1a8a3e),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'ThaibaHive v${AppConstants.appVersion}  •  Build ${AppConstants.appBuildNumber}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                        color: Color(0xFF1a8a3e),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

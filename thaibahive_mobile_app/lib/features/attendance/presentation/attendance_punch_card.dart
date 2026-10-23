@@ -146,12 +146,12 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.15),
+                color: const Color(0xFF1a8a3e).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.login_rounded,
-                color: Colors.orange,
+                color: Color(0xFF1a8a3e),
                 size: 22,
               ),
             ),
@@ -222,12 +222,12 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.15),
+              color: const Color(0xFF1a8a3e).withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.check_circle_rounded,
-              color: Colors.green,
+              color: Color(0xFF1a8a3e),
               size: 22,
             ),
           ),
@@ -399,7 +399,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
             child: _ScanMethodChip(
               icon: Icons.nfc_rounded,
               label: 'NFC',
-              color: const Color(0xFF2196F3),
+              color: const Color(0xFF1a8a3e),
               onTap: () => _openNFCScreen(context),
             ),
           ),
@@ -408,7 +408,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
             child: _ScanMethodChip(
               icon: Icons.qr_code_scanner_rounded,
               label: 'QR Code',
-              color: const Color(0xFF9C27B0),
+              color: const Color(0xFF2ea44f),
               onTap: () => _openQRScreen(context),
             ),
           ),
@@ -471,7 +471,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
               icon: Icons.nfc_rounded,
               label: 'NFC Tag',
               description: 'Scan an NFC tag at the entrance',
-              color: const Color(0xFF2196F3),
+              color: const Color(0xFF1a8a3e),
               onTap: () {
                 Navigator.pop(context);
                 _openNFCScreen(context);
@@ -482,7 +482,7 @@ class _AttendancePunchCardState extends ConsumerState<AttendancePunchCard>
               icon: Icons.qr_code_scanner_rounded,
               label: 'QR Code',
               description: 'Scan the QR code displayed at the entrance',
-              color: const Color(0xFF9C27B0),
+              color: const Color(0xFF2ea44f),
               onTap: () {
                 Navigator.pop(context);
                 _openQRScreen(context);

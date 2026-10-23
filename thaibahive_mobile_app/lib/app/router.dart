@@ -49,6 +49,7 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/settings/presentation/profile_edit_screen.dart';
 import '../features/settings/presentation/password_change_screen.dart';
 import '../features/settings/presentation/crash_logs_screen.dart';
+import '../features/settings/presentation/about_screen.dart';
 import '../features/recognition/presentation/biometric_enrollment_screen.dart';
 import '../features/recognition/presentation/recognition_screen.dart';
 import '../features/announcements/presentation/announcements_screen.dart';
@@ -129,6 +130,14 @@ GoRouter buildRouter() {
         path: '/auth/signup',
         name: 'signup',
         redirect: (context, state) => '/auth/login?mode=signup',
+      ),
+      GoRoute(
+        path: '/dashboard',
+        redirect: (context, state) => '/today',
+      ),
+      GoRoute(
+        path: '/home',
+        redirect: (context, state) => '/today',
       ),
 
       // Dynamic StatefulShellRoute - tabs based on capabilities
@@ -412,6 +421,14 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const PasswordChangeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/settings/about',
+        name: 'settingsAbout',
+        pageBuilder: (context, state) => AppTransitions.slide(
+          state: state,
+          child: const AboutScreen(),
         ),
       ),
       GoRoute(

@@ -19,20 +19,23 @@ class QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.5,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isEnabled ? onTap : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.card),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(AppRadius.card),
               border: Border.all(
-                color: color.withValues(alpha: 0.3),
+                color: color.withValues(alpha: 0.25),
                 width: 1,
               ),
             ),
@@ -40,24 +43,28 @@ class QuickActionCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(11),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.2),
+                    color: color.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     icon,
                     color: color,
-                    size: 24,
+                    size: 22,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isEnabled ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.2,
+                    height: 1.2,
+                  ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

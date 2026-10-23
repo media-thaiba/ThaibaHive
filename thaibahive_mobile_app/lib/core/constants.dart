@@ -5,7 +5,8 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'ThaibaHive';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '3.42.1';
+  static const String appBuildNumber = '16';
 
   /// Base URL — use --dart-define=API_BASE_URL=... at build time,
   /// or falls back to localhost/10.0.2.2 for development.
