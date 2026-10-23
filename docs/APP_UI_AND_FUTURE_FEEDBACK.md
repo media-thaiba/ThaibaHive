@@ -129,14 +129,17 @@
   * If the leave request is deleted, auto-skipped meals for that period are cleaned up automatically.
   * Unit tested with 100% pass rate in `src/app/api/canteen/__tests__/canteen-feedback-features.test.ts`.
 
+### 14. Mobile (Android) Passkey Support & OTA Release
+* **User Feedback**: *"Sign in with passkey is there in the web app, not in the android. How does it work ?"*
+* **Implementation**:
+  * **Backend**: Hardened `src/app/api/auth/webauthn/login/complete/route.ts` to return session token in response body for mobile clients presenting `X-Client-Platform: mobile`.
+  * **Android Native (Google Credential Manager)**: Integrated `passkeys_android` with `PasskeyService` (`lib/core/services/passkey_service.dart`) supporting biometric passkey authentication and device enrollment via Google Password Manager.
+  * **Mobile UI**: Added "Sign In with Passkey" in `login_screen.dart` and dedicated enrollment screen at `/auth/passkey/enroll`.
+  * **In-App (OTA) Update Integration**: Mounted `UpdateBanner` in `_DynamicBottomNavShell` (`lib/app/router.dart`), mirroring MediaHive's in-app updater.
+  * **Production Release**: Universal Release APK `v3.42.1+16` built with `minSdk = 28`, published as GitHub Release asset, and wired to `/api/system/update`.
+
 ---
 
 ## ⏳ Pending / Future Feedback Items
 
-### 14. Mobile (Android) Passkey Support
-* **User Feedback**: *"Sign in with passkey is there in the web app, not in the android. How does it work ?"*
-* **Technical Analysis**:
-  * Web uses W3C WebAuthn API (`navigator.credentials.get()`).
-  * Android requires Google Credential Manager API (`androidx.credentials.CredentialManager`).
-  * Can be added to Flutter mobile app using `local_auth` (local biometric check) or `passkeys_android` package paired with `/api/auth/webauthn/login/begin` and `/complete`.
-* **Target Status**: Planned for next mobile sprint.
+*All 14 test user feedback and polish items are currently complete and verified.*

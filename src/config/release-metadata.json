@@ -1,8 +1,8 @@
 {
-  "latestVersion": "3.20.0+15",
-  "downloadUrl": "/downloads/ThaibaHive_latest.apk",
-  "releaseNotes": "Production release 3.20.0+15: hardened mobile release signing, SHA-256 binary integrity verification, and runtime security patches.",
+  "latestVersion": "3.42.1+16",
+  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.1/app-release.apk",
+  "releaseNotes": "Support for Android passkey login, meal preferences, availability auto-clear, and UI refinements.",
   "forceUpdate": false,
-  "sha256": "5b8710a85fb02a95d2e809c9c5ad2ec0d632d5d689448c067196a764969aaf12",
-  "fileSize": 89291695
+  "sha256": "a5549379b6cc06b0b4f2919f0ceb8f18627c781ba1f9d00e2cced03242164a8d",
+  "fileSize": 490736931
 }
