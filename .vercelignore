@@ -39,7 +39,11 @@ build/
 
 # Ignore database and assets
 dev.db*
-*.db
+*.db*
+test-*.db*
+test.db*
+*.apk
+/public/downloads/*.apk
 *.db-wal
 *.db-shm
 /uploads/
