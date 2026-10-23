@@ -137,6 +137,7 @@ UserModel _createUser({
     lastName: 'User',
     role: role,
     isActive: true,
+    isFirstLogin: false,
     createdAt: now,
     updatedAt: now,
   );

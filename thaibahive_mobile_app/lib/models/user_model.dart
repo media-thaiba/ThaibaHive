@@ -14,6 +14,7 @@ class UserModel {
   final String? emergencyContactName;
   final String? emergencyContactPhone;
   final bool isActive;
+  final bool isFirstLogin;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -36,6 +37,7 @@ class UserModel {
     this.emergencyContactName,
     this.emergencyContactPhone,
     required this.isActive,
+    required this.isFirstLogin,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -58,6 +60,7 @@ class UserModel {
       emergencyContactName: (data['emergency_contact_name'] ?? data['emergencyContactName']) as String?,
       emergencyContactPhone: (data['emergency_contact_phone'] ?? data['emergencyContactPhone']) as String?,
       isActive: (data['is_active'] ?? data['isActive']) as bool? ?? true,
+      isFirstLogin: (data['is_first_login'] ?? data['isFirstLogin']) as bool? ?? false,
       createdAt: data['created_at'] != null
           ? DateTime.parse(data['created_at'] as String)
           : (data['createdAt'] != null ? DateTime.parse(data['createdAt'] as String) : DateTime.now()),
@@ -82,8 +85,9 @@ class UserModel {
         'qualifications': qualifications,
         'emergency_contact_name': emergencyContactName,
         'emergency_contact_phone': emergencyContactPhone,
-        'is_active': isActive,
-        'created_at': createdAt.toIso8601String(),
+      'is_active': isActive,
+      'is_first_login': isFirstLogin,
+      'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
 
@@ -103,6 +107,7 @@ class UserModel {
     String? emergencyContactName,
     String? emergencyContactPhone,
     bool? isActive,
+    bool? isFirstLogin,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) =>
@@ -122,6 +127,7 @@ class UserModel {
         emergencyContactName: emergencyContactName ?? this.emergencyContactName,
         emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
         isActive: isActive ?? this.isActive,
+        isFirstLogin: isFirstLogin ?? this.isFirstLogin,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );

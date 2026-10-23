@@ -24,6 +24,8 @@ The following skills are available for this project. Use them when relevant:
 5. **ui-ux-pro-max** — Design intelligence skill with 57 UI styles, 95 color palettes, 56 font pairings, and 99 UX guidelines. Install: project-local at `.opencode/skills/ui-ux-pro-max/`. Run design system generation via Python scripts in its `scripts/` directory.
 
 6. **ruflo** (agent meta-harness) v3.56.9 — initialized in this project (2026-10-14). MCP server `claude-flow` registered via `.mcp.json` (bare tools: `memory_store`, `memory_search`, `swarm_init`, `agent_spawn`, `hooks_route`). 30 skills, 16 commands, 17 agents in project `.claude/`; mods `ruflo-mods`/`ruflo-swarm`/`ruflo-console` enabled in `.claude/settings.json`; runtime in `.claude-flow/` (gitignored). **Use proactively on multi-file/complex features** — swarm coordination, agent memory, background workers. Optional: `ruflo daemon start`, `ruflo swarm init`, `npx ruflo tui` for the console.
+
+7. **gravitas** (Engineering Reliability Runtime) — Invariant-backed engineering discipline: read before writing, stay in declared scope, plan in proportion to risk, verify against fresh executed evidence, never exact-retry failures, and back every claim with observed output. Installed globally in `~/.gemini/config/skills/gravitas` and project-local in `.agent/skills/gravitas/` with TypeScript extension `.agent/skills/gravitas-typescript/`. Native plugin active in `~/.gemini/config/plugins/gravitas-native`.
 <!-- END:thaibahive-skills -->
 
 <!-- BEGIN:plan-review-rule -->
@@ -68,6 +70,33 @@ If verification is blocked, mark the task IMPLEMENTED BUT UNVERIFIED and explain
 
 Completion status must be based on evidence, not confidence or the number of files changed.
 <!-- END:evidence-based-completion-policy -->
+
+<!-- BEGIN:gravitas-protocol -->
+# GRAVITAS Reliability Protocol (Mandatory in Every Single Run)
+
+Antigravity and all pair-programming agents MUST strictly follow the Gravitas reliability runtime invariants on every task, every turn, without exception:
+
+### The 6 Core Invariants:
+1. **Ground before mutating**: Inspect the target file, its tests, and its callers *before* making any edit. Never assume file state or guess content.
+2. **Stay in declared scope**: Maintain strict bounds on modified files (`allowed_write_scope`). Never touch files outside the task's stated boundary without explicitly amending the scope first.
+3. **Completion needs fresh evidence**: A task or criterion is only complete when an explicit validator (tests, typecheck, build, or runtime execution) has passed *after* the last mutation. Stale passes, self-review, or prose summaries never count as evidence.
+4. **Never exact-retry a failure**: If an action, test, or command fails, do not repeat the exact same call. Change the diagnosis, context, or strategy first.
+5. **Satisfy the contract**: Acceptance criteria and required validators gate completion. Generic "it looks good" does not fulfill the requirement.
+6. **Say what you cannot verify**: If something cannot be tested or verified (e.g. missing external hardware or blocked network), explicitly declare it as `IMPLEMENTED BUT UNVERIFIED`. Never fabricate certainty.
+
+### Decision & Execution Standard:
+For every non-trivial modification, establish:
+- **Action**: What specific file and symbol is being modified.
+- **Reason**: Why this modification is required.
+- **Evidence**: The prior read/repro evidence justifying the edit.
+- **Verification**: The exact command executed to verify the result (`tsc --noEmit`, test runner, etc.).
+
+### Standard Output Format:
+Every non-trivial response must conclude with:
+- **What Changed**: Files modified, lines changed, behavior delta.
+- **Evidence**: Exact command output, pass counts, compiler status.
+- **Why**: Rationale for the key decision.
+<!-- END:gravitas-protocol -->
 
 <!-- BEGIN:working-state-preservation-policy -->
 # STRICT RULE: NON-DESTRUCTIVE WORKFLOW & WORKING-TREE INVIOLABILITY PROTOCOL

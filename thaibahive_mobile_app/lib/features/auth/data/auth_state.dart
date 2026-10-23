@@ -80,6 +80,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: user,
           token: token,
         );
+        await _storage.write(key: 'is_first_login', value: user.isFirstLogin.toString());
         logger.info('[AuthState] Restored authenticated session from cached token (cache hit) for ${user.email} (ID: ${user.id})');
         // Re-register FCM token for silently-restored sessions.
         await _onLoginSuccess();
@@ -112,6 +113,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             user: cachedUser,
             token: token,
           );
+          await _storage.write(key: 'is_first_login', value: cachedUser?.isFirstLogin.toString() ?? 'false');
           logger.info('[AuthState] Restored session in offline mode for ${cachedUser?.email ?? "cached user"}');
         }
       }
@@ -140,6 +142,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         key: AppConstants.storageUserProfileKey,
         value: jsonEncode(response.user.toJson()),
       );
+      await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
@@ -173,6 +176,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
       }
       await _storage.write(key: 'remember_me', value: 'true');
+      await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
@@ -198,6 +202,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
       }
       await _storage.write(key: 'remember_me', value: 'true');
+      await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,

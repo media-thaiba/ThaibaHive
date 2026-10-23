@@ -43,6 +43,7 @@ class FastRestoreAuthNotifier extends AuthNotifier {
         lastName: 'Restore',
         role: 'staff',
         isActive: true,
+        isFirstLogin: false,
         createdAt: DateTime(2026, 1, 1),
         updatedAt: DateTime(2026, 1, 1),
       ),
@@ -163,10 +164,11 @@ void main() {
           employeeId: 'EMP-001',
           firstName: 'UpdatedName',
           lastName: 'Restore',
-          role: 'staff',
-          isActive: true,
-          createdAt: DateTime(2026, 1, 1),
-          updatedAt: DateTime(2026, 1, 1),
+        role: 'staff',
+        isActive: true,
+        isFirstLogin: false,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
         ),
       );
 

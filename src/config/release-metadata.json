@@ -1,8 +1,8 @@
 {
-  "latestVersion": "3.42.5+20",
-  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.5/app-release.apk",
-  "releaseNotes": "Resolved biometric unlock loop by using safe GoRouter.maybeOf(context) in root overlay, bumped version to 3.42.5+20, and optimized APK size.",
+  "latestVersion": "3.42.6+21",
+  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.6/app-release.apk",
+  "releaseNotes": "Added JIT Google sign-in auto-provisioning with first-login onboarding and cascading campus institution/department affiliation flow.",
   "forceUpdate": false,
-  "sha256": "05e7f49e1aad10c6e0489ce97acbf1eacdc4e76d080cb05f3a812268afec744e",
-  "fileSize": 94080327
+  "sha256": "03270a3631bc891347e64d41c0e4b61548a9d67979dc9f0dfc2ea0e5e4c162bb",
+  "fileSize": 94178631
 }

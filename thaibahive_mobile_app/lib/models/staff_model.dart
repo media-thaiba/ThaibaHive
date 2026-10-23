@@ -12,6 +12,7 @@ class StaffModel {
   final String role;
   final String? avatarUrl;
   final bool isActive;
+  final bool isFirstLogin;
   final List<DepartmentModel> departments;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -31,6 +32,7 @@ class StaffModel {
     required this.role,
     this.avatarUrl,
     required this.isActive,
+    required this.isFirstLogin,
     required this.departments,
     required this.createdAt,
     required this.updatedAt,
@@ -47,6 +49,7 @@ class StaffModel {
         role: (json['role'] ?? 'staff') as String,
         avatarUrl: (json['avatar_url'] ?? json['avatarUrl']) as String?,
         isActive: (json['is_active'] ?? json['isActive'] ?? true) as bool,
+        isFirstLogin: (json['is_first_login'] ?? json['isFirstLogin'] ?? false) as bool,
         departments: (json['departments'] as List<dynamic>?)
                 ?.map((e) =>
                     DepartmentModel.fromJson(e as Map<String, dynamic>))
@@ -69,6 +72,7 @@ class StaffModel {
         'role': role,
         'avatar_url': avatarUrl,
         'is_active': isActive,
+        'is_first_login': isFirstLogin,
         'departments': departments.map((e) => e.toJson()).toList(),
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -85,6 +89,7 @@ class StaffModel {
         role: role,
         avatarUrl: avatarUrl,
         isActive: isActive,
+        isFirstLogin: isFirstLogin,
         createdAt: createdAt,
         updatedAt: updatedAt,
       );

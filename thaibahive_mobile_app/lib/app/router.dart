@@ -16,6 +16,7 @@ import '../features/action_center/tray.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/passkey_enrollment_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
+import '../features/auth/presentation/onboarding_affiliation_screen.dart';
 import '../features/today/presentation/today_screen.dart';
 import '../features/notices/presentation/notices_screen.dart';
 import '../features/notifications/data/notifications_provider.dart';
@@ -152,6 +153,11 @@ GoRouter buildRouter() {
           final redirect = state.uri.queryParameters['redirect'];
           return LoginScreen(initialMode: mode, redirect: redirect);
         },
+      ),
+      GoRoute(
+        path: '/onboarding/affiliate',
+        name: 'onboardingAffiliate',
+        builder: (_, __) => const OnboardingAffiliationScreen(),
       ),
       GoRoute(
         path: '/auth/passkey/enroll',
@@ -1080,6 +1086,7 @@ void clearCachedAuthToken() {
 Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isAuthRoute = state.matchedLocation.startsWith('/auth');
   final isWelcomeRoute = state.matchedLocation == '/';
+  final isOnboardingRoute = state.matchedLocation == '/onboarding/affiliate';
 
   if (isWelcomeRoute) {
     return null;
@@ -1095,7 +1102,7 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
 
   final isLoggedIn = token != null && token.isNotEmpty;
 
-  if (!isLoggedIn && !isAuthRoute) {
+  if (!isLoggedIn && !isAuthRoute && !isOnboardingRoute) {
     logger.info('AUTH GUARD: Unauthenticated access to ${state.matchedLocation} -> redirecting to login');
     final target = state.uri.toString();
     if (target.isNotEmpty && target != '/' && target != '/today' && target != '/dashboard') {
@@ -1110,7 +1117,21 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
     if (redirectParam != null && redirectParam.isNotEmpty && redirectParam.startsWith('/')) {
       return redirectParam;
     }
+    // First-login users go to onboarding, not /today
+    final isFirstLogin = await _storage.read(key: 'is_first_login');
+    if (isFirstLogin == 'true') {
+      return '/onboarding/affiliate';
+    }
     return '/today';
+  }
+
+  // First-login guard: redirect to onboarding unless already there
+  if (isLoggedIn && !isOnboardingRoute) {
+    final isFirstLogin = await _storage.read(key: 'is_first_login');
+    if (isFirstLogin == 'true') {
+      logger.info('AUTH GUARD: First-login user redirected to onboarding');
+      return '/onboarding/affiliate';
+    }
   }
 
   return null;
