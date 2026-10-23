@@ -8,6 +8,7 @@ import '../data/auth_repository.dart';
 import '../data/auth_state.dart';
 import '../data/biometric_provider.dart';
 import '../../settings/data/settings_provider.dart';
+import '../../../../shared/widgets/th_input.dart';
 
 class BiometricLockScreenOverlay extends ConsumerStatefulWidget {
   const BiometricLockScreenOverlay({super.key});
@@ -233,34 +234,15 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
                       ),
                     ),
                   ] else ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E2022).withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF2A2D32)),
-                      ),
-                      child: TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _isAuthenticating ? null : _submitPasswordFallback(),
-                        decoration: InputDecoration(
-                          hintText: 'Enter account password',
-                          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                          prefixIcon: Icon(Icons.lock_outline_rounded, color: Colors.grey[400], size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: Colors.grey[400],
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
+                    ThInput(
+                      label: 'Account Password',
+                      hint: 'Enter your account password',
+                      controller: _passwordController,
+                      isPassword: true,
+                      prefixIcon: Icons.lock_outline_rounded,
+                      textInputAction: TextInputAction.done,
+                      accentColor: brandColor,
+                      onFieldSubmitted: (_) => _isAuthenticating ? null : _submitPasswordFallback(),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(

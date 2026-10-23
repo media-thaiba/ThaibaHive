@@ -8,6 +8,7 @@ import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/services/logger_service.dart';
 import 'package:thaibahive_mobile/core/services/passkey_service.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
+import 'package:thaibahive_mobile/shared/widgets/th_input.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 
 enum AuthMode { signIn, signUp, google, passkey, forgotPassword }
@@ -1180,7 +1181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // TextFormField Factory
+  // TextFormField Factory using unified ThInput primitive
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String hintText,
@@ -1193,35 +1194,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     Widget? suffixIcon,
     void Function(String)? onFieldSubmitted,
   }) {
-    return TextFormField(
+    return ThInput(
+      label: '',
+      hint: hintText,
       controller: controller,
-      keyboardType: keyboardType,
+      prefixIcon: icon,
+      isPassword: obscureText,
+      suffixIcon: suffixIcon,
+      keyboardType: keyboardType ?? TextInputType.text,
       textInputAction: textInputAction,
-      obscureText: obscureText,
-      style: const TextStyle(color: Colors.white, fontSize: 13.5),
-      onFieldSubmitted: onFieldSubmitted,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: const Color(0xFF121316).withOpacity(0.6),
-        hintText: hintText,
-        hintStyle: TextStyle(color: Colors.grey[600], fontSize: 13.5),
-        prefixIcon: Icon(icon, color: Colors.grey[600], size: 18),
-        suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1E2022)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1E2022)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: accentColor, width: 1.5),
-        ),
-      ),
       validator: validator,
+      accentColor: accentColor,
+      onFieldSubmitted: onFieldSubmitted,
     );
   }
 }

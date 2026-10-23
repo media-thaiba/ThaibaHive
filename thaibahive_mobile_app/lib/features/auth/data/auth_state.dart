@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/services/logger_service.dart';
 import 'package:thaibahive_mobile/core/network/api_exception.dart';
+import 'package:thaibahive_mobile/core/errors/auth_error_mapper.dart';
 import 'package:thaibahive_mobile/core/services/fcm_service.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
 import 'package:thaibahive_mobile/app/router.dart';
@@ -147,16 +148,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       logger.info('[AuthState] login succeeded for $email. User ID: ${response.user.id}, Role: ${response.user.role}');
       await _onLoginSuccess();
-    } on AppException catch (e) {
-      logger.error('[AuthState] login AppException: ${e.message}');
-      state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } on DioException catch (e) {
-      final appEx = AppException.fromDioException(e);
-      logger.error('[AuthState] login DioException: ${appEx.message}');
-      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
     } catch (e, stack) {
-      logger.error('[AuthState] login unexpected error: $e', e, stack);
-      state = state.copyWith(status: AuthStatus.error, errorMessage: 'Login failed: $e');
+      final domainEx = AuthErrorMapper.map(e);
+      logger.error('[AuthState] login error: ${domainEx.code} - ${domainEx.uiMessage}', e, stack);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: domainEx.uiMessage);
     }
   }
 
@@ -186,16 +181,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       logger.info('[AuthState] loginWithGoogle succeeded! User: ${response.user.email}, Role: ${response.user.role}');
       await _onLoginSuccess();
-    } on AppException catch (e) {
-      logger.error('[AuthState] loginWithGoogle AppException: ${e.message}');
-      state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } on DioException catch (e) {
-      final appEx = AppException.fromDioException(e);
-      logger.error('[AuthState] loginWithGoogle DioException: ${appEx.message}');
-      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
     } catch (e, stack) {
-      logger.error('[AuthState] loginWithGoogle unexpected error: $e', e, stack);
-      state = state.copyWith(status: AuthStatus.error, errorMessage: 'Google login failed: $e');
+      final domainEx = AuthErrorMapper.map(e);
+      logger.error('[AuthState] loginWithGoogle error: ${domainEx.code} - ${domainEx.uiMessage}', e, stack);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: domainEx.uiMessage);
     }
   }
 
@@ -264,13 +253,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         token: response.token,
       );
       await _onLoginSuccess();
-    } on AppException catch (e) {
-      state = state.copyWith(status: AuthStatus.error, errorMessage: e.message);
-    } on DioException catch (e) {
-      final appEx = AppException.fromDioException(e);
-      state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
-    } catch (e) {
-      state = state.copyWith(status: AuthStatus.error, errorMessage: 'Signup failed: $e');
+    } catch (e, stack) {
+      final domainEx = AuthErrorMapper.map(e);
+      logger.error('[AuthState] signup error: ${domainEx.code} - ${domainEx.uiMessage}', e, stack);
+      state = state.copyWith(status: AuthStatus.error, errorMessage: domainEx.uiMessage);
     }
   }
 
