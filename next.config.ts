@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-    output: process.env.VERCEL ? undefined : "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   allowedDevOrigins: [
     "192.168.0.57",
     "localhost",
@@ -59,7 +59,7 @@ const nextConfig: NextConfig = {
   compress: true,
 
   experimental: {
-    webpackBuildWorker: true,
+    webpackBuildWorker: false,
     webpackMemoryOptimizations: true,
     optimizePackageImports: [
       "lucide-react",
@@ -95,25 +95,6 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "private, no-store" },
         ],
       },
-      ...(process.env.NODE_ENV === "production"
-        ? [
-            {
-              source: "/_next/static/:path*",
-              headers: [
-                { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-              ],
-            },
-          ]
-        : [
-            {
-              source: "/_next/static/:path*",
-              headers: [
-                { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
-                { key: "Pragma", value: "no-cache" },
-                { key: "Expires", value: "0" },
-              ],
-            },
-          ]),
       {
         source: "/(.*)",
         headers: securityHeaderPairs(),
