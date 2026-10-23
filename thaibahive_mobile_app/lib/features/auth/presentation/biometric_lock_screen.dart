@@ -61,7 +61,7 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
 
     if (result.success) {
       logger.info('[BiometricLockScreen] Biometric authentication successful, unlocking app');
-      ref.read(biometricLockProvider.notifier).unlock(GoRouter.of(context));
+      ref.read(biometricLockProvider.notifier).unlock(GoRouter.maybeOf(context));
     } else {
       logger.warning('[BiometricLockScreen] Biometric authentication unsuccessful: ${result.status} - ${result.errorMessage}');
       if (result.status == BiometricResultStatus.noBiometricsEnrolled) {
@@ -119,7 +119,7 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
       });
 
       logger.info('[BiometricLockScreen] Password fallback successful, unlocking app');
-      ref.read(biometricLockProvider.notifier).unlock(GoRouter.of(context));
+      ref.read(biometricLockProvider.notifier).unlock(GoRouter.maybeOf(context));
     } catch (e, stack) {
       logger.error('[BiometricLockScreen] Password fallback failed: $e', e, stack);
       if (!mounted) return;

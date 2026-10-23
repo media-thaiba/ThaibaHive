@@ -1,8 +1,8 @@
 {
-    "latestVersion":  "3.42.4+19",
-    "releaseNotes":  "Optimized release APK by 378MB (468MB -\u003e 89.7MB), aligned Google OAuth to GCP project 744655632042 with release SHA-1, added AuthErrorMapper, and unified ThInput primitives.",
-    "downloadUrl":  "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.4/app-release.apk",
-    "sha256":  "a887da124a484671010abb2c59a2014769499e92bf41ccba16cac09b63cb4595",
-    "forceUpdate":  false,
-    "fileSize":  94080327
+  "latestVersion": "3.42.5+20",
+  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.5/app-release.apk",
+  "releaseNotes": "Resolved biometric unlock loop by using safe GoRouter.maybeOf(context) in root overlay, bumped version to 3.42.5+20, and optimized APK size.",
+  "forceUpdate": false,
+  "sha256": "05e7f49e1aad10c6e0489ce97acbf1eacdc4e76d080cb05f3a812268afec744e",
+  "fileSize": 94080327
 }
