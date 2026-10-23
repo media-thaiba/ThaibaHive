@@ -1,6 +1,6 @@
 name: thaibahive_mobile
 description: ThaibaHive - Thaiba Family App
-version: 3.42.1+16
+version: 3.42.2+17
 environment:
   sdk: '>=3.2.0 <4.0.0'
 

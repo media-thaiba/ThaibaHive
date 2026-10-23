@@ -1,8 +1,8 @@
 {
-  "latestVersion": "3.42.1+16",
-  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.1/app-release.apk",
-  "releaseNotes": "Google Sign-In out-of-the-box support, friendly passkey enrollment guidance, UI overhaul to MediaHive standard, and persistent session fix.",
+  "latestVersion": "3.42.2+17",
+  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.2/app-release.apk",
+  "releaseNotes": "Resolved biometric lock retry loop, added comprehensive console and navigation logging in Diagnostics, and added clear Google Sign-In Code 10 resolution guidance.",
   "forceUpdate": false,
-  "sha256": "0b8889eec6fe6b3bc4bf7d36f0dbf1c74b15e4ea55110b693178118b41214dfd",
-  "fileSize": 490835271
+  "sha256": "10e8399cb0a1315da69e80fe61767611fd51d0e53908fc32c367b6855eb22ef3",
+  "fileSize": 490851655
 }
