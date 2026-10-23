@@ -39,24 +39,21 @@ class AppConstants {
     return 'https://thaiba-hive.vercel.app';
   }
 
-  /// Whether GOOGLE_WEB_CLIENT_ID was provided via --dart-define at build time.
-  static bool get isGoogleSignInConfigured =>
-      const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID').isNotEmpty;
+  static const String _defaultGoogleWebClientId =
+      '744655632042-7njpugg533kj5okh731c38m9ffdgpc0o.apps.googleusercontent.com';
+
+  /// Whether GOOGLE_WEB_CLIENT_ID is configured
+  static bool get isGoogleSignInConfigured {
+    const override = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+    if (override.isNotEmpty) return true;
+    return _defaultGoogleWebClientId.isNotEmpty;
+  }
 
   /// Google Web Client ID for Google Sign-In on Android/iOS
-  /// Must be provided via --dart-define=GOOGLE_WEB_CLIENT_ID=... at build time.
   static String get googleWebClientId {
     const override = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
     if (override.isNotEmpty) return override;
-
-    if (kDebugMode) {
-      return '';
-    }
-
-    throw StateError(
-      'GOOGLE_WEB_CLIENT_ID must be provided via --dart-define at build time in release builds. '
-      'Example: flutter build apk --dart-define=GOOGLE_WEB_CLIENT_ID=your-client-id.apps.googleusercontent.com',
-    );
+    return _defaultGoogleWebClientId;
   }
 
   static const String storageTokenKey = 'auth_token';

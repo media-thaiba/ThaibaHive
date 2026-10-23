@@ -1,8 +1,8 @@
 {
   "latestVersion": "3.42.1+16",
   "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.1/app-release.apk",
-  "releaseNotes": "UI overhaul to MediaHive standard, fixed /dashboard navigation routing, persistent login fix, and app version badge in settings.",
+  "releaseNotes": "Google Sign-In out-of-the-box support, friendly passkey enrollment guidance, UI overhaul to MediaHive standard, and persistent session fix.",
   "forceUpdate": false,
-  "sha256": "89bddf62e9cdc7e9d6ced4c6378c6d263d660c4971efcf7266b4851a8e5fed28",
+  "sha256": "0b8889eec6fe6b3bc4bf7d36f0dbf1c74b15e4ea55110b693178118b41214dfd",
   "fileSize": 490835271
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
@@ -201,8 +202,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } on DioException catch (e) {
       final appEx = AppException.fromDioException(e);
       state = state.copyWith(status: AuthStatus.error, errorMessage: appEx.message);
+    } on PlatformException catch (e) {
+      if (e.code == 'cancelled' || (e.message?.toLowerCase().contains('cancel') ?? false)) {
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: 'No passkey found on this device for this account, or prompt was closed. Please log in with your credentials or Google first, then register your device passkey in Settings.',
+        );
+      } else {
+        state = state.copyWith(status: AuthStatus.error, errorMessage: 'Passkey error: ${e.message ?? e.code}');
+      }
     } catch (e) {
-      state = state.copyWith(status: AuthStatus.error, errorMessage: 'Passkey login failed: $e');
+      if (e.toString().toLowerCase().contains('cancel')) {
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: 'No passkey found on this device for this account, or prompt was closed. Please log in with your credentials or Google first, then register your device passkey in Settings.',
+        );
+      } else {
+        state = state.copyWith(status: AuthStatus.error, errorMessage: 'Passkey login failed: $e');
+      }
     }
   }
 
