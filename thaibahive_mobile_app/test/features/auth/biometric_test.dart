@@ -1,10 +1,33 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thaibahive_mobile/core/services/biometric_service.dart';
 import 'package:thaibahive_mobile/features/auth/data/biometric_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   FlutterSecureStorage.setMockInitialValues({});
+
+  group('BiometricService Rate-Limiting Tests', () {
+    test('Rapid consecutive authentication attempts trigger rate-limiting cooldown', () async {
+      final service = BiometricService();
+      service.resetCooldown();
+
+      // First call (fails because mock environment has no enrolled biometrics)
+      final first = await service.authenticate();
+      expect(first.success, false);
+
+      // Immediate second call should be caught by rate-limiting cooldown
+      final second = await service.authenticate();
+      expect(second.success, false);
+      expect(second.errorMessage, contains('Too many attempts'));
+
+      // Reset cooldown and verify prompt is accepted again
+      service.resetCooldown();
+      final third = await service.authenticate();
+      expect(third.errorMessage, isNot(contains('Too many attempts')));
+    });
+  });
+
   group('BiometricLockNotifier Tests', () {
     late BiometricLockNotifier notifier;
 

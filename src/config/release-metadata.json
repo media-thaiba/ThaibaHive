@@ -1,8 +1,8 @@
 {
-  "latestVersion": "3.42.2+17",
-  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.2/app-release.apk",
-  "releaseNotes": "Resolved biometric lock retry loop, added comprehensive console and navigation logging in Diagnostics, and added clear Google Sign-In Code 10 resolution guidance.",
+  "latestVersion": "3.42.3+18",
+  "downloadUrl": "https://github.com/media-thaiba/ThaibaHive/releases/download/v3.42.3/app-release.apk",
+  "releaseNotes": "Added biometric retry cooldown rate-limiting, compliant ≥11px mobile typography, sanitized navigation logs, theme-styled password fallback input, re-enrollment guidance, and auth session cache logging.",
   "forceUpdate": false,
-  "sha256": "10e8399cb0a1315da69e80fe61767611fd51d0e53908fc32c367b6855eb22ef3",
-  "fileSize": 490851655
+  "sha256": "19cd4202d0f763f28f35a09c2a7f8453d7d80b3b4e9e891af62a4acc33a4760b",
+  "fileSize": 490851659
 }

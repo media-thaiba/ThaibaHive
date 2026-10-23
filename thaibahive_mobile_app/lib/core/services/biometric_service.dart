@@ -17,6 +17,10 @@ class BiometricService {
   /// Tracks whether an OS biometric prompt is currently active to prevent lifecycle thrashing
   bool isAuthenticatingNow = false;
 
+  /// Timestamp of the last failed authentication attempt for rate-limiting cooldown
+  DateTime? _lastFailedAt;
+  static const Duration _cooldownDuration = Duration(milliseconds: 2500);
+
   /// Check if hardware supports biometrics and has enrolled credentials
   Future<bool> isAvailable() async {
     try {
@@ -71,10 +75,25 @@ class BiometricService {
       );
     }
 
+    if (_lastFailedAt != null) {
+      final elapsed = DateTime.now().difference(_lastFailedAt!);
+      if (elapsed < _cooldownDuration) {
+        final remainingMs = (_cooldownDuration - elapsed).inMilliseconds;
+        final remainingSec = (remainingMs / 1000).ceil();
+        logger.warning('[BiometricService] Rate-limited: cooldown active ($remainingSec s remaining).');
+        return BiometricAuthResult(
+          success: false,
+          status: BiometricResultStatus.failed,
+          errorMessage: 'Too many attempts. Please wait $remainingSec second${remainingSec == 1 ? '' : 's'}.',
+        );
+      }
+    }
+
     try {
       isAuthenticatingNow = true;
       final enrolled = await hasEnrolledBiometrics();
       if (!enrolled) {
+        _lastFailedAt = DateTime.now();
         logger.warning('[BiometricService] No biometrics enrolled or supported on device.');
         return BiometricAuthResult(
           success: false,
@@ -96,12 +115,18 @@ class BiometricService {
       );
 
       logger.info('[BiometricService] Auth completed. Success: $authenticated');
+      if (authenticated) {
+        _lastFailedAt = null;
+      } else {
+        _lastFailedAt = DateTime.now();
+      }
       return BiometricAuthResult(
         success: authenticated,
         status: authenticated ? BiometricResultStatus.success : BiometricResultStatus.failed,
         errorMessage: authenticated ? null : 'Authentication not completed. Please try again or use your password.',
       );
     } on PlatformException catch (e, stack) {
+      _lastFailedAt = DateTime.now();
       logger.error('[BiometricService] Auth PlatformException: ${e.code} - ${e.message}', e, stack);
       if (e.code == auth_error.lockedOut || e.code == auth_error.permanentlyLockedOut) {
         return BiometricAuthResult(
@@ -123,6 +148,7 @@ class BiometricService {
         errorMessage: e.message ?? 'Biometric authentication failed (${e.code})',
       );
     } catch (e, stack) {
+      _lastFailedAt = DateTime.now();
       logger.error('[BiometricService] Unexpected auth error: $e', e, stack);
       return BiometricAuthResult(
         success: false,
@@ -132,6 +158,12 @@ class BiometricService {
     } finally {
       isAuthenticatingNow = false;
     }
+  }
+
+  /// Reset cooldown timer (e.g. for testing or when switching users)
+  @visibleForTesting
+  void resetCooldown() {
+    _lastFailedAt = null;
   }
 
   /// Check if user has enabled biometric security in App Settings

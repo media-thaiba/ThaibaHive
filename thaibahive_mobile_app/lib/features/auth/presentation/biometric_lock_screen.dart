@@ -22,6 +22,7 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
   
   bool _showPasswordFallback = false;
   bool _isAuthenticating = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
@@ -66,12 +67,12 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
         await ref.read(biometricLockProvider.notifier).autoDisableBiometrics();
         setState(() {
           _showPasswordFallback = true;
-          _errorMessage = 'Enrolled biometrics were removed from device. Biometric lock disabled. Please unlock with your password.';
+          _errorMessage = 'Enrolled biometrics were removed or disabled on this device. Please unlock with your password. You can re-enable biometrics anytime in Settings.';
         });
       } else if (result.status == BiometricResultStatus.lockedOut) {
         setState(() {
           _showPasswordFallback = true;
-          _errorMessage = result.errorMessage ?? 'Biometrics locked due to multiple failed attempts. Please enter your password.';
+          _errorMessage = result.errorMessage ?? 'Biometrics temporarily locked due to multiple failed attempts. Please unlock with your account password.';
         });
       } else {
         setState(() {
@@ -232,19 +233,32 @@ class _BiometricLockScreenOverlayState extends ConsumerState<BiometricLockScreen
                       ),
                     ),
                   ] else ...[
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Enter Password',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Colors.white70),
-                        filled: true,
-                        fillColor: Colors.white.withValues(alpha: 0.08),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E2022).withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF2A2D32)),
+                      ),
+                      child: TextField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _isAuthenticating ? null : _submitPasswordFallback(),
+                        decoration: InputDecoration(
+                          hintText: 'Enter account password',
+                          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                          prefixIcon: Icon(Icons.lock_outline_rounded, color: Colors.grey[400], size: 20),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: Colors.grey[400],
+                              size: 20,
+                            ),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
                       ),
                     ),

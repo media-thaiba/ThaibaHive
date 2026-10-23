@@ -58,12 +58,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _storage.delete(key: AppConstants.storageRefreshTokenKey);
       await _storage.delete(key: 'remember_me');
       updateCachedAuthToken(null);
+      logger.info('[AuthState] Remember me is false. Fresh unauthenticated start.');
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
     }
 
     final token = await _storage.read(key: AppConstants.storageTokenKey);
     if (token != null && token.isNotEmpty) {
+      logger.info('[AuthState] Cached auth token found in secure storage. Restoring session...');
       state = state.copyWith(status: AuthStatus.loading);
       _repository.client.options.headers['Authorization'] = 'Bearer $token';
       try {
@@ -77,6 +79,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: user,
           token: token,
         );
+        logger.info('[AuthState] Restored authenticated session from cached token (cache hit) for ${user.email} (ID: ${user.id})');
         // Re-register FCM token for silently-restored sessions.
         await _onLoginSuccess();
       } catch (e) {
@@ -91,9 +94,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         if (isAuthFailure || !isGenuineOffline) {
           // Token explicitly rejected or revoked (or unexpected error) — clear session.
+          logger.warning('[AuthState] Cached token was revoked or invalid ($e). Clearing session.');
           await logout();
         } else {
           // Genuine network connection error / offline. Load cached profile.
+          logger.warning('[AuthState] Device offline during session check. Restoring from cached profile.');
           final cachedProfileJson = await _storage.read(key: AppConstants.storageUserProfileKey);
           UserModel? cachedUser;
           if (cachedProfileJson != null) {
@@ -106,9 +111,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
             user: cachedUser,
             token: token,
           );
+          logger.info('[AuthState] Restored session in offline mode for ${cachedUser?.email ?? "cached user"}');
         }
       }
     } else {
+      logger.info('[AuthState] Fresh unauthenticated start (no cached token found). Showing welcome / login.');
       state = const AuthState(status: AuthStatus.unauthenticated);
     }
   }

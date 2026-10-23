@@ -480,9 +480,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           color: accentColor,
-                          fontSize: 9.5,
+                          fontSize: 11.0,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          letterSpacing: 1.0,
                         ),
                         child: Text(subtitleText),
                       ),
@@ -552,7 +552,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           color: Colors.grey,
-                          fontSize: 10,
+                          fontSize: 11.0,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -563,7 +563,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           color: Colors.grey,
-                          fontSize: 10,
+                          fontSize: 11.0,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1173,7 +1173,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       style: TextStyle(
         fontFamily: 'PlusJakartaSans',
         color: Colors.grey[500],
-        fontSize: 9.5,
+        fontSize: 11.0,
         fontWeight: FontWeight.w800,
         letterSpacing: 0.8,
       ),

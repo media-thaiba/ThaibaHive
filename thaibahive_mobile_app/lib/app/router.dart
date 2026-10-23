@@ -96,26 +96,37 @@ import '../shared/transitions/page_transitions.dart';
 final _storage = const FlutterSecureStorage();
 
 class DiagnosticsNavigatorObserver extends NavigatorObserver {
+  String _formatRouteName(Route<dynamic>? route, [String fallback = 'unknown']) {
+    if (route == null) return fallback;
+    final name = route.settings.name;
+    if (name != null && name.isNotEmpty) return name;
+    final args = route.settings.arguments;
+    if (args is String && args.startsWith('/')) return args;
+    return route.runtimeType.toString();
+  }
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    final routeName = route.settings.name ?? route.settings.arguments?.toString() ?? 'route';
-    final prevName = previousRoute?.settings.name ?? 'initial';
+    final routeName = _formatRouteName(route, 'route');
+    final prevName = _formatRouteName(previousRoute, 'initial');
     logger.info('NAVIGATION: Pushed $routeName (previous: $prevName)');
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    final routeName = route.settings.name ?? 'route';
-    final currentName = previousRoute?.settings.name ?? 'none';
+    final routeName = _formatRouteName(route, 'route');
+    final currentName = _formatRouteName(previousRoute, 'none');
     logger.info('NAVIGATION: Popped $routeName (current: $currentName)');
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    logger.info('NAVIGATION: Replaced ${oldRoute?.settings.name} with ${newRoute?.settings.name}');
+    final oldName = _formatRouteName(oldRoute, 'previous');
+    final newName = _formatRouteName(newRoute, 'next');
+    logger.info('NAVIGATION: Replaced $oldName with $newName');
   }
 }
 
