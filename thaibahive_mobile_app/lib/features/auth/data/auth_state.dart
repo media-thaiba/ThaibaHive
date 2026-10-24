@@ -12,6 +12,7 @@ import 'package:thaibahive_mobile/core/errors/auth_error_mapper.dart';
 import 'package:thaibahive_mobile/core/services/fcm_service.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
 import 'package:thaibahive_mobile/app/router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_repository.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading, error }
@@ -267,16 +268,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     logger.info('[AuthState] Logging out user...');
-    try {
-      await _repository.logout();
-    } catch (_) {}
-    await _storage.delete(key: AppConstants.storageTokenKey);
-    await _storage.delete(key: AppConstants.storageRefreshTokenKey);
-    await _storage.delete(key: 'remember_me');
+    // 1. Immediately transition UI state and clear memory client headers for instantaneous logout
+    state = const AuthState(status: AuthStatus.unauthenticated);
     _repository.client.options.headers.remove('Authorization');
     updateCachedAuthToken(null);
-    state = const AuthState(status: AuthStatus.unauthenticated);
-    await FCMService().onUserLogout();
+
+    // 2. Sign out of Google account session so the user can freely choose another account next time
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
+
+    // 3. Purge persisted tokens asynchronously
+    try {
+      await Future.wait([
+        _storage.delete(key: AppConstants.storageTokenKey),
+        _storage.delete(key: AppConstants.storageRefreshTokenKey),
+        _storage.delete(key: 'remember_me'),
+      ]);
+    } catch (_) {}
+
+    // 4. Invalidate server-side session and FCM in the background with bounded timeouts
+    try {
+      await _repository.logout().timeout(const Duration(seconds: 3));
+    } catch (_) {}
+    try {
+      await FCMService().onUserLogout().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+
     logger.info('[AuthState] Logout completed. Session cleared.');
   }
 
