@@ -13,11 +13,8 @@ import 'features/attendance/data/services/background_presence_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Make the app fullscreen (hide status bar, keep navigation bar)
-  await SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.manual,
-    overlays: [SystemUiOverlay.bottom],
-  );
+  // Enable modern edge-to-edge system UI (preserves status bar and insets)
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   
   // Initialize all services before running the app
   await serviceInitializer.init();
@@ -81,4 +78,3 @@ void main() async {
     ),
   );
 }
-

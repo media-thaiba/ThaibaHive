@@ -77,7 +77,7 @@ export function DiagnosticsButton() {
         onClick={openSheet}
         size="icon"
         variant="destructive"
-        className="fixed bottom-4 right-4 z-50 h-10 w-10 rounded-full shadow-lg hover:scale-105 transition-all"
+        className="hidden lg:flex fixed bottom-4 right-4 z-50 h-10 w-10 rounded-full shadow-lg hover:scale-105 transition-all"
         title="Diagnostics & Bug Report"
         aria-label="Diagnostics & Bug Report"
       >

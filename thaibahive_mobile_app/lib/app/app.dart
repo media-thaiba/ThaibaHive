@@ -36,10 +36,7 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: [SystemUiOverlay.bottom],
-    );
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _router = buildRouter();
     FCMService.setRouter(_router);
     _router.routerDelegate.addListener(_onRouteChange);

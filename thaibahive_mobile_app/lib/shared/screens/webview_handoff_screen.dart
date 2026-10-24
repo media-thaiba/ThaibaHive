@@ -136,14 +136,19 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
         final target = widget.targetPath.startsWith('/') ? widget.targetPath : '/${widget.targetPath}';
         targetUrl = '${AppConstants.webBaseUrl}$target';
       }
-      // url initialized above
-
-
 
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setNavigationDelegate(
           NavigationDelegate(
+            onNavigationRequest: (NavigationRequest request) {
+              final uri = Uri.tryParse(request.url);
+              final baseUri = Uri.parse(AppConstants.webBaseUrl);
+              if (uri != null && (uri.host == baseUri.host || uri.scheme == 'about')) {
+                return NavigationDecision.navigate;
+              }
+              return NavigationDecision.prevent;
+            },
             onPageStarted: (_) {
               if (mounted) setState(() => _isLoading = true);
             },

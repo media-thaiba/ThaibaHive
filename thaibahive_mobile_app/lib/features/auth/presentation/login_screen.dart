@@ -44,6 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _recoverySent = false;
   bool _rememberMe = true; // Default to true — users expect to stay logged in
+  String? _lastAuthError;
 
   @override
   void initState() {
@@ -252,6 +253,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       logger.info('[LoginScreen] Obtained Google ID token. aud=${claims?['aud']}, azp=${claims?['azp']}, email=${claims?['email']}');
 
       stage = 'Stage 3: Backend Authentication (/api/auth/google)';
+      _lastAuthError = null;
       logger.info('[LoginScreen] Federating token with backend...');
       await ref.read(authProvider.notifier).loginWithGoogle(idToken);
 
@@ -259,7 +261,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (authState.status == AuthStatus.error) {
         await _showGoogleDiag(
           stage,
-          'Backend returned error: ${authState.errorMessage}\n\n'
+          'Backend returned error: ${authState.errorMessage ?? _lastAuthError ?? "Authentication failed"}\n\n'
           'Token Claims:\n'
           'aud: ${claims?['aud']}\n'
           'azp: ${claims?['azp']}\n'
@@ -382,6 +384,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context.go('/today');
         }
       } else if (next.status == AuthStatus.error && next.errorMessage != null) {
+        _lastAuthError = next.errorMessage;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage!),

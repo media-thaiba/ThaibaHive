@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Clock, LogOut } from "lucide-react";
 
 type AttendanceWidgetProps = {
@@ -41,10 +42,14 @@ export function AttendanceWidget({ checkedIn, onClockOut, clockingOut }: Attenda
             <LogOut className="h-4 w-4" /> {clockingOut ? "Processing..." : "Clock Out"}
           </Button>
         ) : (
-          <Link href="/my-work/attendance" className="block w-full">
-            <Button className="w-full h-11 bg-success text-success-foreground hover:bg-success/90 gap-2 font-medium rounded-xl active:scale-[0.98] transition-transform">
-              <Clock className="h-4 w-4" /> Check In / Punch
-            </Button>
+          <Link
+            href="/my-work/attendance"
+            className={cn(
+              buttonVariants({ variant: "default" }),
+              "w-full h-11 bg-success text-success-foreground hover:bg-success/90 gap-2 font-medium rounded-xl active:scale-[0.98] transition-transform"
+            )}
+          >
+            <Clock className="h-4 w-4" /> Check In / Punch
           </Link>
         )}
       </CardContent>

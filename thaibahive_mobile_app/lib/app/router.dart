@@ -1230,7 +1230,9 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
             ),
         ],
       ),
-      bottomNavigationBar: Padding(
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.section,
           0,
@@ -1302,6 +1304,7 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
               ),
             ),
           ),
+        ),
         ),
       ),
     );

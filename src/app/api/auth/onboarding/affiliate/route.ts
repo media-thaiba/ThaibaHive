@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { db } from "@/db";
-import { staff, staffInstitutions, staffDepartments } from "@/db/schema";
+import { staff, staffInstitutions, staffDepartments, institutions, departments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export const POST = requireAuth(async (request, session) => {
@@ -14,7 +14,6 @@ export const POST = requireAuth(async (request, session) => {
   }
 
   // Verify the institution exists and is active
-  const { institutions } = await import("@thaiba/db/schema");
   const institution = await db
     .select()
     .from(institutions)
@@ -30,7 +29,6 @@ export const POST = requireAuth(async (request, session) => {
 
   // Verify department belongs to the selected institution (if provided)
   if (departmentId) {
-    const { departments } = await import("@thaiba/db/schema");
     const department = await db
       .select()
       .from(departments)

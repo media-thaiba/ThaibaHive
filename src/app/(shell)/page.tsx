@@ -160,7 +160,7 @@ export default function DashboardPage() {
       <section>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
           <PermissionGate anyRole={["super_admin", "admin", "principal", "hod"]} fallback={null}>
-            <StatCard id="tour-profile" label="Staff Present" value={data?.todayPresent ?? 0} suffix={` / ${data?.staffCount ?? 0}`} progress={data && data.staffCount > 0 ? data.todayPresent / data.staffCount : 0} href="/admin/attendance-locations" icon={<Users className="h-4 w-4" />} color="success" />
+            <StatCard id="tour-staff-present" label="Staff Present" value={data?.todayPresent ?? 0} suffix={` / ${data?.staffCount ?? 0}`} progress={data && data.staffCount > 0 ? data.todayPresent / data.staffCount : 0} href="/admin/attendance-locations" icon={<Users className="h-4 w-4" />} color="success" />
           </PermissionGate>
           <PermissionGate anyRole={["super_admin", "admin", "principal", "hod", "staff", "accounts", "purchase"]} fallback={null}>
             <StatCard id="tour-profile" label="Profile Completion" value={data?.profileFields.filled ?? 0} suffix={` / ${data?.profileFields.total ?? 7}`} progress={data ? data.profileFields.filled / data.profileFields.total : 0} href={staff ? `/admin/staff/${staff.id}/edit` : "/admin/staff"} icon={<ShieldCheck className="h-4 w-4" />} color="primary" />

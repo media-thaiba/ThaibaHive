@@ -46,7 +46,7 @@ class OfflineBanner extends ConsumerWidget {
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 color: isDark ? Colors.white70 : const Color(0xFF5C4500),
-                fontSize: 9,
+                fontSize: 11,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2.0,
               ),
