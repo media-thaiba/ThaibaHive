@@ -121,8 +121,16 @@ class LoggerService extends StateNotifier<List<LogEntry>> {
 
   Future<void> shareLogs() async {
     try {
-      if (_internalLogFile != null && _internalLogFile!.existsSync()) {
-        final content = _internalLogFile!.readAsStringSync();
+      String content = '';
+      if (state.isNotEmpty) {
+        // Share current session logs (most recent first)
+        content = state.map((e) => e.toString()).join('\n');
+      } else if (_internalLogFile != null && _internalLogFile!.existsSync()) {
+        final lines = _internalLogFile!.readAsLinesSync();
+        // Return latest 300 lines in reverse order so latest logs are at the top
+        content = lines.reversed.take(300).join('\n');
+      }
+      if (content.isNotEmpty) {
         await Share.share(
           content,
           subject: 'ThaibaHive App Console Logs',

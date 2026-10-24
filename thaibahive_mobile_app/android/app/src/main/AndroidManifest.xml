@@ -60,8 +60,8 @@
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:foregroundServiceType="location"
-            android:exported="true"
-            tools:replace="android:foregroundServiceType" />
+            android:exported="false"
+            tools:replace="android:foregroundServiceType,android:exported" />
 
         <receiver
             android:name=".AttendanceWidgetProvider"

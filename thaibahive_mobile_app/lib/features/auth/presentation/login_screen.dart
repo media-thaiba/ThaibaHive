@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -134,20 +136,82 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
+  String _explainGoogleCode(int? code) => switch (code) {
+        10 => 'DEVELOPER_ERROR (Code 10):\n'
+            'Package name "com.thaiba.hive" and SHA-1 certificate fingerprint are not matched by an Android OAuth Client ID in this Google Cloud project.\n'
+            'Note: If installed via Play Store, you must register the Play App Signing SHA-1, not the upload key.',
+        12500 => 'SIGN_IN_FAILED (Code 12500):\n'
+            'OAuth Consent Screen in Google Cloud Console is in "Testing" mode and this email is NOT listed under Test Users, or Support Email is missing in GCP, or Google Play Services needs updating.',
+        12501 => 'SIGN_IN_CANCELLED (Code 12501):\n'
+            'User dismissed the account picker or flow was cancelled.',
+        12502 => 'SIGN_IN_CURRENTLY_IN_PROGRESS (Code 12502):\n'
+            'Duplicate signIn() call already in progress.',
+        7 => 'NETWORK_ERROR (Code 7):\n'
+            'No network connectivity to Google authentication services.',
+        8 => 'INTERNAL_ERROR (Code 8):\n'
+            'Transient Google Play Services internal error.',
+        _ => 'Unrecognised Google Play Services status code: $code',
+      };
+
+  Map<String, dynamic>? _decodeJwt(String jwt) {
+    try {
+      final p = jwt.split('.')[1];
+      return jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(p))));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _showGoogleDiag(String stage, String detail) async {
+    if (!mounted) return;
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Sign-in Failed: $stage', style: const TextStyle(fontSize: 16))),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SelectableText(
+                detail,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: '[$stage]\n$detail'));
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(content: Text('Diagnostic trace copied to clipboard!')),
+              );
+            },
+            label: const Text('Copy Error'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleGoogleLogin() async {
     logger.info('[LoginScreen] User clicked "Continue with Google"');
+    var stage = 'Initialization';
     if (!AppConstants.isGoogleSignInConfigured && !kDebugMode) {
-      logger.warning('[LoginScreen] Google Sign-In is not configured for this build.');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Google Sign-In is not configured for this build. Please sign in with your email and password.',
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+      await _showGoogleDiag(stage, 'Google Sign-In is not configured for this build.');
       return;
     }
     try {
@@ -160,54 +224,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       try {
         await googleSignIn.signOut();
       } catch (_) {}
+
+      stage = 'Stage 1: Google Account Picker';
       logger.info('[LoginScreen] Displaying Google Account Picker...');
       final account = await googleSignIn.signIn();
       if (account == null) {
         logger.info('[LoginScreen] Google Sign-In was cancelled or dismissed by user.');
         return;
       }
-      logger.info('[LoginScreen] Google account chosen: ${account.email}. Fetching authentication credentials...');
+
+      stage = 'Stage 2: Fetch Tokens';
+      logger.info('[LoginScreen] Google account chosen: ${account.email}. Fetching auth tokens...');
       final authDetails = await account.authentication;
       final idToken = authDetails.idToken;
       if (idToken == null || idToken.isEmpty) {
         logger.error('[LoginScreen] Google Sign-In returned null or empty idToken.');
-        throw Exception('Google Sign-In failed: No ID token returned by Google Services. Please ensure Google Play Services is updated.');
+        await _showGoogleDiag(
+          stage,
+          'idToken is null or empty.\n'
+          'Account: ${account.email}\n'
+          'Possible Cause: Android OAuth client SHA-1 does not match the active APK signing key, or serverClientId is incorrect.',
+        );
+        return;
       }
-      logger.info('[LoginScreen] Obtained Google ID token (${idToken.length} chars). Federating with backend...');
+
+      final claims = _decodeJwt(idToken);
+      logger.info('[LoginScreen] Obtained Google ID token. aud=${claims?['aud']}, azp=${claims?['azp']}, email=${claims?['email']}');
+
+      stage = 'Stage 3: Backend Authentication (/api/auth/google)';
+      logger.info('[LoginScreen] Federating token with backend...');
       await ref.read(authProvider.notifier).loginWithGoogle(idToken);
+
+      final authState = ref.read(authProvider);
+      if (authState.status == AuthStatus.error) {
+        await _showGoogleDiag(
+          stage,
+          'Backend returned error: ${authState.errorMessage}\n\n'
+          'Token Claims:\n'
+          'aud: ${claims?['aud']}\n'
+          'azp: ${claims?['azp']}\n'
+          'email: ${claims?['email']}\n'
+          'email_verified: ${claims?['email_verified']}\n'
+          'hd (Workspace Domain): ${claims?['hd']}',
+        );
+      }
+    } on PlatformException catch (e, stack) {
+      logger.error('[LoginScreen] Google Sign-In PlatformException at $stage: $e', e, stack);
+      final m = RegExp(r'ApiException:\s*(\d+)').firstMatch('${e.message}');
+      final code = m != null ? int.tryParse(m.group(1)!) : null;
+      final explanation = _explainGoogleCode(code);
+      await _showGoogleDiag(
+        stage,
+        'PlatformException:\n'
+        'code: ${e.code}\n'
+        'message: ${e.message}\n'
+        'details: ${e.details}\n\n'
+        '→ $explanation\n\n'
+        'Raw: $e',
+      );
     } catch (e, stack) {
-      logger.error('[LoginScreen] Google Sign-In exception: $e', e, stack);
-      String userFriendlyMessage = 'Google Sign-In failed: $e';
-      final errStr = e.toString();
-      final bool isCode10 = errStr.contains('10') || errStr.contains('DEVELOPER_ERROR') || errStr.contains('f1.d: 10');
-
-      if (isCode10) {
-        logger.error(
-          '[LoginScreen] [CRITICAL] Google Sign-In Developer Error (Code 10).\n'
-          'Root Cause: Package name "com.thaiba.hive" and Keystore SHA-1 certificate fingerprint are not registered in Google Cloud Console OAuth 2.0 Android Client IDs.\n'
-          'Required Fingerprints:\n'
-          '- Release Keystore SHA-1: 2A:7A:C1:AF:B2:DE:8A:F9:34:DD:CD:56:86:93:A0:48:6E:44:8F:AD\n'
-          '- Debug Keystore SHA-1: FE:91:95:3F:5F:3D:B0:F0:D3:4B:E2:4B:A3:BE:1E:EB:84:95:98:A5'
-        );
-        userFriendlyMessage =
-            'Google Sign-In configuration error (Code 10: Developer Error).\n'
-            'The release SHA-1 certificate fingerprint must be registered in Google Cloud Console. Check Diagnostics for details, or use email/password to sign in.';
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(userFriendlyMessage),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 7),
-            action: SnackBarAction(
-              label: 'Diagnostics',
-              textColor: Colors.white,
-              onPressed: () => context.push('/auth/diagnostics'),
-            ),
-          ),
-        );
-      }
+      logger.error('[LoginScreen] Google Sign-In exception at $stage: $e', e, stack);
+      await _showGoogleDiag(
+        stage,
+        'Exception:\n$e\n\nStack:\n$stack',
+      );
     }
   }
 
