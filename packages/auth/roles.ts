@@ -119,7 +119,10 @@ const basePermissions = {
     "conference:manage",
     "notifications:read",
     "institutions:read",
-    "auth:logout"
+    "auth:logout",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue"
   ],
   institutional_head: [
     "academic.student.admissions",
@@ -296,7 +299,13 @@ const basePermissions = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   academic_coordinator: [
     "academic.grade.create",
@@ -428,7 +437,8 @@ const basePermissions = {
     "tasks:update",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view"
   ],
   inspector: [
     "reports:read",
@@ -700,7 +710,13 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "conference:create",
     "conference:join",
     "conference:record",
-    "conference:manage"
+    "conference:manage",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   regional_auditor: [
     "regional:view",
@@ -1175,7 +1191,13 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   principal: [
     "system:sessions:terminate",
@@ -1496,7 +1518,13 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   hod: [
     "exam.marks.enter",
@@ -1653,7 +1681,11 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:fine:assess"
   ],
   staff: [
     "exam.marks.enter",
@@ -1759,7 +1791,11 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan"
   ],
   accounts: [
     "staff:read",
@@ -1859,7 +1895,9 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   purchase: [
     "staff:read",
