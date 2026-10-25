@@ -15,8 +15,10 @@ export interface AuditEntry {
   entityType: string;
   entityId?: string | null;
   payload?: any;
+  sequenceNumber?: number;
   previousHash?: string | null;
   currentHash: string;
+  signature?: string | null;
   merkleRootId?: string | null;
   merkleProof?: string | null; // JSON string of MerkleProofStep[]
   ipAddress?: string | null;

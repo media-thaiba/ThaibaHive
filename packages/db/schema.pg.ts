@@ -3012,8 +3012,10 @@ export const auditLogs = sqliteTable("audit_logs", {
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id"),
   payload: text("payload"), // JSON payload or diff
+  sequenceNumber: integer("sequence_number").notNull().default(1),
   previousHash: text("previous_hash"),
   currentHash: text("current_hash").notNull(),
+  signature: text("signature"),
   merkleRootId: text("merkle_root_id").references(() => auditMerkleRoots.id, { onDelete: "set null" }),
   merkleProof: text("merkle_proof"), // JSON array of proof hashes
   ipAddress: text("ip_address"),
@@ -3027,6 +3029,8 @@ export const auditLogs = sqliteTable("audit_logs", {
   currentHashIdx: index("idx_pg_audit_logs_hash").on(t.currentHash),
   merkleRootIdx: index("idx_pg_audit_logs_merkle_root").on(t.merkleRootId),
   timestampIdx: index("idx_pg_audit_logs_timestamp").on(t.timestamp),
+  tenantSeqIdx: uniqueIndex("idx_pg_audit_logs_tenant_seq").on(t.tenantId, t.sequenceNumber),
+  tenantHashIdx: uniqueIndex("idx_pg_audit_logs_tenant_hash").on(t.tenantId, t.currentHash),
 }));
 
 export const complianceViolations = sqliteTable("compliance_violations", {

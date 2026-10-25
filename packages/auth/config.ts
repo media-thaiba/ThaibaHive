@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export type JwtSecretPurpose = "session" | "step-up" | "action-step-up" | "hall-ticket" | "mobile-handoff";
+export type JwtSecretPurpose = "session" | "step-up" | "action-step-up" | "hall-ticket" | "mobile-handoff" | "audit-hmac";
 
 const HKDF_SALT = "thaibahive:jwt:salt:v1";
 
@@ -52,6 +52,14 @@ export function getJwtSecret(purpose: JwtSecretPurpose = "session"): string {
 
 export function getJwtSecretBytes(purpose: JwtSecretPurpose = "session"): Uint8Array {
   return new TextEncoder().encode(getJwtSecret(purpose));
+}
+
+export function getAuditHmacSecret(): string {
+  return getJwtSecret("audit-hmac");
+}
+
+export function getAuditHmacKey(): Buffer {
+  return Buffer.from(getAuditHmacSecret(), "hex");
 }
 
 export const authConfig = {

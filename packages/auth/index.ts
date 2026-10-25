@@ -7,7 +7,7 @@ export { hasPermission, getRolePermissions, ROLE_RANK_MAP, getRoleRank, canCreat
 export type { StaffRole } from "./roles";
 export { getUserInstitutionScope, resolveScopedInstitutionId, resolveRequestInstitution, resolveScopedInstitutions, resolveInstitutionScopeForSession, getStaffInstitutionMemberships, TenantMismatchError, isRegionalScopeRole, isGlobalScopeRole } from "./institution-scope";
 
-export { authConfig, getJwtSecret, getJwtSecretBytes } from "./config";
+export { authConfig, getJwtSecret, getJwtSecretBytes, getAuditHmacSecret, getAuditHmacKey } from "./config";
 export type { JwtSecretPurpose } from "./config";
 export { loginSchema, signupSchema, passwordChangeSchema, profileUpdateSchema, invitationSchema, resetPasswordSchema } from "./schemas";
 export { verifyGoogleToken } from "./google";
