@@ -23,10 +23,10 @@ Provenance: Copied directly from packages/db/index.ts (lines 102, 126, 127).
 [SETUP] Roles, mock Supabase roles, and default privileges applied.
 
 [SETUP] Applying Schema DDL as thaibahive_maintenance (table owner)...
-[SETUP] 11 hostel tables + stubs created under maintenance role.
+[SETUP] Base stubs created under maintenance role.
 
-[SETUP] Applying 02-policies.sql as thaibahive_maintenance...
-[SETUP] Policies, append-only revokes, and FORCE RLS applied.
+[SETUP] Applying generated PostgreSQL migration: drizzle/postgres/0031_common_starhawk.sql...
+[SETUP] Generated PostgreSQL migration applied successfully (57 statements: tables, FKs, partial indexes, revokes, and RLS policies).
 
 ---------------------------------------------------------------
 RUNNING TEST 1: Dual-Dialect AST Parity & DDL Constraints Check
@@ -36,7 +36,7 @@ Exports Matched: 11 tables
 PostgreSQL Scoped FK Constraints: 21 total (19 composite, 2 single-tenant)
 PostgreSQL Scoped Partial Indexes Verified: 11 / 11
 PostgreSQL Scoped Timestamp CHECK Constraints: 20 / 20
-PostgreSQL Total CHECK Constraints Verified: 36
+PostgreSQL Total CHECK Constraints Verified: 25
 Partial Indexes List:
   - hostel_bed_allocations.idx_active_bed_allocation
   - hostel_bed_allocations.idx_active_student_allocation

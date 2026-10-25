@@ -44,6 +44,7 @@
     "security:tenants": "tsx scripts/security/tenant-isolation-scan.ts",
     "security:rbac": "tsx scripts/security/rbac-permission-audit.ts",
     "security:requireauth": "tsx scripts/security/requireauth-permission-audit.ts",
+    "security:ast-shield": "tsx scripts/security/ast-route-guard-scanner.ts",
     "compliance:verify": "tsx scripts/compliance/verify-audit-chain.ts",
     "compliance:snapshot": "tsx scripts/compliance/snapshot-cron.ts",
     "compliance:scan": "tsx scripts/compliance/audit-coverage-scanner.ts",

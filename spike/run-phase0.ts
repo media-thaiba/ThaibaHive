@@ -83,17 +83,17 @@ async function main() {
   const maintClient = new Client({ connectionString: maintUrl });
   await maintClient.connect();
 
-  // Reset existing hostel tables for clean deterministic setup
+  // Reset existing hostel tables and stubs for clean deterministic setup
   await maintClient.query(`
     DROP TABLE IF EXISTS hostel_fine_actions, hostel_fines, hostel_gate_logs, 
                          hostel_gate_passes, hostel_leaves, hostel_bed_allocations, 
                          hostel_beds, hostel_rooms, hostel_block_wardens, 
-                         hostel_blocks, hostel_settings CASCADE;
+                         hostel_blocks, hostel_settings,
+                         audit_logs, academic_years, staff_institutions, students, staff, institutions CASCADE;
   `);
 
-  // Create tables in correct dependency order
+  // Create base stubs required for foreign key targets
   await maintClient.query(`
-    -- Base Stubs
     CREATE TABLE IF NOT EXISTS institutions (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -106,9 +106,7 @@ async function main() {
       institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
       admission_number TEXT NOT NULL,
       full_name TEXT NOT NULL,
-      gender TEXT NOT NULL CHECK (gender IN ('male', 'female')),
-      CONSTRAINT uq_student_inst_id UNIQUE (institution_id, id),
-      CONSTRAINT uq_student_inst_adm UNIQUE (institution_id, admission_number)
+      gender TEXT NOT NULL CHECK (gender IN ('male', 'female'))
     );
 
     CREATE TABLE IF NOT EXISTS staff (
@@ -120,241 +118,44 @@ async function main() {
     CREATE TABLE IF NOT EXISTS staff_institutions (
       institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
       staff_id TEXT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
-      role TEXT NOT NULL,
-      CONSTRAINT uq_staff_inst UNIQUE (institution_id, staff_id)
+      role TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS academic_years (
       id TEXT PRIMARY KEY,
       institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
       name TEXT NOT NULL,
-      is_current TEXT NOT NULL DEFAULT 'true',
-      CONSTRAINT uq_ay_inst_id UNIQUE (institution_id, id)
+      is_current TEXT NOT NULL DEFAULT 'true'
     );
 
-    -- 1. Hostel Settings
-    CREATE TABLE IF NOT EXISTS hostel_settings (
+    CREATE TABLE IF NOT EXISTS audit_logs (
       id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
-      late_fine_rate_per_day_minor INT NOT NULL DEFAULT 5000,
-      grace_period_minutes INT NOT NULL DEFAULT 60,
-      rounding_rule TEXT NOT NULL DEFAULT 'ceil' CHECK (rounding_rule IN ('ceil', 'floor')),
-      updated_at TEXT NOT NULL,
-      CONSTRAINT uq_settings_inst UNIQUE (institution_id),
-      CONSTRAINT chk_settings_positive CHECK (late_fine_rate_per_day_minor > 0 AND grace_period_minutes >= 0),
-      CONSTRAINT chk_ts_settings_updated CHECK (length(updated_at) = 24 AND substr(updated_at,11,1) = 'T' AND substr(updated_at,24,1) = 'Z')
+      tenant_id TEXT,
+      current_hash TEXT
     );
-
-    -- 2. Hostel Blocks
-    CREATE TABLE IF NOT EXISTS hostel_blocks (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
-      name TEXT NOT NULL,
-      gender TEXT NOT NULL CHECK (gender IN ('boys', 'girls')),
-      deleted_at TEXT,
-      CONSTRAINT uq_block_inst_id UNIQUE (institution_id, id)
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_block_inst_name_active ON hostel_blocks(institution_id, name) WHERE deleted_at IS NULL;
-
-    -- 3. Hostel Block Wardens
-    CREATE TABLE IF NOT EXISTS hostel_block_wardens (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      block_id TEXT NOT NULL,
-      staff_id TEXT NOT NULL,
-      assigned_at TEXT NOT NULL,
-      revoked_at TEXT,
-      CONSTRAINT chk_ts_warden_assigned CHECK (length(assigned_at) = 24 AND substr(assigned_at,11,1) = 'T' AND substr(assigned_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_warden_revoked CHECK (revoked_at IS NULL OR (length(revoked_at) = 24 AND substr(revoked_at,11,1) = 'T' AND substr(revoked_at,24,1) = 'Z')),
-      FOREIGN KEY (institution_id, block_id) REFERENCES hostel_blocks(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_active_block_warden ON hostel_block_wardens(institution_id, block_id, staff_id) WHERE revoked_at IS NULL;
-
-    -- 4. Hostel Rooms
-    CREATE TABLE IF NOT EXISTS hostel_rooms (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      block_id TEXT NOT NULL,
-      room_number TEXT NOT NULL,
-      capacity INT NOT NULL,
-      deleted_at TEXT,
-      CONSTRAINT uq_room_inst_id UNIQUE (institution_id, id),
-      CONSTRAINT chk_room_capacity_positive CHECK (capacity > 0),
-      FOREIGN KEY (institution_id, block_id) REFERENCES hostel_blocks(institution_id, id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_room_inst_number_active ON hostel_rooms(institution_id, block_id, room_number) WHERE deleted_at IS NULL;
-
-    -- 5. Hostel Beds
-    CREATE TABLE IF NOT EXISTS hostel_beds (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      room_id TEXT NOT NULL,
-      bed_number TEXT NOT NULL,
-      is_maintenance BOOLEAN NOT NULL DEFAULT false,
-      deleted_at TEXT,
-      CONSTRAINT uq_bed_inst_id UNIQUE (institution_id, id),
-      FOREIGN KEY (institution_id, room_id) REFERENCES hostel_rooms(institution_id, id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_bed_inst_number_active ON hostel_beds(institution_id, room_id, bed_number) WHERE deleted_at IS NULL;
-
-    -- 6. Bed Allocations
-    CREATE TABLE IF NOT EXISTS hostel_bed_allocations (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      bed_id TEXT NOT NULL,
-      student_id TEXT NOT NULL,
-      academic_year_id TEXT NOT NULL,
-      allocated_at TEXT NOT NULL,
-      vacated_at TEXT,
-      allocated_staff_id TEXT NOT NULL,
-      CONSTRAINT chk_ts_alloc_allocated CHECK (length(allocated_at) = 24 AND substr(allocated_at,11,1) = 'T' AND substr(allocated_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_alloc_vacated CHECK (vacated_at IS NULL OR (length(vacated_at) = 24 AND substr(vacated_at,11,1) = 'T' AND substr(vacated_at,24,1) = 'Z')),
-      FOREIGN KEY (institution_id, bed_id) REFERENCES hostel_beds(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, student_id) REFERENCES students(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, allocated_staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, academic_year_id) REFERENCES academic_years(institution_id, id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_active_bed_allocation ON hostel_bed_allocations(institution_id, bed_id) WHERE vacated_at IS NULL;
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_active_student_allocation ON hostel_bed_allocations(institution_id, student_id) WHERE vacated_at IS NULL;
-
-    -- 7. Hostel Leaves
-    CREATE TABLE IF NOT EXISTS hostel_leaves (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      student_id TEXT NOT NULL,
-      leave_type TEXT NOT NULL CHECK (leave_type IN ('home', 'medical', 'emergency', 'outing')),
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'active', 'completed', 'rejected', 'cancelled')),
-      expected_out_at TEXT NOT NULL,
-      expected_in_at TEXT NOT NULL,
-      actual_out_at TEXT,
-      actual_in_at TEXT,
-      authorized_pickup_name TEXT NOT NULL,
-      authorized_pickup_phone TEXT NOT NULL,
-      parent_consent_received BOOLEAN NOT NULL DEFAULT false,
-      approved_staff_id TEXT,
-      approved_at TEXT,
-      created_at TEXT NOT NULL,
-      CONSTRAINT uq_leave_inst_id UNIQUE (institution_id, id),
-      CONSTRAINT uq_leave_inst_id_student UNIQUE (institution_id, id, student_id),
-      CONSTRAINT chk_leave_time_order CHECK (expected_in_at > expected_out_at),
-      CONSTRAINT chk_ts_leave_exp_out CHECK (length(expected_out_at) = 24 AND substr(expected_out_at,11,1) = 'T' AND substr(expected_out_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_leave_exp_in CHECK (length(expected_in_at) = 24 AND substr(expected_in_at,11,1) = 'T' AND substr(expected_in_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_leave_act_out CHECK (actual_out_at IS NULL OR (length(actual_out_at) = 24 AND substr(actual_out_at,11,1) = 'T' AND substr(actual_out_at,24,1) = 'Z')),
-      CONSTRAINT chk_ts_leave_act_in CHECK (actual_in_at IS NULL OR (length(actual_in_at) = 24 AND substr(actual_in_at,11,1) = 'T' AND substr(actual_in_at,24,1) = 'Z')),
-      CONSTRAINT chk_ts_leave_app CHECK (approved_at IS NULL OR (length(approved_at) = 24 AND substr(approved_at,11,1) = 'T' AND substr(approved_at,24,1) = 'Z')),
-      CONSTRAINT chk_ts_leave_created CHECK (length(created_at) = 24 AND substr(created_at,11,1) = 'T' AND substr(created_at,24,1) = 'Z'),
-      FOREIGN KEY (institution_id, student_id) REFERENCES students(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, approved_staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT
-    );
-
-    -- 8. Hostel Gate Passes
-    CREATE TABLE IF NOT EXISTS hostel_gate_passes (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      leave_id TEXT NOT NULL,
-      student_id TEXT NOT NULL,
-      pass_number TEXT NOT NULL,
-      token_hash TEXT NOT NULL,
-      valid_from TEXT NOT NULL,
-      valid_until TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'issued' CHECK (status IN ('issued', 'used_out', 'used_in', 'revoked')),
-      issued_staff_id TEXT NOT NULL,
-      issued_at TEXT NOT NULL,
-      revoked_at TEXT,
-      revoked_staff_id TEXT,
-      revoke_reason TEXT,
-      CONSTRAINT uq_pass_inst_id UNIQUE (institution_id, id),
-      CONSTRAINT chk_ts_pass_valid_from CHECK (length(valid_from) = 24 AND substr(valid_from,11,1) = 'T' AND substr(valid_from,24,1) = 'Z'),
-      CONSTRAINT chk_ts_pass_valid_until CHECK (length(valid_until) = 24 AND substr(valid_until,11,1) = 'T' AND substr(valid_until,24,1) = 'Z'),
-      CONSTRAINT chk_ts_pass_issued CHECK (length(issued_at) = 24 AND substr(issued_at,11,1) = 'T' AND substr(issued_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_pass_revoked CHECK (revoked_at IS NULL OR (length(revoked_at) = 24 AND substr(revoked_at,11,1) = 'T' AND substr(revoked_at,24,1) = 'Z')),
-      FOREIGN KEY (institution_id, leave_id, student_id) REFERENCES hostel_leaves(institution_id, id, student_id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, issued_staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, revoked_staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_pass_token_hash ON hostel_gate_passes(institution_id, token_hash);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_pass_number ON hostel_gate_passes(institution_id, pass_number);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_one_live_pass_per_leave ON hostel_gate_passes(institution_id, leave_id) WHERE status != 'revoked';
-
-    -- 9. Hostel Gate Logs
-    CREATE TABLE IF NOT EXISTS hostel_gate_logs (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      pass_id TEXT,
-      direction TEXT NOT NULL CHECK (direction IN ('out', 'in')),
-      scanned_at TEXT NOT NULL,
-      received_at TEXT NOT NULL,
-      device_id TEXT NOT NULL,
-      guard_staff_id TEXT NOT NULL,
-      verification_result TEXT NOT NULL CHECK (verification_result IN ('verified', 'tampered', 'expired_rejected', 'revoked_rejected', 'out_of_window_rejected', 'manual_override')),
-      override_reason TEXT,
-      idempotency_key TEXT NOT NULL,
-      CONSTRAINT chk_ts_log_scanned CHECK (length(scanned_at) = 24 AND substr(scanned_at,11,1) = 'T' AND substr(scanned_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_log_received CHECK (length(received_at) = 24 AND substr(received_at,11,1) = 'T' AND substr(received_at,24,1) = 'Z'),
-      FOREIGN KEY (institution_id, pass_id) REFERENCES hostel_gate_passes(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, guard_staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_gate_log_idempotency ON hostel_gate_logs(institution_id, idempotency_key);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_verified_scan ON hostel_gate_logs(institution_id, pass_id, direction) 
-      WHERE pass_id IS NOT NULL AND verification_result IN ('verified', 'manual_override');
-
-    -- 10. Hostel Fines
-    CREATE TABLE IF NOT EXISTS hostel_fines (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      student_id TEXT NOT NULL,
-      leave_id TEXT,
-      fine_category TEXT NOT NULL CHECK (fine_category IN ('late_return', 'disciplinary', 'property_damage', 'misconduct')),
-      days_late INT NOT NULL DEFAULT 0,
-      rate_per_day INT NOT NULL DEFAULT 0,
-      total_amount INT NOT NULL,
-      paid_amount INT NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'assessed' CHECK (status IN ('assessed', 'partially_paid', 'paid', 'waived')),
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      CONSTRAINT uq_fine_inst_id UNIQUE (institution_id, id),
-      CONSTRAINT chk_fine_amounts_positive CHECK (total_amount > 0 AND paid_amount >= 0 AND paid_amount <= total_amount),
-      CONSTRAINT chk_ts_fine_created CHECK (length(created_at) = 24 AND substr(created_at,11,1) = 'T' AND substr(created_at,24,1) = 'Z'),
-      CONSTRAINT chk_ts_fine_updated CHECK (length(updated_at) = 24 AND substr(updated_at,11,1) = 'T' AND substr(updated_at,24,1) = 'Z'),
-      FOREIGN KEY (institution_id, student_id) REFERENCES students(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, leave_id, student_id) REFERENCES hostel_leaves(institution_id, id, student_id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_single_late_fine_per_leave ON hostel_fines(institution_id, leave_id) 
-      WHERE leave_id IS NOT NULL AND fine_category = 'late_return';
-
-    -- 11. Hostel Fine Actions
-    CREATE TABLE IF NOT EXISTS hostel_fine_actions (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL,
-      fine_id TEXT NOT NULL,
-      action_type TEXT NOT NULL CHECK (action_type IN ('ASSESSED', 'WAIVED')),
-      amount INT NOT NULL,
-      idempotency_key TEXT NOT NULL,
-      payload_hash TEXT NOT NULL,
-      actor_type TEXT NOT NULL CHECK (actor_type IN ('system', 'staff')),
-      actor_staff_id TEXT,
-      created_at TEXT NOT NULL,
-      CONSTRAINT chk_actor_system_consistency CHECK (
-        (actor_type = 'system' AND actor_staff_id IS NULL) OR 
-        (actor_type = 'staff' AND actor_staff_id IS NOT NULL)
-      ),
-      CONSTRAINT chk_ts_fine_act_created CHECK (length(created_at) = 24 AND substr(created_at,11,1) = 'T' AND substr(created_at,24,1) = 'Z'),
-      FOREIGN KEY (institution_id, fine_id) REFERENCES hostel_fines(institution_id, id) ON DELETE RESTRICT,
-      FOREIGN KEY (institution_id, actor_staff_id) REFERENCES staff_institutions(institution_id, staff_id) ON DELETE RESTRICT
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_fine_action_idempotency ON hostel_fine_actions(institution_id, idempotency_key);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_single_assessed_per_fine ON hostel_fine_actions(institution_id, fine_id) WHERE action_type = 'ASSESSED';
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_single_waiver_per_fine ON hostel_fine_actions(institution_id, fine_id) WHERE action_type = 'WAIVED';
   `);
-  log("[SETUP] 11 hostel tables + stubs created under maintenance role.");
+  log("[SETUP] Base stubs created under maintenance role.");
 
-  // 7. Apply 02-policies.sql as table owner (maintenance role)
-  log("\n[SETUP] Applying 02-policies.sql as thaibahive_maintenance...");
-  const policiesSql = fs.readFileSync(path.resolve("./sql/02-policies.sql"), "utf-8");
-  await maintClient.query(policiesSql);
+  // Apply actual generated PostgreSQL migration: drizzle/postgres/0031_common_starhawk.sql
+  log("\n[SETUP] Applying generated PostgreSQL migration: drizzle/postgres/0031_common_starhawk.sql...");
+  const migrationPath = path.resolve("../drizzle/postgres/0031_common_starhawk.sql");
+  const migrationSql = fs.readFileSync(migrationPath, "utf-8");
+  const pgStatements = migrationSql
+    .split("--> statement-breakpoint")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  for (let i = 0; i < pgStatements.length; i++) {
+    const stmt = pgStatements[i];
+    try {
+      await maintClient.query(stmt);
+    } catch (e: any) {
+      log(`Error on statement #${i}: \n${stmt}`);
+      throw e;
+    }
+  }
   await maintClient.end();
-  log("[SETUP] Policies, append-only revokes, and FORCE RLS applied.");
+  log(`[SETUP] Generated PostgreSQL migration applied successfully (${pgStatements.length} statements: tables, FKs, partial indexes, revokes, and RLS policies).`);
 
   // =========================================================================
   // RUN ALL TEST SUITES

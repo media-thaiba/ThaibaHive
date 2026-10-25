@@ -39,16 +39,69 @@ export async function runTest2(): Promise<{
   }
 
   const client = createClient({ url: `file:${schemaDbPath}` });
-  const sqlDdl = fs.readFileSync(path.resolve("./sql/03-sqlite-schema.sql"), "utf-8");
+  await client.execute("PRAGMA foreign_keys = ON;");
 
-  // Strip single-line comments and execute DDL statements sequentially
-  const cleanSql = sqlDdl.replace(/--[^\r\n]*/g, "").trim();
-  const statements = cleanSql
-    .split(";")
+  // Create base stubs
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS institutions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    );
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS students (
+      id TEXT PRIMARY KEY,
+      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
+      admission_number TEXT NOT NULL,
+      full_name TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      UNIQUE(institution_id, id),
+      UNIQUE(institution_id, admission_number)
+    );
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS staff (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      full_name TEXT NOT NULL
+    );
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS staff_institutions (
+      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
+      staff_id TEXT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
+      role TEXT NOT NULL,
+      UNIQUE(institution_id, staff_id)
+    );
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS academic_years (
+      id TEXT PRIMARY KEY,
+      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
+      name TEXT NOT NULL,
+      is_current TEXT NOT NULL DEFAULT 'true',
+      UNIQUE(institution_id, id)
+    );
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT,
+      current_hash TEXT
+    );
+  `);
+
+  // Apply actual generated SQLite migration: drizzle/0045_cultured_rawhide_kid.sql
+  const sqliteMigrationPath = path.resolve("../drizzle/0045_cultured_rawhide_kid.sql");
+  const sqliteMigrationSql = fs.readFileSync(sqliteMigrationPath, "utf-8");
+  const sqliteStatements = sqliteMigrationSql
+    .split("--> statement-breakpoint")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  for (const stmt of statements) {
+  for (const stmt of sqliteStatements) {
     await client.execute(stmt);
   }
 
