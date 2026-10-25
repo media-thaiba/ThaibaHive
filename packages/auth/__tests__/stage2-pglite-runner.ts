@@ -137,6 +137,15 @@ async function runStage2PgVerification() {
       "entity_type" text NOT NULL,
       "entity_id" text,
       "payload" jsonb,
+      "sequence_number" integer DEFAULT 1 NOT NULL,
+      "previous_hash" text,
+      "current_hash" text NOT NULL,
+      "signature" text,
+      "merkle_root_id" text,
+      "merkle_proof" text,
+      "ip_address" text,
+      "user_agent" text,
+      "timestamp" text DEFAULT (current_timestamp) NOT NULL,
       "created_at" text DEFAULT (current_timestamp) NOT NULL
     );
   `);

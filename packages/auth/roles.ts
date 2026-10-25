@@ -37,6 +37,8 @@ const basePermissions = {
     "system:cache:sync",
     "system:dr",
     "system:read",
+    "system:audit:read",
+    "system:audit:verify",
     "system:cron",
     "cache:manage",
     "media:reconcile",
@@ -778,7 +780,9 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "institutions:read",
     "auth:logout",
     "system:sessions:view",
-    "system:sessions:terminate"
+    "system:sessions:terminate",
+    "system:audit:read",
+    "system:audit:verify"
   ],
   admin: [
     "system:sessions:terminate",
@@ -1171,6 +1175,8 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
   ],
   principal: [
     "system:sessions:terminate",
+    "system:audit:read",
+    "system:audit:verify",
     "academic.student.admissions",
     "students:create",
     "students:read",
