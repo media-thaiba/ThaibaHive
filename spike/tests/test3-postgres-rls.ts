@@ -65,9 +65,9 @@ export async function runTest3(
 
     // 2. Seed Tenant A and Tenant B as maintenance role
     await maint.query(`
-      INSERT INTO institutions (id, name, slug, created_at) VALUES 
-        ('inst-a', 'Institution Alpha', 'alpha', '2026-10-25T00:00:00.000Z'),
-        ('inst-b', 'Institution Beta', 'beta', '2026-10-25T00:00:00.000Z')
+      INSERT INTO institutions (id, name, code, created_at) VALUES 
+        ('inst-a', 'Institution Alpha', 'ALPHA_T3', '2026-10-25T00:00:00.000Z'),
+        ('inst-b', 'Institution Beta', 'BETA_T3', '2026-10-25T00:00:00.000Z')
       ON CONFLICT DO NOTHING;
 
       INSERT INTO hostel_blocks (id, institution_id, name, gender, deleted_at) VALUES

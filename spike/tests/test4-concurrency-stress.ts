@@ -33,17 +33,17 @@ export async function runTest4(appDbUrl: string): Promise<{
       await initClient.query(`
         BEGIN;
         SELECT set_config('app.current_tenant_id', 'inst-a', true);
+        INSERT INTO institutions (id, name, code, created_at) VALUES ('inst-a', 'Inst Alpha', 'INST_A_T4', '2026-10-25T00:00:00.000Z') ON CONFLICT DO NOTHING;
         INSERT INTO hostel_blocks (id, institution_id, name, gender) 
         VALUES ('block-a', 'inst-a', 'Block A', 'boys') ON CONFLICT DO NOTHING;
         INSERT INTO hostel_rooms (id, institution_id, block_id, room_number, capacity)
         VALUES ('room-a1', 'inst-a', 'block-a', '101', 500) 
         ON CONFLICT (id) DO UPDATE SET capacity = 500;
-        INSERT INTO staff (id, email, full_name)
-        VALUES ('staff-warden-1', 'warden@inst-a.edu', 'Warden One') ON CONFLICT DO NOTHING;
-        INSERT INTO staff_institutions (institution_id, staff_id, role)
-        VALUES ('inst-a', 'staff-warden-1', 'warden') ON CONFLICT DO NOTHING;
-        INSERT INTO academic_years (id, institution_id, name, is_current)
-        VALUES ('ay-2026', 'inst-a', '2026-2027', 'true') ON CONFLICT DO NOTHING;
+        INSERT INTO staff (id, employee_id, email, first_name, last_name, role)
+        VALUES ('staff-warden-1', 'EMP-W1', 'warden@inst-a.edu', 'Warden', 'One', 'staff') ON CONFLICT DO NOTHING;
+        INSERT INTO staff_institutions (id, institution_id, staff_id) VALUES ('si-w1', 'inst-a', 'staff-warden-1') ON CONFLICT DO NOTHING;
+        INSERT INTO academic_years (id, institution_id, name, start_date, end_date)
+        VALUES ('ay-2026', 'inst-a', '2026-2027', '2026-06-01', '2027-05-31') ON CONFLICT DO NOTHING;
         INSERT INTO hostel_block_wardens (id, institution_id, block_id, staff_id, assigned_at)
         VALUES ('warden-assign-1', 'inst-a', 'block-a', 'staff-warden-1', '2026-10-25T00:00:00.000Z')
         ON CONFLICT DO NOTHING;
@@ -66,10 +66,10 @@ export async function runTest4(appDbUrl: string): Promise<{
           SELECT set_config('app.current_tenant_id', 'inst-a', true);
           INSERT INTO hostel_beds (id, institution_id, room_id, bed_number, is_maintenance)
           VALUES ('${bedId}', 'inst-a', 'room-a1', 'B${i}', false) ON CONFLICT DO NOTHING;
-          INSERT INTO students (id, institution_id, admission_number, full_name, gender)
+          INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender)
           VALUES 
-            ('${student1}', 'inst-a', 'ADM-A-${i}-${Date.now()}', 'Student 1', 'male'),
-            ('${student2}', 'inst-a', 'ADM-B-${i}-${Date.now()}', 'Student 2', 'male');
+            ('${student1}', 'inst-a', 'ADM-A-${i}-${Date.now()}', 'Student', '1', 'male'),
+            ('${student2}', 'inst-a', 'ADM-B-${i}-${Date.now()}', 'Student', '2', 'male');
           COMMIT;
         `);
       } finally {
@@ -120,8 +120,8 @@ export async function runTest4(appDbUrl: string): Promise<{
             ('${bedA}', 'inst-a', 'room-a1', 'BA${i}', false),
             ('${bedB}', 'inst-a', 'room-a1', 'BB${i}', false)
           ON CONFLICT DO NOTHING;
-          INSERT INTO students (id, institution_id, admission_number, full_name, gender)
-          VALUES ('${studentId}', 'inst-a', 'ADM-S-${i}-${Date.now()}', 'Student S', 'male');
+          INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender)
+          VALUES ('${studentId}', 'inst-a', 'ADM-S-${i}-${Date.now()}', 'Student', 'S', 'male');
           COMMIT;
         `);
       } finally {
@@ -166,8 +166,8 @@ export async function runTest4(appDbUrl: string): Promise<{
         await seedClient.query(`
           BEGIN;
           SELECT set_config('app.current_tenant_id', 'inst-a', true);
-          INSERT INTO students (id, institution_id, admission_number, full_name, gender)
-          VALUES ('${studentId}', 'inst-a', 'ADM-CAS-${i}-${Date.now()}', 'CAS Student', 'male');
+          INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender)
+          VALUES ('${studentId}', 'inst-a', 'ADM-CAS-${i}-${Date.now()}', 'CAS', 'Student', 'male');
           INSERT INTO hostel_leaves (
             id, institution_id, student_id, leave_type, status,
             expected_out_at, expected_in_at, authorized_pickup_name, authorized_pickup_phone,
@@ -243,8 +243,8 @@ export async function runTest4(appDbUrl: string): Promise<{
           ('${capRoomId}-b2', 'inst-a', '${capRoomId}', 'B2'),
           ('${capRoomId}-b3', 'inst-a', '${capRoomId}', 'B3'),
           ('${capRoomId}-b4', 'inst-a', '${capRoomId}', 'B4');
-        INSERT INTO students (id, institution_id, admission_number, full_name, gender) VALUES
-          ('${sExist}', 'inst-a', 'ADM-E-${Date.now()}', 'Existing Student', 'male');
+        INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender) VALUES
+          ('${sExist}', 'inst-a', 'ADM-E-${Date.now()}', 'Existing', 'Student', 'male');
         INSERT INTO hostel_bed_allocations (id, institution_id, bed_id, student_id, academic_year_id, allocated_at, allocated_staff_id)
         VALUES (gen_random_uuid(), 'inst-a', '${capRoomId}-b1', '${sExist}', 'ay-2026', '2026-10-25T00:00:00.000Z', 'staff-warden-1');
         COMMIT;
@@ -291,10 +291,10 @@ export async function runTest4(appDbUrl: string): Promise<{
       await seedLockClient.query(`
         BEGIN;
         SELECT set_config('app.current_tenant_id', 'inst-a', true);
-        INSERT INTO students (id, institution_id, admission_number, full_name, gender) VALUES
-          ('${sCap1}', 'inst-a', 'ADM-C1-${Date.now()}', 'Candidate 1', 'male'),
-          ('${sCap2}', 'inst-a', 'ADM-C2-${Date.now()}', 'Candidate 2', 'male'),
-          ('${sCap3}', 'inst-a', 'ADM-C3-${Date.now()}', 'Candidate 3', 'male');
+        INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender) VALUES
+          ('${sCap1}', 'inst-a', 'ADM-C1-${Date.now()}', 'Candidate', '1', 'male'),
+          ('${sCap2}', 'inst-a', 'ADM-C2-${Date.now()}', 'Candidate', '2', 'male'),
+          ('${sCap3}', 'inst-a', 'ADM-C3-${Date.now()}', 'Candidate', '3', 'male');
         COMMIT;
       `);
     } finally {
@@ -327,9 +327,9 @@ export async function runTest4(appDbUrl: string): Promise<{
         INSERT INTO hostel_beds (id, institution_id, room_id, bed_number) VALUES
           ('${unlRoomId}-b1', 'inst-a', '${unlRoomId}', 'B1'),
           ('${unlRoomId}-b2', 'inst-a', '${unlRoomId}', 'B2');
-        INSERT INTO students (id, institution_id, admission_number, full_name, gender) VALUES
-          ('${sUnl1}', 'inst-a', 'ADM-U1-${Date.now()}', 'Unl 1', 'male'),
-          ('${sUnl2}', 'inst-a', 'ADM-U2-${Date.now()}', 'Unl 2', 'male');
+        INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender) VALUES
+          ('${sUnl1}', 'inst-a', 'ADM-U1-${Date.now()}', 'Unl', '1', 'male'),
+          ('${sUnl2}', 'inst-a', 'ADM-U2-${Date.now()}', 'Unl', '2', 'male');
         COMMIT;
       `);
     } finally {

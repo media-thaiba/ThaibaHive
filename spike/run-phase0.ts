@@ -136,29 +136,38 @@ async function main() {
   `);
   log("[SETUP] Base stubs created under maintenance role.");
 
-  // Apply actual generated PostgreSQL migration: drizzle/postgres/0031_common_starhawk.sql
-  log("\n[SETUP] Applying generated PostgreSQL migration: drizzle/postgres/0031_common_starhawk.sql...");
-  const migrationPath = path.resolve("../drizzle/postgres/0031_common_starhawk.sql");
-  const migrationSql = fs.readFileSync(migrationPath, "utf-8");
-  const pgStatements = migrationSql
-    .split("--> statement-breakpoint")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  // Apply actual generated PostgreSQL migrations: 0031_odd_domino.sql, 0032_simple_nextwave.sql, 0033_hostel_rls_policies.sql
+  const pgMigrationFiles = [
+    '0031_odd_domino.sql',
+    '0032_simple_nextwave.sql',
+    '0033_hostel_rls_policies.sql',
+  ];
 
-  for (let i = 0; i < pgStatements.length; i++) {
-    const stmt = pgStatements[i];
-    try {
-      await maintClient.query(stmt);
-    } catch (e: any) {
-      log(`Error on statement #${i}: \n${stmt}`);
-      throw e;
+  let totalPgStatements = 0;
+  for (const migFile of pgMigrationFiles) {
+    const migPath = path.resolve('../drizzle/postgres/' + migFile);
+    log('\n[SETUP] Applying PostgreSQL migration: ' + migFile + '...');
+    const migSql = fs.readFileSync(migPath, 'utf-8');
+    const stmts = migSql
+      .split('--> statement-breakpoint')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    for (let i = 0; i < stmts.length; i++) {
+      const stmt = stmts[i];
+      try {
+        await maintClient.query(stmt);
+      } catch (e) {
+        log('Error in ' + migFile + ' statement #' + i + ': \n' + stmt);
+        throw e;
+      }
     }
+    totalPgStatements += stmts.length;
   }
   await maintClient.end();
-  log(`[SETUP] Generated PostgreSQL migration applied successfully (${pgStatements.length} statements: tables, FKs, partial indexes, revokes, and RLS policies).`);
+  log('[SETUP] Generated PostgreSQL migrations applied successfully (' + totalPgStatements + ' statements across ' + pgMigrationFiles.length + ' files: parent keys, tables, FKs, partial indexes, revokes, and RLS policies).\n');
 
-  // =========================================================================
-  // RUN ALL TEST SUITES
+  // =========================================================================\n  // RUN ALL TEST SUITES
   // =========================================================================
 
   log("\n---------------------------------------------------------------");

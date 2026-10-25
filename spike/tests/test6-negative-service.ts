@@ -7,7 +7,7 @@ import { allocateHostelBed } from "../src/service.js";
 
 const { Pool } = pg;
 
-export async function runTest6(appDbUrl: string): Promise<{
+export async function runTest6(appDbUrl: string, existingSqliteDbPath?: string): Promise<{
   totalChecks: number;
   passedChecks: number;
   allPassed: boolean;
@@ -42,14 +42,14 @@ export async function runTest6(appDbUrl: string): Promise<{
       SELECT set_config('app.current_tenant_id', 'inst-a', true);
 
       -- Additional staff
-      INSERT INTO staff (id, email, full_name) VALUES 
-        ('${revokedWarden}', 'revoked@inst-a.edu', 'Revoked Warden'),
-        ('${unassignedStaff}', 'unassigned@inst-a.edu', 'Unassigned Staff')
+      INSERT INTO staff (id, employee_id, email, first_name, last_name, role) VALUES 
+        ('${revokedWarden}', 'EMP-REV-1', 'revoked@inst-a.edu', 'Revoked', 'Warden', 'staff'),
+        ('${unassignedStaff}', 'EMP-UNASS-1', 'unassigned@inst-a.edu', 'Unassigned', 'Staff', 'staff')
       ON CONFLICT DO NOTHING;
 
-      INSERT INTO staff_institutions (institution_id, staff_id, role) VALUES 
-        ('${instId}', '${revokedWarden}', 'warden'),
-        ('${instId}', '${unassignedStaff}', 'warden')
+      INSERT INTO staff_institutions (id, institution_id, staff_id) VALUES 
+        ('si-rev-1', '${instId}', '${revokedWarden}'),
+        ('si-unass-1', '${instId}', '${unassignedStaff}')
       ON CONFLICT DO NOTHING;
 
       -- Revoked warden assignment
@@ -58,13 +58,13 @@ export async function runTest6(appDbUrl: string): Promise<{
       ON CONFLICT DO NOTHING;
 
       -- Female student
-      INSERT INTO students (id, institution_id, admission_number, full_name, gender)
-      VALUES ('s-female-1', '${instId}', 'ADM-FEM-1', 'Female Student', 'female')
+      INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender)
+      VALUES ('s-female-1', '${instId}', 'ADM-FEM-1', 'Female', 'Student', 'female')
       ON CONFLICT DO NOTHING;
 
       -- Male student for test
-      INSERT INTO students (id, institution_id, admission_number, full_name, gender)
-      VALUES ('s-valid-male', '${instId}', 'ADM-VM-1', 'Valid Male Student', 'male')
+      INSERT INTO students (id, institution_id, admission_no, first_name, last_name, gender)
+      VALUES ('s-valid-male', '${instId}', 'ADM-VM-1', 'Valid', 'Male', 'male')
       ON CONFLICT DO NOTHING;
 
       -- Maintenance bed
@@ -261,7 +261,7 @@ export async function runTest6(appDbUrl: string): Promise<{
   // =========================================================================
   // 2. LibSQL / SQLite Negative Paths
   // =========================================================================
-  const sqliteDbPath = path.resolve("./spike-sqlite-schema.db");
+  const sqliteDbPath = existingSqliteDbPath || path.resolve("./spike-sqlite-schema.db");
   const sqliteClient = createClient({ url: `file:${sqliteDbPath}` });
 
   try {
@@ -275,18 +275,18 @@ export async function runTest6(appDbUrl: string): Promise<{
       VALUES ('w-sqlite-1', '${instId}', 'b-1', '${goodWarden}', '2026-10-25T00:00:00.000Z');
     `);
     await sqliteClient.execute(`
-      INSERT OR IGNORE INTO staff (id, email, full_name) VALUES ('staff-sqlite-revoked', 'rev@sqlite.org', 'Revoked SQLite');
+      INSERT OR IGNORE INTO staff (id, employee_id, email, first_name, last_name, role) VALUES ('staff-sqlite-revoked', 'EMP-SQL-REV', 'rev@sqlite.org', 'Revoked', 'SQLite', 'staff');
     `);
     await sqliteClient.execute(`
-      INSERT OR IGNORE INTO staff_institutions (institution_id, staff_id, role) VALUES ('${instId}', 'staff-sqlite-revoked', 'warden');
+      INSERT OR IGNORE INTO staff_institutions (id, institution_id, staff_id) VALUES ('si-sql-rev', '${instId}', 'staff-sqlite-revoked');
     `);
     await sqliteClient.execute(`
       INSERT OR IGNORE INTO hostel_block_wardens (id, institution_id, block_id, staff_id, assigned_at, revoked_at)
       VALUES ('w-sqlite-rev', '${instId}', 'b-1', 'staff-sqlite-revoked', '2026-01-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z');
     `);
     await sqliteClient.execute(`
-      INSERT OR IGNORE INTO students (id, institution_id, admission_number, full_name, gender)
-      VALUES ('s-sqlite-fem', '${instId}', 'ADM-SQL-F', 'Female SQLite', 'female');
+      INSERT OR IGNORE INTO students (id, institution_id, admission_no, first_name, last_name, gender)
+      VALUES ('s-sqlite-fem', '${instId}', 'ADM-SQL-F', 'Female', 'SQLite', 'female');
     `);
     await sqliteClient.execute(`
       INSERT OR IGNORE INTO hostel_beds (id, institution_id, room_id, bed_number, is_maintenance)

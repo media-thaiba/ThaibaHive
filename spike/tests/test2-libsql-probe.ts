@@ -4,7 +4,7 @@ import { classifyAllocationViolation } from "../src/errors.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
 
-export async function runTest2(): Promise<{
+export async function runTest2(existingDbPath?: string): Promise<{
   tx1Pragma: number;
   tx1OrphanRejected: boolean;
   tx2Pragma: number;
@@ -32,78 +32,10 @@ export async function runTest2(): Promise<{
     throw new Error(`Test 2 failed: LibSQL foreign key invariant violated: ${JSON.stringify(res)}`);
   }
 
-  // 2. SQLite Schema & PRAGMA foreign_key_list verification
-  const schemaDbPath = path.resolve("./spike-sqlite-schema.db");
-  if (fs.existsSync(schemaDbPath)) {
-    try { fs.unlinkSync(schemaDbPath); } catch (_) {}
-  }
-
+  // 2. SQLite Schema & PRAGMA foreign_key_list verification on chain database
+  const schemaDbPath = existingDbPath || (fs.existsSync("./spike/spike-chain.db") ? path.resolve("./spike/spike-chain.db") : path.resolve("./spike-chain.db"));
   const client = createClient({ url: `file:${schemaDbPath}` });
   await client.execute("PRAGMA foreign_keys = ON;");
-
-  // Create base stubs
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS institutions (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      slug TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS students (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
-      admission_number TEXT NOT NULL,
-      full_name TEXT NOT NULL,
-      gender TEXT NOT NULL,
-      UNIQUE(institution_id, id),
-      UNIQUE(institution_id, admission_number)
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS staff (
-      id TEXT PRIMARY KEY,
-      email TEXT NOT NULL UNIQUE,
-      full_name TEXT NOT NULL
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS staff_institutions (
-      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
-      staff_id TEXT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
-      role TEXT NOT NULL,
-      UNIQUE(institution_id, staff_id)
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS academic_years (
-      id TEXT PRIMARY KEY,
-      institution_id TEXT NOT NULL REFERENCES institutions(id) ON DELETE RESTRICT,
-      name TEXT NOT NULL,
-      is_current TEXT NOT NULL DEFAULT 'true',
-      UNIQUE(institution_id, id)
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS audit_logs (
-      id TEXT PRIMARY KEY,
-      tenant_id TEXT,
-      current_hash TEXT
-    );
-  `);
-
-  // Apply actual generated SQLite migration: drizzle/0045_cultured_rawhide_kid.sql
-  const sqliteMigrationPath = path.resolve("../drizzle/0045_cultured_rawhide_kid.sql");
-  const sqliteMigrationSql = fs.readFileSync(sqliteMigrationPath, "utf-8");
-  const sqliteStatements = sqliteMigrationSql
-    .split("--> statement-breakpoint")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-
-  for (const stmt of sqliteStatements) {
-    await client.execute(stmt);
-  }
 
   // Query PRAGMA foreign_key_list for all 11 hostel tables
   const hostelTables = [
@@ -136,20 +68,20 @@ export async function runTest2(): Promise<{
   }
 
   // 3. Real Driver Error Classification on LibSQL (@libsql/client@0.17.4)
-  // Seed base stubs and room/bed
-  await client.execute(`INSERT INTO institutions (id, name, slug, created_at) VALUES ('inst-1', 'Inst One', 'inst-1', '2026-10-25T00:00:00.000Z');`);
-  await client.execute(`INSERT INTO staff (id, email, full_name) VALUES ('staff-1', 'staff@test.com', 'Staff One');`);
-  await client.execute(`INSERT INTO staff_institutions (institution_id, staff_id, role) VALUES ('inst-1', 'staff-1', 'warden');`);
-  await client.execute(`INSERT INTO academic_years (id, institution_id, name, is_current) VALUES ('ay-1', 'inst-1', '2026', 'true');`);
-  await client.execute(`INSERT INTO hostel_blocks (id, institution_id, name, gender) VALUES ('b-1', 'inst-1', 'Block 1', 'boys');`);
-  await client.execute(`INSERT INTO hostel_rooms (id, institution_id, block_id, room_number, capacity) VALUES ('r-1', 'inst-1', 'b-1', '101', 10);`);
-  await client.execute(`INSERT INTO hostel_beds (id, institution_id, room_id, bed_number) VALUES ('bed-libsql-1', 'inst-1', 'r-1', 'B1');`);
-  await client.execute(`INSERT INTO students (id, institution_id, admission_number, full_name, gender) VALUES ('s-libsql-1', 'inst-1', 'ADM-1', 'Student 1', 'male');`);
-  await client.execute(`INSERT INTO students (id, institution_id, admission_number, full_name, gender) VALUES ('s-libsql-2', 'inst-1', 'ADM-2', 'Student 2', 'male');`);
+  // Seed parent tables with real schema columns
+  await client.execute(`INSERT OR IGNORE INTO institutions (id, name, code, created_at) VALUES ('inst-1', 'Inst One', 'CODE-1', '2026-10-25T00:00:00.000Z');`);
+  await client.execute(`INSERT OR IGNORE INTO staff (id, employee_id, email, first_name, last_name, role) VALUES ('staff-1', 'EMP-1', 'staff@test.com', 'Staff', 'One', 'staff');`);
+  await client.execute(`INSERT OR IGNORE INTO staff_institutions (id, institution_id, staff_id) VALUES ('si-1', 'inst-1', 'staff-1');`);
+  await client.execute(`INSERT OR IGNORE INTO academic_years (id, institution_id, name, start_date, end_date) VALUES ('ay-1', 'inst-1', '2026', '2026-06-01', '2027-05-31');`);
+  await client.execute(`INSERT OR IGNORE INTO hostel_blocks (id, institution_id, name, gender) VALUES ('b-1', 'inst-1', 'Block 1', 'boys');`);
+  await client.execute(`INSERT OR IGNORE INTO hostel_rooms (id, institution_id, block_id, room_number, capacity) VALUES ('r-1', 'inst-1', 'b-1', '101', 10);`);
+  await client.execute(`INSERT OR IGNORE INTO hostel_beds (id, institution_id, room_id, bed_number) VALUES ('bed-libsql-1', 'inst-1', 'r-1', 'B1');`);
+  await client.execute(`INSERT OR IGNORE INTO students (id, institution_id, admission_no, first_name, last_name, gender) VALUES ('s-libsql-1', 'inst-1', 'ADM-1', 'Student', '1', 'male');`);
+  await client.execute(`INSERT OR IGNORE INTO students (id, institution_id, admission_no, first_name, last_name, gender) VALUES ('s-libsql-2', 'inst-1', 'ADM-2', 'Student', '2', 'male');`);
 
   // (a) First allocation succeeds
   await client.execute({
-    sql: `INSERT INTO hostel_bed_allocations (id, institution_id, bed_id, student_id, academic_year_id, allocated_at, allocated_staff_id) VALUES ('alloc-1', 'inst-1', 'bed-libsql-1', 's-libsql-1', 'ay-1', '2026-10-25T00:00:00.000Z', 'staff-1');`
+    sql: `INSERT OR IGNORE INTO hostel_bed_allocations (id, institution_id, bed_id, student_id, academic_year_id, allocated_at, allocated_staff_id) VALUES ('alloc-1', 'inst-1', 'bed-libsql-1', 's-libsql-1', 'ay-1', '2026-10-25T00:00:00.000Z', 'staff-1');`
   });
 
   // (b) Bed collision on LibSQL: insert different student on same active bed -> Must throw UNIQUE constraint failed
@@ -166,7 +98,7 @@ export async function runTest2(): Promise<{
   }
 
   // (c) Student collision on LibSQL: insert same student on second bed -> Must throw UNIQUE constraint failed
-  await client.execute(`INSERT INTO hostel_beds (id, institution_id, room_id, bed_number) VALUES ('bed-libsql-2', 'inst-1', 'r-1', 'B2');`);
+  await client.execute(`INSERT OR IGNORE INTO hostel_beds (id, institution_id, room_id, bed_number) VALUES ('bed-libsql-2', 'inst-1', 'r-1', 'B2');`);
   let sqliteStudentCollisionPassed = false;
   try {
     await client.execute({
