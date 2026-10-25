@@ -1,0 +1,147 @@
+===============================================================
+       TPSH HOSTEL ERP - PHASE 0 EMPIRICAL SPIKE HARNESS      
+===============================================================
+
+--- ENVIRONMENT & DEPENDENCY VERSIONS BLOCK ---
+Node.js Version: v20.19.6
+pnpm Version: 12.9.1
+drizzle-orm Version: 0.45.2 (pinned from pnpm-lock.yaml)
+drizzle-kit Version: 0.31.10 (pinned from pnpm-lock.yaml)
+pg Version: 8.22.0 (pinned from pnpm-lock.yaml)
+@libsql/client Version: 0.17.4 (pinned from pnpm-lock.yaml)
+---------------------------------------------------------------
+
+--- POOL CONFIGURATION PROVENANCE ---
+Configured: pg.Pool({ max: 10, idleTimeoutMillis: 30000, connectionTimeoutMillis: 5000 })
+Provenance: Copied directly from packages/db/index.ts (lines 102, 126, 127).
+---------------------------------------------------------------
+
+[PHASE 0] Git baseline recorded.
+[PHASE 0] All database URLs validated against 3-way safety guard (127.0.0.1:54329, 'spike_').
+
+[SETUP] Applying 01-roles.sql as postgres superuser...
+[SETUP] Roles, mock Supabase roles, and default privileges applied.
+
+[SETUP] Applying Schema DDL as thaibahive_maintenance (table owner)...
+[SETUP] 11 hostel tables + stubs created under maintenance role.
+
+[SETUP] Applying 02-policies.sql as thaibahive_maintenance...
+[SETUP] Policies, append-only revokes, and FORCE RLS applied.
+
+---------------------------------------------------------------
+RUNNING TEST 1: Dual-Dialect AST Parity & DDL Constraints Check
+---------------------------------------------------------------
+Test 1 Result: Parity Passed = true
+Exports Matched: 11 tables
+PostgreSQL Scoped FK Constraints: 21 total (19 composite, 2 single-tenant)
+PostgreSQL Scoped Partial Indexes Verified: 11 / 11
+PostgreSQL Scoped Timestamp CHECK Constraints: 20 / 20
+PostgreSQL Total CHECK Constraints Verified: 36
+Partial Indexes List:
+  - hostel_bed_allocations.idx_active_bed_allocation
+  - hostel_bed_allocations.idx_active_student_allocation
+  - hostel_beds.idx_bed_inst_number_active
+  - hostel_block_wardens.idx_active_block_warden
+  - hostel_blocks.idx_block_inst_name_active
+  - hostel_fine_actions.idx_single_assessed_per_fine
+  - hostel_fine_actions.idx_single_waiver_per_fine
+  - hostel_fines.idx_single_late_fine_per_leave
+  - hostel_gate_logs.idx_unique_verified_scan
+  - hostel_gate_passes.idx_one_live_pass_per_leave
+  - hostel_rooms.idx_room_inst_number_active
+
+---------------------------------------------------------------
+RUNNING TEST 2: LibSQL Connection Pragma, FKs & Collision Probe
+---------------------------------------------------------------
+Test 2 Result: Passed = true
+Tx 1 PRAGMA foreign_keys: 1, Orphan Rejected: true
+Tx 2 PRAGMA foreign_keys: 1, Orphan Rejected: true
+Non-Tx Statement Orphan Rejected: true
+LibSQL Bed Collision Correctly Classified: true
+LibSQL Student Collision Correctly Classified: true
+LibSQL SQLite Foreign Keys Verified: 21 constraints across 42 column rows
+  - hostel_settings: 1 constraint(s) (1 column row(s))
+  - hostel_blocks: 1 constraint(s) (1 column row(s))
+  - hostel_block_wardens: 2 constraint(s) (4 column row(s))
+  - hostel_rooms: 1 constraint(s) (2 column row(s))
+  - hostel_beds: 1 constraint(s) (2 column row(s))
+  - hostel_bed_allocations: 4 constraint(s) (8 column row(s))
+  - hostel_leaves: 2 constraint(s) (4 column row(s))
+  - hostel_gate_passes: 3 constraint(s) (7 column row(s))
+  - hostel_gate_logs: 2 constraint(s) (4 column row(s))
+  - hostel_fines: 2 constraint(s) (5 column row(s))
+  - hostel_fine_actions: 2 constraint(s) (4 column row(s))
+
+---------------------------------------------------------------
+RUNNING TEST 3: Multi-Tenant PostgreSQL RLS & Ledger Security
+---------------------------------------------------------------
+Test 3 Result: All Security Assertions Passed
+Tables with FORCE RLS: 11 / 11
+Named tenant_isolation_policy entries: 11 / 11
+Empty Context Zero Rows: true
+Tenant A Isolation Holds: true
+Cross-Tenant Write Blocked by WITH CHECK: true
+Ledger Mutation Revoked (42501 on UPDATE/DELETE): true
+Mock Roles (anon, authenticated) Access Denied: true
+Transaction Tenant Setting Leak-Free: true
+
+---------------------------------------------------------------
+RUNNING TEST 4: Production Pool Concurrency & Service Stress
+---------------------------------------------------------------
+Test 4 Result:
+Bed Collision Race: 50 / 50 passed
+Student Collision Race: 50 / 50 passed
+CAS Gate Pass Reissue Race: 10 / 10 passed
+Room Capacity Locked (FOR UPDATE): Passed = true
+Negative Control (Race Detected when Unlocked): Detected = true
+
+---------------------------------------------------------------
+RUNNING TEST 5: Table-Driven Late-Fine Calculation Unit Test
+---------------------------------------------------------------
+Test 5 Result: 8 / 8 cases passed (allPassed = true)
+  - [PASS] Missing settings throws error: Caught expected error: Hostel settings not configured for institution
+  - [PASS] On-time arrival (early by 10 mins) returns 0 fine: daysLate=0, amount=0
+  - [PASS] Late equals grace period (exactly 60 mins late) returns 0 fine: daysLate=0, amount=0
+  - [PASS] Grace plus 1 minute (61 mins late) gives exactly 1 day fine: daysLate=1, amount=5000
+  - [PASS] Exactly 24h past grace (60 + 1440 mins = 1500 mins late) gives 1 day fine: daysLate=1, amount=5000
+  - [PASS] 24h plus 1 minute past grace with 'ceil' (1501 mins late) gives 2 days fine: daysLate=2, amount=10000
+  - [PASS] 24h plus 1 minute past grace with 'floor' (1501 mins late) gives 1 day fine: daysLate=1, amount=5000
+  - [PASS] Replay idempotency: repeated calculation yields byte-identical result: res1={"daysLate":2,"ratePerDayMinor":5000,"totalAmountMinor":10000}, res2={"daysLate":2,"ratePerDayMinor":5000,"totalAmountMinor":10000}
+
+---------------------------------------------------------------
+RUNNING TEST 6: Negative-Path Service Tests (Both Dialects)
+---------------------------------------------------------------
+Test 6 Result: 14 / 14 checks passed (allPassed = true)
+  - [PASS] [Postgres] Unknown student rejected: Student not found.
+  - [PASS] [Postgres] Gender mismatch rejected: Gender parity violation: student is female but block is boys.
+  - [PASS] [Postgres] Bed under maintenance rejected: Bed is currently under maintenance.
+  - [PASS] [Postgres] Soft-deleted bed rejected: Bed or parent room/block does not exist or has been deleted.
+  - [PASS] [Postgres] Bed in soft-deleted room rejected: Bed or parent room/block does not exist or has been deleted.
+  - [PASS] [Postgres] Bed in soft-deleted block rejected: Bed or parent room/block does not exist or has been deleted.
+  - [PASS] [Postgres] Unassigned staff member rejected: Staff member is not an active assigned warden for this block.
+  - [PASS] [Postgres] Revoked warden assignment rejected: Staff member is not an active assigned warden for this block.
+  - [PASS] [Postgres] CAS gate pass race leaves exactly one live pass per leave: Live passes found: 10 across 10 leaves
+  - [PASS] [LibSQL] Unknown student rejected: Student not found.
+  - [PASS] [LibSQL] Gender mismatch rejected: Gender parity violation: student is female but block is boys.
+  - [PASS] [LibSQL] Bed under maintenance rejected: Bed is currently under maintenance.
+  - [PASS] [LibSQL] Soft-deleted bed rejected: Bed or parent room/block does not exist or has been deleted.
+  - [PASS] [LibSQL] Revoked warden assignment rejected: Staff member is not an active assigned warden for this block.
+
+---------------------------------------------------------------
+RUNNING TEST 7: Deliberate Mutation Proof (Tests Must Fail)
+---------------------------------------------------------------
+Test 7 Result: All 4 deliberate mutations caught = true
+  - [CAUGHT] 1. Drop tenant_isolation_policy on hostel_settings -> Expected exactly 11 tenant_isolation_policy entries, found: 10
+  - [CAUGHT] 2. Drop partial index idx_active_student_allocation -> Test 1 caught missing partial index: found 10 partial indexes (expected 11)
+  - [CAUGHT] 3. Remove FORCE ROW LEVEL SECURITY from hostel_blocks -> Expected exactly 11 tables with FORCE RLS, found: 10
+  - [CAUGHT] 4. Grant UPDATE on append-only hostel_gate_logs to thaibahive_app -> Ledger mutation revocation failed: gateLogs(del=true, upd=false), fineActions(del=true, upd=true)
+
+---------------------------------------------------------------
+FINAL POST-ACTION AUDIT: Git Drift Verification
+---------------------------------------------------------------
+Git Drift Audit PASSED: Zero changes introduced outside spike/** and .gravitas/**.
+
+===============================================================
+   ALL 7 PHASE 0 SPIKE SUITES EXECUTED AND EMPIRICALLY PASSED  
+===============================================================
+Exit Code: 0
