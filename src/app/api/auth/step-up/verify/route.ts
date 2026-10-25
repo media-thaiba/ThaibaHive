@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
           if (process.env.NODE_ENV !== "production") {
             if (host === "localhost" || host.startsWith("localhost:") || host === "127.0.0.1" || host.startsWith("127.0.0.1:")) return true;
           }
-          if (host === "thaiba-hive.vercel.app" || host.endsWith(".thaiba-hive.vercel.app")) return true;
+          if (host === "thaiba-hive.vercel.app" || /^[a-z0-9-]+\.thaiba-hive\.vercel\.app$/.test(host)) return true;
           const appUrl = process.env.NEXT_PUBLIC_APP_URL;
           if (appUrl) {
             try {
@@ -309,6 +309,13 @@ export async function POST(req: NextRequest) {
       }
 
       // Counter check and update ONLY executed AFTER signature has cryptographically verified
+      if (credential.counter > 0 && signCount <= credential.counter) {
+        // Counter rollback / clone detected:
+        // A hardware key that previously reported counter > 0 dropped to a lower or 0 signCount
+        await recordFailure();
+        return NextResponse.json({ error: "Authenticator counter rollback detected (potential cloned device)" }, { status: 401 });
+      }
+
       if (signCount === 0) {
         // Multi-device synced passkey (e.g. iCloud Keychain, Google Password Manager)
         // Per WebAuthn spec §6.1.2, authenticators that do not support counters always return signCount = 0
@@ -317,16 +324,13 @@ export async function POST(req: NextRequest) {
           .set({ lastUsedAt: new Date().toISOString() })
           .where(eq(webauthnCredentials.id, credential.id))
           .run();
-      } else if (signCount > credential.counter) {
+      } else {
+        // Hardware authenticator advancing strictly forward (signCount > credential.counter)
         await db
           .update(webauthnCredentials)
           .set({ counter: signCount, lastUsedAt: new Date().toISOString() })
           .where(eq(webauthnCredentials.id, credential.id))
           .run();
-      } else {
-        // Counter rollback / clone detected
-        await recordFailure();
-        return NextResponse.json({ error: "Authenticator counter rollback: possible cloned authenticator" }, { status: 401 });
       }
     } else if (factor === "email_otp") {
       if (!otp) {
