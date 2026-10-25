@@ -19,7 +19,7 @@ export interface AllocateBedParams {
   studentId: string;
   academicYearId: string;
   staffId: string;
-  allocatedAt: string;
+  allocatedAt?: string;
 }
 
 export interface AllocateBedResult {
@@ -32,7 +32,7 @@ export interface AllocateBedResult {
 export interface VacateBedParams {
   institutionId: string;
   allocationId: string;
-  vacatedAt: string;
+  vacatedAt?: string;
 }
 
 export interface VacateBedResult {

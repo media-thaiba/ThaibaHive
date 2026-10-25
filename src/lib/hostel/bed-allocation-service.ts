@@ -39,7 +39,8 @@ export async function allocateHostelBed(
   options?: { isPostgres?: boolean }
 ): Promise<AllocateBedResult> {
   const isPostgres = options?.isPostgres ?? isPostgresConnection(client);
-  const { institutionId, bedId, studentId, academicYearId, staffId, allocatedAt } = params;
+  const { institutionId, bedId, studentId, academicYearId, staffId } = params;
+  const allocatedAt = params.allocatedAt || new Date().toISOString();
 
   if (isPostgres) {
     const { conn, release } = await acquirePgClient(client);
@@ -264,7 +265,8 @@ export async function vacateHostelBed(
   options?: { isPostgres?: boolean }
 ): Promise<VacateBedResult> {
   const isPostgres = options?.isPostgres ?? isPostgresConnection(client);
-  const { institutionId, allocationId, vacatedAt } = params;
+  const { institutionId, allocationId } = params;
+  const vacatedAt = params.vacatedAt || new Date().toISOString();
 
   if (isPostgres) {
     const { conn, release } = await acquirePgClient(client);
