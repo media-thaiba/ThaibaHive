@@ -31,7 +31,7 @@ export async function createActionStepUpToken(params: {
 
 export async function verifyActionStepUpToken(
   token: string,
-  expected: { staffId: string; sid: string; action: string }
+  expected: { staffId: string; sid: string; action: string | string[] }
 ): Promise<{ success: true; payload: ActionStepUpPayload; exp: number } | { success: false; error: string }> {
   try {
     const { payload, protectedHeader } = await jwtVerify(token, getJwtSecretBytes("action-step-up"), {
@@ -53,7 +53,10 @@ export async function verifyActionStepUpToken(
     if (payload.sid !== expected.sid) {
       return { success: false, error: "SID_MISMATCH" };
     }
-    if (payload.action !== expected.action) {
+    const actionAllowed = Array.isArray(expected.action)
+      ? expected.action.includes(payload.action as string)
+      : payload.action === expected.action;
+    if (!actionAllowed) {
       return { success: false, error: "ACTION_MISMATCH" };
     }
     const exp = typeof payload.exp === "number" ? payload.exp * 1000 : Date.now() + 300_000;
@@ -91,4 +94,45 @@ export async function consumeStepUpTokenInTx(
     expiresAt: stepUp.exp,
     usedAt: Date.now(),
   });
+}
+
+
+/**
+ * Robust detection of primary-key / unique constraint violations on step_up_used
+ * across both SQLite/LibSQL and PostgreSQL/PGlite.
+ */
+export function isStepUpReplayError(txErr: any): boolean {
+  if (!txErr) return false;
+
+  const allMessages = [
+    txErr?.message,
+    txErr?.cause?.message,
+    txErr?.cause?.cause?.message,
+    String(txErr),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const allCodes = [
+    txErr?.code,
+    txErr?.rawCode,
+    txErr?.cause?.code,
+    txErr?.cause?.rawCode,
+  ].filter(Boolean);
+
+  const isConstraintCode =
+    allCodes.includes('23505') ||
+    allCodes.includes('SQLITE_CONSTRAINT_PRIMARYKEY') ||
+    allCodes.includes('SQLITE_CONSTRAINT_UNIQUE');
+
+  const mentionsStepUpTable =
+    allMessages.includes('step_up_used') ||
+    allMessages.includes('jti');
+
+  return (
+    (isConstraintCode && mentionsStepUpTable) ||
+    allMessages.includes('step_up_used_pkey') ||
+    allMessages.includes('step_up_used.jti') ||
+    allMessages.includes('step_up_used.PRIMARY')
+  );
 }

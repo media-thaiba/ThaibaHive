@@ -40,7 +40,7 @@ export async function getManagedStaffIds(
       .where(eq(staffInstitutions.staffId, hodStaffId))
       .all();
     if (callerInstRows.length === 0) {
-      return role === "admin" ? null : [hodStaffId];
+      return [hodStaffId]; // Unmapped admin/principal can only manage self, not global
     }
     const instIds = callerInstRows.map((r) => r.institutionId);
     const instStaff = await db
@@ -98,7 +98,7 @@ export async function isManagedBy(
     if (callerInstRows.length > 0) {
       return sharesInstitutionMembership(managerStaffId, targetStaffId);
     }
-    return role === "admin";
+    return false; // Unmapped admin has no tenant authority
   }
 
   const managedIds = await getManagedStaffIds(managerStaffId, role);
@@ -121,21 +121,37 @@ export async function canAccessStaff(
   if (targetStaffId === callerStaffId) return true;
   if (role === "super_admin") return true;
 
-  if (role === "admin" || role === "principal") {
+  if (role === "regional_admin") {
+    const callerInstRows = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, callerStaffId))
+      .all();
+    if (callerInstRows.length === 0) return false;
+    const callerInstSet = new Set(callerInstRows.map((r) => r.institutionId));
+    const targetInstRows = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, targetStaffId))
+      .all();
+    return targetInstRows.some((r) => callerInstSet.has(r.institutionId));
+  }
+
+  if (role === "admin" || role === "principal" || role === "institutional_head") {
     const callerInstRows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)
       .where(eq(staffInstitutions.staffId, callerStaffId))
       .all();
     if (callerInstRows.length === 0) {
-      return role === "admin";
+      return false; // Fail closed: unmapped admin/principal has no tenant authority
     }
     return sharesInstitutionMembership(callerStaffId, targetStaffId);
   }
 
-  if (role === "hod") {
-    const managedIds = await getManagedStaffIds(callerStaffId, "hod");
-    if (managedIds === null) return true;
+  if (role === "hod" || role === "coordinator") {
+    const managedIds = await getManagedStaffIds(callerStaffId, role);
+    if (!managedIds || managedIds.length === 0) return false;
     return managedIds.includes(targetStaffId);
   }
 
@@ -145,6 +161,7 @@ export async function canAccessStaff(
 /**
  * Returns all staff IDs the caller is authorized to access.
  * - super_admin: returns null (meaning no filter — all staff)
+ * - regional_admin: staff in their regional cluster
  * - admin/principal: staff in their institution
  * - hod: staff in their departments
  * - staff: only themselves
@@ -155,7 +172,7 @@ export async function getAccessibleStaffIds(
 ): Promise<string[] | null> {
   if (role === "super_admin") return null;
 
-  if (role === "admin" || role === "principal") {
+  if (role === "regional_admin" || role === "admin" || role === "principal" || role === "institutional_head") {
     const callerInstRows = await db
       .select({ institutionId: staffInstitutions.institutionId })
       .from(staffInstitutions)

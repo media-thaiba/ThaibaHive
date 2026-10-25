@@ -6,6 +6,8 @@ import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { pick } from "@/lib/api/pick";
 import { hashPassword } from "@/lib/auth";
+import { canCreateRole, getRoleRank, verifyActionStepUpToken, consumeStepUpTokenInTx, isStepUpReplayError, getStaffInstitutionMemberships, isRegionalScopeRole } from "@thaiba/auth";
+import { cryptoAuditWriter } from "@/lib/audit/crypto-writer";
 import { staffCreateSchema } from "@/lib/validation/schemas";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 import { autoAssignOnboardingChecklists } from "@/lib/onboarding/auto-assign";
@@ -122,43 +124,15 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  // ── Role-Creation Hierarchy & Privilege Escalation Guard (TH-001) ──────────
-  if (targetRole === "super_admin" && session.role !== "super_admin") {
+  // ── Role-Creation Hierarchy & Privilege Escalation Guard (Rule 22) ──────────
+  if (!canCreateRole(session.role, targetRole)) {
     return NextResponse.json(
-      { error: "Forbidden: Only super_admin can create super_admin accounts" },
+      { error: "Forbidden: Cannot create an account with equal or higher rank, and system role cannot be assigned" },
       { status: 403 }
     );
   }
 
-  if (targetRole === "admin" && session.role !== "super_admin" && session.role !== "admin") {
-    return NextResponse.json(
-      { error: "Forbidden: Only administrators can create admin accounts" },
-      { status: 403 }
-    );
-  }
-
-  const PRINCIPAL_ALLOWED_ROLES = new Set([
-    "hod",
-    "staff",
-    "accounts",
-    "purchase",
-    "teacher",
-    "coordinator",
-    "academic_coordinator",
-    "exam_coordinator",
-    "inspector",
-  ]);
-
-  if (session.role === "principal" || session.role === "institutional_head") {
-    if (!PRINCIPAL_ALLOWED_ROLES.has(targetRole)) {
-      return NextResponse.json(
-        { error: `Forbidden: Principal cannot create '${targetRole}' accounts` },
-        { status: 403 }
-      );
-    }
-  }
-
-  // ── Mandatory Institutional Tenancy Enforcement ────────────────────────────
+  // ── Mandatory Institutional Tenancy Enforcement (Invariant A & B) ─────────
   if (session.role !== "super_admin") {
     if (!institutionIds || institutionIds.length === 0) {
       return NextResponse.json(
@@ -166,91 +140,191 @@ export const POST = requireAuth(async (request: Request, session) => {
         { status: 400 }
       );
     }
-  }
 
-  if (session.role === "principal" || session.role === "institutional_head") {
-    const callerInst = await db
-      .select({ institutionId: staffInstitutions.institutionId })
-      .from(staffInstitutions)
-      .where(eq(staffInstitutions.staffId, session.staffId))
-      .limit(1);
-    const instId = callerInst[0]?.institutionId;
-
-    if (!instId) {
-      return NextResponse.json(
-        { error: "Forbidden: Caller has no assigned institution to scope staff creation" },
-        { status: 403 }
-      );
-    }
-
-    if (institutionIds?.some((id) => id !== instId)) {
-      return NextResponse.json(
-        { error: "Cannot assign staff to institutions outside your own" },
-        { status: 403 }
-      );
-    }
-
-    if (departmentIds?.length) {
-      const validDepts = await db
-        .select({ id: departments.id })
-        .from(departments)
-        .where(and(eq(departments.institutionId, instId), inArray(departments.id, departmentIds)))
-        .all();
-      if (validDepts.length !== departmentIds.length) {
+    if (isRegionalScopeRole(session.role)) {
+      const cluster = await getStaffInstitutionMemberships(session.staffId);
+      if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
+        cluster.push(session.institutionId);
+      }
+      if (cluster.length === 0) {
         return NextResponse.json(
-          { error: "Cannot assign staff to departments outside your institution" },
+          { error: "Forbidden: Caller has no assigned regional cluster" },
           { status: 403 }
         );
+      }
+      const clusterSet = new Set(cluster);
+      if (institutionIds.some((id) => !clusterSet.has(id))) {
+        return NextResponse.json(
+          { error: "Cannot assign staff to institutions outside your assigned region" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Tier 3, 4, 5 (principal, admin, hod, etc.)
+      const memberships = await getStaffInstitutionMemberships(session.staffId);
+      if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
+        memberships.push(session.institutionId);
+      }
+      if (memberships.length === 0) {
+        return NextResponse.json(
+          { error: "Forbidden: Caller has no assigned institution to scope staff creation" },
+          { status: 403 }
+        );
+      }
+      const allowedInstSet = new Set(memberships);
+      if (institutionIds.some((id) => !allowedInstSet.has(id))) {
+        return NextResponse.json(
+          { error: "Cannot assign staff to institutions outside your own" },
+          { status: 403 }
+        );
+      }
+
+      if (departmentIds?.length) {
+        const validDepts = await db
+          .select({ id: departments.id, institutionId: departments.institutionId })
+          .from(departments)
+          .where(inArray(departments.id, departmentIds))
+          .all();
+        if (validDepts.length !== departmentIds.length || validDepts.some((d) => !d.institutionId || !allowedInstSet.has(d.institutionId))) {
+          return NextResponse.json(
+            { error: "Cannot assign staff to departments outside your institution" },
+            { status: 403 }
+          );
+        }
+
+        if (session.role === "hod" || session.role === "coordinator") {
+          const callerDepts = await db
+            .select({ departmentId: staffDepartments.departmentId })
+            .from(staffDepartments)
+            .where(eq(staffDepartments.staffId, session.staffId))
+            .all();
+          const callerDeptSet = new Set(callerDepts.map((d) => d.departmentId));
+          if (departmentIds.some((id) => !callerDeptSet.has(id))) {
+            return NextResponse.json(
+              { error: "Cannot assign staff to departments outside your own" },
+              { status: 403 }
+            );
+          }
+        }
       }
     }
   }
 
+  // ── Step-Up Verification for Administrative Roles (Rank >= 60) ─────────────
+  const targetRank = getRoleRank(targetRole);
+  const isAdministrativeRole = targetRank !== null && targetRank >= 60;
+  let stepUpResult: { success: true; payload: any; exp: number } | null = null;
+
+  if (isAdministrativeRole) {
+    const stepUpToken = (body as any)?.stepUpToken || parsed.data.stepUpToken || request.headers.get("x-step-up-token");
+    if (!stepUpToken) {
+      return NextResponse.json(
+        { error: "Step-up authentication required for creating administrative roles" },
+        { status: 403 }
+      );
+    }
+
+    const verification = await verifyActionStepUpToken(stepUpToken, {
+      staffId: session.staffId,
+      sid: session.sid,
+      action: ["staff:role:change", "staff:mutate"],
+    });
+    if (!verification.success) {
+      return NextResponse.json(
+        { error: `Step-up authentication failed: ${verification.error}` },
+        { status: 403 }
+      );
+    }
+    stepUpResult = verification;
+  }
+
   const passwordHash = password ? await hashPassword(password) : null;
 
-  const result = await db.transaction(async (tx) => {
-    const staffResult = await tx
-      .insert(staff)
-      .values({
-        id: randomUUID(),
-        email,
-        employeeId,
-        firstName,
-        lastName,
-        phone,
-        designation,
-        role: targetRole,
-        passwordHash,
-        emailVerifiedAt: new Date().toISOString(),
-        aadhaar: encryptPiiField(parsed.data.aadhaar),
-        pan: encryptPiiField(parsed.data.pan),
-        bankAccount: encryptPiiField(parsed.data.bankAccount),
-        ifscCode: encryptPiiField(parsed.data.ifscCode),
-      })
-      .returning()
-      .get();
+  let result;
+  try {
+    result = await db.transaction(async (tx) => {
+      if (isAdministrativeRole && stepUpResult) {
+        await consumeStepUpTokenInTx(tx, {
+          jti: stepUpResult.payload.jti,
+          staffId: session.staffId,
+          action: stepUpResult.payload.action,
+          exp: stepUpResult.exp,
+        });
+      }
 
-    if (departmentIds?.length) {
-      await tx.insert(staffDepartments).values(
-        departmentIds.map((deptId: string) => ({
+      const staffResult = await tx
+        .insert(staff)
+        .values({
           id: randomUUID(),
-          staffId: staffResult.id,
-          departmentId: deptId,
-        }))
-      ).run();
-    }
+          email,
+          employeeId,
+          firstName,
+          lastName,
+          phone,
+          designation,
+          role: targetRole,
+          passwordHash,
+          emailVerifiedAt: new Date().toISOString(),
+          isFirstLogin: false,
+          onboardingCompletedAt: new Date().toISOString(),
+          aadhaar: encryptPiiField(parsed.data.aadhaar),
+          pan: encryptPiiField(parsed.data.pan),
+          bankAccount: encryptPiiField(parsed.data.bankAccount),
+          ifscCode: encryptPiiField(parsed.data.ifscCode),
+        })
+        .returning()
+        .get();
 
-    if (institutionIds?.length) {
-      await tx.insert(staffInstitutions).values(
-        institutionIds.map((instId: string) => ({
-          id: randomUUID(),
-          staffId: staffResult.id,
-          institutionId: instId,
-        }))
-      ).run();
-    }
+      if (departmentIds?.length) {
+        await tx.insert(staffDepartments).values(
+          departmentIds.map((deptId: string) => ({
+            id: randomUUID(),
+            staffId: staffResult.id,
+            departmentId: deptId,
+          }))
+        ).run();
+      }
 
-    return staffResult;
-  });
+      if (institutionIds?.length) {
+        await tx.insert(staffInstitutions).values(
+          institutionIds.map((instId: string) => ({
+            id: randomUUID(),
+            staffId: staffResult.id,
+            institutionId: instId,
+          }))
+        ).run();
+      }
+
+      if (isAdministrativeRole && stepUpResult) {
+        await cryptoAuditWriter.log(
+          {
+            tenantId: institutionIds?.[0] || session.institutionId || "default",
+            userId: session.staffId,
+            action: "STAFF_CREATE_ADMIN",
+            entityType: "staff",
+            entityId: staffResult.id,
+            payload: {
+              targetRole,
+              email,
+              employeeId,
+              institutionIds,
+            },
+          },
+          tx
+        );
+      }
+
+      return staffResult;
+    });
+  } catch (txErr: any) {
+    if (isStepUpReplayError(txErr)) {
+      return NextResponse.json(
+        { error: "Forbidden: Step-up token has already been used (replay detected)" },
+        { status: 403 }
+      );
+    }
+    throw txErr;
+  }
 
   const safeStaff = pick(result, Object.keys(SAFE_STAFF_FIELDS) as (keyof typeof SAFE_STAFF_FIELDS)[]);
 

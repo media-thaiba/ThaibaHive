@@ -1995,21 +1995,21 @@ export function getRolePermissions(role: string) {
 
 export const ROLE_RANK_MAP: Record<StaffRole, number> = {
   super_admin: 100,
-  admin: 80,
-  regional_admin: 70,
-  principal: 60,
-  institutional_head: 60,
+  regional_admin: 90,
+  principal: 70,
+  institutional_head: 70,
+  hod: 65,
+  coordinator: 65,
+  admin: 60,
+  accounts: 50,
+  purchase: 50,
   regional_auditor: 50,
-  hod: 40,
-  coordinator: 35,
-  academic_coordinator: 35,
-  exam_coordinator: 35,
-  inspector: 30,
-  accounts: 20,
-  purchase: 20,
-  teacher: 20,
-  staff: 20,
-  system: 0,
+  inspector: 45,
+  academic_coordinator: 45,
+  exam_coordinator: 45,
+  teacher: 40,
+  staff: 40,
+  system: 1000,
 };
 
 export function getRoleRank(role: unknown): number | null {
@@ -2021,11 +2021,51 @@ export function getRoleRank(role: unknown): number | null {
 
 export function canCreateRole(callerRole: unknown, targetRole: unknown): boolean {
   if (targetRole === "system") return false;
+  if (callerRole === "system") return false;
   const callerRank = getRoleRank(callerRole);
   const targetRank = getRoleRank(targetRole);
   if (callerRank === null || targetRank === null) return false;
-  if (callerRole === "super_admin" && targetRole === "super_admin") return true;
+  if (callerRole === "super_admin") {
+    return targetRole === "super_admin" || targetRank < callerRank;
+  }
   return targetRank < callerRank;
+}
+
+export function canMutateStaff(
+  callerRole: unknown,
+  targetCurrentRole: unknown,
+  targetNewRole?: unknown
+): boolean {
+  if (targetCurrentRole === "system" || targetNewRole === "system") return false;
+  if (callerRole === "system") return false;
+
+  const callerRank = getRoleRank(callerRole);
+  const currentRank = getRoleRank(targetCurrentRole);
+  if (callerRank === null || currentRank === null) return false;
+
+  if (callerRole === "super_admin") {
+    if (targetNewRole !== undefined) {
+      if (targetNewRole === "system") return false;
+      const newRank = getRoleRank(targetNewRole);
+      if (newRank === null) return false;
+    }
+    return true;
+  }
+
+  // Non-super_admin: Cannot mutate equal or higher current rank
+  if (currentRank >= callerRank) {
+    return false;
+  }
+
+  // Non-super_admin: Cannot elevate target to equal or higher rank
+  if (targetNewRole !== undefined) {
+    const newRank = getRoleRank(targetNewRole);
+    if (newRank === null || newRank >= callerRank) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function isAuthorizedDeveloper(user: { email?: string | null; role?: string | null; emailVerifiedAt: string | null } | null | undefined): boolean {
