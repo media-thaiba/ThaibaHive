@@ -1,7 +1,9 @@
 export { hashPassword, verifyPassword } from "./password";
-export { createSession, createDPoPSession, verifySession, destroySession, createStepUpToken, verifyStepUpToken } from "./session";
+export { createSession, createDPoPSession, verifySession, destroySession, createStepUpToken, verifyStepUpToken, verifyDPoPSession, touchSession, getClientIp } from "./session";
+export { createActionStepUpToken, verifyActionStepUpToken, consumeStepUpTokenInTx } from "./step-up";
+export type { ActionStepUpPayload } from "./step-up";
 export type { SessionPayload, DPoPSessionPayload } from "./session";
-export { hasPermission, getRolePermissions } from "./roles";
+export { hasPermission, getRolePermissions, ROLE_RANK_MAP, getRoleRank, canCreateRole, isAuthorizedDeveloper } from "./roles";
 export type { StaffRole } from "./roles";
 export { getUserInstitutionScope, resolveScopedInstitutionId, resolveRequestInstitution, resolveScopedInstitutions, resolveInstitutionScopeForSession, getStaffInstitutionMemberships, TenantMismatchError } from "./institution-scope";
 

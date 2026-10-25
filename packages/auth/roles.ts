@@ -776,9 +776,12 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "conference:join",
     "notifications:read",
     "institutions:read",
-    "auth:logout"
+    "auth:logout",
+    "system:sessions:view",
+    "system:sessions:terminate"
   ],
   admin: [
+    "system:sessions:terminate",
     "academic.student.admissions",
     "students:create",
     "students:read",
@@ -1167,6 +1170,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "checklists:read"
   ],
   principal: [
+    "system:sessions:terminate",
     "academic.student.admissions",
     "students:create",
     "students:read",
@@ -1988,3 +1992,48 @@ export function getRolePermissions(role: string) {
   }
   return rolePermissions[role] ?? [];
 }
+
+export const ROLE_RANK_MAP: Record<StaffRole, number> = {
+  super_admin: 100,
+  admin: 80,
+  regional_admin: 70,
+  principal: 60,
+  institutional_head: 60,
+  regional_auditor: 50,
+  hod: 40,
+  coordinator: 35,
+  academic_coordinator: 35,
+  exam_coordinator: 35,
+  inspector: 30,
+  accounts: 20,
+  purchase: 20,
+  teacher: 20,
+  staff: 20,
+  system: 0,
+};
+
+export function getRoleRank(role: unknown): number | null {
+  if (typeof role !== "string" || !Object.hasOwn(ROLE_RANK_MAP, role)) {
+    return null;
+  }
+  return ROLE_RANK_MAP[role as StaffRole];
+}
+
+export function canCreateRole(callerRole: unknown, targetRole: unknown): boolean {
+  if (targetRole === "system") return false;
+  const callerRank = getRoleRank(callerRole);
+  const targetRank = getRoleRank(targetRole);
+  if (callerRank === null || targetRank === null) return false;
+  if (callerRole === "super_admin" && targetRole === "super_admin") return true;
+  return targetRank < callerRank;
+}
+
+export function isAuthorizedDeveloper(user: { email?: string | null; role?: string | null; emailVerifiedAt: string | null } | null | undefined): boolean {
+  if (!user || !user.email) return false;
+  // Strict fail-closed: emailVerifiedAt MUST be present and truthy (Rule 32 / C2)
+  if (!user.emailVerifiedAt) return false;
+  const rawList = process.env.DEVELOPER_EMAILS || "";
+  const allowed = rawList.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes(user.email.toLowerCase().trim());
+}
+

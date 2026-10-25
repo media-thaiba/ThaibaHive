@@ -15,7 +15,8 @@ export * from "drizzle-orm";
 export * from "./replica-router";
 export * from "./tenant-router";
 
-export const databaseUrl = process.env.DATABASE_URL || "file:./dev.db";
+const rawDatabaseUrl = (process.env.DATABASE_URL || process.env.POSTGRES_URL || "file:./dev.db").trim().replace(/^["']|["']$/g, "");
+export const databaseUrl = rawDatabaseUrl;
 export const isPostgres = databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://");
 
 /**
@@ -160,8 +161,12 @@ if (isPostgres) {
   // remote LibSQL (Turso) over HTTP/WS rejects PRAGMA busy_timeout with SQL_PARSE_ERROR.
   const isLocalFileDb = databaseUrl.startsWith("file:") || !databaseUrl.includes("://");
   if (isLocalFileDb) {
-    client.execute("PRAGMA foreign_keys = ON;").catch(() => {});
-    client.execute("PRAGMA busy_timeout = 15000;").catch(() => {});
+    client.execute("PRAGMA foreign_keys = ON;").catch((err) => {
+      throw new Error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA foreign_keys = ON failed: ${err?.message || err}`);
+    });
+    client.execute("PRAGMA busy_timeout = 15000;").catch((err) => {
+      throw new Error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 15000 failed: ${err?.message || err}`);
+    });
   }
   dbInstance = sqliteDrizzle(client, { schema: sqliteSchema });
 
