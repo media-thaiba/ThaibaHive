@@ -3,7 +3,7 @@ export { createSession, createDPoPSession, verifySession, destroySession, create
 export { createActionStepUpToken, verifyActionStepUpToken, consumeStepUpTokenInTx, isStepUpReplayError } from "./step-up";
 export type { ActionStepUpPayload } from "./step-up";
 export type { SessionPayload, DPoPSessionPayload } from "./session";
-export { hasPermission, getRolePermissions, ROLE_RANK_MAP, getRoleRank, canCreateRole, canMutateStaff, isAuthorizedDeveloper } from "./roles";
+export { hasPermission, getRolePermissions, ROLE_RANK_MAP, getRoleRank, canCreateRole, canMutateStaff, isAuthorizedDeveloper, ALL_VALID_PERMISSIONS, isValidPermission } from "./roles";
 export type { StaffRole } from "./roles";
 export { getUserInstitutionScope, resolveScopedInstitutionId, resolveRequestInstitution, resolveScopedInstitutions, resolveInstitutionScopeForSession, getStaffInstitutionMemberships, TenantMismatchError, isRegionalScopeRole, isGlobalScopeRole } from "./institution-scope";
 
