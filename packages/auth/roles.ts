@@ -781,6 +781,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "system:sessions:terminate"
   ],
   admin: [
+    "system:sessions:terminate",
     "academic.student.admissions",
     "students:create",
     "students:read",
@@ -1169,6 +1170,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "checklists:read"
   ],
   principal: [
+    "system:sessions:terminate",
     "academic.student.admissions",
     "students:create",
     "students:read",

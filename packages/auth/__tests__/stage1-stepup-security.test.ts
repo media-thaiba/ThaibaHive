@@ -847,4 +847,293 @@ describe("Critical Security Gate: Step-Up Factor Verification (C1 & C2)", () => 
     const replayTerminateData = await replayTerminateRes.json();
     expect(replayTerminateData.error).toContain("replay detected");
   });
+
+  // ─── C1.11: Cross-Tenant Null/Mismatch Gate ─────────────────────────────────
+  it("C1.11: Scoped principal cannot terminate session in different or null institution (HTTP 403)", async () => {
+    const principalStaffId = `staff_princ_${ts}`;
+    const targetStaffDiffInst = `staff_sub_diff_${ts}`;
+    const targetStaffNullInst = `staff_sub_null_${ts}`;
+
+    await db.insert(staff).values([
+      {
+        id: principalStaffId,
+        email: `principal_${ts}@thaiba.com`,
+        employeeId: `EMP_PR_${ts}`,
+        firstName: "Principal",
+        lastName: "User",
+        role: "principal",
+        isActive: true,
+        tokenVersion: 1,
+        emailVerifiedAt: new Date().toISOString(),
+      },
+      {
+        id: targetStaffDiffInst,
+        email: `sub_diff_${ts}@thaiba.com`,
+        employeeId: `EMP_DIFF_${ts}`,
+        firstName: "Sub",
+        lastName: "Diff",
+        role: "staff",
+        isActive: true,
+        tokenVersion: 1,
+      },
+      {
+        id: targetStaffNullInst,
+        email: `sub_null_${ts}@thaiba.com`,
+        employeeId: `EMP_NULL_${ts}`,
+        firstName: "Sub",
+        lastName: "Null",
+        role: "staff",
+        isActive: true,
+        tokenVersion: 1,
+      },
+    ] as any).run();
+
+    const principalToken = await createSession({
+      staffId: principalStaffId,
+      email: `principal_${ts}@thaiba.com`,
+      role: "principal",
+      institutionId: "inst_A",
+      employeeId: `EMP_PR_${ts}`,
+      name: "Principal User",
+      tokenVersion: 1,
+    });
+    mockCookieMap.set("thaibahive_session", { value: principalToken });
+
+    // Target session in inst_B
+    const targetSessionBToken = await createSession({
+      staffId: targetStaffDiffInst,
+      email: `sub_diff_${ts}@thaiba.com`,
+      role: "staff",
+      institutionId: "inst_B",
+      employeeId: `EMP_DIFF_${ts}`,
+      name: "Sub Diff",
+      tokenVersion: 1,
+    });
+    const { payload: payloadB } = await (await import("jose")).jwtVerify(targetSessionBToken, (await import("../config")).getJwtSecretBytes("session"));
+    const sidB = payloadB.sid as string;
+
+    // Target session with null institution
+    const targetSessionNullToken = await createSession({
+      staffId: targetStaffNullInst,
+      email: `sub_null_${ts}@thaiba.com`,
+      role: "staff",
+      employeeId: `EMP_NULL_${ts}`,
+      name: "Sub Null",
+      tokenVersion: 1,
+    });
+    const { payload: payloadNull } = await (await import("jose")).jwtVerify(targetSessionNullToken, (await import("../config")).getJwtSecretBytes("session"));
+    const sidNull = payloadNull.sid as string;
+
+    // Step-up token for principal
+    const { createActionStepUpToken } = await import("../step-up");
+    const { payload: princPayload } = await (await import("jose")).jwtVerify(principalToken, (await import("../config")).getJwtSecretBytes("session"));
+    const princSid = princPayload.sid as string;
+    const princStepUpToken = await createActionStepUpToken({
+      staffId: principalStaffId,
+      sid: princSid,
+      action: "session:terminate",
+    });
+
+    // Ensure cookie is set to principal caller
+    mockCookieMap.set("thaibahive_session", { value: principalToken });
+
+    // 1. Terminate in different institution -> 403
+    const resDiff = await terminateSessionRoute(
+      new Request(`http://localhost:3000/api/admin/sessions/${sidB}/terminate`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ stepUpToken: princStepUpToken }),
+      }),
+      { params: Promise.resolve({ id: sidB }) }
+    );
+    expect(resDiff.status).toBe(403);
+    const diffData = await resDiff.json();
+    expect(diffData.error).toContain("outside your assigned institution");
+
+    // 2. Terminate in null institution -> 403
+    const resNull = await terminateSessionRoute(
+      new Request(`http://localhost:3000/api/admin/sessions/${sidNull}/terminate`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ stepUpToken: princStepUpToken }),
+      }),
+      { params: Promise.resolve({ id: sidNull }) }
+    );
+    expect(resNull.status).toBe(403);
+    const nullData = await resNull.json();
+    expect(nullData.error).toContain("outside your assigned institution");
+  });
+
+  // ─── C1.12: Peer Rank & System Account Protection ───────────────────────────
+  it("C1.12: Peer rank termination and system account termination return HTTP 403", async () => {
+    const adminAStaffId = `staff_admA_${ts}`;
+    const adminBStaffId = `staff_admB_${ts}`;
+    const systemStaffId = `staff_sys_${ts}`;
+
+    await db.insert(staff).values([
+      {
+        id: adminAStaffId,
+        email: `admA_${ts}@thaiba.com`,
+        employeeId: `EMP_ADMA_${ts}`,
+        firstName: "Admin",
+        lastName: "A",
+        role: "admin",
+        isActive: true,
+        tokenVersion: 1,
+        emailVerifiedAt: new Date().toISOString(),
+      },
+      {
+        id: adminBStaffId,
+        email: `admB_${ts}@thaiba.com`,
+        employeeId: `EMP_ADMB_${ts}`,
+        firstName: "Admin",
+        lastName: "B",
+        role: "admin",
+        isActive: true,
+        tokenVersion: 1,
+      },
+      {
+        id: systemStaffId,
+        email: `sys_${ts}@thaiba.com`,
+        employeeId: `EMP_SYS_${ts}`,
+        firstName: "System",
+        lastName: "Account",
+        role: "system",
+        isActive: true,
+        tokenVersion: 1,
+      },
+    ] as any).run();
+
+    const adminAToken = await createSession({
+      staffId: adminAStaffId,
+      email: `admA_${ts}@thaiba.com`,
+      role: "admin",
+      institutionId: "inst_common",
+      employeeId: `EMP_ADMA_${ts}`,
+      name: "Admin A",
+      tokenVersion: 1,
+    });
+    mockCookieMap.set("thaibahive_session", { value: adminAToken });
+
+    const adminBToken = await createSession({
+      staffId: adminBStaffId,
+      email: `admB_${ts}@thaiba.com`,
+      role: "admin",
+      institutionId: "inst_common",
+      employeeId: `EMP_ADMB_${ts}`,
+      name: "Admin B",
+      tokenVersion: 1,
+    });
+    const { payload: payloadB } = await (await import("jose")).jwtVerify(adminBToken, (await import("../config")).getJwtSecretBytes("session"));
+    const sidB = payloadB.sid as string;
+
+    const sysToken = await createSession({
+      staffId: systemStaffId,
+      email: `sys_${ts}@thaiba.com`,
+      role: "system",
+      employeeId: `EMP_SYS_${ts}`,
+      name: "System",
+      tokenVersion: 1,
+    });
+    const { payload: payloadSys } = await (await import("jose")).jwtVerify(sysToken, (await import("../config")).getJwtSecretBytes("session"));
+    const sidSys = payloadSys.sid as string;
+
+    const { createActionStepUpToken } = await import("../step-up");
+    const { payload: admAPayload } = await (await import("jose")).jwtVerify(adminAToken, (await import("../config")).getJwtSecretBytes("session"));
+    const admASid = admAPayload.sid as string;
+    const stepUpToken = await createActionStepUpToken({
+      staffId: adminAStaffId,
+      sid: admASid,
+      action: "session:terminate",
+    });
+
+    // Ensure cookie is set to adminA caller
+    mockCookieMap.set("thaibahive_session", { value: adminAToken });
+
+    // 1. Peer rank termination (admin -> admin) -> 403
+    const resPeer = await terminateSessionRoute(
+      new Request(`http://localhost:3000/api/admin/sessions/${sidB}/terminate`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ stepUpToken }),
+      }),
+      { params: Promise.resolve({ id: sidB }) }
+    );
+    expect(resPeer.status).toBe(403);
+    const peerData = await resPeer.json();
+    expect(peerData.error).toContain("equal or higher ranked");
+
+    // 2. System account termination -> 403
+    const resSys = await terminateSessionRoute(
+      new Request(`http://localhost:3000/api/admin/sessions/${sidSys}/terminate`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify({ stepUpToken }),
+      }),
+      { params: Promise.resolve({ id: sidSys }) }
+    );
+    expect(resSys.status).toBe(403);
+    const sysData = await resSys.json();
+    expect(sysData.error).toContain("System account sessions cannot be terminated");
+  });
+
+  // ─── C1.13: Step-Up Session Binding Gate ────────────────────────────────────
+  it("C1.13: Step-up token minted on session A presented on session B returns HTTP 403", async () => {
+    // Caller staff_1 has two active sessions: session_A and session_B
+    const sessionAToken = await createSession({
+      staffId: passkeyStaffId,
+      email: passkeyEmail,
+      role: "super_admin",
+      employeeId: `EMP_PK_C1_${ts}`,
+      name: "Caller Admin",
+      tokenVersion: 1,
+    });
+    const { payload: payloadA } = await (await import("jose")).jwtVerify(sessionAToken, (await import("../config")).getJwtSecretBytes("session"));
+    const sidA = payloadA.sid as string;
+
+    const sessionBToken = await createSession({
+      staffId: passkeyStaffId,
+      email: passkeyEmail,
+      role: "super_admin",
+      employeeId: `EMP_PK_C1_${ts}`,
+      name: "Caller Admin",
+      tokenVersion: 1,
+    });
+
+    // Target session to terminate
+    const targetToken = await createSession({
+      staffId: targetSubordinateStaffId,
+      email: targetSubordinateEmail,
+      role: "staff",
+      employeeId: `EMP_SUB_C1_${ts}`,
+      name: "Subordinate Target",
+      tokenVersion: 1,
+    });
+    const { payload: targetPayload } = await (await import("jose")).jwtVerify(targetToken, (await import("../config")).getJwtSecretBytes("session"));
+    const targetSid = targetPayload.sid as string;
+
+    // Mint step-up token bound to session_A
+    const { createActionStepUpToken } = await import("../step-up");
+    const stepUpTokenFromA = await createActionStepUpToken({
+      staffId: passkeyStaffId,
+      sid: sidA,
+      action: "session:terminate",
+    });
+
+    // Caller presents cookie for session_B with token minted on session_A
+    mockCookieMap.set("thaibahive_session", { value: sessionBToken });
+
+    const terminateReq = new Request(`http://localhost:3000/api/admin/sessions/${targetSid}/terminate`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+      body: JSON.stringify({ stepUpToken: stepUpTokenFromA }),
+    });
+
+    const res = await terminateSessionRoute(terminateReq, {
+      params: Promise.resolve({ id: targetSid }),
+    });
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toContain("SID_MISMATCH");
+  });
 });

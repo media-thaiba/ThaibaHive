@@ -223,6 +223,13 @@ export async function POST(req: NextRequest) {
             if (host === "localhost" || host.startsWith("localhost:") || host === "127.0.0.1" || host.startsWith("127.0.0.1:")) return true;
           }
           if (host === "thaiba-hive.vercel.app" || host.endsWith(".thaiba-hive.vercel.app")) return true;
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+          if (appUrl) {
+            try {
+              const appHost = new URL(appUrl).host.toLowerCase();
+              if (host === appHost) return true;
+            } catch {}
+          }
           const configured = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
           return configured.includes(orig.toLowerCase()) || configured.includes(host);
         } catch {
@@ -302,8 +309,14 @@ export async function POST(req: NextRequest) {
       }
 
       // Counter check and update ONLY executed AFTER signature has cryptographically verified
-      if (credential.counter === 0 && signCount === 0) {
+      if (signCount === 0) {
         // Multi-device synced passkey (e.g. iCloud Keychain, Google Password Manager)
+        // Per WebAuthn spec §6.1.2, authenticators that do not support counters always return signCount = 0
+        await db
+          .update(webauthnCredentials)
+          .set({ lastUsedAt: new Date().toISOString() })
+          .where(eq(webauthnCredentials.id, credential.id))
+          .run();
       } else if (signCount > credential.counter) {
         await db
           .update(webauthnCredentials)

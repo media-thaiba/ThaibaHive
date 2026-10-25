@@ -192,11 +192,24 @@ export async function POST(
       );
     }
   } else {
-    // Everyone else receives 403
-    return NextResponse.json(
-      { error: "Forbidden: Insufficient privileges to terminate sessions" },
-      { status: 403 }
-    );
+    // Subordinate check: caller must strictly outrank target
+    if (targetRank >= callerRank) {
+      return NextResponse.json(
+        { error: "Forbidden: Cannot terminate session of equal or higher ranked staff member" },
+        { status: 403 }
+      );
+    }
+
+    // Cross-tenant boundary check: fail closed if either institution is missing or mismatched
+    const callerInstId = (session as any).institutionId || (callerStaff as any).institutionId;
+    const targetInstId = targetSession.institutionId || (targetStaff as any).institutionId;
+
+    if (!callerInstId || !targetInstId || callerInstId !== targetInstId) {
+      return NextResponse.json(
+        { error: "Forbidden: Cannot terminate sessions outside your assigned institution" },
+        { status: 403 }
+      );
+    }
   }
 
   // 8. Transactional termination & audit entry
@@ -268,18 +281,21 @@ export async function POST(
       txErr?.cause?.rawCode,
     ].filter(Boolean);
 
-    // Explicit primary key / unique constraint check on step_up_used
-    const isStepUpPrimaryKeyReplay =
+    const isConstraintCode =
       allCodes.includes("23505") || // Postgres unique_violation
       allCodes.includes("SQLITE_CONSTRAINT_PRIMARYKEY") || // LibSQL primary key
-      allCodes.includes("SQLITE_CONSTRAINT_UNIQUE") ||
+      allCodes.includes("SQLITE_CONSTRAINT_UNIQUE");
+
+    const mentionsStepUpTable =
+      allMessages.includes("step_up_used") ||
+      allMessages.includes("jti");
+
+    // Explicit primary key / unique constraint check on step_up_used
+    const isStepUpPrimaryKeyReplay =
+      (isConstraintCode && mentionsStepUpTable) ||
       allMessages.includes("step_up_used_pkey") ||
       allMessages.includes("step_up_used.jti") ||
-      allMessages.includes("step_up_used.PRIMARY") ||
-      (allMessages.includes("step_up_used") &&
-        (allMessages.includes("UNIQUE") ||
-          allMessages.includes("PRIMARY") ||
-          allMessages.includes("constraint failed")));
+      allMessages.includes("step_up_used.PRIMARY");
 
     if (isStepUpPrimaryKeyReplay) {
       return NextResponse.json(
