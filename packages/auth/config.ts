@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export type JwtSecretPurpose = "session" | "step-up" | "hall-ticket" | "mobile-handoff";
+export type JwtSecretPurpose = "session" | "step-up" | "action-step-up" | "hall-ticket" | "mobile-handoff";
 
 const HKDF_SALT = "thaibahive:jwt:salt:v1";
 

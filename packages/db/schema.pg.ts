@@ -1,4 +1,4 @@
-import { pgTable, text, integer, serial, doublePrecision as real, boolean, uniqueIndex, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, serial, doublePrecision as real, boolean, uniqueIndex, jsonb, index, bigint } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 const sqliteTable = pgTable;
@@ -90,6 +90,7 @@ export const staff = sqliteTable("staff", {
   biometricEnabled: boolean("biometric_enabled").notNull().default(false),
   modelVersion: text("model_version").default("facenet-512d-v1"),
   biometricStatus: text("biometric_status").default("active"),
+  googleSub: text("google_sub").unique(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
@@ -7853,8 +7854,32 @@ export const crossCampusAllocations = pgTable("cross_campus_allocations", {
   ccaBookingIdx: index("idx_pg_cross_campus_alloc_booking").on(t.bookingId),
 }));
 
+export const userSessions = sqliteTable("user_sessions", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role").notNull(),
+  institutionId: text("institution_id"),
+  status: text("status").notNull().default("active"),
+  clientIp: text("client_ip"),
+  userAgent: text("user_agent"),
+  deviceType: text("device_type"),
+  loginAt: bigint("login_at", { mode: "number" }).notNull(),
+  lastActiveAt: bigint("last_active_at", { mode: "number" }).notNull(),
+  expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
+  logoutAt: bigint("logout_at", { mode: "number" }),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+}, (t) => ({
+  userSessionsStaffStatusIdx: index("idx_pg_user_sessions_staff_status").on(t.staffId, t.status),
+  userSessionsStatusIdx: index("idx_pg_user_sessions_status").on(t.status),
+  userSessionsExpiresAtIdx: index("idx_pg_user_sessions_expires_at").on(t.expiresAt),
+  userSessionsLastActiveAtIdx: index("idx_pg_user_sessions_last_active_at").on(t.lastActiveAt),
+}));
 
-
-
-
-
+export const stepUpUsed = sqliteTable("step_up_used", {
+  jti: text("jti").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
+  usedAt: bigint("used_at", { mode: "number" }).notNull(),
+});
