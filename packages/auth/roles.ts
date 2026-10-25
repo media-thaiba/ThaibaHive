@@ -39,6 +39,7 @@ const basePermissions = {
     "system:read",
     "system:audit:read",
     "system:audit:verify",
+    "system:diagnostics:read",
     "system:cron",
     "cache:manage",
     "media:reconcile",
@@ -476,6 +477,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
   inspector: basePermissions.inspector,
 
   regional_admin: [
+    "system:diagnostics:read",
     "academic.student.admissions",
     "academic.classes.manage",
     "academic.grade.create",
@@ -782,9 +784,11 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "system:sessions:view",
     "system:sessions:terminate",
     "system:audit:read",
-    "system:audit:verify"
+    "system:audit:verify",
+    "system:diagnostics:read"
   ],
   admin: [
+    "system:diagnostics:read",
     "system:sessions:terminate",
     "academic.student.admissions",
     "students:create",
@@ -2083,3 +2087,13 @@ export function isAuthorizedDeveloper(user: { email?: string | null; role?: stri
   return allowed.includes(user.email.toLowerCase().trim());
 }
 
+export const ALL_VALID_PERMISSIONS: Set<string> = new Set([
+  ...Object.values(rolePermissions).flat().filter(p => p !== "*"),
+  ...Object.keys(DOT_TO_COLON_MAP),
+  ...Object.values(DOT_TO_COLON_MAP),
+]);
+
+export function isValidPermission(permission: string): boolean {
+  if (permission === "*") return true;
+  return ALL_VALID_PERMISSIONS.has(permission);
+}

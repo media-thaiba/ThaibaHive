@@ -125,4 +125,4 @@ export const PUT = requireAuth(async (request: Request, session) => {
       recurringSkipDays: recurringSkipDays || [],
     },
   });
-}, "canteen:write");
+}, "canteen:create");
