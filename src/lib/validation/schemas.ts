@@ -52,6 +52,7 @@ export const staffCreateSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must not exceed 128 characters").optional(),
   departmentIds: z.array(z.string().trim().min(1)).max(50).optional(),
   institutionIds: z.array(z.string().trim().min(1)).max(50).optional(),
+  stepUpToken: z.string().trim().optional(),
   aadhaar: z.string().trim().max(50).optional().nullable(),
   pan: z.string().trim().max(50).optional().nullable(),
   bankAccount: z.string().trim().max(50).optional().nullable(),
@@ -83,6 +84,9 @@ export const staffUpdateSchema = z.object({
   nfcTagId: z.string().trim().max(100).optional().nullable(),
   departmentIds: z.array(z.string().trim().min(1)).max(50).optional(),
   institutionIds: z.array(z.string().trim().min(1)).max(50).optional(),
+  role: staffRoleEnum.optional(),
+  isActive: z.boolean().optional(),
+  stepUpToken: z.string().trim().optional(),
 });
 
 export const taskStatusEnum = z.enum(["todo", "in_progress", "review", "completed", "cancelled"]);
