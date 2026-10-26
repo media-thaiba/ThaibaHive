@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, financialReconciliationItems, financialReconciliations, eq, and } from "@/db";
+import { db, financialReconciliationItems, financialReconciliations, eq, and, sql } from "@/db";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { financialReconciliationItemMatchSchema } from "@/lib/validation/schemas";
@@ -52,24 +52,30 @@ export const PATCH = requireAuth(async (request: Request, session: any, context?
   try {
     const institutionId = await resolveScopedInstitutionId(null);
 
-    // Fetch the item and its parent session for tenant scoping
-    const [itemRow] = await db
-      .select()
+    const [result] = await db
+      .select({
+        item: financialReconciliationItems,
+        institutionId: financialReconciliations.institutionId,
+      })
       .from(financialReconciliationItems)
-      .where(eq(financialReconciliationItems.id, itemId));
+      .innerJoin(
+        financialReconciliations,
+        eq(financialReconciliationItems.reconciliationId, financialReconciliations.id)
+      )
+      .where(
+        and(
+          eq(financialReconciliationItems.id, itemId),
+          institutionId === "global"
+            ? sql`1=1`
+            : eq(financialReconciliations.institutionId, institutionId)
+        )
+      );
 
-    if (!itemRow) {
+    if (!result) {
       return NextResponse.json({ error: "Reconciliation item not found" }, { status: 404 });
     }
 
-    const [sessionRow] = await db
-      .select()
-      .from(financialReconciliations)
-      .where(eq(financialReconciliations.id, itemRow.reconciliationId));
-
-    if (!sessionRow || sessionRow.institutionId !== institutionId) {
-      return NextResponse.json({ error: "Forbidden: institution scope mismatch" }, { status: 403 });
-    }
+    const itemRow = result.item;
 
     // State invariant: Once an item is in a terminal match status, reject invalid regressions
     const currentStatus = itemRow.matchStatus;

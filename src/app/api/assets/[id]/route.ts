@@ -11,7 +11,7 @@ import {
   verifyStaffInstitutionAffiliation,
   isDecommissionedAsset,
 } from "@/lib/assets/ledger";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, or, isNull } from "drizzle-orm";
 
 export const GET = requireAuth(async (request, session, context) => {
   const params = context?.params ? await context.params : {};
@@ -81,7 +81,11 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   const scopedInstId = await resolveRequestInstitution(session, null);
 
-  const existing = await db.select().from(assets).where(eq(assets.id, id)).get();
+  const existing = await db.select().from(assets).where(
+    scopedInstId !== "global"
+      ? and(eq(assets.id, id), or(eq(assets.institutionId, scopedInstId), isNull(assets.institutionId)))
+      : eq(assets.id, id)
+  ).get();
   if (!existing) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
@@ -154,7 +158,15 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
     const updated = await db
       .update(assets)
       .set(updateData)
-      .where(and(eq(assets.id, id), eq(assets.updatedAt, existing.updatedAt)))
+      .where(
+        and(
+          eq(assets.id, id),
+          eq(assets.updatedAt, existing.updatedAt),
+          scopedInstId !== "global" && existing.institutionId
+            ? eq(assets.institutionId, existing.institutionId)
+            : sql`1=1`
+        )
+      )
       .returning()
       .get();
 
@@ -195,12 +207,12 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
 
   const scopedInstId = await resolveRequestInstitution(session, null);
 
-  const existing = await db.select().from(assets).where(eq(assets.id, id)).get();
+  const existing = await db.select().from(assets).where(
+    scopedInstId !== "global"
+      ? and(eq(assets.id, id), or(eq(assets.institutionId, scopedInstId), isNull(assets.institutionId)))
+      : eq(assets.id, id)
+  ).get();
   if (!existing) {
-    return NextResponse.json({ error: "Asset not found" }, { status: 404 });
-  }
-
-  if (scopedInstId !== "global" && existing.institutionId && existing.institutionId !== scopedInstId) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 
@@ -213,7 +225,14 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
         assignedToId: null,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(assets.id, id))
+      .where(
+        and(
+          eq(assets.id, id),
+          scopedInstId !== "global" && existing.institutionId
+            ? eq(assets.institutionId, existing.institutionId)
+            : sql`1=1`
+        )
+      )
       .returning()
       .get();
 

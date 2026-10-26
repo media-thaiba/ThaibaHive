@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
+import { resolveRequestInstitution } from '@thaiba/auth';
 import { withDPoP } from '@/lib/identity/dpop-middleware';
 import { AimsDbStore } from '@/lib/operations/persistence/aims-db-store';
 
 export const GET = withDPoP(
-  requireAuth(async (req, _session, context) => {
+  requireAuth(async (req, session, context) => {
     const params = context?.params ? await context.params : {};
     let id: string | undefined = params.id;
     if (!id) {
@@ -15,8 +16,11 @@ export const GET = withDPoP(
       return NextResponse.json({ error: 'Dispatch route ID is required' }, { status: 400 });
     }
 
+    const scopedInstId = await resolveRequestInstitution(session, null);
     const store = AimsDbStore.getInstance();
-    const dispatches = store.getDispatches();
+    const dispatches = scopedInstId === "global"
+      ? store.getDispatches()
+      : store.getDispatches(scopedInstId);
     const dispatch = dispatches.find((d) => d.routeId === id || d.id === id);
 
     if (!dispatch) {
@@ -29,7 +33,7 @@ export const GET = withDPoP(
 );
 
 export const DELETE = withDPoP(
-  requireAuth(async (req, _session, context) => {
+  requireAuth(async (req, session, context) => {
     const params = context?.params ? await context.params : {};
     let id: string | undefined = params.id;
     if (!id) {
@@ -40,7 +44,17 @@ export const DELETE = withDPoP(
       return NextResponse.json({ error: 'Dispatch route ID is required' }, { status: 400 });
     }
 
+    const scopedInstId = await resolveRequestInstitution(session, null);
     const store = AimsDbStore.getInstance();
+    const dispatches = scopedInstId === "global"
+      ? store.getDispatches()
+      : store.getDispatches(scopedInstId);
+    const dispatch = dispatches.find((d) => d.routeId === id || d.id === id);
+
+    if (!dispatch) {
+      return NextResponse.json({ error: 'Dispatch route not found' }, { status: 404 });
+    }
+
     const deleted = store.deleteDispatch(id);
 
     if (!deleted) {
