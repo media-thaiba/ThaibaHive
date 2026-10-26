@@ -105,8 +105,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         body: JSON.stringify({ idToken }),
       });
       if (res.ok) {
-        telemetry.info("[Google GIS] Authentication successful, navigating to root...");
-        router.push("/");
+        telemetry.info("[Google GIS] Authentication successful, reloading to re-hydrate session...");
+        window.location.href = "/";
       } else {
         const data = await res.json().catch(() => ({}));
         const errMsg = data.error || "Google authentication failed";

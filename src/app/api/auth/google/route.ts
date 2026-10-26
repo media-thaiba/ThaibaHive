@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff } from "@/db/schema";
+import { staff, staffInstitutions } from "@/db/schema";
 import { createSession, verifyGoogleToken } from "@/lib/auth";
 import { eq, and, or, sql } from "drizzle-orm";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: UNIFORM_AUTH_DENIED_ERROR, code: "ACCOUNT_NOT_FOUND" }, { status: 403 });
     }
 
-    let staffMember = candidates[0];
+    const staffMember = candidates[0];
 
     // Uniform 403 on deactivated account (D3)
     if (!staffMember.isActive) {
@@ -185,6 +185,15 @@ export async function POST(request: Request) {
     const isFirstLogin = staffMember.isFirstLogin ?? false;
     const needsOnboarding = isFirstLogin;
 
+    // Resolve tenant scope via staffInstitutions junction table (staff has no direct institutionId column)
+    const staffInstRow = await db
+      .select({ institutionId: staffInstitutions.institutionId })
+      .from(staffInstitutions)
+      .where(eq(staffInstitutions.staffId, staffMember.id))
+      .get();
+
+    const resolvedInstitutionId = staffInstRow?.institutionId ?? null;
+
     const token = await createSession({
       staffId: staffMember.id,
       email: staffMember.email,
@@ -192,6 +201,7 @@ export async function POST(request: Request) {
       employeeId: staffMember.employeeId,
       name: `${staffMember.firstName} ${staffMember.lastName}`,
       tokenVersion: staffMember.tokenVersion ?? 0,
+      institutionId: resolvedInstitutionId,
     });
 
     // F-12: token-in-body only for mobile clients presenting the platform header.
