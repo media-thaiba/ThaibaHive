@@ -118,3 +118,15 @@ test-*.db-shm
 
 dev.log
 *.log
+
+# External reference repositories
+external-erps/
+
+# Local agent runtime state
+.agent/skills/gravitas*
+.gravitas/
+
+# Spike scratch artifacts
+spike/fix-*
+spike/patch-*
+spike/user_request_*.txt

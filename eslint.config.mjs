@@ -105,6 +105,7 @@ const eslintConfig = defineConfig([
     ".claude/**",
     ".claude-flow/**",
     ".stryker-tmp/**",
+    "external-erps/**",
   ]),
 ]);
 
