@@ -28,7 +28,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Google ID token is required" }, { status: 400 });
     }
 
-    const rawIds = [process.env.GOOGLE_CLIENT_IDS, process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS]
+    const rawIds = [
+      process.env.GOOGLE_CLIENT_IDS,
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS,
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    ]
       .filter(Boolean)
       .join(",");
     const allowedClientIds = Array.from(

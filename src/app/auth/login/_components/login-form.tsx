@@ -86,7 +86,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   const { attachDPoP } = useDPoP();
 
   const googleBtnRef = useRef<HTMLDivElement>(null);
-  const rawGoogleClientIds = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS || "")
+  const rawGoogleClientIds = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "")
     .replace(/[\uFEFF\u200B\u00A0"']/g, "")
     .trim();
   const googleClientId = rawGoogleClientIds.split(",")[0]?.trim() || "";
@@ -105,8 +105,8 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         body: JSON.stringify({ idToken }),
       });
       if (res.ok) {
-        telemetry.info("[Google GIS] Authentication successful, reloading to re-hydrate session...");
-        window.location.href = "/";
+        telemetry.info("[Google GIS] Authentication successful, navigating to root...");
+        router.push("/");
       } else {
         const data = await res.json().catch(() => ({}));
         const errMsg = data.error || "Google authentication failed";
