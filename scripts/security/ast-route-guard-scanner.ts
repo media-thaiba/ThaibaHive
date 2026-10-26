@@ -12,7 +12,7 @@
 import fs from "fs";
 import path from "path";
 import ts from "typescript";
-import { ALL_VALID_PERMISSIONS, isValidPermission } from "../../packages/auth/roles";
+import { isValidPermission } from "../../packages/auth/roles";
 
 export interface MethodFinding {
   method: string;

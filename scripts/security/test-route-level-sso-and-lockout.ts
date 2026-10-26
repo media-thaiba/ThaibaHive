@@ -134,7 +134,7 @@ async function run() {
     tokenVersion: 0,
   }).run();
 
-  const saSessionToken = await createSession({
+  const _saSessionToken = await createSession({
     staffId: callerSuperAdminId,
     email: "caller.sa@thaibahive.local",
     role: "super_admin",
@@ -169,7 +169,7 @@ async function run() {
   // Wait, what if media is active, and caller tries to delete media when only media is active?
   // To simulate that: let's query the guard condition directly or with caller:
   // If media is active (1 active super admin), and caller is a system token (role: super_admin):
-  const systemSessionToken = await createSession({
+  const _systemSessionToken = await createSession({
     staffId: "system",
     email: "system@internal",
     role: "super_admin",

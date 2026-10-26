@@ -6,7 +6,7 @@ import {
   ScanGatePassParams,
   ScanGatePassResult
 } from "./types";
-import { CasConflictError } from "./errors";
+
 
 function isPostgresConnection(client: any): boolean {
   if (!client) return false;

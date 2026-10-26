@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error missing types for pg in script context
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";

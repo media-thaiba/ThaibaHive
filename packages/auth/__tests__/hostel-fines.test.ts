@@ -20,7 +20,7 @@ describe("Hostel Fine Calculation & Append-Only Ledger Suite", () => {
         calculateLateReturnFine(
           "2026-10-25T18:00:00.000Z",
           "2026-10-25T19:30:00.000Z",
-          null as any
+          null as unknown as HostelSettings
         );
       }).toThrow("Hostel settings not configured for institution");
     });

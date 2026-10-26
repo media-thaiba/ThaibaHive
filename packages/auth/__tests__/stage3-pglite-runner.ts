@@ -93,7 +93,7 @@ async function runStage3PgVerification() {
   const tenant = `pg_tenant_stg3_${ts}`;
 
   // ─── Test 1: Sequential Hash-Chaining & Merkle Root on Postgres ─────────────
-  const entries: any[] = [];
+  const entries: { sequenceNumber: number; previousHash: string; currentHash: string; signature: string }[] = [];
   let prevHash = GENESIS_PREV_HASH;
 
   for (let seq = 1; seq <= 5; seq++) {
@@ -122,7 +122,7 @@ async function runStage3PgVerification() {
       action: `PG_ACTION_${seq}`,
       entityType: "pg_entity",
       entityId: `id_${seq}`,
-      payload: canonicalPayloadJSON as any,
+      payload: canonicalPayloadJSON,
       sequenceNumber: seq,
       previousHash: prevHash,
       currentHash,
@@ -146,7 +146,7 @@ async function runStage3PgVerification() {
   }
 
   // Verify Merkle Root
-  const blockHashes = insertedRows.map((r: any) => r.currentHash);
+  const blockHashes = insertedRows.map((r: { currentHash: string }) => r.currentHash);
   const merkleRoot = computeMerkleRoot(blockHashes);
   if (!merkleRoot || merkleRoot.length !== 64) {
     throw new Error("Test 1 Failed: Invalid Merkle root computed");
@@ -171,8 +171,9 @@ async function runStage3PgVerification() {
   // ─── Test 2: Database-Level Append-Only Trigger on Postgres ──────────────────
   await installAuditImmutabilityTriggers(pgDb);
 
-  const isImmutabilityError = (err: any) => {
-    const all = [err?.message, err?.cause?.message, String(err), String(err?.cause)].filter(Boolean).join(" ");
+  const isImmutabilityError = (err: unknown) => {
+    const e = err as { message?: string; cause?: { message?: string } } | null;
+    const all = [e?.message, e?.cause?.message, String(err), String(e?.cause)].filter(Boolean).join(" ");
     return all.includes("Audit ledger is immutable");
   };
 
@@ -183,7 +184,7 @@ async function runStage3PgVerification() {
       .set({ action: "TAMPERED_ON_PG" })
       .where(eq(pgSchema.auditLogs.id, insertedRows[0].id))
       .run();
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isImmutabilityError(err)) {
       updateBlocked = true;
     }
@@ -199,7 +200,7 @@ async function runStage3PgVerification() {
       .delete(pgSchema.auditLogs)
       .where(eq(pgSchema.auditLogs.id, insertedRows[0].id))
       .run();
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (isImmutabilityError(err)) {
       deleteBlocked = true;
     }
@@ -216,7 +217,7 @@ async function runStage3PgVerification() {
   const rollbackTenant = `pg_tenant_rb_${ts}`;
 
   // Initial record in tx
-  await pgDb.transaction(async (tx: any) => {
+  await pgDb.transaction(async (tx: typeof rawDrizzle) => {
     const tsNow = new Date().toISOString();
     const canon = canonicalizePayload({ initial: true });
     const h = computeAuditBlockHash({
@@ -235,7 +236,7 @@ async function runStage3PgVerification() {
       tenantId: rollbackTenant,
       action: "INIT",
       entityType: "test",
-      payload: canon as any,
+      payload: canon,
       sequenceNumber: 1,
       previousHash: GENESIS_PREV_HASH,
       currentHash: h,
@@ -247,7 +248,7 @@ async function runStage3PgVerification() {
   // Failing tx
   let txFailed = false;
   try {
-    await pgDb.transaction(async (tx: any) => {
+    await pgDb.transaction(async (tx: typeof rawDrizzle) => {
       const tsNow = new Date().toISOString();
       const canon = canonicalizePayload({ fail: true });
       const h = computeAuditBlockHash({
@@ -265,7 +266,7 @@ async function runStage3PgVerification() {
         tenantId: rollbackTenant,
         action: "FAIL",
         entityType: "test",
-        payload: canon as any,
+        payload: canon,
         sequenceNumber: 2,
         previousHash: "prev",
         currentHash: h,

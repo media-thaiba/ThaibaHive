@@ -301,10 +301,10 @@ export async function verifySession(): Promise<SessionPayload | null> {
 
     return {
       ...session,
-      role: (row.role as any) || session.role,
+      role: (row.role as string) || session.role,
     };
   } catch (error: unknown) {
-    if ((error as any)?.message === "LEGACY_SESSION_EXPIRED") {
+    if (error instanceof Error && error.message === "LEGACY_SESSION_EXPIRED") {
       throw error;
     }
     console.error("[Auth] Session verification failed:", error instanceof Error ? error.message : error);
@@ -322,7 +322,7 @@ export async function verifyDPoPSession(
     if (payload.dpopEnabled !== true) {
       return null;
     }
-    const cnf = (payload as any).cnf;
+    const cnf = (payload as Record<string, unknown>).cnf as { jkt?: string } | undefined;
     if (!cnf || typeof cnf !== "object" || cnf.jkt !== dpopProof.jkt) {
       return null;
     }
@@ -368,7 +368,7 @@ export async function verifyDPoPSession(
 
     return {
       ...session,
-      role: (row.role as any) || session.role,
+      role: (row.role as string) || session.role,
       cnfJkt: cnf.jkt,
     };
   } catch (err) {

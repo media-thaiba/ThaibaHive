@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffDepartments, staffInstitutions, userAppAssignments, auditLog, userSessions } from "@/db/schema";
-import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { requireAuth } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import {
   hasPermission,
   type StaffRole,
   getRoleRank,
-  ROLE_RANK_MAP,
+
   canMutateStaff,
   isAuthorizedDeveloper,
   verifyActionStepUpToken,

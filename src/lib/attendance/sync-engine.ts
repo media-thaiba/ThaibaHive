@@ -1,7 +1,6 @@
-import { db, attendanceEvents, attendanceDays, punchAttempts, attendanceLogs, institutions } from "@/db";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { db, attendanceEvents, attendanceDays, punchAttempts, attendanceLogs } from "@/db";
+import { eq, and, asc } from "drizzle-orm";
 import type {
-  AttendanceEventSyncItem,
   AttendanceSyncBatchRequest,
   AttendanceSyncBatchResponse,
   AttendanceSyncItemResult,

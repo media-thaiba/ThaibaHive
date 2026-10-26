@@ -23,6 +23,7 @@ import {
   isStepUpReplayError,
   createSession,
   verifySession,
+  type SessionPayload,
 } from "../index";
 import { canAccessStaff } from "@/lib/auth/department-scope";
 import { PUT as staffPut, PATCH as staffPatch, DELETE as staffDelete } from "@/app/api/staff/[id]/route";
@@ -31,8 +32,8 @@ import { db } from "@/db";
 import { staff, institutions, departments, staffInstitutions, staffDepartments, userSessions, stepUpUsed } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 
-let activeCookieMap = new Map<string, string>();
-let activeHeaderMap = new Map<string, string>();
+const activeCookieMap = new Map<string, string>();
+const activeHeaderMap = new Map<string, string>();
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(async () => ({
@@ -142,7 +143,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "principal",
         institutionId: instA,
       };
-      const resolved = await resolveScopedInstitutionId(null, session as any);
+      const resolved = await resolveScopedInstitutionId(null, session as unknown as SessionPayload);
       expect(resolved).toBe(instA);
     });
 
@@ -152,7 +153,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "principal",
         institutionId: instA,
       };
-      await expect(resolveScopedInstitutionId(instB, session as any)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(instB, session as unknown as SessionPayload)).rejects.toThrow(TenantMismatchError);
     });
 
     it("accepts when requested institution matches caller assigned institution", async () => {
@@ -161,7 +162,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "admin",
         institutionId: instA,
       };
-      const resolved = await resolveScopedInstitutionId(instA, session as any);
+      const resolved = await resolveScopedInstitutionId(instA, session as unknown as SessionPayload);
       expect(resolved).toBe(instA);
     });
   });
@@ -174,8 +175,8 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "staff",
         institutionId: null,
       };
-      await expect(resolveScopedInstitutionId(instA, session as any)).rejects.toThrow(TenantMismatchError);
-      await expect(resolveRequestInstitution(session as any, instA)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(instA, session as unknown as SessionPayload)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveRequestInstitution(session as unknown as SessionPayload, instA)).rejects.toThrow(TenantMismatchError);
     });
   });
 
@@ -187,8 +188,8 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "regional_admin",
         institutionId: null,
       };
-      expect(await resolveScopedInstitutionId(instA, session as any)).toBe(instA);
-      expect(await resolveScopedInstitutionId(instB, session as any)).toBe(instB);
+      expect(await resolveScopedInstitutionId(instA, session as unknown as SessionPayload)).toBe(instA);
+      expect(await resolveScopedInstitutionId(instB, session as unknown as SessionPayload)).toBe(instB);
     });
 
     it("rejects regional_admin with 403 TenantMismatchError when accessing institution outside cluster", async () => {
@@ -197,7 +198,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "regional_admin",
         institutionId: null,
       };
-      await expect(resolveScopedInstitutionId(instC, session as any)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(instC, session as unknown as SessionPayload)).rejects.toThrow(TenantMismatchError);
     });
 
     it("fails closed when regional_admin has an empty cluster", async () => {
@@ -206,7 +207,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "regional_admin",
         institutionId: null,
       };
-      await expect(resolveScopedInstitutionId(instA, session as any)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(instA, session as unknown as SessionPayload)).rejects.toThrow(TenantMismatchError);
     });
   });
 
@@ -218,10 +219,10 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         role: "super_admin",
         institutionId: "global",
       };
-      expect(await resolveScopedInstitutionId(instA, session as any)).toBe(instA);
-      expect(await resolveScopedInstitutionId(instB, session as any)).toBe(instB);
-      expect(await resolveScopedInstitutionId(instC, session as any)).toBe(instC);
-      expect(await resolveScopedInstitutionId(null, session as any, { allowGlobal: true })).toBe("global");
+      expect(await resolveScopedInstitutionId(instA, session as unknown as SessionPayload)).toBe(instA);
+      expect(await resolveScopedInstitutionId(instB, session as unknown as SessionPayload)).toBe(instB);
+      expect(await resolveScopedInstitutionId(instC, session as unknown as SessionPayload)).toBe(instC);
+      expect(await resolveScopedInstitutionId(null, session as unknown as SessionPayload, { allowGlobal: true })).toBe("global");
     });
   });
 
@@ -231,7 +232,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
       expect(canCreateRole("principal", "super_admin")).toBe(false);
       expect(canCreateRole("principal", "regional_admin")).toBe(false);
       expect(canCreateRole("principal", "principal")).toBe(false);
-      expect(canCreateRole("principal", "system" as any)).toBe(false);
+      expect(canCreateRole("principal", "system" as unknown as Parameters<typeof canCreateRole>[1])).toBe(false);
     });
 
     it("allows principal to create strictly subordinate roles (hod, coordinator, admin, staff)", () => {
@@ -270,7 +271,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
     });
 
     it("blocks super_admin from modifying system role account", () => {
-      expect(canMutateStaff("super_admin", "system" as any)).toBe(false);
+      expect(canMutateStaff("super_admin", "system" as unknown as Parameters<typeof canMutateStaff>[1])).toBe(false);
     });
   });
 
@@ -299,7 +300,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         }),
       });
 
-      const res = await staffPut(req, { params: Promise.resolve({ id: adminAId }) } as any);
+      const res = await staffPut(req, { params: Promise.resolve({ id: adminAId }) } as unknown as { params: Promise<{ id: string }> });
       expect(res.status).toBe(403);
       const json = await res.json();
       expect(json.error).toContain("Cannot modify role, institution, department, or active status on your own account");
@@ -328,7 +329,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
         }),
       });
 
-      const res = await staffPatch(req, { params: Promise.resolve({ id: adminAId }) } as any);
+      const res = await staffPatch(req, { params: Promise.resolve({ id: adminAId }) } as unknown as { params: Promise<{ id: string }> });
       expect(res.status).toBe(403);
       const json = await res.json();
       expect(json.error).toContain("Cannot modify role, institution, department, or active status on your own account");
@@ -465,7 +466,7 @@ describe("Stage 2: Multi-Tenant RBAC & Privilege Escalation Guards (C2.1 – C2.
             exp: verifyRes.exp,
           });
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         replayCaught = isStepUpReplayError(err);
       }
       expect(replayCaught).toBe(true);

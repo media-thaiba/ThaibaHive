@@ -203,7 +203,7 @@ describe("Hostel CAS Gate Pass & Scan Engine (SQLite / LibSQL)", () => {
         sql: `SELECT count(*) as live_count FROM hostel_gate_passes WHERE leave_id = ? AND status != 'revoked';`,
         args: [leaveId]
       });
-      expect(Number((livePasses.rows[0] as any).live_count)).toBe(1);
+      expect(Number((livePasses.rows[0] as unknown as { live_count: number | string }).live_count)).toBe(1);
     });
 
     it("rejects reissuing a pass that has already been checked in (used_in)", async () => {

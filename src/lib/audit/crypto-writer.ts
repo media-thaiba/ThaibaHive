@@ -3,7 +3,7 @@ import { auditLogs, auditMerkleRoots } from "@thaiba/db/schema";
 import { eq, desc } from "drizzle-orm";
 import {
   canonicalizePayload,
-  computePreimageString,
+
   computeAuditBlockHash,
   computeAuditHmac,
   GENESIS_PREV_HASH,

@@ -8,9 +8,9 @@ import { POST as rawStepUpChallengeRoute } from "../../../src/app/api/auth/step-
 import { POST as rawStepUpVerifyRoute } from "../../../src/app/api/auth/step-up/verify/route";
 import { POST as rawTerminateSessionRoute } from "../../../src/app/api/admin/sessions/[id]/terminate/route";
 
-const stepUpChallengeRoute = (req: any) => (rawStepUpChallengeRoute as any)(req);
-const stepUpVerifyRoute = (req: any) => (rawStepUpVerifyRoute as any)(req);
-const terminateSessionRoute = (req: any, ctx: any) => (rawTerminateSessionRoute as any)(req, ctx);
+const stepUpChallengeRoute = (req: Request) => (rawStepUpChallengeRoute as unknown as (r: Request) => Promise<Response>)(req);
+const stepUpVerifyRoute = (req: Request) => (rawStepUpVerifyRoute as unknown as (r: Request) => Promise<Response>)(req);
+const terminateSessionRoute = (req: Request, ctx: unknown) => (rawTerminateSessionRoute as unknown as (r: Request, c: unknown) => Promise<Response>)(req, ctx);
 
 const mockCookieMap = new Map<string, { value: string }>();
 const mockHeaderMap = new Map<string, string>();
@@ -98,7 +98,7 @@ describe("Critical Security Gate: Step-Up Factor Verification (C1 & C2)", () => 
       deviceName: "platform",
       createdAt: now,
       lastUsedAt: now,
-    } as any).run();
+    } as unknown as typeof webauthnCredentials.$inferInsert).run();
 
     // 3. Email OTP-Enrolled Staff
     await db.insert(staff).values({
@@ -213,7 +213,7 @@ describe("Critical Security Gate: Step-Up Factor Verification (C1 & C2)", () => 
   // ─── C2: isAuthorizedDeveloper Fail-Closed Validation ───────────────────────
   it("C2.1: isAuthorizedDeveloper fails closed when emailVerifiedAt is null, undefined, or missing", () => {
     expect(isAuthorizedDeveloper({ email: devEmail, emailVerifiedAt: null, role: "super_admin" })).toBe(false);
-    expect(isAuthorizedDeveloper({ email: devEmail, emailVerifiedAt: undefined as any, role: "super_admin" })).toBe(false);
+    expect(isAuthorizedDeveloper({ email: devEmail, emailVerifiedAt: undefined as unknown as string, role: "super_admin" })).toBe(false);
     expect(isAuthorizedDeveloper(null)).toBe(false);
     expect(isAuthorizedDeveloper(undefined)).toBe(false);
     expect(isAuthorizedDeveloper({ email: "unauthorized@test.com", emailVerifiedAt: new Date().toISOString(), role: "super_admin" })).toBe(false);
@@ -886,7 +886,7 @@ describe("Critical Security Gate: Step-Up Factor Verification (C1 & C2)", () => 
         isActive: true,
         tokenVersion: 1,
       },
-    ] as any).run();
+    ] as unknown as (typeof staff.$inferInsert)[]).run();
 
     const principalToken = await createSession({
       staffId: principalStaffId,
@@ -1002,7 +1002,7 @@ describe("Critical Security Gate: Step-Up Factor Verification (C1 & C2)", () => 
         isActive: true,
         tokenVersion: 1,
       },
-    ] as any).run();
+    ] as unknown as (typeof staff.$inferInsert)[]).run();
 
     const adminAToken = await createSession({
       staffId: adminAStaffId,

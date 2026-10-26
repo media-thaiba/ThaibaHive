@@ -31,12 +31,12 @@ jest.mock("next/headers", () => ({
   headers: jest.fn(),
 }));
 
-let mockCookieMap = new Map<string, { value: string; options?: any }>();
-let mockHeaderMap = new Map<string, string>();
+const mockCookieMap = new Map<string, { value: string; options?: Record<string, unknown> }>();
+const mockHeaderMap = new Map<string, string>();
 
 const mockCookies = {
   get: jest.fn((name: string) => mockCookieMap.get(name)),
-  set: jest.fn((name: string, value: string, options?: any) => {
+  set: jest.fn((name: string, value: string, options?: Record<string, unknown>) => {
     mockCookieMap.set(name, { value, options });
   }),
   delete: jest.fn((name: string) => {
@@ -65,8 +65,8 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
   beforeEach(async () => {
     mockCookieMap.clear();
     mockHeaderMap.clear();
-    (cookies as any).mockResolvedValue(mockCookies);
-    (headers as any).mockResolvedValue(mockHeaders);
+    (cookies as unknown as jest.Mock).mockResolvedValue(mockCookies);
+    (headers as unknown as jest.Mock).mockResolvedValue(mockHeaders);
     process.env.DEVELOPER_EMAILS = `${developerEmail},other_dev@thaiba.org`;
 
     // Seed test staff records
@@ -190,7 +190,7 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
     const { payload: dpopPayload } = await jwtVerify(dpopToken, getJwtSecretBytes("session"));
     expect((dpopPayload.sid as string).startsWith("sess_")).toBe(true);
     expect(dpopPayload.dpopEnabled).toBe(true);
-    expect((dpopPayload as any).cnf?.jkt).toBe(dpopJkt);
+    expect((dpopPayload as unknown as { cnf?: { jkt?: string } }).cnf?.jkt).toBe(dpopJkt);
 
     const dpopDbRow = await db
       .select()
@@ -675,7 +675,7 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
     // 6. Transaction rollback leaves jti unburned
     if (verified.success) {
       try {
-        await db.transaction(async (tx: any) => {
+        await db.transaction(async (tx) => {
           await consumeStepUpTokenInTx(tx, {
             jti: verified.payload.jti,
             staffId: testDeveloperId,
@@ -694,7 +694,7 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
       expect(usedRow).toBeUndefined();
 
       // Successful transaction consumes jti
-      await db.transaction(async (tx: any) => {
+      await db.transaction(async (tx) => {
         await consumeStepUpTokenInTx(tx, {
           jti: verified.payload.jti,
           staffId: testDeveloperId,
@@ -708,7 +708,7 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
 
       // Second consumption fails with PK conflict
       await expect(
-        db.transaction(async (tx: any) => {
+        db.transaction(async (tx) => {
           await consumeStepUpTokenInTx(tx, {
             jti: verified.payload.jti,
             staffId: testDeveloperId,
@@ -810,7 +810,7 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
     const auditCountBefore = await db.select({ count: sql<number>`count(*)` }).from(auditLogs).get();
 
     try {
-      await db.transaction(async (tx: any) => {
+      await db.transaction(async (tx) => {
         await tx.update(userSessions).set({ status: "terminated" }).where(eq(userSessions.id, rollbackSid));
         await cryptoAuditWriter.log(
           {
@@ -859,9 +859,9 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
 
   // ─── CASE 18: Foreign Key Enforcement in Transaction ────────────────────────
   it("Case 18: Foreign key violation inside db.transaction throws error mentioning foreign key", async () => {
-    let thrownError: any = null;
+    let thrownError: { message?: string; cause?: unknown } | null = null;
     try {
-      await db.transaction(async (tx: any) => {
+      await db.transaction(async (tx) => {
         await tx.insert(userSessions).values({
           id: `sess_fk_${Date.now()}`,
           staffId: "non_existent_staff_id_9999", // Invalid FK!
@@ -874,8 +874,8 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
           createdAt: Date.now(),
         });
       });
-    } catch (err: any) {
-      thrownError = err;
+    } catch (err: unknown) {
+      thrownError = err as { message?: string; cause?: unknown };
     }
 
     expect(thrownError).not.toBeNull();

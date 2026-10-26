@@ -4,7 +4,7 @@ const mockJwtVerify = jest.fn();
 
 jest.mock("jose", () => ({
   createRemoteJWKSet: jest.fn().mockReturnValue({}),
-  jwtVerify: (...args: any[]) => mockJwtVerify(...args),
+  jwtVerify: (...args: unknown[]) => mockJwtVerify(...args),
 }));
 
 describe("verifyGoogleToken", () => {
@@ -19,14 +19,14 @@ describe("verifyGoogleToken", () => {
 
   it("throws if idToken is missing or empty", async () => {
     await expect(verifyGoogleToken("", validClientIds)).rejects.toThrow("Google ID token is required");
-    await expect(verifyGoogleToken(null as any, validClientIds)).rejects.toThrow("Google ID token is required");
+    await expect(verifyGoogleToken(null as unknown as string, validClientIds)).rejects.toThrow("Google ID token is required");
   });
 
   it("throws if allowedClientIds is missing or empty (fails closed, no wildcard/skip)", async () => {
     await expect(verifyGoogleToken("mock-token", [])).rejects.toThrow(
       "Google authentication misconfigured: allowedClientIds must be provided and non-empty"
     );
-    await expect(verifyGoogleToken("mock-token", null as any)).rejects.toThrow(
+    await expect(verifyGoogleToken("mock-token", null as unknown as string[])).rejects.toThrow(
       "Google authentication misconfigured: allowedClientIds must be provided and non-empty"
     );
   });

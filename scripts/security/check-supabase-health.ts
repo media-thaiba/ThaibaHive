@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error missing types for pg in script context
 import { Client } from "pg";
 
 async function main() {

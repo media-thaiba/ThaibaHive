@@ -75,7 +75,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
       body: JSON.stringify({ newEmail: "hacker@gmail.com" }),
     });
 
-    const res = await resetSsoHandler(req, { params: Promise.resolve({ id: superAdminId }) } as any);
+    const res = await resetSsoHandler(req, { params: Promise.resolve({ id: superAdminId }) } as unknown as { params: Promise<{ id: string }> });
     expect(res.status).toBe(403);
     const data = await res.json();
     expect(data.code).toBe("STEP_UP_REQUIRED");
@@ -102,7 +102,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
       body: JSON.stringify({ newEmail: "hacker@gmail.com" }),
     });
 
-    const res = await resetSsoHandler(req, { params: Promise.resolve({ id: superAdminId }) } as any);
+    const res = await resetSsoHandler(req, { params: Promise.resolve({ id: superAdminId }) } as unknown as { params: Promise<{ id: string }> });
     expect(res.status).toBe(403);
     const data = await res.json();
     expect(data.error).toContain("Forbidden");
@@ -119,7 +119,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
     });
 
     const req = new Request(`http://localhost/api/staff/${superAdminId}`, { method: "DELETE" });
-    const res = await deleteStaffHandler(req, { params: Promise.resolve({ id: superAdminId }) } as any);
+    const res = await deleteStaffHandler(req, { params: Promise.resolve({ id: superAdminId }) } as unknown as { params: Promise<{ id: string }> });
     expect(res.status).toBe(403);
   });
 
@@ -188,7 +188,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
       method: "DELETE",
       headers: { "x-step-up-token": stepUp1 },
     });
-    const res1 = await deleteStaffHandler(req1, { params: Promise.resolve({ id: targetId }) } as any);
+    const res1 = await deleteStaffHandler(req1, { params: Promise.resolve({ id: targetId }) } as unknown as { params: Promise<{ id: string }> });
     expect(res1.status).toBe(200);
 
     // Verify targetId is now inactive and active count is exactly 1 (only callerId remains active)
@@ -208,7 +208,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
       method: "DELETE",
       headers: { "x-step-up-token": stepUp2 },
     });
-    const res2 = await deleteStaffHandler(req2, { params: Promise.resolve({ id: targetId }) } as any);
+    const res2 = await deleteStaffHandler(req2, { params: Promise.resolve({ id: targetId }) } as unknown as { params: Promise<{ id: string }> });
     expect(res2.status).toBe(400);
     const data2 = await res2.json();
     expect(data2.error).toContain("Cannot deactivate the last active super_admin account");

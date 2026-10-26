@@ -16,7 +16,6 @@ import {
   allocateHostelBed,
   vacateHostelBed,
   issueGatePass,
-  reissueGatePass,
   scanGatePass,
   assessFine,
   waiveFine,
@@ -29,7 +28,6 @@ import {
   consumeStepUpTokenInTx,
   isStepUpReplayError,
 } from "../packages/auth";
-import { cryptoAuditWriter } from "../src/lib/audit/crypto-writer";
 
 interface StageResult {
   stage: number;

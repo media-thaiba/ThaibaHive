@@ -4,6 +4,18 @@ import { eq, and } from "drizzle-orm";
 import { wrapPgDb } from "../../db/index";
 import * as pgSchema from "../../db/schema.pg";
 
+interface DbError {
+  message?: string;
+  code?: string;
+  rawCode?: string;
+  cause?: {
+    message?: string;
+    code?: string;
+    rawCode?: string;
+    cause?: { message?: string };
+  };
+}
+
 async function runStage1PgVerification() {
   console.log("=== Stage 1 Postgres Verification via PGlite & wrapPgDb ===");
   const pglite = new PGlite();
@@ -192,7 +204,7 @@ async function runStage1PgVerification() {
 
   // Test 3: Transactional step-up token consumption & replay prevention
   const jti = `jti_${crypto.randomUUID()}`;
-  await db.transaction(async (tx: any) => {
+  await db.transaction(async (tx: typeof rawDb) => {
     await tx.insert(pgSchema.stepUpUsed).values({
       jti,
       staffId,
@@ -212,9 +224,9 @@ async function runStage1PgVerification() {
   }
 
   // 2nd insertion with identical jti MUST throw unique constraint violation
-  let caughtError: any = null;
+  let caughtError: DbError | null = null;
   try {
-    await db.transaction(async (tx: any) => {
+    await db.transaction(async (tx: typeof rawDb) => {
       await tx.insert(pgSchema.stepUpUsed).values({
         jti,
         staffId,
@@ -223,8 +235,8 @@ async function runStage1PgVerification() {
         usedAt: now,
       });
     });
-  } catch (err: any) {
-    caughtError = err;
+  } catch (err: unknown) {
+    caughtError = err as DbError;
   }
 
   if (!caughtError) {

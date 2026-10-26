@@ -12,7 +12,7 @@ import { staffCreateSchema } from "@/lib/validation/schemas";
 import { getAccessibleStaffIds } from "@/lib/auth/department-scope";
 import { autoAssignOnboardingChecklists } from "@/lib/onboarding/auto-assign";
 import { encryptPiiField } from "@/lib/crypto/tenant-encryption";
-import { eq, and, or, inArray, sql } from "drizzle-orm";
+import { eq, or, inArray, sql } from "drizzle-orm";
 
 const SAFE_STAFF_FIELDS = {
   id: staff.id,

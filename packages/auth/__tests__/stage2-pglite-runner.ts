@@ -12,6 +12,16 @@ import {
   canCreateRole,
 } from "../index";
 
+interface WrappedPgDb {
+  update: (table: unknown) => {
+    set: (values: unknown) => {
+      where: (condition: unknown) => {
+        run: () => Promise<unknown>;
+      };
+    };
+  };
+}
+
 async function runStage2PgVerification() {
   process.env.AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET || "stage2-test-auth-jwt-secret-at-least-32-chars-long";
   console.log("=== Stage 2 Postgres Verification via PGlite & wrapPgDb ===");
@@ -224,7 +234,7 @@ async function runStage2PgVerification() {
   const jti = payload.jti as string;
 
   // Execute mutation inside transaction
-  await pgDb.transaction(async (tx: any) => {
+  await pgDb.transaction(async (tx: WrappedPgDb) => {
     // 1. Consume step-up token
     await consumeStepUpTokenInTx(tx, {
       jti,
@@ -267,7 +277,7 @@ async function runStage2PgVerification() {
   // ── Test 2: Step-Up Replay Detection on Postgres (code 23505)
   let replayCaught = false;
   try {
-    await pgDb.transaction(async (tx: any) => {
+    await pgDb.transaction(async (tx: WrappedPgDb) => {
       await consumeStepUpTokenInTx(tx, {
         jti, // Replay same jti!
         staffId: callerId,
@@ -275,7 +285,7 @@ async function runStage2PgVerification() {
         exp: Date.now() + 300000,
       });
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     replayCaught = isStepUpReplayError(err);
   }
 

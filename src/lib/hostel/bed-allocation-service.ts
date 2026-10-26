@@ -5,12 +5,12 @@ import {
   VacateBedResult
 } from "./types";
 import {
-  BedCollisionError,
-  StudentCollisionError,
-  RoomCapacityExceededError,
-  GenderParityViolationError,
-  WardenUnauthorizedError,
-  BedMaintenanceError,
+
+
+
+
+
+
   classifyAllocationViolation
 } from "./errors";
 

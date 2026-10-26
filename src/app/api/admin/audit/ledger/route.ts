@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { auditLogs } from "@thaiba/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";
-import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
+import { eq, and, gte, lte, asc } from "drizzle-orm";
 
 export const GET = requireAuth(async (request: Request, session) => {
   const url = new URL(request.url);

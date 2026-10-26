@@ -18,6 +18,7 @@ const customJestConfig = {
     "/node_modules/",
     "<rootDir>/e2e/",
     "<rootDir>/.stryker-tmp/",
+    "<rootDir>/packages/auth/__tests__/(hostel|stage2|stage3|stage4)-pglite-runner\\.ts$",
   ],
   modulePathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/.stryker-tmp/", "<rootDir>/scratch/"],
   maxWorkers: 1,

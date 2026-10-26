@@ -64,8 +64,8 @@ export function requireAuth<TParams = Record<string, string>>(
     let session: SessionPayload | null = null;
     try {
       session = await verifySession();
-    } catch (err: any) {
-      if (err?.message === "LEGACY_SESSION_EXPIRED") {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "LEGACY_SESSION_EXPIRED") {
         recordApm(401);
         const res = NextResponse.json({ error: "LEGACY_SESSION_EXPIRED" }, { status: 401 });
         res.cookies.delete("thaibahive_session");

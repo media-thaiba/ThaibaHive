@@ -42,8 +42,8 @@ import { GET as auditLedgerGet } from "@/app/api/admin/audit/ledger/route";
 import { POST as auditVerifyPost } from "@/app/api/admin/audit/verify-chain/route";
 import { POST as auditExportPost } from "@/app/api/admin/audit/export/route";
 
-let activeCookieMap = new Map<string, string>();
-let activeHeaderMap = new Map<string, string>();
+const activeCookieMap = new Map<string, string>();
+const activeHeaderMap = new Map<string, string>();
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(async () => ({
@@ -382,22 +382,22 @@ describe("Stage 3: Tamper-Evident Cryptographic Audit Logging (C3.1 – C3.10)",
       const entry = await db.transaction((tx) => cryptoAuditWriter.log({ tenantId: tenant, action: "IMMUTABLE_LOG", entityType: "doc" }, tx));
 
       // 3. Attempt UPDATE -> Must throw trigger error
-      let updateError: any = null;
+      let updateError: { message?: string; cause?: { message?: string } } | null = null;
       try {
         await db.update(auditLogs).set({ action: "TAMPERED" }).where(eq(auditLogs.id, entry.id)).run();
       } catch (err) {
-        updateError = err;
+        updateError = err as { message?: string; cause?: { message?: string } };
       }
       expect(updateError).not.toBeNull();
       const updateErrMsg = [updateError?.message, updateError?.cause?.message, String(updateError), String(updateError?.cause)].join(" ");
       expect(updateErrMsg).toContain("Audit ledger is immutable");
 
       // 4. Attempt DELETE -> Must throw trigger error
-      let deleteError: any = null;
+      let deleteError: { message?: string; cause?: { message?: string } } | null = null;
       try {
         await db.delete(auditLogs).where(eq(auditLogs.id, entry.id)).run();
       } catch (err) {
-        deleteError = err;
+        deleteError = err as { message?: string; cause?: { message?: string } };
       }
       expect(deleteError).not.toBeNull();
       const deleteErrMsg = [deleteError?.message, deleteError?.cause?.message, String(deleteError), String(deleteError?.cause)].join(" ");

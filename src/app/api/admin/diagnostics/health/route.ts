@@ -19,7 +19,7 @@ export async function checkDiagnosticsHealth(
   runner: any = db
 ) {
   const isPostgres = isPostgresDialect(runner);
-  const startTime = Date.now();
+  const _startTime = Date.now();
 
   // 1. Database Ping & Latency Probe
   let dbStatus = "connected";
@@ -32,7 +32,7 @@ export async function checkDiagnosticsHealth(
       await runner.run(sql`SELECT 1`);
     }
     latencyMs = Date.now() - pingStart;
-  } catch (err: any) {
+  } catch (_err) {
     dbStatus = "disconnected";
   }
 
@@ -63,7 +63,7 @@ export async function checkDiagnosticsHealth(
       }
       activeTriggers = rows.map((r: any) => r.name);
     }
-  } catch (err) {
+  } catch (_err) {
     // Triggers failed to inspect
   }
 
@@ -169,9 +169,9 @@ export const GET = requireAuth(async (request: Request, session) => {
   let targetTenantId: string;
   try {
     targetTenantId = await resolveScopedInstitutionId(requestedTenantId, session, { allowGlobal: true });
-  } catch (err: any) {
-    if (err instanceof TenantMismatchError || err.name === "TenantMismatchError") {
-      return NextResponse.json({ error: err.message }, { status: 403 });
+  } catch (_err) {
+    if (_err instanceof TenantMismatchError || (_err instanceof Error && _err.name === "TenantMismatchError")) {
+      return NextResponse.json({ error: _err.message }, { status: 403 });
     }
     return NextResponse.json({ error: "Unauthorized tenant scope" }, { status: 403 });
   }

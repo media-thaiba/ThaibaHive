@@ -82,7 +82,10 @@ describe("TPSH Hostel ERP — Gate 3 Integration Test Suite (G3.1 – G3.5)", ()
   const bedGirlsId = `bed_g_${ts}`;
   const leaveId = `leave_h3_${ts}`;
 
-  let client: any;
+  interface HostelClient {
+    execute: (stmt: string | { sql: string; args?: unknown[] }) => Promise<{ rows: Record<string, unknown>[] }>;
+  }
+  let client: HostelClient;
 
   beforeAll(async () => {
     client = resolveHostelClient(db);
@@ -638,7 +641,7 @@ describe("TPSH Hostel ERP — Gate 3 Integration Test Suite (G3.1 – G3.5)", ()
         args: [issuedPassId],
       });
       expect(passDb.rows[0].token_hash).not.toBe(singleRevealSecret);
-      expect(passDb.rows[0].token_hash.length).toBe(64); // SHA-256 digest
+      expect((passDb.rows[0].token_hash as string).length).toBe(64); // SHA-256 digest
       activeCookieMap.clear();
     });
 
@@ -1015,7 +1018,7 @@ describe("TPSH Hostel ERP — Gate 3 Integration Test Suite (G3.1 – G3.5)", ()
         args: [instA],
       });
       expect(logs.rows.length).toBeGreaterThan(0);
-      const actions = logs.rows.map((r: any) => r.action);
+      const actions = logs.rows.map((r: Record<string, unknown>) => String(r.action || ""));
       // Confirms hostel mutation actions were logged
       expect(actions.some((a: string) => a.toUpperCase().startsWith("HOSTEL"))).toBe(true);
     });

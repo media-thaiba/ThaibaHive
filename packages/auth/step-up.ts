@@ -41,7 +41,7 @@ export async function verifyActionStepUpToken(
     if (protectedHeader.typ !== "thaiba-action-step-up") {
       return { success: false, error: "INVALID_TYP" };
     }
-    if ((payload as any).stepUpPending === true) {
+    if ((payload as Record<string, unknown>).stepUpPending === true) {
       return { success: false, error: "LOGIN_PENDING_STEP_UP_REJECTED" };
     }
     if (!payload.jti || typeof payload.jti !== "string") {
@@ -71,11 +71,11 @@ export async function verifyActionStepUpToken(
       },
       exp,
     };
-  } catch (err: any) {
-    if (err?.code === "ERR_JWT_EXPIRED") {
+  } catch (err: unknown) {
+    if ((err as { code?: string })?.code === "ERR_JWT_EXPIRED") {
       return { success: false, error: "TOKEN_EXPIRED" };
     }
-    return { success: false, error: err?.message || "VERIFICATION_FAILED" };
+    return { success: false, error: (err as { message?: string })?.message || "VERIFICATION_FAILED" };
   }
 }
 
@@ -84,10 +84,15 @@ export async function verifyActionStepUpToken(
  * Primary-key collision on step_up_used(jti) indicates a replay attack and aborts.
  */
 export async function consumeStepUpTokenInTx(
-  tx: any,
+  tx: unknown,
   stepUp: { jti: string; staffId: string; action: string; exp: number }
 ): Promise<void> {
-  await tx.insert(stepUpUsed).values({
+  const txInsertable = tx as {
+    insert: (table: unknown) => {
+      values: (values: unknown) => Promise<unknown>;
+    };
+  };
+  await txInsertable.insert(stepUpUsed).values({
     jti: stepUp.jti,
     staffId: stepUp.staffId,
     action: stepUp.action,
@@ -101,23 +106,26 @@ export async function consumeStepUpTokenInTx(
  * Robust detection of primary-key / unique constraint violations on step_up_used
  * across both SQLite/LibSQL and PostgreSQL/PGlite.
  */
-export function isStepUpReplayError(txErr: any): boolean {
+export function isStepUpReplayError(txErr: unknown): boolean {
   if (!txErr) return false;
 
   const allMessages = [
-    txErr?.message,
-    txErr?.cause?.message,
-    txErr?.cause?.cause?.message,
+    (txErr as { message?: string })?.message,
+    (txErr as { cause?: { message?: string } })?.cause?.message,
+    (txErr as { cause?: { cause?: { message?: string } } })?.cause?.cause?.message,
     String(txErr),
   ]
     .filter(Boolean)
     .join(' ');
 
+  const errObj = (typeof txErr === "object" && txErr !== null ? txErr : {}) as Record<string, unknown>;
+  const causeObj = (typeof errObj.cause === "object" && errObj.cause !== null ? errObj.cause : {}) as Record<string, unknown>;
+
   const allCodes = [
-    txErr?.code,
-    txErr?.rawCode,
-    txErr?.cause?.code,
-    txErr?.cause?.rawCode,
+    errObj.code,
+    errObj.rawCode,
+    causeObj.code,
+    causeObj.rawCode,
   ].filter(Boolean);
 
   const isConstraintCode =

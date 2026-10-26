@@ -1,12 +1,13 @@
-interface GoogleTokenInfoPayload {
-  email: string;
-  email_verified: string | boolean;
-  name?: string;
-  picture?: string;
-  sub: string;
-  exp: string;
-  aud: string;
-  error_description?: string;
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
+let _googleJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+function getGoogleJwks() {
+  if (!_googleJwks) {
+    _googleJwks = createRemoteJWKSet(
+      new URL("https://www.googleapis.com/oauth2/v3/certs")
+    );
+  }
+  return _googleJwks;
 }
 
 export async function verifyGoogleToken(
@@ -22,41 +23,25 @@ export async function verifyGoogleToken(
     throw new Error("Google ID token is required");
   }
 
-  // Google's tokeninfo endpoint performs signature verification and checks expiration
-  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Google token validation failed: ${response.statusText} (${errText})`);
+  if (!allowedClientIds || allowedClientIds.length === 0) {
+    throw new Error(
+      "Google authentication misconfigured: allowedClientIds must be provided and non-empty"
+    );
   }
 
-  const payload: GoogleTokenInfoPayload = await response.json();
+  const { payload } = await jwtVerify(idToken, getGoogleJwks(), {
+    issuer: ["https://accounts.google.com", "accounts.google.com"],
+    audience: allowedClientIds,
+  });
 
-
-  if (payload.error_description) {
-    throw new Error(`Google token error: ${payload.error_description}`);
-  }
-
-  const exp = Number(payload.exp);
-  if (isNaN(exp) || Date.now() >= exp * 1000) {
-    throw new Error("Google ID token has expired");
-  }
-
-  if (payload.email_verified !== "true" && payload.email_verified !== true) {
+  if (payload.email_verified !== true && payload.email_verified !== "true") {
     throw new Error("Google email is not verified");
   }
 
-  // If audience verification list is provided (to restrict to authorized apps/frontends)
-  if (allowedClientIds && allowedClientIds.length > 0) {
-    const aud = payload.aud;
-    if (!allowedClientIds.includes(aud)) {
-      throw new Error(`Google token audience mismatch: ${aud} is not in allowed client IDs`);
-    }
-  }
-
   return {
-    email: payload.email,
-    name: payload.name,
-    picture: payload.picture,
-    sub: payload.sub,
+    email: String(payload.email || ""),
+    name: payload.name ? String(payload.name) : undefined,
+    picture: payload.picture ? String(payload.picture) : undefined,
+    sub: String(payload.sub),
   };
 }

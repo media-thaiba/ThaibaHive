@@ -1,7 +1,7 @@
 import { requireAuth } from "../../src/lib/api/auth-guard";
 import { createSession } from "../../packages/auth/session";
 import { db } from "../../src/db";
-import { staff, staffInstitutions } from "../../packages/db/schema";
+import { staff } from "../../packages/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 

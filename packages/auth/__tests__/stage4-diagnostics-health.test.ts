@@ -17,7 +17,7 @@ import { createSession } from "../index";
 import { GET as healthGet } from "@/app/api/admin/diagnostics/health/route";
 import { installAuditImmutabilityTriggers, dropAuditImmutabilityTriggers } from "@/lib/audit/triggers";
 
-let activeCookieMap = new Map<string, string>();
+const activeCookieMap = new Map<string, string>();
 
 jest.mock("next/headers", () => ({
   cookies: jest.fn(async () => ({
