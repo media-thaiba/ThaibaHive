@@ -15,14 +15,17 @@ const visitorLocks = new Map<string, LockEntry>();
 const LOCK_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Periodic cleanup of stale locks
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [id, entry] of visitorLocks.entries()) {
     if (now - entry.createdAt > LOCK_TTL_MS) {
       visitorLocks.delete(id);
     }
   }
-}, 60 * 1000).unref(); // Run cleanup every minute without holding process open
+}, 60 * 1000);
+if (typeof (cleanupInterval as unknown as { unref?: () => void })?.unref === "function") {
+  (cleanupInterval as unknown as { unref: () => void }).unref();
+}
 
 export async function withVisitorLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
   const currentEntry = visitorLocks.get(id);
@@ -60,14 +63,17 @@ const requestLocks = new Map<string, RequestLockEntry>();
 const REQUEST_LOCK_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // Periodic cleanup of stale request locks
-setInterval(() => {
+const cleanupRequestInterval = setInterval(() => {
   const now = Date.now();
   for (const [id, entry] of requestLocks.entries()) {
     if (now - entry.createdAt > REQUEST_LOCK_TTL_MS) {
       requestLocks.delete(id);
     }
   }
-}, 60 * 1000).unref(); // Run cleanup every minute without holding process open
+}, 60 * 1000);
+if (typeof (cleanupRequestInterval as unknown as { unref?: () => void })?.unref === "function") {
+  (cleanupRequestInterval as unknown as { unref: () => void }).unref();
+}
 
 export async function withVisitorRequestLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
   const currentEntry = requestLocks.get(id);

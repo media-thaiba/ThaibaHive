@@ -182,7 +182,7 @@ const writeRoutesToTest: WriteRouteTest[] = [
     name: "academic/timetables/substitutions (POST)",
     url: "http://localhost/api/academic/timetables/substitutions",
     method: "POST",
-    body: { timetableEntryId: ttEntryA, date: "2026-10-04", originalTeacherId: staffA, substituteTeacherId: staffA, reason: "Leave" },
+    body: { timetableEntryId: ttEntryA, date: "2026-10-04", originalTeacherId: staffA, substituteTeacherId: staffMulti, reason: "Leave" },
     handler: postSubstitutions as RouteHandler,
   },
   {

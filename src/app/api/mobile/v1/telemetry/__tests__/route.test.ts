@@ -2,10 +2,15 @@ import { POST } from "../route";
 import { MobileSyncTelemetryAggregator } from "@/lib/observability/mobile-sync-telemetry-aggregator";
 import { verifySession } from "@thaiba/auth";
 
-jest.mock("@thaiba/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(() => true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst-1"),
+  };
+});
 
 describe("MOB-009: POST /api/mobile/v1/telemetry", () => {
   beforeEach(() => {

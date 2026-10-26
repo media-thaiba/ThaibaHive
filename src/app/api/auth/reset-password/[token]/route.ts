@@ -80,8 +80,7 @@ export async function POST(
       status: "terminated",
       logoutAt: Date.now(),
     })
-    .where(and(eq(userSessions.staffId, consumedToken.staffId), eq(userSessions.status, "active")))
-    .run();
+    .where(and(eq(userSessions.staffId, consumedToken.staffId), eq(userSessions.status, "active")));
 
   await db
     .update(staff)

@@ -3,6 +3,8 @@ import { encryptPiiField, decryptPiiField } from "@/lib/crypto/tenant-encryption
 import { ReviewWorkflowService } from "@/lib/performance/review-workflow-service";
 import { isManagedBy } from "@/lib/auth/department-scope";
 import { verifySession } from "@thaiba/auth";
+import { db, institutions, staff, staffInstitutions } from "@/db";
+import { inArray } from "drizzle-orm";
 
 jest.mock("@thaiba/auth", () => {
   const actual = jest.requireActual("@thaiba/auth");
@@ -10,6 +12,7 @@ jest.mock("@thaiba/auth", () => {
     ...actual,
     verifySession: jest.fn(),
     hasPermission: jest.fn().mockReturnValue(true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_phase7"),
   };
 });
 
@@ -21,7 +24,23 @@ describe("Phase 7 Full-Stack Security Hardening Suite", () => {
     (verifySession as jest.Mock).mockResolvedValue({
       staffId: "admin_001",
       role: "admin",
+      institutionId: "inst_phase7",
     });
+
+    try {
+      await db.insert(institutions).values({ id: "inst_phase7", name: "Phase 7 Inst", code: "p7inst" }).onConflictDoNothing();
+      await db.insert(staff).values([
+        { id: "admin_01", email: "admin_01@p7.edu", employeeId: "EMP-ADM-01", firstName: "Admin", lastName: "One", role: "admin", isActive: true, tokenVersion: 0 },
+        { id: "principal_01", email: "prin_01@p7.edu", employeeId: "EMP-PRN-01", firstName: "Principal", lastName: "One", role: "principal", isActive: true, tokenVersion: 0 },
+        { id: "staff_01", email: "staff_01@p7.edu", employeeId: "EMP-STF-01", firstName: "Staff", lastName: "One", role: "staff", isActive: true, tokenVersion: 0 },
+        { id: "staff_02", email: "staff_02@p7.edu", employeeId: "EMP-STF-02", firstName: "Staff", lastName: "Two", role: "staff", isActive: true, tokenVersion: 0 },
+      ]).onConflictDoNothing();
+      await db.insert(staffInstitutions).values([
+        { id: "si_adm_01", staffId: "admin_01", institutionId: "inst_phase7" },
+        { id: "si_prn_01", staffId: "principal_01", institutionId: "inst_phase7" },
+        { id: "si_stf_01", staffId: "staff_01", institutionId: "inst_phase7" },
+      ]).onConflictDoNothing();
+    } catch {}
 
     const req = new Request("http://localhost:3000/api/performance/reviews", {
       method: "POST",
@@ -85,5 +104,13 @@ describe("Phase 7 Full-Stack Security Hardening Suite", () => {
       expect(await isManagedBy("staff_01", "staff", "staff_01")).toBe(true);
       expect(await isManagedBy("staff_01", "staff", "staff_02")).toBe(false);
     });
+  });
+
+  afterAll(async () => {
+    try {
+      await db.delete(staffInstitutions).where(inArray(staffInstitutions.id, ["si_adm_01", "si_prn_01", "si_stf_01"]));
+      await db.delete(staff).where(inArray(staff.id, ["admin_01", "principal_01", "staff_01", "staff_02"]));
+      await db.delete(institutions).where(inArray(institutions.id, ["inst_phase7"]));
+    } catch {}
   });
 });

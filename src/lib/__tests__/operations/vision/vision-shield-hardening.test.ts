@@ -33,6 +33,7 @@ jest.mock('@thaiba/auth', () => {
       permissions: ['*'],
     }),
     hasPermission: jest.fn().mockReturnValue(true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue('tenant_shield_alpha'),
   };
 });
 

@@ -1,6 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import { getJwtSecret, getJwtSecretBytes } from "@thaiba/auth/config";
 import { createSession } from "@thaiba/auth/session";
+import { db, staff } from "@thaiba/db";
+import { eq } from "drizzle-orm";
 
 describe("Token Round-Trip & Cryptographic Key Separation (Task A1 / Blocker B1)", () => {
   const MASTER_SECRET = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -8,16 +10,27 @@ describe("Token Round-Trip & Cryptographic Key Separation (Task A1 / Blocker B1)
 
   let originalEnv: NodeJS.ProcessEnv;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     originalEnv = process.env;
+    await db.insert(staff).values({
+      id: "usr_integration_123",
+      email: "teacher@thaiba.edu",
+      employeeId: "EMP-9001",
+      firstName: "Aisha",
+      lastName: "Rahman",
+      role: "staff",
+      isActive: true,
+      tokenVersion: 1,
+    }).onConflictDoNothing();
   });
 
   beforeEach(() => {
     process.env = { ...originalEnv, AUTH_JWT_SECRET: MASTER_SECRET, NODE_ENV: "test" };
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     process.env = originalEnv;
+    await db.delete(staff).where(eq(staff.id, "usr_integration_123")).run().catch(() => {});
   });
 
   describe("Real Jose Token Round-Trip", () => {

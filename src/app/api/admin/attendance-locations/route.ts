@@ -14,10 +14,7 @@ export const GET = requireAuth(async (request: Request, session) => {
 
   const url = new URL(request.url);
   const requestedInst = url.searchParams.get("institutionId");
-  const effectiveInst = await getEffectiveInstitutionId(session);
-  const scopedInstId = effectiveInst !== "global" && effectiveInst !== null
-    ? effectiveInst
-    : await resolveRequestInstitution(session, requestedInst);
+  const scopedInstId = await resolveRequestInstitution(session, requestedInst);
   const showDeleted = url.searchParams.get("showDeleted") === "true";
 
   const conditions = [];

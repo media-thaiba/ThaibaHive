@@ -33,7 +33,6 @@ export const LEGACY_REDIRECTS: LegacyRedirect[] = [
   { source: "/school/events/:path*", destination: "/my-work/events/:path*" },
   { source: "/school/polls/:path*", destination: "/my-work/polls/:path*" },
   { source: "/school/announcements/:path*", destination: "/my-work/announcements/:path*" },
-  { source: "/my-work/grievances/:path*", destination: "/my-work/complaints/:path*" },
 
   // --- Admin renames (specific first) ---
   { source: "/admin/security/identity/:path*", destination: "/admin/keys/:path*" },
@@ -52,7 +51,7 @@ export const LEGACY_REDIRECTS: LegacyRedirect[] = [
   { source: "/expenses/:path*", destination: "/my-work/expenses/:path*" },
   { source: "/availability/:path*", destination: "/my-work/availability/:path*" },
   { source: "/recognition/:path*", destination: "/my-work/recognition/:path*" },
-  { source: "/grievances/:path*", destination: "/my-work/grievances/:path*" },
+  { source: "/grievances/:path*", destination: "/my-work/complaints/:path*" },
   { source: "/announcements/:path*", destination: "/my-work/announcements/:path*" },
   { source: "/events/:path*", destination: "/my-work/events/:path*" },
   { source: "/circulars/:path*", destination: "/my-work/circulars/:path*" },

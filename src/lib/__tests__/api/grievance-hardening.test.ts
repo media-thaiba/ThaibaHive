@@ -131,6 +131,7 @@ describe("Confidential Grievance Redressal & Whistleblower Pipeline — Hardenin
     await db.insert(staffInstitutions).values([
       { id: `si_pra_a_${suffix}`, staffId: principalAId, institutionId: instA },
       { id: `si_pra_b_${suffix}`, staffId: principalBId, institutionId: instB },
+      { id: `si_adm_a_${suffix}`, staffId: adminAId, institutionId: instA },
       { id: `si_sta_${suffix}`, staffId: staffAId, institutionId: instA },
       { id: `si_stb_${suffix}`, staffId: staffBId, institutionId: instB },
     ]).run();
@@ -337,7 +338,7 @@ describe("Confidential Grievance Redressal & Whistleblower Pipeline — Hardenin
     it("allows global Admin A to inspect grievances across institutions", async () => {
       setSession({
         staffId: adminAId,
-        role: "admin",
+        role: "super_admin",
         permissions: ["grievances:read", "grievances:manage"],
       });
 

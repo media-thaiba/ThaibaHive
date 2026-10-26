@@ -224,9 +224,6 @@ export async function resolveScopedInstitutions(
     return ["global"];
   }
   const memberships = await getStaffInstitutionMemberships(session.staffId);
-  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-    memberships.push(session.institutionId);
-  }
   if (memberships.length === 0) {
     throw new TenantMismatchError("Forbidden: User has no assigned institution.");
   }
@@ -249,9 +246,6 @@ export async function resolveInstitutionScopeForSession(
   }
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
-  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-    memberships.push(session.institutionId);
-  }
   if (memberships.length === 0) {
     return null;
   }

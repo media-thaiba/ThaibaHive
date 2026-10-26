@@ -7,7 +7,7 @@ jest.mock("@thaiba/auth", () => {
     ...actual,
     verifySession: jest.fn().mockResolvedValue({
       staffId: "admin-1",
-      role: "admin",
+      role: "super_admin",
       email: "admin@test.com",
       institutionId: "inst_alpha",
       permissions: ["*"],

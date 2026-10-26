@@ -6,10 +6,15 @@ import { verifySession } from "@thaiba/auth";
 import { db } from "@/db";
 import { checkRateLimit } from "@/lib/api/rate-limit";
 
-jest.mock("@thaiba/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(() => true),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(() => true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst-1"),
+  };
+});
 
 
 jest.mock("@/lib/api/activity-log", () => ({
@@ -67,6 +72,25 @@ describe("NFC Tag Registration & Management API", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (checkRateLimit as jest.Mock).mockReturnValue({ allowed: true, remaining: 59, resetMs: 60000 });
+    (db.transaction as jest.Mock).mockImplementation(async (cb) => {
+      return cb({
+        update: (...args: any[]) => {
+          (db.update as jest.Mock)(...args);
+          return {
+            set: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                run: jest.fn().mockResolvedValue(undefined),
+              }),
+            }),
+          };
+        },
+        insert: jest.fn().mockReturnValue({
+          values: jest.fn().mockReturnValue({
+            run: jest.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      });
+    });
   });
 
   describe("GET /api/admin/nfc/lookup", () => {
@@ -83,6 +107,7 @@ describe("NFC Tag Registration & Management API", () => {
         role: "admin",
         email: "admin@test.com",
       });
+
       const req = new Request("http://localhost/api/admin/nfc/lookup");
       const res = await lookupHandler(req);
       expect(res.status).toBe(400);
@@ -495,8 +520,20 @@ describe("NFC Tag Registration & Management API", () => {
     it("should release staff nfcTagId to null when account is revoked/deactivated", async () => {
       (verifySession as jest.Mock).mockResolvedValueOnce({
         staffId: "admin-deactivator",
-        role: "admin",
+        role: "super_admin",
         email: "admin@test.com",
+      });
+
+      (db.select as jest.Mock).mockReturnValueOnce({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            get: jest.fn().mockResolvedValue({
+              id: "staff-leaving-123",
+              role: "staff",
+              isActive: true,
+            }),
+          }),
+        }),
       });
 
       const req = new Request("http://localhost/api/staff/staff-leaving-123", {

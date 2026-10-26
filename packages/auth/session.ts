@@ -157,8 +157,7 @@ export async function createSession(
     }
 
     cookieStore.set(authConfig.cookieName, token, cookieOptions);
-  } catch (err) {
-    console.error("[DEBUG] createSession cookieStore error:", err);
+  } catch {
     // Non-request context (e.g. tests or background jobs)
   }
 
@@ -378,8 +377,12 @@ export async function verifyDPoPSession(
 }
 
 export async function destroySession() {
-  const cookieStore = await cookies();
-  cookieStore.delete(authConfig.cookieName);
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete(authConfig.cookieName);
+  } catch {
+    // Non-request context
+  }
 }
 
 export async function createStepUpToken(staffId: string, challengeId: string): Promise<string> {

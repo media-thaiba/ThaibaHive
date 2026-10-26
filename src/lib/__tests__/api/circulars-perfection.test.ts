@@ -349,7 +349,7 @@ describe("Circulars & Institutional Compliance Perfection Suite", () => {
       const res = await updateCompliance(patchReq, contextParams(circularId));
       expect(res.status).toBe(403);
       const data = await res.json();
-      expect(data.error).toMatch(/does not belong to the requested institution|Cannot update compliance for another institution/i);
+      expect(data.error).toMatch(/does not belong to the requested institution|Cannot update compliance for another institution|Cross-tenant access denied/i);
     });
 
     it("allows Principal A to update compliance for Institution A", async () => {

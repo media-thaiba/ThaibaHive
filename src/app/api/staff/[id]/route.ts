@@ -15,6 +15,7 @@ import {
   isStepUpReplayError,
   getStaffInstitutionMemberships,
   isRegionalScopeRole,
+  resolveScopedInstitutionId,
 } from "@thaiba/auth";
 import { pick } from "@/lib/api/pick";
 import { canAccessStaff } from "@/lib/auth/department-scope";
@@ -108,6 +109,7 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
 
   const { id } = await context!.params;
   const isSelf = session.staffId === id;
+  await resolveScopedInstitutionId(session.institutionId, session, { allowGlobal: true });
 
   let body: any;
   try {
@@ -385,6 +387,7 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
 
   const { id } = await context!.params;
   const isSelf = session.staffId === id;
+  await resolveScopedInstitutionId(session.institutionId, session, { allowGlobal: true });
 
   let body: any;
   try {

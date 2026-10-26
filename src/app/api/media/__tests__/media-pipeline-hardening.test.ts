@@ -25,7 +25,7 @@ import { sanitizeZipEntryName, sanitizeZipFolderName } from "@/lib/media/zip-uti
 import { db } from "@/db";
 import { mediaAssets } from "@/db/schema";
 import { downloadFromSupabase, deleteFromSupabase, copySupabaseObject } from "@/lib/storage";
-import { verifySession } from "@/lib/auth";
+import { verifySession } from "@thaiba/auth";
 import type { NextRequest } from "next/server";
 
 jest.mock("@/db", () => ({
@@ -36,10 +36,27 @@ jest.mock("@/db", () => ({
   },
 }));
 
-jest.mock("@/lib/auth", () => ({
-  verifySession: jest.fn(),
-  resolveScopedInstitutionId: jest.fn(async (id?: string | null) => id ?? null),
-}));
+const mockVerifySession = jest.fn();
+
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn((...args: unknown[]) => mockVerifySession(...args)),
+    resolveInstitutionScopeForSession: jest.fn(async (session: { institutionId?: string | null }) => session?.institutionId || "inst_a"),
+    resolveScopedInstitutionId: jest.fn(async (id?: string | null) => id ?? null),
+  };
+});
+
+jest.mock("@/lib/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn((...args: unknown[]) => mockVerifySession(...args)),
+    resolveInstitutionScopeForSession: jest.fn(async (session: { institutionId?: string | null }) => session?.institutionId || "inst_a"),
+    resolveScopedInstitutionId: jest.fn(async (id?: string | null) => id ?? null),
+  };
+});
 
 const mockStorageState = { configured: true };
 
@@ -188,7 +205,8 @@ describe("Media & Asset Pipeline Hardening", () => {
 
   describe("File Serving Multi-Tenant Boundary & Private Temp Gating", () => {
     it("rejects access to private_tmp files for regular staff (HTTP 403)", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({
+      mockVerifySession.mockResolvedValueOnce({
+        sid: "sess_1",
         staffId: "staff_1",
         role: "staff",
         institutionId: "inst_a",
@@ -206,7 +224,8 @@ describe("Media & Asset Pipeline Hardening", () => {
     });
 
     it("rejects cross-tenant access to assets belonging to another institution (HTTP 403)", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({
+      mockVerifySession.mockResolvedValueOnce({
+        sid: "sess_1",
         staffId: "staff_1",
         role: "admin",
         institutionId: "inst_a", // Caller is in inst_a
@@ -224,7 +243,8 @@ describe("Media & Asset Pipeline Hardening", () => {
     });
 
     it("allows access to same-tenant assets", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({
+      mockVerifySession.mockResolvedValueOnce({
+        sid: "sess_1",
         staffId: "staff_1",
         role: "staff",
         institutionId: "inst_a",
@@ -246,7 +266,8 @@ describe("Media & Asset Pipeline Hardening", () => {
     });
 
     it("allows super_admin to access assets across any tenant", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({
+      mockVerifySession.mockResolvedValueOnce({
+        sid: "sess_super",
         staffId: "super_admin_1",
         role: "super_admin",
         institutionId: "inst_master",

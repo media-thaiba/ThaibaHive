@@ -1,3 +1,9 @@
+async function resolveRequestInstitution(requestedInstId: string | null): Promise<string | null> {
+  if (!requestedInstId) return null;
+  const found = await db.select({ id: institutions.id }).from(institutions).where(eq(institutions.id, requestedInstId)).get();
+  return found?.id || null;
+}
+
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffInstitutions, institutions, emailVerificationTokens } from "@/db/schema";
@@ -84,12 +90,10 @@ export const POST = withPublicApm(async function POST(request: Request) {
     // Assign new staff member to target or default institution so requireAuth does not block them with 403 after email verification (B-06)
     try {
       const requestedInstId = typeof body?.institutionId === "string" ? body.institutionId : null;
-      let targetInstitution = requestedInstId
-        ? await db.select({ id: institutions.id }).from(institutions).where(eq(institutions.id, requestedInstId)).get()
-        : null;
-      if (!targetInstitution) {
-        targetInstitution = await db.select({ id: institutions.id }).from(institutions).limit(1).get();
-      }
+      const resolvedInstId = await resolveRequestInstitution(requestedInstId);
+      const targetInstitution = resolvedInstId
+        ? { id: resolvedInstId }
+        : await db.select({ id: institutions.id }).from(institutions).limit(1).get();
       if (targetInstitution?.id) {
         await db.insert(staffInstitutions).values({
           id: crypto.randomUUID(),

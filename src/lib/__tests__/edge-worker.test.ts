@@ -49,6 +49,7 @@ describe("Phase 1: Edge Infrastructure & Deployments Tests", () => {
       const token = await new SignJWT({
         tenantId: "tenant_abc",
         userId: "usr_123",
+        sid: "sess_123",
         role: "admin",
         permissions: ["academics:read"],
       })

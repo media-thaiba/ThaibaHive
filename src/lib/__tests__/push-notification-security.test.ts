@@ -6,6 +6,7 @@ import { verifySession } from "@thaiba/auth";
 jest.mock("@thaiba/auth", () => ({
   ...jest.requireActual("@thaiba/auth"),
   verifySession: jest.fn(),
+  resolveInstitutionScopeForSession: jest.fn(async (s: any) => s?.institutionId || "inst_001"),
 }));
 
 describe("Push Notification Security & RBAC Invariants", () => {
