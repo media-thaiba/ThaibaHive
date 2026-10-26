@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../core/pilot/pilot_gate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -205,14 +207,6 @@ GoRouter buildRouter() {
             ),
           );
         },
-      ),
-      GoRoute(
-        path: '/attendance',
-        name: 'attendance',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const AttendanceScreen(),
-        ),
       ),
       GoRoute(
         path: '/me/attendance',
@@ -472,14 +466,6 @@ GoRouter buildRouter() {
         pageBuilder: (context, state) => AppTransitions.slide(
           state: state,
           child: const AboutScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/settings/diagnostics',
-        name: 'settingsDiagnostics',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const CrashLogsScreen(),
         ),
       ),
       GoRoute(
@@ -1026,7 +1012,7 @@ GoRouter buildRouter() {
 /// Build shell branches dynamically
 List<StatefulShellBranch> _buildShellBranches() {
   return [
-    // Branch 0: Today (always visible)
+    // Branch 0: Today
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1036,8 +1022,20 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 1: Notices (always visible) — segmented Circulars/Announcements/
-    // Polls. Services moved to a pushed top-level route (D2).
+    // Branch 1: Attendance (Core V1.0 Pilot Tab)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/attendance',
+          name: 'attendance',
+          pageBuilder: (context, state) => AppTransitions.slide(
+            state: state,
+            child: const AttendanceScreen(),
+          ),
+        ),
+      ],
+    ),
+    // Branch 2: Notices (Core V1.0 Pilot Tab)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1047,7 +1045,7 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 2: My Hub (always visible)
+    // Branch 3: My Hub / Profile (Core V1.0 Pilot Tab)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1057,7 +1055,20 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 3: Media (conditional)
+    // Branch 4: Diagnostics (Core V1.0 Pilot Tab)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/settings/diagnostics',
+          name: 'settingsDiagnostics',
+          pageBuilder: (context, state) => AppTransitions.slide(
+            state: state,
+            child: const CrashLogsScreen(),
+          ),
+        ),
+      ],
+    ),
+    // Branch 5: Media (Legacy / Post-pilot conditional)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1101,6 +1112,12 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   }
 
   final isLoggedIn = token != null && token.isNotEmpty;
+
+  // Pilot freeze guard: block access to frozen modules in V1.0 pilot
+  if (isLoggedIn && isFrozenPath(state.matchedLocation)) {
+    logger.info('AUTH GUARD: Blocked access to frozen pilot route ${state.matchedLocation} -> /today');
+    return '/today?error=module_frozen';
+  }
 
   if (!isLoggedIn && !isAuthRoute && !isOnboardingRoute) {
     logger.info('AUTH GUARD: Unauthenticated access to ${state.matchedLocation} -> redirecting to login');
@@ -1150,10 +1167,28 @@ class _DynamicBottomNavShell extends ConsumerStatefulWidget {
 }
 
 class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> {
+  DateTime? _lastBackPressTime;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Surface pilot freeze toast if redirected with error=module_frozen
+    final queryError = GoRouterState.of(context).uri.queryParameters['error'];
+    if (queryError == 'module_frozen') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This module is frozen during the Version 1.0 Pilot.'),
+            backgroundColor: Color(0xFFC05621),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    }
 
     // Get user capabilities from auth state
     final authState = ref.watch(authProvider);
@@ -1170,36 +1205,93 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
     final unreadCount = ref.watch(unreadCountProvider).valueOrNull ?? 0;
     final onTodayBranch = widget.navigationShell.currentIndex == 0;
 
-    // Build dynamic tab list (D2: Today / Notices / My Hub / Media)
-    final tabs = [
-      const _TabData(
-        branchIndex: 0,
-        icon: Icons.today_rounded,
-        selectedIcon: Icons.today_rounded,
-        label: 'Today',
-      ),
-      const _TabData(
-        branchIndex: 1,
-        icon: Icons.notifications_outlined,
-        selectedIcon: Icons.notifications_rounded,
-        label: 'Notices',
-      ),
-      const _TabData(
-        branchIndex: 2,
-        icon: Icons.person_rounded,
-        selectedIcon: Icons.person_rounded,
-        label: 'My Hub',
-      ),
-      if (hasMediaCapability)
-        const _TabData(
-          branchIndex: 3,
-          icon: Icons.photo_library_rounded,
-          selectedIcon: Icons.photo_library_rounded,
-          label: 'Media',
-        ),
-    ];
+    // Build dynamic tab list: 5 Core V1.0 Pilot Tabs
+    final tabs = isPilotActive
+        ? [
+            const _TabData(
+              branchIndex: 0,
+              icon: Icons.today_outlined,
+              selectedIcon: Icons.today_rounded,
+              label: 'Today',
+            ),
+            const _TabData(
+              branchIndex: 1,
+              icon: Icons.access_time_rounded,
+              selectedIcon: Icons.access_time_filled_rounded,
+              label: 'Attendance',
+            ),
+            const _TabData(
+              branchIndex: 2,
+              icon: Icons.notifications_outlined,
+              selectedIcon: Icons.notifications_rounded,
+              label: 'Notices',
+            ),
+            const _TabData(
+              branchIndex: 3,
+              icon: Icons.person_outline_rounded,
+              selectedIcon: Icons.person_rounded,
+              label: 'My Hub',
+            ),
+            const _TabData(
+              branchIndex: 4,
+              icon: Icons.terminal_outlined,
+              selectedIcon: Icons.terminal_rounded,
+              label: 'Diagnostics',
+            ),
+          ]
+        : [
+            const _TabData(
+              branchIndex: 0,
+              icon: Icons.today_rounded,
+              selectedIcon: Icons.today_rounded,
+              label: 'Today',
+            ),
+            const _TabData(
+              branchIndex: 2,
+              icon: Icons.notifications_outlined,
+              selectedIcon: Icons.notifications_rounded,
+              label: 'Notices',
+            ),
+            const _TabData(
+              branchIndex: 3,
+              icon: Icons.person_rounded,
+              selectedIcon: Icons.person_rounded,
+              label: 'My Hub',
+            ),
+            if (hasMediaCapability)
+              const _TabData(
+                branchIndex: 5,
+                icon: Icons.photo_library_rounded,
+                selectedIcon: Icons.photo_library_rounded,
+                label: 'Media',
+              ),
+          ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final currentBranch = widget.navigationShell.currentIndex;
+        if (currentBranch != 0) {
+          widget.navigationShell.goBranch(0);
+          return;
+        }
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          await SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
       // Single tray + single FAB layer, Today branch only (D5*).
       floatingActionButton: onTodayBranch && pendingActionCount > 0
           ? const ActionCenterFab()
@@ -1282,7 +1374,7 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
                   // unread notifications on Notices.
                   final badgeCount = switch (tab.branchIndex) {
                     0 => pendingActionCount,
-                    1 => unreadCount,
+                    2 => unreadCount,
                     _ => 0,
                   };
                   return NavigationDestination(
@@ -1307,6 +1399,7 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
         ),
         ),
       ),
+    ),
     );
   }
 

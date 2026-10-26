@@ -4,8 +4,8 @@ import type { SessionPayload } from "@thaiba/auth";
 import { chatPubSub, ChatSubscriber, ChatEvent } from "./pubsub-broker";
 import { chatPresence } from "./presence-engine";
 import { db } from "@/db";
-import { chatMembers, chatChannelMessages, chatReceipts } from "@thaiba/db/schema";
-import { eq, and } from "drizzle-orm";
+import { chatMembers, chatChannelMessages, chatReceipts, userSessions, staff } from "@thaiba/db/schema";
+import { eq, and, gt } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface WSClientMessage {
@@ -49,17 +49,76 @@ export class ChatWebSocketHandler {
       if (!payload.staffId || typeof payload.staffId !== "string") {
         return null;
       }
+      if (!payload.sid || typeof payload.sid !== "string") {
+        return null;
+      }
+
+      // Live user_sessions + staff dual-key check (fail closed against revoked sessions)
+      const now = Date.now();
+      const sessionRow = await db
+        .select({
+          sessionId: userSessions.id,
+          sessionStatus: userSessions.status,
+          sessionExpiresAt: userSessions.expiresAt,
+          staffId: staff.id,
+          isActive: staff.isActive,
+          tokenVersion: staff.tokenVersion,
+          email: staff.email,
+          role: staff.role,
+        })
+        .from(userSessions)
+        .innerJoin(staff, eq(userSessions.staffId, staff.id))
+        .where(
+          and(
+            eq(userSessions.id, payload.sid),
+            eq(userSessions.staffId, payload.staffId),
+            eq(userSessions.status, "active"),
+            gt(userSessions.expiresAt, now)
+          )
+        )
+        .get();
+
+      if (!sessionRow || !sessionRow.isActive) {
+        return null;
+      }
+
+      const expectedTokenVersion = typeof payload.tokenVersion === "number" ? payload.tokenVersion : 0;
+      if (sessionRow.tokenVersion !== expectedTokenVersion) {
+        return null;
+      }
+
       return {
+        sid: payload.sid,
         staffId: payload.staffId,
-        email: typeof payload.email === "string" ? payload.email : "",
-        role: typeof payload.role === "string" ? payload.role : "staff",
+        email: typeof payload.email === "string" ? payload.email : sessionRow.email,
+        role: typeof payload.role === "string" ? payload.role : sessionRow.role,
         employeeId: typeof payload.employeeId === "string" ? payload.employeeId : "",
         name: typeof payload.name === "string" ? payload.name : "",
-        tokenVersion: typeof payload.tokenVersion === "number" ? payload.tokenVersion : 0,
+        tokenVersion: sessionRow.tokenVersion,
         institutionId: typeof payload.institutionId === "string" ? payload.institutionId : null,
       };
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Terminate all active WebSocket connections for a revoked session
+   */
+  public terminateSessionSockets(sid: string): void {
+    for (const [connId, conn] of this.connections.entries()) {
+      if (conn.session.sid === sid) {
+        try {
+          conn.subscriber.send({
+            type: "system_event",
+            action: "session_terminated",
+            payload: { reason: "Session has been terminated by administrator" },
+          } as any);
+        } catch {
+          // Socket already closed
+        }
+        this.handleDisconnect(connId);
+      }
     }
   }
 

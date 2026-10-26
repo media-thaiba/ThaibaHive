@@ -330,6 +330,20 @@
       "when": 1792920944589,
       "tag": "0046_curved_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "6",
+      "when": 1792920950000,
+      "tag": "0047_hostel_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1792935526637,
+      "tag": "0048_robust_wasp",
+      "breakpoints": true
     }
   ]
 }

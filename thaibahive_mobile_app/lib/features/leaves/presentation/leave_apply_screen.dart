@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -27,9 +30,82 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
   final _reasonController = TextEditingController();
   bool _isSubmitting = false;
   List<UploadedFile> _attachments = [];
+  static const _storage = FlutterSecureStorage();
+  static const _draftKey = 'draft_leave_application';
+  Timer? _debounceTimer;
+  String? _draftTypeId;
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonController.addListener(_onFieldChanged);
+    _loadDraft();
+  }
+
+  void _onFieldChanged() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), _saveDraft);
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      final draft = {
+        'leave_type_id': _selectedType?.id ?? _draftTypeId,
+        'start_date': _startDate?.toIso8601String(),
+        'end_date': _endDate?.toIso8601String(),
+        'reason': _reasonController.text,
+      };
+      if ((_selectedType != null || _draftTypeId != null) ||
+          _startDate != null ||
+          _endDate != null ||
+          _reasonController.text.trim().isNotEmpty) {
+        await _storage.write(key: _draftKey, value: jsonEncode(draft));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadDraft() async {
+    try {
+      final raw = await _storage.read(key: _draftKey);
+      if (raw == null || raw.isEmpty) return;
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _draftTypeId = map['leave_type_id'] as String?;
+        if (map['start_date'] != null) {
+          _startDate = DateTime.tryParse(map['start_date'] as String);
+        }
+        if (map['end_date'] != null) {
+          _endDate = DateTime.tryParse(map['end_date'] as String);
+        }
+        final reason = map['reason'] as String?;
+        if (reason != null && reason.isNotEmpty) {
+          _reasonController.text = reason;
+        }
+      });
+      if (_reasonController.text.isNotEmpty || _startDate != null || _draftTypeId != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Restored unsaved leave draft'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _discardDraft() async {
+    try {
+      _debounceTimer?.cancel();
+      await _storage.delete(key: _draftKey);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _reasonController.removeListener(_onFieldChanged);
     _reasonController.dispose();
     super.dispose();
   }
@@ -60,6 +136,7 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
           _endDate = picked;
         }
       });
+      _onFieldChanged();
     }
   }
 
@@ -95,6 +172,7 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
                 : 'Saved offline — queued for sync'),
           ),
         );
+        await _discardDraft();
         context.pop();
       }
     } catch (e) {
@@ -124,7 +202,11 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               typesAsync.when(
-                data: (types) => DropdownButtonFormField<LeaveTypeModel>(
+                data: (types) {
+                  if (_selectedType == null && _draftTypeId != null) {
+                    _selectedType = types.where((t) => t.id == _draftTypeId).firstOrNull;
+                  }
+                  return DropdownButtonFormField<LeaveTypeModel>(
                   value: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Leave Type',
@@ -136,9 +218,13 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
                             child: Text(t.name),
                           ))
                       .toList(),
-                  onChanged: (v) => setState(() => _selectedType = v),
+                  onChanged: (v) {
+                    setState(() => _selectedType = v);
+                    _onFieldChanged();
+                  },
                   validator: (v) => v == null ? 'Required' : null,
-                ),
+                );
+              },
                  loading: () => DropdownButtonFormField(
                   decoration: const InputDecoration(labelText: 'Leave Type'),
                   items: const [],

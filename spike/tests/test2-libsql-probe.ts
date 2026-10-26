@@ -18,8 +18,9 @@ export async function runTest2(existingDbPath?: string): Promise<{
   passed: boolean;
 }> {
   // 1. Connection & sequential transaction pragma probe
-  const dbPath = path.resolve("./spike-test2.db");
+  const dbPath = fs.existsSync("./spike") ? path.resolve("./spike/spike-test2.db") : path.resolve("./spike-test2.db");
   const res = await runLibsqlSequentialTransactionProbe(dbPath);
+  try { if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath); } catch (_) {}
 
   const pragmaPassed =
     res.tx1Pragma === 1 &&

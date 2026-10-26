@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff, usedNonces } from "@/db/schema";
+import { staff, usedNonces, userSessions } from "@/db/schema";
 import { createSession } from "@/lib/auth";
 import { verifyMobileNonce } from "@/lib/auth/mobile-nonce-service";
 import { checkDistributedRateLimit, extractIp } from "@/lib/api/rate-limit";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 function redirectWithError(code: string, message: string) {
   const url = `/auth/error?code=${encodeURIComponent(code)}&message=${encodeURIComponent(message)}`;
@@ -101,6 +101,20 @@ async function handleMobileHandoff(request: Request) {
       return redirectWithError("account_deactivated", "Account has been deactivated.");
     }
 
+
+    // Re-check origin session if embedded in nonce (Rule 18)
+    if (payload.originSid) {
+      const originSession = await db
+        .select({ status: userSessions.status, expiresAt: userSessions.expiresAt })
+        .from(userSessions)
+        .where(and(eq(userSessions.id, payload.originSid), eq(userSessions.staffId, staffId)))
+        .get();
+
+      if (!originSession || originSession.status !== "active" || originSession.expiresAt <= Date.now()) {
+        return redirectWithError("origin_session_expired", "Origin session is expired or terminated.");
+      }
+    }
+
     const userTokenVersion = user.tokenVersion ?? 0;
     const nonceTokenVersion = payloadTokenVersion ?? 0;
     if (userTokenVersion !== nonceTokenVersion) {
@@ -117,7 +131,7 @@ async function handleMobileHandoff(request: Request) {
       employeeId: user.employeeId,
       name: `${user.firstName} ${user.lastName}`,
       tokenVersion: user.tokenVersion,
-    });
+    }, false, "mobile");
 
     return NextResponse.redirect(new URL(redirectPath, process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"), {
       status: 302,

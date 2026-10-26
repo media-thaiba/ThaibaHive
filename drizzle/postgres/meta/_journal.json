@@ -239,6 +239,13 @@
       "when": 1792920889287,
       "tag": "0033_hostel_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792934713040,
+      "tag": "0034_glamorous_gauntlet",
+      "breakpoints": true
     }
   ]
 }

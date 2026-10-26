@@ -310,7 +310,7 @@ class OfflineQueue {
   Future<int> flush({Dio? httpClient, String? deviceId}) async {
     if (!_initialized) await init();
 
-    final pending = getPendingEvents();
+    final pending = getPendingEvents().where((e) => e.type != 'attendance_event').toList();
     if (pending.isEmpty) return 0;
 
     for (final event in pending) {

@@ -5,6 +5,7 @@ export interface MobileNoncePayload {
   staffId: string;
   email: string;
   role: string;
+  originSid?: string;
   employeeId?: string | null;
   name?: string;
   tokenVersion?: number;
@@ -23,6 +24,7 @@ export async function createMobileNonce(params: {
   staffId: string;
   email: string;
   role: string;
+  originSid?: string;
   employeeId?: string | null;
   name?: string;
   tokenVersion?: number;
@@ -42,6 +44,7 @@ export async function createMobileNonce(params: {
     staffId: params.staffId,
     email: params.email,
     role: params.role,
+    originSid: params.originSid,
     employeeId: params.employeeId ?? null,
     name: params.name ?? "",
     tokenVersion: params.tokenVersion ?? 0,
@@ -72,6 +75,7 @@ export async function verifyMobileNonce(nonce: string): Promise<{
   staffId: string;
   email: string;
   role: string;
+  originSid?: string;
   employeeId?: string | null;
   name?: string;
   tokenVersion?: number;
@@ -93,6 +97,7 @@ export async function verifyMobileNonce(nonce: string): Promise<{
       staffId: string;
       email: string;
       role: string;
+      originSid?: string;
       employeeId?: string | null;
       name?: string;
       tokenVersion?: number;

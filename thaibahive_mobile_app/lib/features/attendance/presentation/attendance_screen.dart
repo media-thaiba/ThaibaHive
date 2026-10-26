@@ -126,6 +126,26 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
             ),
             const SizedBox(height: 24),
             _BottomSheetOption(
+              icon: Icons.location_on_rounded,
+              label: 'Campus Geofence (One-Tap)',
+              description: 'Instant GPS verification within campus boundary',
+              color: const Color(0xFF1a8a3e),
+              onTap: () async {
+                Navigator.pop(context);
+                final outcome = await ref.read(attendanceProvider.notifier).punchOneTap(isCheckIn: true);
+                if (context.mounted && outcome != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(outcome.message ?? 'Check-in recorded'),
+                      backgroundColor: outcome.isQueuedOffline ? Colors.amber[800] : const Color(0xFF1a8a3e),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            _BottomSheetOption(
               icon: Icons.nfc_rounded,
               label: 'NFC Tag',
               description: 'Scan an NFC tag at the entrance',

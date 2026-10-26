@@ -588,10 +588,11 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
     }
 
     // Rank ordering checks
-    expect(getRoleRank("super_admin")!).toBeGreaterThan(getRoleRank("admin")!);
-    expect(getRoleRank("admin")!).toBeGreaterThan(getRoleRank("principal")!);
+    expect(getRoleRank("super_admin")!).toBeGreaterThan(getRoleRank("regional_admin")!);
+    expect(getRoleRank("regional_admin")!).toBeGreaterThan(getRoleRank("principal")!);
     expect(getRoleRank("principal")!).toBeGreaterThan(getRoleRank("hod")!);
-    expect(getRoleRank("hod")!).toBeGreaterThan(getRoleRank("teacher")!);
+    expect(getRoleRank("hod")!).toBeGreaterThan(getRoleRank("admin")!);
+    expect(getRoleRank("admin")!).toBeGreaterThan(getRoleRank("teacher")!);
 
     // Prototype poisoning attempts must fail closed
     expect(getRoleRank("constructor")).toBeNull();

@@ -55,4 +55,13 @@ DROP TRIGGER IF EXISTS trg_immutable_hostel_fine_actions ON hostel_fine_actions;
 CREATE TRIGGER trg_immutable_hostel_fine_actions
 BEFORE UPDATE OR DELETE ON hostel_fine_actions
 FOR EACH ROW EXECUTE FUNCTION prevent_hostel_ledger_mutation();
-
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS trg_immutable_hostel_gate_logs_truncate ON hostel_gate_logs;
+CREATE TRIGGER trg_immutable_hostel_gate_logs_truncate
+BEFORE TRUNCATE ON hostel_gate_logs
+FOR EACH STATEMENT EXECUTE FUNCTION prevent_hostel_ledger_mutation();
+--> statement-breakpoint
+DROP TRIGGER IF EXISTS trg_immutable_hostel_fine_actions_truncate ON hostel_fine_actions;
+CREATE TRIGGER trg_immutable_hostel_fine_actions_truncate
+BEFORE TRUNCATE ON hostel_fine_actions
+FOR EACH STATEMENT EXECUTE FUNCTION prevent_hostel_ledger_mutation();

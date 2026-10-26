@@ -14,6 +14,11 @@ import {
 
 import { getJwtSecretBytes } from "@thaiba/auth/config";
 import { resolveLegacyRedirect } from "./lib/navigation/legacy-redirects";
+import {
+  isPilotFreezeActive,
+  isFrozenPilotPath,
+  pilotFrozenModuleResponse,
+} from "./lib/attendance/pilot-gate";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -135,6 +140,34 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       return addSecurityHeaders(request, NextResponse.redirect(new URL("/", request.url)), pathname, nonce);
     }
 
+    // V1.0 Pilot Freeze Gate: Intercept all frozen module routes and pages (fails closed)
+    if (isPilotFreezeActive()) {
+      const frozenModule = isFrozenPilotPath(pathname);
+      if (frozenModule) {
+        const isApiOrAction =
+          pathname.startsWith("/api/") ||
+          Boolean(request.headers.get("next-action")) ||
+          Boolean(request.headers.get("x-action-id")) ||
+          isWrite ||
+          request.headers.get("accept")?.includes("application/json");
+
+        if (isApiOrAction) {
+          return addSecurityHeaders(
+            request,
+            pilotFrozenModuleResponse(frozenModule),
+            pathname,
+            nonce
+          );
+        }
+        return addSecurityHeaders(
+          request,
+          NextResponse.redirect(new URL(`/workspace?error=module_frozen&module=${frozenModule}`, request.url)),
+          pathname,
+          nonce
+        );
+      }
+    }
+
     const legacyDest = resolveLegacyRedirect(pathname);
     if (legacyDest) {
       return addSecurityHeaders(
@@ -144,6 +177,7 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         nonce
       );
     }
+
     const isProtectedPortal =
       pathname.startsWith("/portal/alumni") ||
       pathname.startsWith("/portal/facilities") ||
@@ -184,29 +218,33 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // SEC-01: Cryptographically verify session token signature at edge
+    // SEC-01: Cryptographically verify session token signature and sid at edge
     let verifiedRole: string | null = null;
     try {
       const { payload } = await jwtVerify(token, getJwtSecretBytes());
       if (payload.purpose === "mobile_handoff") {
         throw new Error("Mobile handoff nonce cannot be used as a general session token");
       }
-      verifiedRole = typeof payload.role === "string" ? payload.role : null;
-    } catch {
-      if (pathname.startsWith("/api/")) {
-        return addSecurityHeaders(
-          request,
-          NextResponse.json({ error: "Invalid or expired session token" }, { status: 401 }),
-          pathname,
-          nonce
-        );
+      if (!payload.sid || typeof payload.sid !== "string") {
+        const res = NextResponse.json({ error: "LEGACY_SESSION_EXPIRED" }, { status: 401 });
+        res.cookies?.delete?.("thaibahive_session");
+        return addSecurityHeaders(request, res, pathname, nonce);
       }
-      return addSecurityHeaders(
-        request,
-        NextResponse.redirect(new URL("/auth/login", request.url)),
-        pathname,
-        nonce
-      );
+      verifiedRole = typeof payload.role === "string" ? payload.role : null;
+    } catch (err: any) {
+      if (err?.message === "LEGACY_SESSION_EXPIRED") {
+        const res = NextResponse.json({ error: "LEGACY_SESSION_EXPIRED" }, { status: 401 });
+        res.cookies?.delete?.("thaibahive_session");
+        return addSecurityHeaders(request, res, pathname, nonce);
+      }
+      if (pathname.startsWith("/api/")) {
+        const res = NextResponse.json({ error: "Invalid or expired session token" }, { status: 401 });
+        res.cookies?.delete?.("thaibahive_session");
+        return addSecurityHeaders(request, res, pathname, nonce);
+      }
+      const res = NextResponse.redirect(new URL("/auth/login", request.url));
+      res.cookies?.delete?.("thaibahive_session");
+      return addSecurityHeaders(request, res, pathname, nonce);
     }
 
     // Workspace root redirect: /workspace -> /workspace/{role}

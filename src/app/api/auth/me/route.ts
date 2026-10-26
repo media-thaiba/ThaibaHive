@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff } from "@/db/schema";
+import { staff, userSessions } from "@/db/schema";
 import { verifySession } from "@/lib/auth";
 import { verifyPassword, hashPassword } from "@/lib/auth";
 import { getStaffInstitutionMemberships } from "@thaiba/auth";
 import { passwordChangeSchema, profileUpdateSchema } from "@/lib/auth/schemas";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export async function GET() {
   const session = await verifySession();
@@ -66,10 +66,23 @@ export async function PATCH(request: Request) {
     if (!valid) return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
 
     const hashed = await hashPassword(parsed.data.newPassword);
+    
+    // Invalidate active sessions in user_sessions (Rule 20)
+    await db
+      .update(userSessions)
+      .set({
+        status: "terminated",
+        logoutAt: Date.now(),
+      })
+      .where(and(eq(userSessions.staffId, session.staffId), eq(userSessions.status, "active")))
+      .run();
+
+    // Increment tokenVersion on staff
     await db.update(staff).set({
       passwordHash: hashed,
       tokenVersion: sql`${staff.tokenVersion} + 1`,
     }).where(eq(staff.id, session.staffId)).run();
+
     return NextResponse.json({ success: true });
   }
 

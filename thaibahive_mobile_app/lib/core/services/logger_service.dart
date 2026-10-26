@@ -28,6 +28,7 @@ class LogEntry {
 }
 
 class LoggerService extends StateNotifier<List<LogEntry>> {
+  List<LogEntry> get entries => state;
   static const int _maxLogs = 500;
   File? _internalLogFile;
   File? _externalLogFile;

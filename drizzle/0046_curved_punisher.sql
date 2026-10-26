@@ -201,8 +201,4 @@ CREATE TABLE `hostel_settings` (
 	CONSTRAINT "chk_ts_settings_updated" CHECK(length(updated_at) = 24 AND substr(updated_at,11,1) = 'T' AND substr(updated_at,24,1) = 'Z')
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uq_settings_inst` ON `hostel_settings` (`institution_id`);--> statement-breakpoint
-CREATE TRIGGER IF NOT EXISTS `trg_immutable_gate_logs_update` BEFORE UPDATE ON `hostel_gate_logs` BEGIN SELECT RAISE(ABORT, 'hostel_gate_logs is append-only. UPDATE not allowed.'); END;--> statement-breakpoint
-CREATE TRIGGER IF NOT EXISTS `trg_immutable_gate_logs_delete` BEFORE DELETE ON `hostel_gate_logs` BEGIN SELECT RAISE(ABORT, 'hostel_gate_logs is append-only. DELETE not allowed.'); END;--> statement-breakpoint
-CREATE TRIGGER IF NOT EXISTS `trg_immutable_fine_actions_update` BEFORE UPDATE ON `hostel_fine_actions` BEGIN SELECT RAISE(ABORT, 'hostel_fine_actions is append-only. UPDATE not allowed.'); END;--> statement-breakpoint
-CREATE TRIGGER IF NOT EXISTS `trg_immutable_fine_actions_delete` BEFORE DELETE ON `hostel_fine_actions` BEGIN SELECT RAISE(ABORT, 'hostel_fine_actions is append-only. DELETE not allowed.'); END;
+CREATE UNIQUE INDEX `uq_settings_inst` ON `hostel_settings` (`institution_id`);

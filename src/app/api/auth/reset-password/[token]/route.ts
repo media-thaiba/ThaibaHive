@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and, isNull, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { staff, passwordResetTokens } from "@thaiba/db/schema";
+import { staff, passwordResetTokens, userSessions } from "@thaiba/db/schema";
 import { resetPasswordSchema } from "@/lib/validation/schemas";
 import { hashPassword } from "@thaiba/auth";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -23,23 +23,21 @@ export async function POST(
 
   const body = await request.json();
   const parsed = resetPasswordSchema.safeParse({
-    ...body,
-    token,
+    password: body.password,
+    confirmPassword: body.confirmPassword,
   });
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message || "Invalid input" },
+      { error: parsed.error.issues[0]?.message ?? "Invalid password" },
       { status: 400 }
     );
   }
 
   const { password: newPassword } = parsed.data;
-
-  const now = new Date().toISOString();
   const tokenHash = hashToken(token);
+  const now = new Date().toISOString();
 
-  // Atomic single-use token consumption (anti-replay TOCTOU guard)
   const consumedToken = await db
     .update(passwordResetTokens)
     .set({ usedAt: now })
@@ -74,6 +72,17 @@ export async function POST(
   }
 
   const newHash = await hashPassword(newPassword);
+
+  // Invalidate active sessions in user_sessions (Rule 20)
+  await db
+    .update(userSessions)
+    .set({
+      status: "terminated",
+      logoutAt: Date.now(),
+    })
+    .where(and(eq(userSessions.staffId, consumedToken.staffId), eq(userSessions.status, "active")))
+    .run();
+
   await db
     .update(staff)
     .set({

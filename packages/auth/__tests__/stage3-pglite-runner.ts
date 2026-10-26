@@ -7,6 +7,7 @@
  * 4. Chain integrity verification and tamper detection on PostgreSQL.
  */
 
+(process.env as Record<string, string | undefined>).NODE_ENV = "test";
 process.env.AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET || "stage3-test-auth-jwt-secret-at-least-32-chars-long";
 
 import { PGlite } from "@electric-sql/pglite";

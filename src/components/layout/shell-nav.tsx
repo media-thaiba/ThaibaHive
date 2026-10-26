@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { UserAvatarDropdown } from "@/components/layout/user-avatar-dropdown";
 import { NotificationsMenu } from "@/components/layout/notifications-menu";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
+import { DiagnosticsButton } from "@/components/diagnostics-button";
 
 type ShellNavProps = {
   onSearchOpen: () => void;
@@ -120,6 +121,10 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
         >
           <Search className="h-[18px] w-[18px]" />
         </button>
+
+        {/* Live Telemetry & Diagnostics HUD */}
+        <DiagnosticsButton variant="pill" label="Diagnostics" className="hidden xl:inline-flex" />
+        <DiagnosticsButton variant="icon" className="xl:hidden flex" />
 
         {/* Chat Drawer Toggle */}
         <button

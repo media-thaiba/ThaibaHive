@@ -206,6 +206,77 @@ export async function runTest7(
       errorObserved: `Owner blocked by trigger: ${ownerBlockedByTrigger}`,
       details: `Trigger active: Blocked owner [${triggerErrCode}] | RED: Dropping trigger permitted owner mutation (amount=1234) | GREEN: Recreated trigger blocked owner [55000]`,
     });
+
+    // -----------------------------------------------------------------------
+    // Mutation 5: Weakened RLS Policy (USING true) Behavioral Isolation Failure
+    // -----------------------------------------------------------------------
+    await maint.query(`
+      INSERT INTO institutions (id, name, code, created_at) VALUES 
+        ('inst-iso-a', 'Iso A', 'ISO_A', '2026-10-25T00:00:00.000Z'),
+        ('inst-iso-b', 'Iso B', 'ISO_B', '2026-10-25T00:00:00.000Z')
+      ON CONFLICT DO NOTHING;
+      INSERT INTO hostel_blocks (id, institution_id, name, gender) VALUES 
+        ('blk-iso-a', 'inst-iso-a', 'Block Secret A', 'boys')
+      ON CONFLICT DO NOTHING;
+    `);
+
+    const appClient = new Client({ connectionString: appUrl });
+    await appClient.connect();
+
+    let m5Red = false;
+    let m5Green = false;
+    let m5RedDetails = "";
+
+    try {
+      // Step 1: Weaken policy to USING (true) WITH CHECK (true)
+      await maint.query("DROP POLICY tenant_isolation_policy ON hostel_blocks;");
+      await maint.query(`
+        CREATE POLICY tenant_isolation_policy ON hostel_blocks 
+        FOR ALL TO thaibahive_app 
+        USING (true) 
+        WITH CHECK (true);
+      `);
+
+      // Tenant B queries blocks - under weakened policy, Tenant B SEES Tenant A's block!
+      await appClient.query("BEGIN;");
+      await appClient.query("SELECT set_config('app.current_tenant_id', 'inst-iso-b', true);");
+      const leakedRes = await appClient.query("SELECT id, institution_id, name FROM hostel_blocks WHERE id = 'blk-iso-a';");
+      await appClient.query("COMMIT;");
+
+      if (leakedRes.rows.length === 1 && leakedRes.rows[0].institution_id === "inst-iso-a") {
+        m5Red = true;
+        m5RedDetails = "Tenant B successfully read Tenant A block (tenant isolation breached under weakened USING true policy)";
+      } else {
+        m5RedDetails = `Unexpectedly could not read leaked row: count=${leakedRes.rows.length}`;
+      }
+    } finally {
+      // Step 2: Restore policy to strict tenant scoping
+      await maint.query("DROP POLICY tenant_isolation_policy ON hostel_blocks;");
+      await maint.query(`
+        CREATE POLICY tenant_isolation_policy ON hostel_blocks 
+        FOR ALL TO thaibahive_app 
+        USING (institution_id = NULLIF(current_setting('app.current_tenant_id', true), '')) 
+        WITH CHECK (institution_id = NULLIF(current_setting('app.current_tenant_id', true), ''));
+      `);
+
+      // Tenant B queries blocks again - under restored policy, Tenant B gets 0 rows!
+      await appClient.query("BEGIN;");
+      await appClient.query("SELECT set_config('app.current_tenant_id', 'inst-iso-b', true);");
+      const blockedRes = await appClient.query("SELECT id, institution_id, name FROM hostel_blocks WHERE id = 'blk-iso-a';");
+      await appClient.query("COMMIT;");
+
+      m5Green = blockedRes.rows.length === 0;
+      await appClient.end();
+    }
+
+    results.push({
+      mutation: "5. Weaken RLS policy to USING (true) (Behavioral Tenant Isolation Failure)",
+      redVerified: m5Red,
+      greenVerified: m5Green,
+      caught: m5Red && m5Green,
+      errorObserved: m5Red ? "Isolation breach observed" : "Mutation not caught",
+      details: `RED: ${m5RedDetails} | GREEN: Restored policy isolated tenant (0 rows visible)`,
+    });
   } finally {
     await maint.end();
   }

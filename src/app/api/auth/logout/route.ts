@@ -1,47 +1,85 @@
 import { NextResponse } from "next/server";
 import { destroySession } from "@/lib/auth";
-import { requireAuth } from "@/lib/api/auth-guard";
-import { logActivity } from "@/lib/api/activity-log";
+import { jwtVerify, decodeJwt } from "jose";
+import { getJwtSecretBytes } from "@thaiba/auth/config";
 import { db } from "@/db";
-import { presence } from "@thaiba/db/schema";
-import { eq } from "drizzle-orm";
+import { userSessions, presence } from "@thaiba/db/schema";
+import { eq, and } from "drizzle-orm";
 import { broadcastPresence } from "@/lib/api/realtime";
+import { cookies } from "next/headers";
 
-export const POST = requireAuth(async (request, session) => {
-  // 1. Log explicit logout activity
-  await logActivity({
-    request,
-    staffId: session.staffId,
-    action: "LOGOUT",
-    resourceType: "auth",
-  });
+export async function POST(request: Request) {
+  let token: string | undefined;
 
-  // 2. Set offline status immediately on logout and broadcast
-  const now = new Date().toISOString();
+  // 1. Check cookies
   try {
-    await db
-      .update(presence)
-      .set({ online: false, lastSeenAt: now, updatedAt: now })
-      .where(eq(presence.staffId, session.staffId));
-    broadcastPresence(session.staffId, false, now);
-  } catch (err) {
-    console.error("Failed to update presence on logout:", err);
+    const cookieStore = await cookies();
+    token = cookieStore.get("thaibahive_session")?.value;
+  } catch {
+    // Non-cookie environment
   }
 
-  // 3. Invalidate JWT tokens across devices by incrementing tokenVersion
-  try {
-    const { staff } = await import("@thaiba/db/schema");
-    const { sql } = await import("drizzle-orm");
-    await db
-      .update(staff)
-      .set({ tokenVersion: sql`${staff.tokenVersion} + 1` })
-      .where(eq(staff.id, session.staffId));
-  } catch (err) {
-    console.error("Failed to increment tokenVersion on logout:", err);
+  // 2. Check Authorization header (Bearer token)
+  if (!token) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
   }
 
-  // 4. Clear session cookie
+  if (token) {
+    let payload: any = null;
+    try {
+      const verified = await jwtVerify(token, getJwtSecretBytes("session"));
+      payload = verified.payload;
+    } catch {
+      // Tolerant fallback: decode without signature verification if token is expired
+      try {
+        payload = decodeJwt(token);
+      } catch {
+        // Unparseable token
+      }
+    }
+
+    if (payload?.sid) {
+      try {
+        // Mark user_sessions status as terminated if still active
+        await db
+          .update(userSessions)
+          .set({
+            status: "terminated",
+            logoutAt: Date.now(),
+          })
+          .where(and(eq(userSessions.id, payload.sid), eq(userSessions.status, "active")))
+          .run();
+      } catch (err) {
+        console.error("Failed to mark user_sessions terminated on logout:", err);
+      }
+    }
+
+    if (payload?.staffId) {
+      const now = new Date().toISOString();
+      try {
+        await db
+          .update(presence)
+          .set({ online: false, lastSeenAt: now, updatedAt: now })
+          .where(eq(presence.staffId, payload.staffId))
+          .run();
+        broadcastPresence(payload.staffId, false, now);
+      } catch (err) {
+        console.error("Failed to update presence on logout:", err);
+      }
+    }
+  }
+
+  // 3. Always clear session cookie
   await destroySession();
-  return NextResponse.json({ success: true });
-}, "auth:logout");
 
+  const response = NextResponse.json({ success: true });
+  try {
+    response.cookies.delete("thaibahive_session");
+  } catch {
+    // Environment fallback
+  }
+  return response;
+}
