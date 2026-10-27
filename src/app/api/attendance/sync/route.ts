@@ -70,4 +70,4 @@ export const POST = requireAuth(async (request, session) => {
       { status: 500, headers: { "X-Request-Id": requestId } }
     );
   }
-});
+}, "attendance:read");

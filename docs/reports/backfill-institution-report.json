@@ -1,7 +1,8 @@
 {
-  "timestamp": "2026-10-03T09:19:38.201Z",
+  "timestamp": "2026-10-26T14:48:45.422Z",
   "dialect": "sqlite",
-  "totalUpdated": 0,
+  "dryRun": true,
+  "totalUpdated": 56,
   "totalSkipped": 0,
   "totalAmbiguous": 0,
   "tableStats": [
@@ -57,6 +58,20 @@
     {
       "table": "media_assets",
       "updated": 0,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "expense_claims",
+      "updated": 55,
+      "skippedNoActor": 0,
+      "ambiguousMultiInst": 0,
+      "ambiguousSampleIds": []
+    },
+    {
+      "table": "purchase_requests",
+      "updated": 1,
       "skippedNoActor": 0,
       "ambiguousMultiInst": 0,
       "ambiguousSampleIds": []

@@ -171,12 +171,12 @@ export function UserAvatarDropdown({ variant = "icon", collapsed = false, align 
           {/* Quick Status Switcher */}
           <div className="px-2 py-2">
             <div className="flex items-center justify-between mb-1.5 px-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Set Availability
               </span>
               <Link
                 href="/my-work/availability"
-                className="text-[10px] font-medium text-primary hover:underline"
+                className="text-[11px] font-medium text-primary hover:underline"
               >
                 Full View &rarr;
               </Link>

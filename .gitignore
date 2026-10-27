@@ -76,6 +76,7 @@ staging-reports/
 # live script run output (drills, simulations, scans) — root files in
 # reports/ and .ai/execution/ are stable baselines; all subdirectories are ephemeral
 reports/*/
+!reports/release-1.0/
 .ai/execution/*/
 
 # transient test artifacts, run logs, and binaries

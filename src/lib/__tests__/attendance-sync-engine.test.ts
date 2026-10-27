@@ -81,9 +81,10 @@ describe("Version 1.0 Attendance Event-Sourcing & Sync Engine Test Suite", () =>
 
   describe("2. Sync Batch Ingestion & Idempotency", () => {
     it("should successfully ingest valid check-in and check-out events", async () => {
-      const now = Date.now();
-      const morningEpoch = now - 8 * 3600 * 1000; // 8 hours ago
-      const eveningEpoch = now - 30 * 60 * 1000; // 30 minutes ago
+      // Use fixed daytime interval on the same calendar day to be deterministic across any time of day
+      const base = new Date("2026-10-26T04:00:00Z").getTime(); // 09:30 AM IST
+      const morningEpoch = base;
+      const eveningEpoch = base + 8 * 3600 * 1000; // 05:30 PM IST
       const expectedMinutes = Math.round((eveningEpoch - morningEpoch) / 60000);
 
       const response = await processAttendanceSyncBatch(
