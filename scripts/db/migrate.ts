@@ -58,30 +58,45 @@ export async function runMigrations() {
         .filter(Boolean);
 
       console.log(`[db:migrate] Applying ${file} (${stmts.length} statements)...`);
-      for (const stmt of stmts) {
-        try {
-          await client.execute(stmt);
-        } catch (err: any) {
-          if (
-            err.message?.includes("already exists") ||
-            err.message?.includes("duplicate column") ||
-            err.message?.includes("columns are not unique") ||
-            err.message?.includes("no such table")
-          ) {
-            // Idempotent skip
-          } else {
-            console.error(`[db:migrate] Error executing statement in ${file}:`, stmt);
-            throw err;
+
+      // Transactional execution per migration file
+      const tx = await client.transaction("write");
+      try {
+        for (const stmt of stmts) {
+          try {
+            await tx.execute(stmt);
+          } catch (err: any) {
+            // Strict idempotency check: only allow re-running already existing objects
+            const isIdempotentSkip =
+              err.message?.includes("already exists") ||
+              err.message?.includes("duplicate column") ||
+              err.message?.includes("columns are not unique");
+
+            if (isIdempotentSkip) {
+              console.warn(`[db:migrate] ℹ️ Idempotent skip in ${file}: ${err.message.slice(0, 80)}`);
+            } else {
+              // Fail hard on real errors (like 'no such table', syntax error, etc.)
+              console.error(`[db:migrate] ❌ Error executing statement in ${file}:`, stmt);
+              throw err;
+            }
           }
         }
-      }
 
-      await client.execute({
-        sql: "INSERT OR IGNORE INTO __drizzle_applied_migrations (name) VALUES (?)",
-        args: [file],
-      });
-      appliedCount++;
-      console.log(`[db:migrate] ✅ ${file} applied.`);
+        await tx.execute({
+          sql: "INSERT OR IGNORE INTO __drizzle_applied_migrations (name) VALUES (?)",
+          args: [file],
+        });
+
+        await tx.commit();
+        appliedCount++;
+        console.log(`[db:migrate] ✅ ${file} applied and committed.`);
+      } catch (err) {
+        await tx.rollback();
+        console.error(`[db:migrate] Rolled back ${file} due to failure.`);
+        throw err;
+      } finally {
+        tx.close();
+      }
     }
 
     await client.execute("PRAGMA foreign_keys = ON");
