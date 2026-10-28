@@ -11,7 +11,7 @@ CREATE TABLE `staff_meal_preferences` (
 	FOREIGN KEY (`staff_id`) REFERENCES `staff`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `staff_meal_preferences_staff_id_unique` ON `staff_meal_preferences` (`staff_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_staff_meal_preferences_staff_id` ON `staff_meal_preferences` (`staff_id`);--> statement-breakpoint
 CREATE TABLE `step_up_used` (
 	`jti` text PRIMARY KEY NOT NULL,
 	`staff_id` text NOT NULL,
