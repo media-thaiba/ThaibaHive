@@ -69,6 +69,13 @@ const exactPublicPaths = new Set([
   "/affiliation",
   "/apple-app-site-association",
   "/favicon.ico",
+  // Legal suite: required to be reachable without a session by Apple 5.1.1(v),
+  // Google Play and the DPDP Act 2023 (notice, grievance and deletion pages).
+  "/privacy",
+  "/terms",
+  "/cookies",
+  "/account-deletion",
+  "/legal/dpdp-notice",
 ]);
 
 const prefixPublicPaths = [

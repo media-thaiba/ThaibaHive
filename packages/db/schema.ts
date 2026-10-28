@@ -920,7 +920,7 @@ export const grievances = sqliteTable("grievances", {
 
 export const staffAvailability = sqliteTable("staff_availability", {
   id: text("id").primaryKey(),
-  staffId: text("staff_id").notNull().unique().references(() => staff.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
   status: text("status").notNull().default("available"),
   expiresAt: text("expires_at"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -1054,7 +1054,7 @@ export const mealNotifications = sqliteTable("meal_notifications", {
 
 export const staffMealPreferences = sqliteTable("staff_meal_preferences", {
   id: text("id").primaryKey(),
-  staffId: text("staff_id").notNull().unique().references(() => staff.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
   defaultBreakfast: text("default_breakfast").notNull().default("eating"),
   defaultLunch: text("default_lunch").notNull().default("eating"),
   defaultDinner: text("default_dinner").notNull().default("eating"),
@@ -1062,7 +1062,9 @@ export const staffMealPreferences = sqliteTable("staff_meal_preferences", {
   skipEndDate: text("skip_end_date"),
   recurringSkipDays: text("recurring_skip_days"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffIdIdx: uniqueIndex("idx_staff_meal_preferences_staff_id").on(t.staffId),
+}));
 
 // ─── Approval Delegations ───
 
@@ -4894,6 +4896,29 @@ export const visionPrivacyAuditLogs = sqliteTable("vision_privacy_audit_logs", {
   visionPrivacyTypeIdx: index("idx_vision_privacy_type").on(t.eventType),
   visionPrivacyCamIdx: index("idx_vision_privacy_cam").on(t.cameraId),
   visionPrivacyTimeIdx: index("idx_vision_privacy_time").on(t.auditTimestamp),
+}));
+
+// ─── DPDP Act 2023 §9: durable consent ledger for surveillance & biometrics ───
+// Consent is NEVER assumed. For minors (userType 'student') both consent flags
+// default to false and stay false until a verified guardian in student_guardians
+// records verifiable parental consent.
+export const surveillanceConsents = sqliteTable("surveillance_consents", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().default("global"),
+  userId: text("user_id").notNull(),
+  userType: text("user_type").notNull().default("student"), // 'student' | 'staff' | 'visitor'
+  hasConsentedSurveillance: integer("has_consented_surveillance", { mode: "boolean" }).notNull().default(false),
+  hasConsentedFacialAuth: integer("has_consented_facial_auth", { mode: "boolean" }).notNull().default(false),
+  parentalConsentVerified: integer("parental_consent_verified", { mode: "boolean" }).notNull().default(false),
+  parentalGuardianId: text("parental_guardian_id"),
+  parentalConsentAt: text("parental_consent_at"),
+  parentalConsentMethod: text("parental_consent_method"), // 'guardian_portal' | 'signed_form' | 'sms_otp'
+  optedOutZoneIds: text("opted_out_zone_ids", { mode: "json" }).$type<string[]>(),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  surveillanceConsentUniq: uniqueIndex("idx_surveillance_consents_tenant_user").on(t.institutionId, t.userId),
+  surveillanceConsentTypeIdx: index("idx_surveillance_consents_user_type").on(t.userType),
 }));
 
 // ─── ADVISE-MESH / CognitiveDegree OS: Curricular Graph & Autonomous Advising (Sprint-051) ───

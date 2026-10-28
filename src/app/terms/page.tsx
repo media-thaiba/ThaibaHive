@@ -92,7 +92,54 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">6. Contact Information</h2>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">6. Account Deletion &amp; Data Erasure</h2>
+            <p className="text-muted-foreground">
+              You may delete your own account at any time, without contacting support, from
+              <strong> Settings → Privacy &amp; Account Deletion</strong> in the web or mobile app. Deletion revokes every active session immediately and anonymises non-statutory personal data. Records that Indian statute requires us to retain — payroll, income-tax and immutable audit records — are kept only for the statutory period. Full details are on the{" "}
+              <Link href="/account-deletion" className="text-primary font-medium underline underline-offset-4">
+                Account Deletion page
+              </Link>
+              .
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">7. Privacy, Cookies &amp; DPDP Compliance</h2>
+            <p className="text-muted-foreground">
+              Your personal data is processed in accordance with our{" "}
+              <Link href="/privacy" className="text-primary font-medium underline underline-offset-4">
+                Privacy Policy
+              </Link>
+              , our{" "}
+              <Link href="/cookies" className="text-primary font-medium underline underline-offset-4">
+                Cookie Policy
+              </Link>{" "}
+              and the Digital Personal Data Protection Act, 2023 — see the{" "}
+              <Link href="/legal/dpdp-notice" className="text-primary font-medium underline underline-offset-4">
+                DPDP data notice
+              </Link>
+              . Children&apos;s data is processed only with verifiable parental consent, and no child is
+              tracked or behaviourally monitored. Consent for biometric or notification features may be
+              withdrawn at any time.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">8. Grievance Redressal</h2>
+            <p className="text-muted-foreground">
+              Complaints about these Terms or about the processing of personal data may be addressed to
+              our Grievance Officer, who acknowledges grievances within 72 hours:
+            </p>
+            <div className="rounded-xl border border-border/60 bg-card p-4 text-xs space-y-1 text-muted-foreground">
+              <p><strong className="text-foreground">Thaiba Garden Educational Institutions</strong></p>
+              <p>Attn: Grievance Officer / Data Protection Officer</p>
+              <p>Email: <a href="mailto:grievance@thaibahive.com" className="text-primary font-medium underline">grievance@thaibahive.com</a></p>
+              <p>Postal: Grievance Officer, Thaiba Garden Educational Institutions, Thaiba Campus, Tamil Nadu, India — 600001</p>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">9. Contact Information</h2>
             <p className="text-muted-foreground">
               For questions regarding these Terms, contact administration at:
             </p>
@@ -106,10 +153,16 @@ export default function TermsOfServicePage() {
         {/* Footer */}
         <div className="mt-16 border-t border-border/40 pt-8 text-center text-xs text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Thaiba Garden. All rights reserved.</p>
-          <div className="mt-2 flex justify-center gap-4">
+          <div className="mt-2 flex flex-wrap justify-center gap-4">
             <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
             <span>&bull;</span>
             <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
+            <span>&bull;</span>
+            <Link href="/cookies" className="hover:text-foreground">Cookie Policy</Link>
+            <span>&bull;</span>
+            <Link href="/legal/dpdp-notice" className="hover:text-foreground">DPDP Notice</Link>
+            <span>&bull;</span>
+            <Link href="/account-deletion" className="hover:text-foreground">Account Deletion</Link>
             <span>&bull;</span>
             <Link href="/auth/login" className="hover:text-foreground">Sign In</Link>
           </div>

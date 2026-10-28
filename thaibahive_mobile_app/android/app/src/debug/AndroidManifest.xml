@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Internal/debug builds only: allows the in-app OTA updater to hand an APK to the
+         package installer. Google Play forbids REQUEST_INSTALL_PACKAGES for store-distributed
+         builds, so this permission must never move back into src/main/AndroidManifest.xml. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 </manifest>

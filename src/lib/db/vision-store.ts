@@ -1,6 +1,7 @@
 import { db } from '@thaiba/db';
 import { eq, and } from 'drizzle-orm';
 import {
+  surveillanceConsents,
   visionCameras,
   visionDetectionZones,
   visionThreatAlerts,
@@ -26,6 +27,7 @@ export interface InMemoryVisionStore {
   vehicleWhitelist: Map<string, any>;
   lockdownEvents: Map<string, any>;
   privacyAuditLogs: Map<string, any>;
+  surveillanceConsents: Map<string, any>;
 }
 
 export class VisionDbStore {
@@ -43,6 +45,7 @@ export class VisionDbStore {
     vehicleWhitelist: new Map(),
     lockdownEvents: new Map(),
     privacyAuditLogs: new Map(),
+    surveillanceConsents: new Map(),
   };
 
   public static getInstance(): VisionDbStore {
@@ -64,13 +67,14 @@ export class VisionDbStore {
     this.memoryStore.vehicleWhitelist.clear();
     this.memoryStore.lockdownEvents.clear();
     this.memoryStore.privacyAuditLogs.clear();
+    this.memoryStore.surveillanceConsents.clear();
   }
 
   private async ensureHydrated(): Promise<void> {
     if (this.useMemoryOnly || this.hydrated || !db) return;
     this.hydrated = true;
     try {
-      const [cams, zones, alerts, incs, guards, disps, alprs, whites, locks, audits] = await Promise.all([
+      const [cams, zones, alerts, incs, guards, disps, alprs, whites, locks, audits, consents] = await Promise.all([
         db.select().from(visionCameras),
         db.select().from(visionDetectionZones),
         db.select().from(visionThreatAlerts),
@@ -81,6 +85,7 @@ export class VisionDbStore {
         db.select().from(visionVehicleWhitelist),
         db.select().from(visionLockdownEvents),
         db.select().from(visionPrivacyAuditLogs),
+        db.select().from(surveillanceConsents),
       ]);
       for (const r of cams) if (!this.memoryStore.cameras.has(r.cameraId)) this.memoryStore.cameras.set(r.cameraId, r);
       for (const r of zones) if (!this.memoryStore.detectionZones.has(r.zoneId)) this.memoryStore.detectionZones.set(r.zoneId, r);
@@ -92,6 +97,12 @@ export class VisionDbStore {
       for (const r of whites) if (!this.memoryStore.vehicleWhitelist.has(r.plateNumber.toUpperCase())) this.memoryStore.vehicleWhitelist.set(r.plateNumber.toUpperCase(), r);
       for (const r of locks) if (!this.memoryStore.lockdownEvents.has(r.lockdownId)) this.memoryStore.lockdownEvents.set(r.lockdownId, r);
       for (const r of audits) if (!this.memoryStore.privacyAuditLogs.has(r.auditId)) this.memoryStore.privacyAuditLogs.set(r.auditId, r);
+      for (const r of consents) {
+        const consentKey = `${r.institutionId}:${r.userId}`;
+        if (!this.memoryStore.surveillanceConsents.has(consentKey)) {
+          this.memoryStore.surveillanceConsents.set(consentKey, r);
+        }
+      }
     } catch {}
   }
 
@@ -544,5 +555,71 @@ export class VisionDbStore {
       })
       .sort((a, b) => b.auditTimestamp.localeCompare(a.auditTimestamp))
       .slice(0, limit);
+  }
+
+  // ─── Surveillance Consent Ledger (DPDP Act 2023 §9) ───
+  /**
+   * Upserts a consent row keyed by (institutionId, userId). The in-memory copy
+   * is always written first so reads never race the database write, then the
+   * row is persisted. Consent is stored durably so it survives restarts — an
+   * in-memory default can never be mistaken for recorded consent again.
+   */
+  async upsertSurveillanceConsent(data: {
+    id?: string;
+    institutionId?: string;
+    userId: string;
+    userType?: string;
+    hasConsentedSurveillance?: boolean;
+    hasConsentedFacialAuth?: boolean;
+    parentalConsentVerified?: boolean;
+    parentalGuardianId?: string | null;
+    parentalConsentAt?: string | null;
+    parentalConsentMethod?: string | null;
+    optedOutZoneIds?: string[] | null;
+  }): Promise<any> {
+    const tenantId = data.institutionId || 'global';
+    const consentKey = `${tenantId}:${data.userId}`;
+    const now = new Date().toISOString();
+    const previous = this.memoryStore.surveillanceConsents.get(consentKey);
+    const record = {
+      id: previous?.id || data.id || `cons_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ...data,
+      institutionId: tenantId,
+      userType: data.userType || 'student',
+      hasConsentedSurveillance: data.hasConsentedSurveillance ?? previous?.hasConsentedSurveillance ?? false,
+      hasConsentedFacialAuth: data.hasConsentedFacialAuth ?? previous?.hasConsentedFacialAuth ?? false,
+      parentalConsentVerified: data.parentalConsentVerified ?? previous?.parentalConsentVerified ?? false,
+      parentalGuardianId: data.parentalGuardianId ?? previous?.parentalGuardianId ?? null,
+      parentalConsentAt: data.parentalConsentAt ?? previous?.parentalConsentAt ?? null,
+      parentalConsentMethod: data.parentalConsentMethod ?? previous?.parentalConsentMethod ?? null,
+      optedOutZoneIds: data.optedOutZoneIds ?? previous?.optedOutZoneIds ?? [],
+      updatedAt: now,
+      createdAt: previous?.createdAt || now,
+    };
+    this.memoryStore.surveillanceConsents.set(consentKey, record);
+    try {
+      if (db && !this.useMemoryOnly) {
+        await db.insert(surveillanceConsents).values(record as any).onConflictDoUpdate({
+          target: [surveillanceConsents.institutionId, surveillanceConsents.userId],
+          set: {
+            userType: record.userType,
+            hasConsentedSurveillance: record.hasConsentedSurveillance,
+            hasConsentedFacialAuth: record.hasConsentedFacialAuth,
+            parentalConsentVerified: record.parentalConsentVerified,
+            parentalGuardianId: record.parentalGuardianId,
+            parentalConsentAt: record.parentalConsentAt,
+            parentalConsentMethod: record.parentalConsentMethod,
+            optedOutZoneIds: record.optedOutZoneIds,
+            updatedAt: record.updatedAt,
+          },
+        });
+      }
+    } catch {}
+    return record;
+  }
+
+  async getSurveillanceConsent(userId: string, tenantId: string = 'global'): Promise<any | null> {
+    await this.ensureHydrated();
+    return this.memoryStore.surveillanceConsents.get(`${tenantId}:${userId}`) || null;
   }
 }

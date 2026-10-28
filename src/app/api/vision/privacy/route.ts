@@ -45,8 +45,11 @@ export const POST = requireAuth(async (req: Request, session: any) => {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input payload' }, { status: 400 });
     }
 
-    registry.registerConsent({ ...parsed.data, updatedAt: new Date().toISOString() }, tenantId);
-    return NextResponse.json({ success: true, consent: parsed.data }, { status: 200 });
+    const stored = await registry.registerConsent(
+      { ...parsed.data, updatedAt: new Date().toISOString() },
+      tenantId
+    );
+    return NextResponse.json({ success: true, consent: stored }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
   }

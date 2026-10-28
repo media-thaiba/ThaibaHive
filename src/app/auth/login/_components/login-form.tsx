@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { ArrowRight, Lock, Mail, User, ShieldCheck, Fingerprint, KeyRound } from "lucide-react";
@@ -70,6 +71,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
   const [resendError, setResendError] = useState("");
   const [signupSent, setSignupSent] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [fingerprint, setFingerprint] = useState<DeviceFingerprint | null>(null);
   const [stepUpState, setStepUpState] = useState<{
@@ -317,6 +319,10 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
     setError("");
     if (signupForm.password !== signupForm.confirm) {
       setError("Passwords do not match");
+      return;
+    }
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service and acknowledge the Privacy Policy to register.");
       return;
     }
     setLoading(true);
@@ -717,6 +723,47 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               </div>
             </div>
 
+            {/* Mandatory legal consent — DPDP Act 2023 notice & Apple/Google store rules */}
+            <div className="rounded-xl border border-border/60 bg-card/50 p-3 space-y-2.5">
+              <label htmlFor="signup-terms" className="flex items-start gap-2.5 cursor-pointer group">
+                <input
+                  id="signup-terms"
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  aria-label="I agree to the Terms of Service and acknowledge the Privacy Policy"
+                  className="sr-only"
+                />
+                <div
+                  aria-hidden="true"
+                  className={`mt-0.5 w-[18px] h-[18px] shrink-0 rounded border transition-all duration-200 flex items-center justify-center ${
+                    agreedToTerms ? "bg-primary border-primary" : "border-border bg-background/80"
+                  }`}
+                >
+                  {agreedToTerms && (
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-[11px] leading-relaxed text-muted-foreground group-hover:text-foreground transition-colors">
+                  By registering, I agree to the{" "}
+                  <Link href="/terms" target="_blank" rel="noreferrer" className="font-semibold text-primary underline underline-offset-2">
+                    Terms of Service
+                  </Link>{" "}
+                  and acknowledge the{" "}
+                  <Link href="/privacy" target="_blank" rel="noreferrer" className="font-semibold text-primary underline underline-offset-2">
+                    Privacy Policy
+                  </Link>
+                  , including the{" "}
+                  <Link href="/legal/dpdp-notice" target="_blank" rel="noreferrer" className="font-semibold text-primary underline underline-offset-2">
+                    DPDP Act 2023 notice
+                  </Link>
+                  .
+                </span>
+              </label>
+            </div>
+
             {error && (
               <div aria-live="polite">
                 <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
@@ -747,7 +794,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             <div className="space-y-3 pt-3">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !agreedToTerms}
                 aria-label="Register account and sign in"
                 style={{ backgroundColor: activeTheme.accent }}
                 className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-11 flex items-center justify-center gap-1.5 transition-all shadow-md text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"

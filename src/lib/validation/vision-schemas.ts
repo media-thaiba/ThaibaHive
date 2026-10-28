@@ -123,7 +123,8 @@ export const lockdownTriggerSchema = z.object({
 export const privacyConsentSchema = z.object({
   userId: z.string().min(1),
   userType: z.enum(['student', 'staff', 'visitor']).default('student'),
-  hasConsentedSurveillance: z.boolean().default(true),
+  // DPDP 2023 §9: consent is opt-in and must be explicitly supplied — never defaulted to granted.
+  hasConsentedSurveillance: z.boolean().default(false),
   hasConsentedFacialAuth: z.boolean().default(false),
   optedOutZoneIds: z.array(z.string()).default([]),
   institutionId: z.string().default('global'),
