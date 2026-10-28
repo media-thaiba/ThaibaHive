@@ -36,18 +36,26 @@ pnpm db:migrate
 
 Because early sprint tables (`attendance_register`, `biometric_logs`, `classes`, `students`, `student_guardians`, `student_attendance_logs`, `guardians`, `stream_recordings`, `streaming_sessions`, `federated_identity_mappings`, `mark_entries`) were prototyped directly into schema baselines before incremental migration files were generated, provisioning a brand-new database from scratch requires a 2-step workflow:
 
-### Step 1: Push Schema Baseline
+> [!WARNING]
+> **Safety Guard**: Bare `pnpm db:push` will deliberately abort if `.env` points to a remote database (`libsql://...`), preventing accidental overwrites or prompts against production. Always target a local scratch file explicitly during bootstrap.
+
+### Step 1: Push Schema Baseline (Empty DB Only)
 ```bash
-pnpm db:push
+# Push full 453-table schema baseline to a fresh local database
+pnpm exec cross-env DATABASE_URL="file:./dev.db" pnpm db:push
 ```
 - Drizzle Kit directly provisions all 453 declared tables from `packages/db/schema.ts` in ~5 seconds.
 
 ### Step 2: Synchronize Migration Ledger
 ```bash
-pnpm db:migrate
+# Record versioned migrations (0000..0049) into the local tracking ledger
+pnpm exec cross-env DATABASE_URL="file:./dev.db" pnpm db:migrate
 ```
 - Replays versioned migrations idempotently and records all 50 migration files in `__drizzle_applied_migrations`.
 - Any subsequent run of `pnpm db:migrate` is an instant no-op.
+
+> [!IMPORTANT]
+> Never run `db:push` against an existing, populated database that has `__drizzle_applied_migrations` — Drizzle Kit's push heuristic will detect the ledger as an undeclared table and prompt to drop it. For all existing environments, always use `pnpm db:migrate`.
 
 ---
 
