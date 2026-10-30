@@ -8,6 +8,7 @@ export interface ReplicaConfig {
   replicaUrls: string[];
   enabled: boolean;
   sessionStickinessTtlMs: number;
+  maxLagMs?: number;
 }
 
 export interface ReplicaNodeStatus {
@@ -25,6 +26,7 @@ export class ReplicaQueryRouter {
   private replicaNodes: ReplicaNodeStatus[] = [];
   private enabled: boolean;
   private sessionStickinessTtlMs: number;
+  private maxLagMs: number;
   private sessionWriteTimestamps = new Map<string, number>();
   private roundRobinCounter = 0;
 
@@ -36,7 +38,8 @@ export class ReplicaQueryRouter {
     this.primaryDb = primaryDb;
     this.replicaDbs = replicaDbs;
     this.enabled = config.enabled ?? (process.env.DB_READ_REPLICAS_ENABLED !== "false" && replicaDbs.length > 0);
-    this.sessionStickinessTtlMs = config.sessionStickinessTtlMs ?? 2000;
+    this.sessionStickinessTtlMs = config.sessionStickinessTtlMs ?? 30000;
+    this.maxLagMs = config.maxLagMs ?? 2000;
 
     const urls = config.replicaUrls || [];
     this.replicaNodes = replicaDbs.map((_, i) => ({
@@ -108,7 +111,8 @@ export class ReplicaQueryRouter {
 
     const healthyIndices: number[] = [];
     for (let i = 0; i < this.replicaNodes.length; i++) {
-      if (this.replicaNodes[i].isHealthy && this.replicaDbs[i]) {
+      const node = this.replicaNodes[i];
+      if (node.isHealthy && (node.lagMs ?? 0) <= this.maxLagMs && this.replicaDbs[i]) {
         healthyIndices.push(i);
       }
     }

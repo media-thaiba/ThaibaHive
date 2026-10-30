@@ -418,5 +418,47 @@ describe("Hostel CAS Gate Pass & Scan Engine (SQLite / LibSQL)", () => {
       expect(scanRes.success).toBe(false);
       expect(scanRes.verificationResult).toBe("tampered");
     });
+    it("rejects duplicate scan with tampered when pass is already used_out for out direction", async () => {
+      const qrSecret = "secret_used_out_dup";
+      const pass = await issueGatePass(client, {
+        institutionId: instId,
+        leaveId,
+        studentId,
+        passNumber: "GP-2026-0008",
+        rawQrSecret: qrSecret,
+        validFrom: "2026-10-25T10:00:00.000Z",
+        validUntil: "2026-10-25T18:00:00.000Z",
+        staffId,
+        issuedAt: "2026-10-25T09:00:00.000Z",
+      }, { isPostgres: false });
+
+      const scan1 = await scanGatePass(client, {
+        institutionId: instId,
+        passId: pass.passId!,
+        rawQrSecret: qrSecret,
+        direction: "out",
+        scannedAt: "2026-10-25T10:15:00.000Z",
+        receivedAt: "2026-10-25T10:15:02.000Z",
+        deviceId: "GATE_POS_01",
+        guardStaffId: staffId,
+        idempotencyKey: `idem_out1_${Date.now()}`,
+      }, { isPostgres: false });
+      expect(scan1.success).toBe(true);
+
+      const scan2 = await scanGatePass(client, {
+        institutionId: instId,
+        passId: pass.passId!,
+        rawQrSecret: qrSecret,
+        direction: "out",
+        scannedAt: "2026-10-25T10:16:00.000Z",
+        receivedAt: "2026-10-25T10:16:02.000Z",
+        deviceId: "GATE_POS_02",
+        guardStaffId: staffId,
+        idempotencyKey: `idem_out2_${Date.now()}`,
+      }, { isPostgres: false });
+
+      expect(scan2.success).toBe(false);
+      expect(scan2.verificationResult).toBe("tampered");
+    });
   });
 });

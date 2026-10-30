@@ -10,6 +10,9 @@ describe("PostgreSQL Connection Pool Sizing & Options", () => {
     delete process.env.DB_SSL;
     delete process.env.DB_IDLE_TIMEOUT_MS;
     delete process.env.DB_CONNECTION_TIMEOUT_MS;
+    delete process.env.DB_STATEMENT_TIMEOUT_MS;
+    delete process.env.DB_LOCK_TIMEOUT_MS;
+    delete process.env.DB_IDLE_IN_TX_TIMEOUT_MS;
   });
 
   afterAll(() => {
@@ -54,5 +57,21 @@ describe("PostgreSQL Connection Pool Sizing & Options", () => {
     const config = getPgPoolConfig();
     expect(config.idleTimeoutMillis).toBe(15000);
     expect(config.connectionTimeoutMillis).toBe(3000);
+  });
+
+  it("should configure statement, lock, and idle_in_transaction timeouts with defaults and overrides", () => {
+    const defaultConfig = getPgPoolConfig();
+    expect(defaultConfig.statement_timeout).toBe(10000);
+    expect(defaultConfig.lock_timeout).toBe(5000);
+    expect(defaultConfig.idle_in_transaction_session_timeout).toBe(30000);
+
+    process.env.DB_STATEMENT_TIMEOUT_MS = "8000";
+    process.env.DB_LOCK_TIMEOUT_MS = "4000";
+    process.env.DB_IDLE_IN_TX_TIMEOUT_MS = "25000";
+
+    const overriddenConfig = getPgPoolConfig();
+    expect(overriddenConfig.statement_timeout).toBe(8000);
+    expect(overriddenConfig.lock_timeout).toBe(4000);
+    expect(overriddenConfig.idle_in_transaction_session_timeout).toBe(25000);
   });
 });

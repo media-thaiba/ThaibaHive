@@ -48,6 +48,8 @@ export async function allocateHostelBed(
     try {
       await conn.query("BEGIN;");
       ownsTx = true;
+      await conn.query("SET LOCAL lock_timeout = '5s';");
+      await conn.query("SET LOCAL statement_timeout = '10s';");
       await conn.query("SELECT set_config('app.current_tenant_id', $1, true);", [institutionId]);
 
       // 1. Bed, parent room, block existence & active status
@@ -274,6 +276,8 @@ export async function vacateHostelBed(
     try {
       await conn.query("BEGIN;");
       ownsTx = true;
+      await conn.query("SET LOCAL lock_timeout = '5s';");
+      await conn.query("SET LOCAL statement_timeout = '10s';");
       await conn.query("SELECT set_config('app.current_tenant_id', $1, true);", [institutionId]);
 
       const res = await conn.query(`

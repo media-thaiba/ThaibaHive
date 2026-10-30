@@ -905,28 +905,14 @@ export async function getSearchSuggestions(
   const isGlobal = !scopedInstitutionId || scopedInstitutionId === "global";
 
   try {
-    // 1. Student suggestions
+    // Build parallel suggestion queries (dispatched via Promise.all)
     const studentConditions = [
       or(searchPattern(students.firstName, trimmed), searchPattern(students.lastName, trimmed)),
     ];
     if (!isGlobal) {
       studentConditions.push(eq(students.institutionId, scopedInstitutionId!));
     }
-    const studentRows = await db
-      .select({
-        firstName: students.firstName,
-        lastName: students.lastName,
-      })
-      .from(students)
-      .where(and(...studentConditions))
-      .limit(5)
-      .all();
-    studentRows.forEach((s) => {
-      const name = `${s.firstName} ${s.lastName}`.trim();
-      if (name) suggestions.add(name);
-    });
 
-    // 2. Staff suggestions
     const staffConditions = [
       or(searchPattern(staff.firstName, trimmed), searchPattern(staff.lastName, trimmed)),
     ];
@@ -937,31 +923,49 @@ export async function getSearchSuggestions(
         .where(eq(staffInstitutions.institutionId, scopedInstitutionId!));
       staffConditions.push(inArray(staff.id, scopedStaff));
     }
-    const staffRows = await db
-      .select({
-        firstName: staff.firstName,
-        lastName: staff.lastName,
-      })
-      .from(staff)
-      .where(and(...staffConditions))
-      .limit(5)
-      .all();
+
+    const taskConditions = [searchPattern(tasks.title, trimmed)];
+    if (!isGlobal) {
+      taskConditions.push(eq(tasks.institutionId, scopedInstitutionId!));
+    }
+
+    const [studentRows, staffRows, taskRows] = await Promise.all([
+      db
+        .select({
+          firstName: students.firstName,
+          lastName: students.lastName,
+        })
+        .from(students)
+        .where(and(...studentConditions))
+        .limit(5)
+        .all(),
+      db
+        .select({
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+        })
+        .from(staff)
+        .where(and(...staffConditions))
+        .limit(5)
+        .all(),
+      db
+        .select({ title: tasks.title })
+        .from(tasks)
+        .where(and(...taskConditions))
+        .limit(5)
+        .all(),
+    ]);
+
+    studentRows.forEach((s) => {
+      const name = `${s.firstName} ${s.lastName}`.trim();
+      if (name) suggestions.add(name);
+    });
+
     staffRows.forEach((s) => {
       const name = `${s.firstName} ${s.lastName}`.trim();
       if (name) suggestions.add(name);
     });
 
-    // 3. Task suggestions
-    const taskConditions = [searchPattern(tasks.title, trimmed)];
-    if (!isGlobal) {
-      taskConditions.push(eq(tasks.institutionId, scopedInstitutionId!));
-    }
-    const taskRows = await db
-      .select({ title: tasks.title })
-      .from(tasks)
-      .where(and(...taskConditions))
-      .limit(5)
-      .all();
     taskRows.forEach((t) => suggestions.add(t.title));
 
     return Array.from(suggestions).slice(0, 10);

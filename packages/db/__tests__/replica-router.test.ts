@@ -59,21 +59,33 @@ describe("ReplicaQueryRouter", () => {
     expect(readDb).toBe(mockPrimary);
   });
 
-  test("bypasses unhealthy replicas with lag > threshold", () => {
-    router.markReplicaHealth(0, false, 8000); // Replica 1 is degraded
+  test("bypasses replicas with lag > threshold even if marked healthy", () => {
+    router.markReplicaHealth(0, true, 8000); // Replica 1 is healthy but lagging (8000ms > 2000ms threshold)
+    expect(router.getReplicaStatuses()[0].isHealthy).toBe(true);
+    expect(router.getReplicaStatuses()[0].lagMs).toBe(8000);
+
+    const db1 = router.getReadDb();
+    const db2 = router.getReadDb();
+
+    // Both queries route to replica 2 since replica 1 lag > maxLagMs
+    expect(db1).toBe(mockReplica2);
+    expect(db2).toBe(mockReplica2);
+  });
+
+  test("bypasses unhealthy replicas regardless of lag", () => {
+    router.markReplicaHealth(0, false, 0); // Replica 1 is marked unhealthy
     expect(router.getReplicaStatuses()[0].isHealthy).toBe(false);
 
     const db1 = router.getReadDb();
     const db2 = router.getReadDb();
 
-    // Both queries route to replica 2 since replica 1 is unhealthy
     expect(db1).toBe(mockReplica2);
     expect(db2).toBe(mockReplica2);
   });
 
-  test("falls back to primary if all replicas are unhealthy", () => {
-    router.markReplicaHealth(0, false, 9000);
-    router.markReplicaHealth(1, false, 9000);
+  test("falls back to primary if all replicas are unhealthy or exceed lag threshold", () => {
+    router.markReplicaHealth(0, true, 9000);
+    router.markReplicaHealth(1, true, 9000);
 
     const readDb = router.getReadDb();
     expect(readDb).toBe(mockPrimary);

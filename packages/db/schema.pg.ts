@@ -124,7 +124,7 @@ export const staffInstitutions = sqliteTable("staff_institutions", {
   staffIdIdx: index("idx_pg_staff_institutions_staff_id").on(t.staffId),
   instIdIdx: index("idx_pg_staff_institutions_inst_id").on(t.institutionId),
   staffInstUnique: uniqueIndex("idx_pg_staff_institutions_staff_inst_unique").on(t.staffId, t.institutionId),
-  uqStaffInst: unique("uq_staff_inst").on(t.institutionId, t.staffId),
+  instStaffIdx: index("idx_staff_institutions_inst_staff").on(t.institutionId, t.staffId),
 }));
 
 export const academicYears = sqliteTable("academic_years", {
@@ -138,7 +138,6 @@ export const academicYears = sqliteTable("academic_years", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   instIdx: index("idx_pg_academic_years_inst_id").on(t.institutionId),
-  uqAyInstId: unique("uq_ay_inst_id").on(t.institutionId, t.id),
 }));
 
 export const classes = sqliteTable("classes", {
@@ -191,7 +190,6 @@ export const students = sqliteTable("students", {
   nfcTagIdx: index("idx_students_nfc_tag").on(t.nfcTagId),
   nameIdx: index("idx_pg_students_name").on(t.firstName, t.lastName),
   emailIdx: index("idx_pg_students_email").on(t.email),
-  uqStudentInstId: unique("uq_student_inst_id").on(t.institutionId, t.id),
 }));
 
 export const guardians = sqliteTable("guardians", {
@@ -264,6 +262,7 @@ export const biometricLogs = sqliteTable("biometric_logs", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   staffIdIdx: index("idx_biometric_logs_staff_id").on(t.staffId),
+  createdAtIdx: index("idx_biometric_logs_created_at").on(t.createdAt),
 }));
 
 // ─── Shifts & Attendance ───
@@ -479,6 +478,7 @@ export const leaveRequests = sqliteTable("leave_requests", {
   staffCreatedAtIdx: index("idx_pg_leave_requests_staff_created").on(t.staffId, t.createdAt),
   statusIdx: index("idx_pg_leave_requests_status").on(t.status),
   instIdx: index("idx_pg_leave_requests_institution").on(t.institutionId),
+  staffDatesIdx: index("idx_leave_requests_staff_dates").on(t.staffId, t.startDate, t.endDate),
 }));
 
 // ─── Tasks ───
@@ -515,7 +515,9 @@ export const taskComments = sqliteTable("task_comments", {
     .references(() => staff.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  taskIdIdx: index("idx_task_comments_task_id").on(t.taskId),
+}));
 
 // ─── Daily Reports ───
 
@@ -549,7 +551,9 @@ export const dailyReportTasks = sqliteTable("daily_report_tasks", {
   description: text("description").notNull(),
   hoursSpent: real("hours_spent"),
   status: text("status").notNull().default("completed"),
-});
+}, (t) => ({
+  reportIdIdx: index("idx_daily_report_tasks_report_id").on(t.reportId),
+}));
 
 // ─── Announcements ───
 
@@ -585,7 +589,9 @@ export const announcementReads = sqliteTable("announcement_reads", {
     .notNull()
     .references(() => staff.id),
   readAt: text("read_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  announcementStaffUniq: uniqueIndex("idx_announcement_reads_announcement_staff_uniq").on(t.announcementId, t.staffId),
+}));
 
 // ─── Events ───
 
@@ -620,7 +626,9 @@ export const eventRsvps = sqliteTable("event_rsvps", {
     .references(() => staff.id),
   status: text("status").notNull().default("pending"),
   respondedAt: text("responded_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  eventStaffUniq: uniqueIndex("idx_event_rsvps_event_staff_uniq").on(t.eventId, t.staffId),
+}));
 
 // ─── Documents / Circulars ───
 
@@ -633,7 +641,9 @@ export const circularDownloads = sqliteTable("circular_downloads", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   downloadedAt: text("downloaded_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  circularIdIdx: index("idx_circular_downloads_circular_id").on(t.circularId),
+}));
 
 export const circulars = sqliteTable("circulars", {
   id: text("id").primaryKey(),
@@ -731,6 +741,7 @@ export const bookings = sqliteTable("bookings", {
 }, (t) => ({
   instIdx: index("idx_pg_bookings_institution").on(t.institutionId),
   resourceIdx: index("idx_pg_bookings_resource_id").on(t.resourceId),
+  resourceTimesIdx: index("idx_bookings_resource_times").on(t.resourceId, t.startTime, t.endTime),
 }));
 
 // ─── Help Desk ───
@@ -753,6 +764,7 @@ export const helpDeskTickets = sqliteTable("help_desk_tickets", {
 }, (t) => ({
   instIdx: index("idx_pg_help_desk_tickets_institution").on(t.institutionId),
   statusIdx: index("idx_pg_help_desk_tickets_status").on(t.status),
+  assignedStatusIdx: index("idx_help_desk_tickets_assigned_status").on(t.assignedToId, t.status),
 }));
 
 export const helpDeskComments = sqliteTable("help_desk_comments", {
@@ -765,7 +777,9 @@ export const helpDeskComments = sqliteTable("help_desk_comments", {
     .references(() => staff.id),
   content: text("content").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  ticketIdIdx: index("idx_help_desk_comments_ticket_id").on(t.ticketId),
+}));
 
 // ─── Notifications ───
 
@@ -784,6 +798,7 @@ export const notifications = sqliteTable("notifications", {
 }, (t) => ({
   staffCreatedAtIdx: index("idx_notifications_staff_created").on(t.staffId, t.createdAt),
   staffIsReadIdx: index("idx_notifications_staff_is_read").on(t.staffId, t.isRead),
+  staffReadCreatedIdx: index("idx_notifications_staff_read_created").on(t.staffId, t.isRead, t.createdAt),
 }));
 
 // ─── Staff Recognition ───
@@ -798,7 +813,9 @@ export const staffRecognition = sqliteTable("staff_recognition", {
   recognizedById: text("recognized_by_id").references(() => staff.id),
   date: text("date").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  dateRecognizedByIdx: index("idx_staff_recognition_date_recognized").on(t.date, t.recognizedById),
+}));
 
 // ─── Asset Management ───
 
@@ -820,7 +837,9 @@ export const assets = sqliteTable("assets", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assignedStatusIdx: index("idx_assets_assigned_status").on(t.assignedToId, t.status),
+}));
 
 export const assetServiceHistory = sqliteTable("asset_service_history", {
   id: text("id").primaryKey(),
@@ -831,7 +850,9 @@ export const assetServiceHistory = sqliteTable("asset_service_history", {
   servicedBy: text("serviced_by"),
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assetIdIdx: index("idx_asset_service_history_asset_id").on(t.assetId),
+}));
 
 // ─── Expense Claims ───
 
@@ -851,6 +872,7 @@ export const expenseClaims = sqliteTable("expense_claims", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   instIdx: index("idx_expense_claims_institution").on(t.institutionId),
+  createdAtIdx: index("idx_expense_claims_created_at").on(t.createdAt),
 }));
 
 // ─── Purchase Requests ───
@@ -913,7 +935,9 @@ export const grievances = sqliteTable("grievances", {
   respondedAt: text("responded_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  statusStaffIdx: index("idx_grievances_status_staff").on(t.status, t.staffId),
+}));
 
 // ─── Staff Availability Status ───
 
@@ -923,7 +947,9 @@ export const staffAvailability = sqliteTable("staff_availability", {
   status: text("status").notNull().default("available"),
   expiresAt: text("expires_at"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffUniq: uniqueIndex("idx_staff_availability_staff_uniq").on(t.staffId),
+}));
 
 // ─── Performance Reviews ───
 
@@ -967,7 +993,10 @@ export const auditLog = sqliteTable("audit_log", {
   details: jsonb("details").$type<Record<string, unknown>>(),
   ipAddress: text("ip_address"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  entityIdx: index("idx_audit_log_entity").on(t.entityType, t.entityId),
+  createdAtIdx: index("idx_audit_log_created_at").on(t.createdAt),
+}));
 
 // ─── Financial / Accounts ───
 
@@ -1017,7 +1046,9 @@ export const vehicleBookings = sqliteTable("vehicle_bookings", {
   approvedById: text("approved_by_id").references(() => staff.id),
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  vehicleDateIdx: index("idx_vehicle_bookings_vehicle_date").on(t.vehicleId, t.date),
+}));
 
 export const vehicleLogs = sqliteTable("vehicle_logs", {
   id: text("id").primaryKey(),
@@ -1076,7 +1107,9 @@ export const approvalDelegations = sqliteTable("approval_delegations", {
   isActive: boolean("is_active").notNull().default(true),
   reason: text("reason"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  delegateIdIdx: index("idx_approval_delegations_delegate_id").on(t.delegateId),
+}));
 
 // ─── Checklist Templates (Onboarding / Offboarding) ───
 
@@ -1097,7 +1130,9 @@ export const checklistTemplateItems = sqliteTable("checklist_template_items", {
   description: text("description"),
   order: integer("order").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  templateIdIdx: index("idx_checklist_template_items_template_id").on(t.templateId),
+}));
 
 export const staffChecklists = sqliteTable("staff_checklists", {
   id: text("id").primaryKey(),
@@ -1111,7 +1146,9 @@ export const staffChecklists = sqliteTable("staff_checklists", {
   createdById: text("created_by_id").references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffStatusIdx: index("idx_staff_checklists_staff_status").on(t.staffId, t.status),
+}));
 
 export const staffChecklistTasks = sqliteTable("staff_checklist_tasks", {
   id: text("id").primaryKey(),
@@ -1123,7 +1160,9 @@ export const staffChecklistTasks = sqliteTable("staff_checklist_tasks", {
   completedAt: text("completed_at"),
   order: integer("order").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  checklistIdIdx: index("idx_staff_checklist_tasks_checklist_id").on(t.checklistId),
+}));
 
 // ─── Marketplace / App Registry ───
 
@@ -1207,7 +1246,9 @@ export const usedNonces = sqliteTable("used_nonces", {
   jti: text("jti").primaryKey(),
   expiresAt: text("expires_at").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  expiresAtIdx: index("idx_used_nonces_expires_at").on(t.expiresAt),
+}));
 
 export const accessRequests = sqliteTable("access_requests", {
   id: text("id").primaryKey(),
@@ -1221,7 +1262,9 @@ export const accessRequests = sqliteTable("access_requests", {
   reviewNotes: text("review_notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  statusRoutedStaffIdx: index("idx_access_requests_status_routed_staff").on(t.status, t.routedToId, t.staffId),
+}));
 
 // ─── Presence Verification ───
 
@@ -1278,7 +1321,9 @@ export const fieldWorkSessions = sqliteTable("field_work_sessions", {
   locationSnapshots: text("location_snapshots"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffStatusIdx: index("idx_field_work_sessions_staff_status").on(t.staffId, t.status),
+}));
 
 // ─── Chat / Messaging ───
 
@@ -1319,6 +1364,7 @@ export const chatMessages = sqliteTable("chat_messages", {
 }, (t) => ({
   roomIdIdx: index("chat_messages_room_idx").on(t.roomId),
   senderIdIdx: index("chat_messages_sender_idx").on(t.senderId),
+  roomCreatedIdx: index("idx_chat_messages_room_created").on(t.roomId, t.createdAt),
 }));
 
 // ─── Presence & Activity Logs ───
@@ -1393,6 +1439,7 @@ export const mediaAssets = sqliteTable("media_assets", {
   fileTypeIdx: index("idx_media_assets_file_type").on(t.fileType),
   statusIdx: index("idx_media_assets_status").on(t.status),
   instIdx: index("idx_pg_media_assets_institution").on(t.institutionId),
+  createdAtIdx: index("idx_media_assets_created_at").on(t.createdAt),
 }));
 
 export const mediaShareLinks = sqliteTable("media_share_links", {
@@ -1417,7 +1464,9 @@ export const mediaDownloads = sqliteTable("media_downloads", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   downloadedAt: text("downloaded_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assetDownloadedIdx: index("idx_media_downloads_asset_downloaded").on(t.assetId, t.downloadedAt),
+}));
 
 export const mediaUploads = sqliteTable("media_uploads", {
   id: text("id").primaryKey(),
@@ -1644,7 +1693,9 @@ export const examAuditLogs = sqliteTable("exam_audit_logs", {
   newState: text("new_state"),
   reason: text("reason"),
   timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  examTimestampIdx: index("idx_exam_audit_logs_exam_timestamp").on(t.examId, t.timestamp),
+}));
 
 // ─── Services Module & Campus Operations (Sprint-006) ───
 
@@ -1659,7 +1710,9 @@ export const fleetRoutes = sqliteTable("fleet_routes", {
   vehicleId: text("vehicle_id").references(() => vehicles.id),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  driverVehicleIdx: index("idx_fleet_routes_driver_vehicle").on(t.driverId, t.vehicleId),
+}));
 
 export const fleetMaintenanceLogs = sqliteTable("fleet_maintenance_logs", {
   id: text("id").primaryKey(),
@@ -1673,7 +1726,9 @@ export const fleetMaintenanceLogs = sqliteTable("fleet_maintenance_logs", {
   performedBy: text("performed_by"),
   status: text("status").notNull().default("completed"), // scheduled | in_progress | completed
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  vehicleMaintenanceDateIdx: index("idx_fleet_maintenance_logs_vehicle_date").on(t.vehicleId, t.maintenanceDate),
+}));
 
 export const canteenItems = sqliteTable("canteen_items", {
   id: text("id").primaryKey(),
@@ -1722,7 +1777,9 @@ export const canteenTransactions = sqliteTable("canteen_transactions", {
   cashierStaffId: text("cashier_staff_id").references(() => staff.id),
   status: text("status").notNull().default("completed"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  passIdIdx: index("idx_canteen_transactions_pass_id").on(t.passId),
+}));
 
 export const visitorRequests = sqliteTable("visitor_requests", {
   id: text("id").primaryKey(),
@@ -1740,7 +1797,9 @@ export const visitorRequests = sqliteTable("visitor_requests", {
   rejectionReason: text("rejection_reason"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  hostStaffStatusIdx: index("idx_visitor_requests_host_status").on(t.hostStaffId, t.status),
+}));
 
 export const visitorPasses = sqliteTable("visitor_passes", {
   id: text("id").primaryKey(),
@@ -1758,7 +1817,9 @@ export const visitorPasses = sqliteTable("visitor_passes", {
   checkOutAt: text("check_out_at"),
   gatekeeperId: text("gatekeeper_id").references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instStatusValidIdx: index("idx_visitor_passes_inst_status_valid").on(t.institutionId, t.status, t.validUntil),
+}));
 
 export const gateLogs = sqliteTable("gate_logs", {
   id: text("id").primaryKey(),
@@ -1885,7 +1946,9 @@ export const aiPredictions = sqliteTable("ai_predictions", {
   status: text("status").notNull().default("active"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  targetEntityIdx: index("idx_ai_predictions_target_entity").on(t.targetEntityType, t.targetEntityId),
+}));
 
 export const aiAnomalies = sqliteTable("ai_anomalies", {
   id: text("id").primaryKey(),
@@ -2005,7 +2068,9 @@ export const dwAggregatedAnalytics = sqliteTable("dw_aggregated_analytics", {
   aiRiskStudentCount: integer("ai_risk_student_count").notNull().default(0),
   activeAnomalyCount: integer("active_anomaly_count").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  regionInstDateUniq: uniqueIndex("idx_dw_aggregated_analytics_region_inst_date_uniq").on(t.regionalGroupId, t.institutionId, t.snapshotDate),
+}));
 
 export const dwMaterializedSnapshots = sqliteTable("dw_materialized_snapshots", {
   id: text("id").primaryKey(),
@@ -2025,7 +2090,9 @@ export const dwEtlRuns = sqliteTable("dw_etl_runs", {
   errorMessage: text("error_message"),
   startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
   completedAt: text("completed_at"),
-});
+}, (t) => ({
+  statusIdx: index("idx_dw_etl_runs_status").on(t.status),
+}));
 
 export const pushNotificationSubscriptions = sqliteTable("push_notification_subscriptions", {
   id: text("id").primaryKey(),
@@ -2036,7 +2103,9 @@ export const pushNotificationSubscriptions = sqliteTable("push_notification_subs
   isActive: boolean("is_active").notNull().default(true),
   lastUsedAt: text("last_used_at").notNull().default(sql`(current_timestamp)`),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  userIdIdx: index("idx_push_notification_subs_user_id").on(t.userId),
+}));
 
 export const alertDeliveryLogs = sqliteTable("alert_delivery_logs", {
   id: text("id").primaryKey(),
@@ -2048,7 +2117,9 @@ export const alertDeliveryLogs = sqliteTable("alert_delivery_logs", {
   attemptCount: integer("attempt_count").notNull().default(1),
   errorMessage: text("error_message"),
   sentAt: text("sent_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  userSentIdx: index("idx_alert_delivery_logs_user_sent").on(t.userId, t.sentAt),
+}));
 
 export const regionalAccessLogs = sqliteTable("regional_access_logs", {
   id: text("id").primaryKey(),
@@ -2059,7 +2130,9 @@ export const regionalAccessLogs = sqliteTable("regional_access_logs", {
   details: text("details"),
   ipAddress: text("ip_address"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  userIdIdx: index("idx_regional_access_logs_user_id").on(t.userId),
+}));
 
 // ─── Autonomous Enterprise Operations & Self-Healing Platform Engine (Sprint-010) ───
 
@@ -2073,7 +2146,9 @@ export const autonomousWorkflows = sqliteTable("autonomous_workflows", {
   lastExecutedAt: text("last_executed_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  statusIdx: index("idx_autonomous_workflows_status").on(t.status),
+}));
 
 export const remediationRules = sqliteTable("remediation_rules", {
   id: text("id").primaryKey(),
@@ -2103,7 +2178,9 @@ export const remediationTickets = sqliteTable("remediation_tickets", {
   resolvedAt: text("resolved_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assignedStaffIdx: index("idx_remediation_tickets_assigned_staff").on(t.assignedStaffId),
+}));
 
 export const remediationActions = sqliteTable("remediation_actions", {
   id: text("id").primaryKey(),
@@ -2233,7 +2310,9 @@ export const aiAgentCommunications = sqliteTable("ai_agent_communications", {
   payloadJson: text("payload_json").notNull(),
   hopCount: integer("hop_count").notNull().default(1),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  correlationIdIdx: index("idx_ai_agent_communications_correlation_id").on(t.correlationId),
+}));
 
 export const redisCircuitBreakerStates = sqliteTable("redis_circuit_breaker_states", {
   id: text("id").primaryKey(),
@@ -2773,6 +2852,7 @@ export const conferenceSignals = sqliteTable("conference_signals", {
   instIdx: index("idx_conference_signals_inst_id").on(t.institutionId),
   roomRecipIdx: index("idx_conference_signals_room_recip").on(t.roomId, t.recipientPeerId),
   createdIdx: index("idx_conference_signals_created").on(t.createdAt),
+  roomDeliveredCreatedIdx: index("idx_conference_signals_room_deliv_created").on(t.roomId, t.delivered, t.createdAt),
 }));
 
 // ─── Sprint-017: PostgreSQL Multi-Node Cluster Certification ───
@@ -3178,7 +3258,9 @@ export const device_fingerprints = sqliteTable("device_fingerprints", {
   trust_score: integer("trust_score").notNull(),
   created_at: text("created_at").notNull().default(sql`(current_timestamp)`),
   last_seen: text("last_seen").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  compositeHashIdx: index("idx_device_fingerprints_composite_hash").on(t.composite_hash),
+}));
 
 // ─── API Gateway Security & IP Quarantine Tables (Sprint-038) ───
 
@@ -8090,6 +8172,7 @@ export const hostelBeds = pgTable("hostel_beds", {
     columns: [table.institutionId, table.roomId],
     foreignColumns: [hostelRooms.institutionId, hostelRooms.id],
   }).onDelete("restrict"),
+  index("idx_beds_room_id").on(table.roomId, table.institutionId),
 ]);
 
 // 6. Bed Allocations (Dialect-neutral vacated_at IS NULL)
@@ -8206,6 +8289,7 @@ export const hostelGatePasses = pgTable("hostel_gate_passes", {
     columns: [table.institutionId, table.revokedStaffId],
     foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
   }).onDelete("restrict"),
+  index("idx_pass_inst_status_valid").on(table.institutionId, table.status, table.validUntil),
 ]);
 
 // 9. Hostel Gate Logs
@@ -8272,6 +8356,7 @@ export const hostelFines = pgTable("hostel_fines", {
     columns: [table.institutionId, table.leaveId, table.studentId],
     foreignColumns: [hostelLeaves.institutionId, hostelLeaves.id, hostelLeaves.studentId],
   }).onDelete("restrict"),
+  index("idx_fines_inst_student").on(table.institutionId, table.studentId),
 ]);
 
 // 11. Hostel Fine Actions (Append-Only Ledger)

@@ -19,11 +19,20 @@ const rawDatabaseUrl = (process.env.DATABASE_URL || process.env.POSTGRES_URL || 
 export const databaseUrl = rawDatabaseUrl;
 export const isPostgres = databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://");
 
+if (process.env.NODE_ENV === "production" && !isPostgres && process.env.REQUIRE_POSTGRES === "true") {
+  throw new Error(
+    "[@thaiba/db] FATAL: Production requires a real DATABASE_URL (postgres://...). " +
+    `Got fallback "${databaseUrl}". Set DATABASE_URL or POSTGRES_URL.`
+  );
+}
+
 /**
  * Ensures column mappers on exported schema tables work seamlessly in both
  * SQLite and PostgreSQL modes (prevents SQLite 1/0 boolean coercion and
  * double JSON.parse on PostgreSQL jsonb columns, plus syncs dialect column names).
  */
+const originalColMeta = new WeakMap<object, { name: string; mapToDriverValue?: any; mapFromDriverValue?: any }>();
+
 export function syncSchemaColumnMappers(forPostgres: boolean = isPostgres): void {
   const sqliteEntries = Object.entries(sqliteSchema);
   const pgRecord = pgSchema as Record<string, unknown>;
@@ -36,6 +45,15 @@ export function syncSchemaColumnMappers(forPostgres: boolean = isPostgres): void
 
     for (const [colKey, sqliteCol] of Object.entries(sqliteCols)) {
       if (!sqliteCol) continue;
+
+      if (!originalColMeta.has(sqliteCol)) {
+        originalColMeta.set(sqliteCol, {
+          name: sqliteCol.name,
+          mapToDriverValue: sqliteCol.mapToDriverValue,
+          mapFromDriverValue: sqliteCol.mapFromDriverValue,
+        });
+      }
+      const original = originalColMeta.get(sqliteCol)!;
 
       // Always make JSON column mapFromDriverValue resilient to pre-parsed objects (PG jsonb or in-memory)
       if (sqliteCol.columnType === "SQLiteTextJson") {
@@ -65,6 +83,12 @@ export function syncSchemaColumnMappers(forPostgres: boolean = isPostgres): void
           sqliteCol.mapToDriverValue = (value: unknown): unknown =>
             typeof value === "string" ? value : JSON.stringify(value);
         }
+      } else {
+        sqliteCol.name = original.name;
+        sqliteCol.mapToDriverValue = original.mapToDriverValue;
+        if (sqliteCol.columnType !== "SQLiteTextJson") {
+          sqliteCol.mapFromDriverValue = original.mapFromDriverValue;
+        }
       }
     }
   }
@@ -88,6 +112,9 @@ export interface PgPoolOptions {
   max?: number;
   idleTimeoutMillis?: number;
   connectionTimeoutMillis?: number;
+  statement_timeout?: number;
+  lock_timeout?: number;
+  idle_in_transaction_session_timeout?: number;
   ssl?: boolean | { rejectUnauthorized: boolean };
 }
 
@@ -120,11 +147,18 @@ export function getPgPoolConfig(connStr: string = databaseUrl): PgPoolOptions {
     };
   }
 
+  const statementTimeout = parseInt(process.env.DB_STATEMENT_TIMEOUT_MS || "10000", 10);
+  const lockTimeout = parseInt(process.env.DB_LOCK_TIMEOUT_MS || "5000", 10);
+  const idleInTxTimeout = parseInt(process.env.DB_IDLE_IN_TX_TIMEOUT_MS || "30000", 10);
+
   return {
     connectionString: connStr,
     max,
-    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || "30000", 10),
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || "10000", 10),
     connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS || "5000", 10),
+    statement_timeout: statementTimeout,
+    lock_timeout: lockTimeout,
+    idle_in_transaction_session_timeout: idleInTxTimeout,
     ...(ssl !== undefined ? { ssl } : {}),
   };
 }
@@ -134,6 +168,9 @@ if (isPostgres) {
   
   // Primary connection pool
   const pool = new Pool(getPgPoolConfig(databaseUrl));
+  pool.on("error", (err) => {
+    console.error("[@thaiba/db] Critical idle PostgreSQL pool client error:", err);
+  });
 
   const pgDb = pgDrizzle(pool, { schema: pgSchema });
   rawPgDb = pgDb;
@@ -144,6 +181,9 @@ if (isPostgres) {
   for (const rUrl of envReplicaUrls) {
     try {
       const replicaPool = new Pool(getPgPoolConfig(rUrl));
+      replicaPool.on("error", (err) => {
+        console.error("[@thaiba/db] Critical idle PostgreSQL replica pool client error:", err);
+      });
       const repPg = pgDrizzle(replicaPool, { schema: pgSchema });
       replicaInstances.push(wrapPgDb(repPg));
       replicaUrls.push(rUrl);
@@ -161,11 +201,17 @@ if (isPostgres) {
   // remote LibSQL (Turso) over HTTP/WS rejects PRAGMA busy_timeout with SQL_PARSE_ERROR.
   const isLocalFileDb = databaseUrl.startsWith("file:") || !databaseUrl.includes("://");
   if (isLocalFileDb) {
-    client.execute("PRAGMA foreign_keys = ON;").catch((err) => {
-      throw new Error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA foreign_keys = ON failed: ${err?.message || err}`);
+    void client.execute("PRAGMA foreign_keys = ON;").catch((err) => {
+      console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA foreign_keys = ON failed: ${err?.message || err}`);
+      if (typeof process !== "undefined" && typeof process.exit === "function") {
+        process.exit(1);
+      }
     });
-    client.execute("PRAGMA busy_timeout = 15000;").catch((err) => {
-      throw new Error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 15000 failed: ${err?.message || err}`);
+    void client.execute("PRAGMA busy_timeout = 15000;").catch((err) => {
+      console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 15000 failed: ${err?.message || err}`);
+      if (typeof process !== "undefined" && typeof process.exit === "function") {
+        process.exit(1);
+      }
     });
   }
   dbInstance = sqliteDrizzle(client, { schema: sqliteSchema });
@@ -191,7 +237,8 @@ export const replicaRouter = new ReplicaQueryRouter(dbInstance, replicaInstances
   primaryUrl: databaseUrl,
   replicaUrls,
   enabled: process.env.DB_READ_REPLICAS_ENABLED !== "false" && replicaInstances.length > 0,
-  sessionStickinessTtlMs: 2000,
+  sessionStickinessTtlMs: parseInt(process.env.DB_SESSION_STICKINESS_TTL_MS || "30000", 10),
+  maxLagMs: parseInt(process.env.DB_REPLICA_MAX_LAG_MS || "2000", 10),
 });
 
 // Global Multi-Tenant Router instance
@@ -287,9 +334,11 @@ function wrapBuilder(builder: any): any {
       if (prop === "run") {
         return function() {
           return target.then((res: any) => {
+            const rows = Array.isArray(res) ? res : (res?.rows ? res.rows : []);
+            const lastId = rows[0]?.id ?? undefined;
             return {
               changes: res?.rowCount ?? 0,
-              lastInsertRowid: undefined,
+              lastInsertRowid: lastId,
             };
           });
         };
@@ -299,7 +348,7 @@ function wrapBuilder(builder: any): any {
       if (typeof val === "function") {
         return function(...args: any[]) {
           const result = val.apply(target, args);
-          if (result && (typeof result === "object" || typeof result === "function")) {
+          if (result && typeof result === "object" && typeof result.then === "function") {
             return wrapBuilder(result);
           }
           return result;

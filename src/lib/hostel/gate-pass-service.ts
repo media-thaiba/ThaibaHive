@@ -64,6 +64,8 @@ export async function issueGatePass(
     try {
       await conn.query("BEGIN;");
       ownsTx = true;
+      await conn.query("SET LOCAL lock_timeout = '5s';");
+      await conn.query("SET LOCAL statement_timeout = '10s';");
       await conn.query("SELECT set_config('app.current_tenant_id', $1, true);", [institutionId]);
 
       await conn.query(`
@@ -127,6 +129,8 @@ export async function reissueGatePass(
     try {
       await conn.query("BEGIN;");
       ownsTx = true;
+      await conn.query("SET LOCAL lock_timeout = '5s';");
+      await conn.query("SET LOCAL statement_timeout = '10s';");
       await conn.query("SELECT set_config('app.current_tenant_id', $1, true);", [institutionId]);
 
       // 1. Check existing pass status
@@ -265,6 +269,8 @@ export async function scanGatePass(
     try {
       await conn.query("BEGIN;");
       ownsTx = true;
+      await conn.query("SET LOCAL lock_timeout = '5s';");
+      await conn.query("SET LOCAL statement_timeout = '10s';");
       await conn.query("SELECT set_config('app.current_tenant_id', $1, true);", [institutionId]);
 
       let verificationResult = "verified";
@@ -277,7 +283,7 @@ export async function scanGatePass(
         const passRes = await conn.query(`
           SELECT id, token_hash, valid_from, valid_until, status 
           FROM hostel_gate_passes 
-          WHERE id = $1 AND institution_id = $2;
+          WHERE id = $1 AND institution_id = $2 FOR UPDATE;
         `, [passId, institutionId]);
 
         if (passRes.rows.length === 0) {
@@ -289,6 +295,10 @@ export async function scanGatePass(
           if (pass.status === "revoked") {
             verificationResult = "revoked_rejected";
           } else if (pass.status === "used_in") {
+            verificationResult = "tampered";
+          } else if (direction === "out" && pass.status !== "issued") {
+            verificationResult = "tampered";
+          } else if (direction === "in" && pass.status !== "used_out" && !manualOverride) {
             verificationResult = "tampered";
           } else if (!safeTimingHashEqual(pass.token_hash, expectedHash)) {
             verificationResult = "tampered";
@@ -318,9 +328,17 @@ export async function scanGatePass(
 
       if (verificationResult === "verified" && passId) {
         const nextStatus = direction === "out" ? "used_out" : "used_in";
-        await conn.query(`
-          UPDATE hostel_gate_passes SET status = $1 WHERE id = $2 AND institution_id = $3;
-        `, [nextStatus, passId, institutionId]);
+        const expectedStatus = direction === "out" ? "issued" : "used_out";
+        const updateRes = await conn.query(`
+          UPDATE hostel_gate_passes 
+          SET status = $1 
+          WHERE id = $2 AND institution_id = $3 AND status = $4;
+        `, [nextStatus, passId, institutionId, expectedStatus]);
+
+        const affected = updateRes.rowCount ?? updateRes.affectedRows ?? 0;
+        if (affected === 0) {
+          throw new Error("Pass already consumed or status changed concurrently.");
+        }
       }
 
       await conn.query("COMMIT;");
@@ -373,6 +391,10 @@ export async function scanGatePass(
           verificationResult = "revoked_rejected";
         } else if (pass.status === "used_in") {
           verificationResult = "tampered";
+        } else if (direction === "out" && pass.status !== "issued") {
+          verificationResult = "tampered";
+        } else if (direction === "in" && pass.status !== "used_out" && !manualOverride) {
+          verificationResult = "tampered";
         } else if (!safeTimingHashEqual(pass.token_hash, expectedHash)) {
           verificationResult = "tampered";
         } else {
@@ -404,10 +426,15 @@ export async function scanGatePass(
 
     if (verificationResult === "verified" && passId) {
       const nextStatus = direction === "out" ? "used_out" : "used_in";
-      await client.execute({
-        sql: `UPDATE hostel_gate_passes SET status = ? WHERE id = ? AND institution_id = ?;`,
-        args: [nextStatus, passId, institutionId]
+      const expectedStatus = direction === "out" ? "issued" : "used_out";
+      const updateRes = await client.execute({
+        sql: `UPDATE hostel_gate_passes SET status = ? WHERE id = ? AND institution_id = ? AND status = ?;`,
+        args: [nextStatus, passId, institutionId, expectedStatus]
       });
+      const affected = updateRes.rowsAffected ?? 0;
+      if (affected === 0) {
+        throw new Error("Pass already consumed or status changed concurrently.");
+      }
     }
 
     if (ownsSqliteTx) await client.execute("COMMIT;");

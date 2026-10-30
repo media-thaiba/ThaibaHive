@@ -94,6 +94,7 @@ export const hostelBeds = pgTable("hostel_beds", {
   deletedAt: text("deleted_at"),
 }, (table) => [
   unique("uq_bed_inst_id").on(table.institutionId, table.id),
+  index("idx_beds_room_id").on(table.roomId, table.institutionId),
   uniqueIndex("idx_bed_inst_number_active")
     .on(table.institutionId, table.roomId, table.bedNumber)
     .where(sql`deleted_at IS NULL`),
@@ -195,6 +196,7 @@ export const hostelGatePasses = pgTable("hostel_gate_passes", {
   revokeReason: text("revoke_reason"),
 }, (table) => [
   unique("uq_pass_inst_id").on(table.institutionId, table.id),
+  index("idx_pass_inst_status_valid").on(table.institutionId, table.status, table.validUntil),
   uniqueIndex("idx_pass_token_hash").on(table.institutionId, table.tokenHash),
   uniqueIndex("idx_pass_number").on(table.institutionId, table.passNumber),
   // Exactly one live pass per leave
@@ -268,6 +270,7 @@ export const hostelFines = pgTable("hostel_fines", {
   updatedAt: text("updated_at").notNull(),
 }, (table) => [
   unique("uq_fine_inst_id").on(table.institutionId, table.id),
+  index("idx_fines_inst_student").on(table.institutionId, table.studentId),
   // Single late fine per leave
   uniqueIndex("idx_single_late_fine_per_leave")
     .on(table.institutionId, table.leaveId)

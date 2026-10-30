@@ -192,18 +192,27 @@ export class PayrollEngine {
     // 3. Entire batch in one transaction — a mid-batch failure rolls back
     // everything rather than leaving a half-generated month.
     await db.transaction(async (tx) => {
+      // Batch-fetch existing records for this institution/year/month in a single round-trip
+      // to eliminate N+1 select round-trips within the active transaction.
+      const existingRows = await tx
+        .select()
+        .from(payrollRecords)
+        .where(
+          and(
+            eq(payrollRecords.institutionId, institutionId),
+            eq(payrollRecords.payPeriodYear, year),
+            eq(payrollRecords.payPeriodMonth, month)
+          )
+        );
+
+      const existingByStaff = new Map<string, typeof existingRows[number]>();
+      for (const row of existingRows) {
+        existingByStaff.set(row.staffId, row);
+      }
+
       for (const struct of eligibleStructures) {
         // Guard: final records (approved/disbursed) are never overwritten
-        const [existingRecord] = await tx
-          .select()
-          .from(payrollRecords)
-          .where(
-            and(
-              eq(payrollRecords.staffId, struct.staffId),
-              eq(payrollRecords.payPeriodYear, year),
-              eq(payrollRecords.payPeriodMonth, month)
-            )
-          );
+        const existingRecord = existingByStaff.get(struct.staffId);
 
         if (
           existingRecord &&
