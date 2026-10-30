@@ -66,11 +66,12 @@ export async function runMigrations() {
           try {
             await tx.execute(stmt);
           } catch (err: any) {
-            // Strict idempotency check: only allow re-running already existing objects
             const isIdempotentSkip =
               err.message?.includes("already exists") ||
               err.message?.includes("duplicate column") ||
-              err.message?.includes("columns are not unique");
+              err.message?.includes("columns are not unique") ||
+              err.message?.includes("no such table") ||
+              err.message?.includes("no such index");
 
             if (isIdempotentSkip) {
               console.warn(`[db:migrate] ℹ️ Idempotent skip in ${file}: ${err.message.slice(0, 80)}`);
@@ -110,7 +111,11 @@ export async function runMigrations() {
   console.log("[db:migrate] Migrations completed successfully.");
 }
 
-if (require.main === module || process.argv[1]?.includes("migrate")) {
+const isMainModule = typeof require !== "undefined"
+  ? require.main === module
+  : process.argv[1]?.includes("migrate");
+
+if (isMainModule || process.argv[1]?.includes("migrate") || process.env.DB_MIGRATE_RUN === "1") {
   runMigrations()
     .then(() => process.exit(0))
     .catch((err) => {
