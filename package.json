@@ -1,7 +1,8 @@
 {
   "name": "thaibahive",
   "version": "3.42.1",
-  "private": true,\n  "packageManager": "pnpm@12.16.1",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "dev": "next dev",
     "build:e2e": "cross-env NEXT_PUBLIC_E2E=1 NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
