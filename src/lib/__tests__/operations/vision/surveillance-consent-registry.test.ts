@@ -12,8 +12,8 @@ describe('SurveillanceConsentRegistry & Differential Privacy Engine', () => {
     registry = new SurveillanceConsentRegistry(store);
   });
 
-  it('should register and retrieve student surveillance consent preferences', () => {
-    registry.registerConsent({
+  it('should register and retrieve student surveillance consent preferences', async () => {
+    await registry.registerConsent({
       userId: 'student_101',
       userType: 'student',
       hasConsentedSurveillance: true,
@@ -22,10 +22,67 @@ describe('SurveillanceConsentRegistry & Differential Privacy Engine', () => {
       updatedAt: new Date().toISOString(),
     }, 'tenant_alpha');
 
-    const consent = registry.getConsent('student_101', 'tenant_alpha');
+    const consent = await registry.getConsent('student_101', 'tenant_alpha');
     expect(consent.hasConsentedSurveillance).toBe(true);
     expect(consent.hasConsentedFacialAuth).toBe(false);
     expect(consent.optedOutZoneIds).toContain('zone_gym');
+  });
+
+  // DPDP Act 2023 §9: consent must never be assumed for a subject with no record.
+  it('should default to NO surveillance consent for unknown students', async () => {
+    const consent = await registry.getConsent('student_unknown', 'tenant_alpha');
+    expect(consent.hasConsentedSurveillance).toBe(false);
+    expect(consent.hasConsentedFacialAuth).toBe(false);
+    expect(consent.parentalConsentVerified).toBe(false);
+    expect(consent.userType).toBe('student');
+  });
+
+  it('should isolate consent records per tenant', async () => {
+    await registry.registerConsent({
+      userId: 'student_202',
+      userType: 'student',
+      hasConsentedSurveillance: true,
+      hasConsentedFacialAuth: false,
+      optedOutZoneIds: [],
+      updatedAt: new Date().toISOString(),
+    }, 'tenant_alpha');
+
+    const inOtherTenant = await registry.getConsent('student_202', 'tenant_beta');
+    expect(inOtherTenant.hasConsentedSurveillance).toBe(false);
+  });
+
+  // DPDP Act 2023 §9(3): student facial recognition requires verified parental consent.
+  it('should block student facial enrolment until parental consent is verified', async () => {
+    expect(await registry.isFacialEnrolmentPermitted('student_303', 'tenant_alpha')).toBe(false);
+
+    await registry.registerConsent({
+      userId: 'student_303',
+      userType: 'student',
+      hasConsentedSurveillance: true,
+      hasConsentedFacialAuth: true,
+      parentalConsentVerified: true,
+      parentalGuardianId: 'guardian_9',
+      parentalConsentAt: new Date().toISOString(),
+      parentalConsentMethod: 'guardian_portal',
+      optedOutZoneIds: [],
+      updatedAt: new Date().toISOString(),
+    }, 'tenant_alpha');
+
+    expect(await registry.isFacialEnrolmentPermitted('student_303', 'tenant_alpha')).toBe(true);
+  });
+
+  it('should refuse parental consent when the guardian is not linked to the student', async () => {
+    const result = await registry.verifyParentalConsent({
+      studentId: 'student_404',
+      guardianId: 'guardian_unlinked',
+      tenantId: 'tenant_alpha',
+    });
+
+    expect(result.verified).toBe(false);
+    expect(result.reason).toMatch(/not linked/i);
+
+    // Nothing was recorded, so facial enrolment stays blocked.
+    expect(await registry.isFacialEnrolmentPermitted('student_404', 'tenant_alpha')).toBe(false);
   });
 
   it('should inject Laplace differential privacy noise into count analytics', () => {

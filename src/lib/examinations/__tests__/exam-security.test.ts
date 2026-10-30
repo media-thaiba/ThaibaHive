@@ -2,11 +2,16 @@ import { POST as createExam } from "@/app/api/examinations/exams/route";
 import { POST as publishReportCards } from "@/app/api/examinations/report-cards/publish/route";
 import { verifySession, hasPermission } from "@thaiba/auth";
 
-jest.mock("@thaiba/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(),
-  resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_campus_main"),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_campus_main"),
+    resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_campus_main"),
+  };
+});
 
 
 jest.mock("@/db", () => ({
@@ -14,7 +19,7 @@ jest.mock("@/db", () => ({
     select: jest.fn(() => ({
       from: jest.fn(() => ({
         where: jest.fn(() => {
-          const res: any = Promise.resolve([{ id: "exam_100", status: "evaluation" }]);
+          const res = Promise.resolve([{ id: "exam_100", status: "evaluation" }]) as Promise<unknown> & { get: jest.Mock };
           res.get = jest.fn().mockResolvedValue({ id: "exam_100", status: "evaluation" });
           return res;
         }),
@@ -26,7 +31,7 @@ jest.mock("@/db", () => ({
     update: jest.fn(() => ({
       set: jest.fn(() => ({
         where: jest.fn(() => {
-          const res: any = Promise.resolve([{ id: "exam_100", status: "published" }]);
+          const res = Promise.resolve([{ id: "exam_100", status: "published" }]) as Promise<unknown> & { returning: jest.Mock };
           res.returning = jest.fn().mockResolvedValue([{ id: "exam_100", status: "published" }]);
           return res;
         }),
@@ -74,6 +79,7 @@ describe("Examination RBAC & Security Audit Suite", () => {
 
   it("should allow request if user has valid session and permission", async () => {
     (verifySession as jest.Mock).mockResolvedValue({
+      sid: "sess_admin",
       staffId: "admin_01",
       role: "admin",
       institutionId: "inst_campus_main",

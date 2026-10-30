@@ -76,6 +76,7 @@ staging-reports/
 # live script run output (drills, simulations, scans) — root files in
 # reports/ and .ai/execution/ are stable baselines; all subdirectories are ephemeral
 reports/*/
+!reports/release-1.0/
 .ai/execution/*/
 
 # transient test artifacts, run logs, and binaries
@@ -118,3 +119,15 @@ test-*.db-shm
 
 dev.log
 *.log
+
+# External reference repositories
+external-erps/
+
+# Local agent runtime state
+.agent/skills/gravitas*
+.gravitas/
+
+# Spike scratch artifacts
+spike/fix-*
+spike/patch-*
+spike/user_request_*.txt

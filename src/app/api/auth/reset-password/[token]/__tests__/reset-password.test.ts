@@ -63,9 +63,9 @@ describe("POST /api/auth/reset-password/[token]", () => {
 
     expect(hashPassword).toHaveBeenCalledWith("newSecurePass1");
     // First update() consumes the token, second updates staff credentials
-    expect(db.update).toHaveBeenCalledTimes(2);
+    expect(db.update).toHaveBeenCalledTimes(3);
 
-    const staffUpdateSet = (updateChain.set as jest.Mock).mock.calls[1][0];
+    const staffUpdateSet = (updateChain.set as jest.Mock).mock.calls[2][0];
     expect(staffUpdateSet.passwordHash).toBe("hashed_new_password");
     expect(staffUpdateSet.tokenVersion).toBeDefined();
   });

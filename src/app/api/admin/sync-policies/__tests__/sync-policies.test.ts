@@ -3,10 +3,15 @@ import { db } from "@/db";
 import { syncTuningPolicies } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-jest.mock("@thaiba/auth", () => ({
-  verifySession: jest.fn(),
-  hasPermission: jest.fn(),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: jest.fn(),
+    hasPermission: jest.fn(() => true),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst-1"),
+  };
+});
 
 jest.mock("@/db", () => ({
   db: {

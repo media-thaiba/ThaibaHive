@@ -3,8 +3,11 @@ jest.mock("next/server", () => {
     public status: number;
     public _headers: Map<string, string>;
 
+    public body: any;
+
     constructor(body?: any, init?: any) {
       this.status = init?.status ?? 200;
+      this.body = body;
       this._headers = new Map<string, string>();
       if (init?.headers) {
         const h = init.headers as Record<string, string>;
@@ -22,6 +25,14 @@ jest.mock("next/server", () => {
 
     get(key: string) {
       return this._headers.get(key.toLowerCase()) ?? null;
+    }
+
+    get cookies() {
+      return {
+        set: () => {},
+        delete: () => {},
+        get: () => undefined,
+      };
     }
 
     static json(data: any, init?: any) {
@@ -103,7 +114,7 @@ import { SignJWT } from "jose";
 import { getJwtSecretBytes } from "@thaiba/auth";
 import { PERMISSIONS_POLICY_VALUE } from "../security/security-headers";
 
-async function createValidTestToken(payload: Record<string, any> = { role: "admin", staffId: "stf-1", email: "test@example.com" }) {
+async function createValidTestToken(payload: Record<string, any> = { role: "admin", staffId: "stf-1", email: "test@example.com", sid: "sess-valid-001" }) {
   const secret = getJwtSecretBytes("session");
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
@@ -181,7 +192,7 @@ describe("proxy", () => {
 
   describe("unauthenticated requests", () => {
     it("should redirect page requests to /auth/login", async () => {
-      const req = makeRequest("/leaves");
+      const req = makeRequest("/profile");
       const res = (await proxy(req as any)) as any;
       expect(res.status).toBe(307);
       expect(res.get("location")).toBe("http://localhost/auth/login");
@@ -202,7 +213,7 @@ describe("proxy", () => {
     });
 
     it("should redirect invalid/garbage token to login on page routes (SEC-01)", async () => {
-      const req = makeRequest("/leaves", {
+      const req = makeRequest("/profile", {
         cookie: "thaibahive_session=invalid.garbage.token",
       });
       const res = (await proxy(req as any)) as any;
@@ -211,37 +222,49 @@ describe("proxy", () => {
     });
 
     it("should allow unauthenticated webhook endpoints through proxy without 401 (Task A3 / Blocker B4)", async () => {
-      const webhookEndpoints = [
-        "/api/finance/fees/webhooks",
-        "/api/webhooks/edge-security",
-        "/api/engage/voice",
-      ];
+      const prevPilot = process.env.V1_PILOT_MODE;
+      process.env.V1_PILOT_MODE = "disabled";
+      try {
+        const webhookEndpoints = [
+          "/api/finance/fees/webhooks",
+          "/api/webhooks/edge-security",
+          "/api/engage/voice",
+        ];
 
-      for (const endpoint of webhookEndpoints) {
-        const req = makeRequest(endpoint, {
-          method: "POST",
-          contentType: "application/x-www-form-urlencoded",
-        });
-        const res = await proxy(req as any);
-        expect(res.status).toBe(200);
+        for (const endpoint of webhookEndpoints) {
+          const req = makeRequest(endpoint, {
+            method: "POST",
+            contentType: "application/x-www-form-urlencoded",
+          });
+          const res = await proxy(req as any);
+          expect(res.status).toBe(200);
+        }
+      } finally {
+        process.env.V1_PILOT_MODE = prevPilot;
       }
     });
 
     it("should require authentication for webhook subpaths (/api/finance/fees/webhooks/anything must NOT be public) (R4-2)", async () => {
-      const subpathEndpoints = [
-        "/api/finance/fees/webhooks/anything",
-        "/api/finance/fees/webhooks/subpath",
-        "/api/webhooks/edge-security/nested",
-        "/api/engage/voice/unauthorized",
-      ];
+      const prevPilot = process.env.V1_PILOT_MODE;
+      process.env.V1_PILOT_MODE = "disabled";
+      try {
+        const subpathEndpoints = [
+          "/api/finance/fees/webhooks/anything",
+          "/api/finance/fees/webhooks/subpath",
+          "/api/webhooks/edge-security/nested",
+          "/api/engage/voice/unauthorized",
+        ];
 
-      for (const endpoint of subpathEndpoints) {
-        const req = makeRequest(endpoint, {
-          method: "POST",
-          contentType: "application/json",
-        });
-        const res = (await proxy(req as any)) as any;
-        expect(res.status).toBe(401);
+        for (const endpoint of subpathEndpoints) {
+          const req = makeRequest(endpoint, {
+            method: "POST",
+            contentType: "application/json",
+          });
+          const res = (await proxy(req as any)) as any;
+          expect(res.status).toBe(401);
+        }
+      } finally {
+        process.env.V1_PILOT_MODE = prevPilot;
       }
     });
   });
@@ -249,7 +272,7 @@ describe("proxy", () => {
   describe("cookie authentication", () => {
     it("should pass through with valid signed thaibahive_session cookie", async () => {
       const token = await createValidTestToken();
-      const req = makeRequest("/leaves", { cookie: `thaibahive_session=${token}` });
+      const req = makeRequest("/profile", { cookie: `thaibahive_session=${token}` });
       const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
@@ -258,7 +281,7 @@ describe("proxy", () => {
   describe("bearer token authentication", () => {
     it("should pass through with valid signed Bearer token", async () => {
       const token = await createValidTestToken();
-      const req = makeRequest("/leaves", { authorization: `Bearer ${token}` });
+      const req = makeRequest("/profile", { authorization: `Bearer ${token}` });
       const res = await proxy(req as any);
       expect(res.status).toBe(200);
     });
@@ -423,4 +446,191 @@ describe("proxy", () => {
       expect(config.matcher[0]).toMatch(/\.svg\$/);
     });
   });
+
+  describe("V1.0 Pilot Module Freeze Gate in proxy.ts (Contract Criterion 5)", () => {
+    it("should fail-closed and return 403 JSON for frozen module API routes when V1_PILOT_MODE is unset", async () => {
+      const prevPilot = process.env.V1_PILOT_MODE;
+      delete process.env.V1_PILOT_MODE;
+      try {
+        const token = await createValidTestToken();
+        const frozenEndpoints = [
+          "/api/finance/invoices",
+          "/api/payroll/cycles",
+          "/api/fleet/vehicles",
+          "/api/agents/execute",
+          "/api/conferencing/rooms",
+          "/api/canteen/menus",
+          "/api/workflow-studio/definitions",
+          "/api/digital-twin/telemetry",
+        ];
+
+        for (const endpoint of frozenEndpoints) {
+          const req = makeRequest(endpoint, {
+            cookie: `thaibahive_session=${token}`,
+            headers: { accept: "application/json" },
+          });
+          const res = (await proxy(req as any)) as any;
+          expect(res.status).toBe(403);
+          const body = JSON.parse(res.body || "{}");
+          expect(body.status).toBe("frozen_for_pilot");
+          expect(body.error).toContain("frozen for the Version 1.0 Pilot");
+        }
+      } finally {
+        process.env.V1_PILOT_MODE = prevPilot;
+      }
+    });
+
+    it("should allow active Version 1.0 core routes through proxy without 403", async () => {
+      const prevPilot = process.env.V1_PILOT_MODE;
+      delete process.env.V1_PILOT_MODE; // fail-closed default
+      try {
+        const token = await createValidTestToken();
+        const activeEndpoints = [
+          "/api/attendance/sync",
+          "/api/tasks",
+          "/api/auth/me",
+          "/api/leaves",
+        ];
+
+        for (const endpoint of activeEndpoints) {
+          const req = makeRequest(endpoint, {
+            cookie: `thaibahive_session=${token}`,
+            headers: { accept: "application/json" },
+          });
+          const res = (await proxy(req as any)) as any;
+          // Should not be 403 frozen
+          expect(res.status).not.toBe(403);
+        }
+      } finally {
+        process.env.V1_PILOT_MODE = prevPilot;
+      }
+    });
+
+    it("should block server actions and POST requests on frozen UI pages with 403", async () => {
+      const prevPilot = process.env.V1_PILOT_MODE;
+      delete process.env.V1_PILOT_MODE;
+      try {
+        const token = await createValidTestToken();
+        const req = makeRequest("/finance", {
+          method: "POST",
+          cookie: `thaibahive_session=${token}`,
+          headers: { "next-action": "action_uuid_123" },
+        });
+        const res = (await proxy(req as any)) as any;
+        expect(res.status).toBe(403);
+      } finally {
+        process.env.V1_PILOT_MODE = prevPilot;
+      }
+    });
+
+    it("should redirect direct browser GET navigation to frozen pages to /workspace", async () => {
+      const prevPilot = process.env.V1_PILOT_MODE;
+      delete process.env.V1_PILOT_MODE;
+      try {
+        const token = await createValidTestToken();
+        const req = makeRequest("/finance", {
+          cookie: `thaibahive_session=${token}`,
+        });
+        const res = (await proxy(req as any)) as any;
+        expect(res.status).toBe(307);
+        expect(res.get("location")).toContain("/workspace?error=module_frozen");
+      } finally {
+        process.env.V1_PILOT_MODE = prevPilot;
+      }
+    });
+  });
+
+  describe("Test Fixture Gating (/dev/*)", () => {
+    const origNodeEnv = process.env.NODE_ENV;
+    const origE2E = process.env.NEXT_PUBLIC_E2E;
+    const origPlaywright = process.env.PLAYWRIGHT_TEST;
+
+    afterEach(() => {
+      (process.env as any).NODE_ENV = origNodeEnv;
+      process.env.NEXT_PUBLIC_E2E = origE2E;
+      process.env.PLAYWRIGHT_TEST = origPlaywright;
+    });
+
+    it("returns 404 in production deploy when NEXT_PUBLIC_E2E is not set", async () => {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.PLAYWRIGHT_TEST;
+
+      const req = makeRequest("/dev/sheet-harness");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(404);
+    });
+
+    it("allows /dev/sheet-harness when NEXT_PUBLIC_E2E=1", async () => {
+      (process.env as any).NODE_ENV = "production";
+      process.env.NEXT_PUBLIC_E2E = "1";
+      delete process.env.PLAYWRIGHT_TEST;
+
+      const req = makeRequest("/dev/sheet-harness");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(200);
+    });
+
+    it("allows /dev/sheet-harness in development mode", async () => {
+      (process.env as any).NODE_ENV = "development";
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.PLAYWRIGHT_TEST;
+
+      const req = makeRequest("/dev/sheet-harness");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(200);
+    });
+
+    it("blocks other /dev/* routes even when NEXT_PUBLIC_E2E=1", async () => {
+      (process.env as any).NODE_ENV = "production";
+      process.env.NEXT_PUBLIC_E2E = "1";
+
+      const req = makeRequest("/dev/other-route");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(404);
+    });
+
+    it.each([
+      { name: "percent-encoded d", path: "/%64ev/sheet-harness", expectedStatus: 404 },
+      { name: "mixed-case DEV", path: "/DEV/sheet-harness", expectedStatus: 404 },
+      { name: "dot-segment traversal", path: "/dev/%2e/sheet-harness", expectedStatus: 404 },
+      { name: "double slash bypass", path: "//dev/sheet-harness", expectedStatus: 404 },
+      { name: "double percent-encoded d", path: "/%2564ev/sheet-harness", expectedStatus: 404 },
+      { name: "encoded slash", path: "/dev%2fsheet-harness", expectedStatus: 404 },
+      { name: "encoded backslash", path: "/dev%5csheet-harness", expectedStatus: 404 },
+    ])("blocks bypass attempt via $name ($path) in production with 404", async ({ path, expectedStatus }) => {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_E2E;
+
+      const req = makeRequest(path);
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(expectedStatus);
+    });
+
+    it.each([
+      { name: "malformed hex digits", path: "/dev/%99" },
+      { name: "truncated UTF-8 sequence", path: "/%E0%A4%A/dev/sheet-harness" },
+      { name: "dangling percent sign", path: "/%/dev/sheet-harness" },
+    ])("fails closed with 404 on malformed percent encoding targeting dev ($name)", async ({ path }) => {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_E2E;
+
+      const req = makeRequest(path);
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(404);
+    });
+
+    it.each([
+      { name: "malformed hex on API route", path: "/api/circulars/%99", expectedStatus: 401 },
+      { name: "malformed hex on unauthenticated page", path: "/circulars/%99", expectedStatus: 307 },
+      { name: "dangling percent on normal login page", path: "/auth/login?redirect=/%", expectedStatus: 200 },
+    ])("returns exact expected status without 500 crash on normal routes with malformed encoding ($name)", async ({ path, expectedStatus }) => {
+      (process.env as any).NODE_ENV = "production";
+
+      const req = makeRequest(path);
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(expectedStatus);
+    });
+  });
+
 });

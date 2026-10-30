@@ -1,6 +1,8 @@
 name: Automated Supabase Storage Backup
 
 on:
+  schedule:
+    - cron: '0 4 * * *'
   workflow_dispatch:
     inputs:
       dry_run:

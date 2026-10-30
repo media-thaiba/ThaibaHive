@@ -121,7 +121,7 @@ describe("MediaHive Security & Permission Controls (MH-012 & MH-013)", () => {
 
   it("should redirect unauthenticated requests to login for shell media routes", async () => {
     const req = new (require("next/server").NextRequest)(
-      "http://localhost:3000/media-library"
+      "http://localhost:3000/operations/media-library"
     );
     const res = await proxy(req as any);
 

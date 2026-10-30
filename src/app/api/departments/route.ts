@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { departments } from "@/db/schema";
 import { requireAuth } from "@/lib/api/auth-guard";
+import { resolveRequestInstitution } from "@thaiba/auth";
 import { eq, and, asc } from "drizzle-orm";
 
-export const GET = requireAuth(async (request) => {
+export const GET = requireAuth(async (request, session) => {
   const { searchParams } = new URL(request.url);
-  const institutionId = searchParams.get("institutionId");
+  const requestedInst = searchParams.get("institutionId");
+  const institutionId = await resolveRequestInstitution(session, requestedInst);
 
-  const where = institutionId
+  const where = institutionId && institutionId !== "global"
     ? and(eq(departments.isActive, true), eq(departments.institutionId, institutionId))
     : eq(departments.isActive, true);
 

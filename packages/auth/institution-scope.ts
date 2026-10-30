@@ -11,13 +11,14 @@ export class TenantMismatchError extends Error {
 
 const GLOBAL_SCOPE_ROLES = new Set([
   "super_admin",
-  "regional_admin",
-  "regional_auditor",
-  "system",
 ]);
 
-function isGlobalScopeRole(role: string): boolean {
+export function isGlobalScopeRole(role: string): boolean {
   return GLOBAL_SCOPE_ROLES.has(role);
+}
+
+export function isRegionalScopeRole(role: string): boolean {
+  return role === "regional_admin" || role === "regional_auditor";
 }
 
 /**
@@ -47,7 +48,8 @@ interface GlobalWithActiveSession {
  * Returns null if the user has a global role or has no memberships.
  */
 export async function getUserInstitutionScope(sessionParam?: SessionPayload | null): Promise<string | null> {
-  const session = sessionParam !== undefined ? sessionParam : (((globalThis as unknown as GlobalWithActiveSession).__activeSession) || (await verifySession()));
+  const testSession = process.env.NODE_ENV === 'test' ? (globalThis as unknown as GlobalWithActiveSession).__activeSession : undefined;
+  const session = sessionParam !== undefined ? sessionParam : (testSession || (await verifySession()));
   if (!session) return null;
 
   if (isGlobalScopeRole(session.role)) {
@@ -75,24 +77,48 @@ export async function getUserInstitutionScope(sessionParam?: SessionPayload | nu
  */
 export async function resolveScopedInstitutionId(
   requestedInstitutionId?: string | null,
-  sessionParam?: SessionPayload | null
+  sessionParam?: SessionPayload | null,
+  options?: { allowGlobal?: boolean }
 ): Promise<string> {
-  const session = sessionParam !== undefined ? sessionParam : (((globalThis as unknown as GlobalWithActiveSession).__activeSession) || (await verifySession()));
+  const testSession = process.env.NODE_ENV === 'test' ? (globalThis as unknown as GlobalWithActiveSession).__activeSession : undefined;
+  const session = sessionParam !== undefined ? sessionParam : (testSession || (await verifySession()));
   if (!session) {
     throw new TenantMismatchError("Unauthorized: Active session required to resolve institution scope.");
   }
 
+  // Tier 1: super_admin (Global)
   if (isGlobalScopeRole(session.role)) {
-    return requestedInstitutionId || "global";
+    if (requestedInstitutionId) return requestedInstitutionId;
+    if (options?.allowGlobal) return "global";
+    if (session.institutionId && session.institutionId !== "global") return session.institutionId;
+    return "global";
   }
 
+  // Tier 2: regional_admin (Regional Cluster)
+  if (isRegionalScopeRole(session.role)) {
+    const cluster = await getStaffInstitutionMemberships(session.staffId);
+    if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
+      cluster.push(session.institutionId);
+    }
+    if (cluster.length === 0) {
+      throw new TenantMismatchError("Forbidden: Regional administrator has no assigned regional cluster.");
+    }
+    const clusterSet = new Set(cluster);
+    const target = requestedInstitutionId || session.institutionId;
+    if (!target || target === "global" || !clusterSet.has(target)) {
+      throw new TenantMismatchError(`Forbidden: Regional administrator cannot access unassigned institution (${target}).`);
+    }
+    return target;
+  }
+
+  // Tier 3, 4, 5: Institution / Department / Staff pinned to verified memberships / session.institutionId
   const memberships = await getStaffInstitutionMemberships(session.staffId);
   if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
     memberships.push(session.institutionId);
   }
 
   if (memberships.length === 0) {
-    throw new TenantMismatchError("Forbidden: User has no assigned institution.");
+    throw new TenantMismatchError("Forbidden: Scoped account has no assigned institution.");
   }
 
   const membershipSet = new Set(memberships);
@@ -100,10 +126,14 @@ export async function resolveScopedInstitutionId(
   if (requestedInstitutionId) {
     if (requestedInstitutionId === "global" || !membershipSet.has(requestedInstitutionId)) {
       throw new TenantMismatchError(
-        `Forbidden: Actor does not belong to the requested institution (${requestedInstitutionId}).`
+        `Forbidden: Cross-tenant access denied. Caller institution (${session.institutionId || memberships[0]}) does not match requested (${requestedInstitutionId}).`
       );
     }
     return requestedInstitutionId;
+  }
+
+  if (session.institutionId && session.institutionId !== "global" && membershipSet.has(session.institutionId)) {
+    return session.institutionId;
   }
 
   return memberships[0];
@@ -132,30 +162,47 @@ export async function resolveRequestInstitution(
     return "global";
   }
 
-  const memberships = await getStaffInstitutionMemberships(session.staffId);
-  const membershipSet = new Set(memberships);
-  if (session.institutionId && session.institutionId !== "global") {
-    membershipSet.add(session.institutionId);
+  if (isRegionalScopeRole(session.role)) {
+    const cluster = await getStaffInstitutionMemberships(session.staffId);
+    if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
+      cluster.push(session.institutionId);
+    }
+    if (cluster.length === 0) {
+      throw new TenantMismatchError("Forbidden: Regional administrator has no assigned regional cluster.");
+    }
+    const clusterSet = new Set(cluster);
+    const target = requested || session.institutionId;
+    if (!target || target === "global" || !clusterSet.has(target)) {
+      throw new TenantMismatchError(`Forbidden: Regional administrator cannot access unassigned institution (${target}).`);
+    }
+    return target;
   }
+
+  const memberships = await getStaffInstitutionMemberships(session.staffId);
+  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
+    memberships.push(session.institutionId);
+  }
+
+  if (memberships.length === 0) {
+    throw new TenantMismatchError("Forbidden: Scoped account has no assigned institution.");
+  }
+
+  const membershipSet = new Set(memberships);
 
   if (requested) {
     if (requested === "global" || !membershipSet.has(requested)) {
       throw new TenantMismatchError(
-        `Forbidden: Actor does not belong to the requested institution (${requested}).`
+        `Forbidden: Cross-tenant access denied. Caller institution (${session.institutionId || memberships[0]}) does not match requested (${requested}).`
       );
     }
     return requested;
   }
 
-  const primary = (session.institutionId && session.institutionId !== "global")
-    ? session.institutionId
-    : memberships[0];
-
-  if (!primary) {
-    throw new TenantMismatchError("Forbidden: User has no assigned institution.");
+  if (session.institutionId && session.institutionId !== "global" && membershipSet.has(session.institutionId)) {
+    return session.institutionId;
   }
 
-  return primary;
+  return memberships[0];
 }
 
 /**
@@ -177,9 +224,6 @@ export async function resolveScopedInstitutions(
     return ["global"];
   }
   const memberships = await getStaffInstitutionMemberships(session.staffId);
-  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-    memberships.push(session.institutionId);
-  }
   if (memberships.length === 0) {
     throw new TenantMismatchError("Forbidden: User has no assigned institution.");
   }
@@ -202,9 +246,6 @@ export async function resolveInstitutionScopeForSession(
   }
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
-  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-    memberships.push(session.institutionId);
-  }
   if (memberships.length === 0) {
     return null;
   }

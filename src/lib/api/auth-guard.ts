@@ -61,7 +61,19 @@ export function requireAuth<TParams = Record<string, string>>(
       }
     };
 
-    let session = await verifySession();
+    let session: SessionPayload | null = null;
+    try {
+      session = await verifySession();
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "LEGACY_SESSION_EXPIRED") {
+        recordApm(401);
+        const res = NextResponse.json({ error: "LEGACY_SESSION_EXPIRED" }, { status: 401 });
+        res.cookies.delete("thaibahive_session");
+        return res;
+      }
+      recordApm(401);
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
 
     if (!session) {
       const drSecret = request.headers.get("x-dr-secret");
@@ -80,6 +92,7 @@ export function requireAuth<TParams = Record<string, string>>(
         (timingSafeSecretMatch(cronSecret, process.env.CRON_SECRET) && isCronPathAllowed)
       ) {
         session = {
+          sid: "sess_system",
           staffId: "system",
           role: "system",
           email: "system@internal",
@@ -120,44 +133,50 @@ export function requireAuth<TParams = Record<string, string>>(
     // memberships, never trusted blindly from JWT claims, request params, or client body.
     // Admins resolve to "global" (the sanctioned unscoped bypass); mapped staff resolve
     // to their verified active institution membership.
-    if (typeof resolveInstitutionScopeForSession === "function") {
-      try {
-        const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
-        const scope = await resolveInstitutionScopeForSession(session, host);
-        if (!scope) {
-          if (session.role !== "super_admin" && session.role !== "admin" && session.role !== "system") {
-            console.warn(
-              JSON.stringify({
-                event: "unmapped_institution_scope_blocked",
-                severity: "error",
-                staffId: session.staffId,
-                role: session.role,
-                url: request.url,
-                timestamp: new Date().toISOString(),
-              })
-            );
-            recordApm(403);
-            return NextResponse.json(
-              { error: "Forbidden: No institution assigned or access denied to tenant" },
-              { status: 403 }
-            );
-          }
-          session.institutionId = "global";
-        } else {
-          session.institutionId = scope;
+    if (typeof resolveInstitutionScopeForSession !== "function") {
+      console.error("[FATAL] resolveInstitutionScopeForSession is not available");
+      recordApm(500);
+      return NextResponse.json({ error: "Tenant resolver not initialized" }, { status: 500 });
+    }
+
+    try {
+      const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+      const scope = await resolveInstitutionScopeForSession(session, host);
+      if (!scope) {
+        if (session.role !== "super_admin" && session.role !== "system") {
+          console.warn(
+            JSON.stringify({
+              event: "unmapped_institution_scope_blocked",
+              severity: "error",
+              staffId: session.staffId,
+              role: session.role,
+              url: request.url,
+              method,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          recordApm(403);
+          return NextResponse.json(
+            { error: "Forbidden: No institution assigned or access denied to tenant" },
+            { status: 403 }
+          );
         }
-      } catch (error) {
-        console.error(
-          JSON.stringify({
-            event: "institution_scope_resolution_failed",
-            staffId: session.staffId,
-            error: error instanceof Error ? error.message : String(error),
-            timestamp: new Date().toISOString(),
-          })
-        );
-        recordApm(500);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        session.institutionId = "global";
+      } else {
+        session.institutionId = scope;
       }
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "institution_scope_resolution_failed",
+          staffId: session.staffId,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        })
+      );
+      recordApm(403);
+      // FAIL-CLOSED: Return 403 on error, never fall through
+      return NextResponse.json({ error: "Access denied: tenant resolution failed" }, { status: 403 });
     }
 
     // Evaluate legacy token deprecation headers
@@ -242,7 +261,7 @@ export function requireAuth<TParams = Record<string, string>>(
   };
 }
 
-export { resolveRequestInstitution, resolveScopedInstitutions, resolveScopedInstitutionId, TenantMismatchError } from "@thaiba/auth";
+export { resolveRequestInstitution, resolveScopedInstitutions, resolveScopedInstitutionId, TenantMismatchError, verifyActionStepUpToken, consumeStepUpTokenInTx, isStepUpReplayError } from "@thaiba/auth";
 
 /**
  * Resolves a concrete (never "global") institution context for routes that

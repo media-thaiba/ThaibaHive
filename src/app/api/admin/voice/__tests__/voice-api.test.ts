@@ -1,10 +1,21 @@
-jest.mock("../../../../../../packages/auth/session", () => ({
-  verifySession: async () => ({ staffId: "user-admin", role: "admin", email: "admin@thaiba.edu" }),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: async () => ({
+      sid: "sess_admin",
+      staffId: "user-admin",
+      role: "admin",
+      email: "admin@thaiba.edu",
+      institutionId: "campus-north",
+    }),
+    resolveInstitutionScopeForSession: async () => "campus-north",
+  };
+});
 
 import { POST as voicePOST } from "../query/route";
 
-function createMockRequest(url: string, method: string = "GET", body?: any): Request {
+function createMockRequest(url: string, method: string = "GET", body?: unknown): Request {
   const headers = new Headers();
   headers.set("authorization", "Bearer mock-token");
   headers.set("x-user-role", "admin");

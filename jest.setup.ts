@@ -52,7 +52,16 @@ if (typeof global.Response === "undefined") {
   global.Response = class MockResponse {
     body: any;
     status: number;
-    headers: { get: (key: string) => string | null; set: (key: string, val: string) => void; entries: () => IterableIterator<[string, string]>; forEach: (cb: any) => void };
+    headers: {
+      get: (key: string) => string | null;
+      set: (key: string, val: string) => void;
+      delete?: (key: string) => void;
+      has?: (key: string) => boolean;
+      append?: (key: string, val: string) => void;
+      entries: () => IterableIterator<[string, string]>;
+      forEach: (cb: any) => void;
+      [key: string]: any;
+    };
     constructor(body: any, init?: any) {
       this.body = body;
       this.status = init?.status || 200;
@@ -71,6 +80,9 @@ if (typeof global.Response === "undefined") {
       this.headers = {
         get: (key: string) => headersMap.get(key.toLowerCase()) || null,
         set: (key: string, val: string) => headersMap.set(key.toLowerCase(), String(val)),
+        delete: (key: string) => { headersMap.delete(key.toLowerCase()); },
+        has: (key: string) => headersMap.has(key.toLowerCase()),
+        append: (key: string, val: string) => headersMap.set(key.toLowerCase(), String(val)),
         entries: () => headersMap.entries(),
         forEach: (cb: any) => headersMap.forEach(cb),
       };

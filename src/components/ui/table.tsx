@@ -52,7 +52,7 @@ const TableRow = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tr
     ref={ref}
-    className={`border-b border-border/50 transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.03] data-[state=selected]:bg-muted ${className || ""}`}
+    className={`border-b border-border/50 transition-colors hover:bg-muted/40 active:bg-muted/60 dark:hover:bg-white/[0.03] dark:active:bg-white/[0.06] data-[state=selected]:bg-muted ${className || ""}`}
     {...props}
   />
 ));
@@ -64,7 +64,7 @@ const TableHead = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <th
     ref={ref}
-    className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className || ""}`}
+    className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground tabular-nums [&:has([role=checkbox])]:pr-0 ${className || ""}`}
     {...props}
   />
 ));
@@ -76,7 +76,7 @@ const TableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}
-    className={`p-4 align-middle [&:has([role=checkbox])]:pr-0 ${className || ""}`}
+    className={`p-4 align-middle tabular-nums [&:has([role=checkbox])]:pr-0 ${className || ""}`}
     {...props}
   />
 ));

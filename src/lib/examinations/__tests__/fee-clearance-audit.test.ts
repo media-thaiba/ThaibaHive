@@ -10,6 +10,7 @@ jest.mock("@thaiba/auth", () => ({
   hasPermission: jest.fn(() => true),
   // Re-exported through @/lib/auth — required by the new tenant-scoped lookups.
   resolveScopedInstitutionId: jest.fn().mockResolvedValue("inst_campus_main"),
+  resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst_campus_main"),
 }));
 
 jest.mock("../hall-ticket-service", () => ({

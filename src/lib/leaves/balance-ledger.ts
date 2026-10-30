@@ -69,38 +69,57 @@ interface OverlapRef {
  * callers run this inside a transaction so the approval rolls back with it.
  */
 export async function deductLeaveDays(tx: LedgerTx, ref: LedgerRef): Promise<void> {
-  const balance = await tx
-    .select()
-    .from(leaveBalances)
-    .where(
-      and(
-        eq(leaveBalances.staffId, ref.staffId),
-        eq(leaveBalances.leaveTypeId, ref.leaveTypeId),
-        eq(leaveBalances.year, ref.year)
-      )
-    )
-    .get();
-
-  if (balance) {
-    if (balance.usedDays + ref.days > balance.totalDays) {
-      throw new LeaveLedgerError(
-        `Insufficient leave balance. Requested: ${ref.days} days, Remaining: ${balance.totalDays - balance.usedDays} days.`,
-        409
-      );
-    }
-  }
-
-  await tx
+  // Atomic check-and-deduct:
+  // Evaluates remainingDays >= ref.days directly in the UPDATE predicate to eliminate
+  // read-then-write race conditions under concurrent / multi-worker deployments.
+  const updated = await tx
     .update(leaveBalances)
     .set({ usedDays: sql`${leaveBalances.usedDays} + ${ref.days}` })
     .where(
       and(
         eq(leaveBalances.staffId, ref.staffId),
         eq(leaveBalances.leaveTypeId, ref.leaveTypeId),
-        eq(leaveBalances.year, ref.year)
+        eq(leaveBalances.year, ref.year),
+        sql`${leaveBalances.totalDays} - ${leaveBalances.usedDays} >= ${ref.days}`
       )
     )
-    .run();
+    .returning({
+      id: leaveBalances.id,
+      usedDays: leaveBalances.usedDays,
+      totalDays: leaveBalances.totalDays,
+    });
+
+  const updatedRows = Array.isArray(updated) ? updated : (updated ? [updated] : []);
+  if (updatedRows.length === 0) {
+    // Determine whether the balance record is missing or balance is insufficient
+    const existing = await tx
+      .select({
+        totalDays: leaveBalances.totalDays,
+        usedDays: leaveBalances.usedDays,
+      })
+      .from(leaveBalances)
+      .where(
+        and(
+          eq(leaveBalances.staffId, ref.staffId),
+          eq(leaveBalances.leaveTypeId, ref.leaveTypeId),
+          eq(leaveBalances.year, ref.year)
+        )
+      )
+      .get();
+
+    if (!existing) {
+      throw new LeaveLedgerError(
+        `Leave balance row not found for staffId=${ref.staffId}, leaveTypeId=${ref.leaveTypeId}, year=${ref.year}.`,
+        404
+      );
+    }
+
+    const remaining = Math.max(0, existing.totalDays - existing.usedDays);
+    throw new LeaveLedgerError(
+      `Insufficient leave balance. Requested: ${ref.days} days, Remaining: ${remaining} days.`,
+      409
+    );
+  }
 }
 
 /**

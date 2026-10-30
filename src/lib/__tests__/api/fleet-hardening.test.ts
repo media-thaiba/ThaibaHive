@@ -342,7 +342,7 @@ describe("Fleet & Vehicle Logistics Management Pipeline — Hardening", () => {
 
   describe("Foreign Key Integrity & Staff Profile Enforcement (VULN-FL-03)", () => {
     it("rejects booking creation if caller lacks a staff profile (400)", async () => {
-      mockUser("admin", null, instA);
+      mockUser("super_admin", null, instA);
       const req = new Request("http://localhost/api/vehicles/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -362,7 +362,7 @@ describe("Fleet & Vehicle Logistics Management Pipeline — Hardening", () => {
     });
 
     it("rejects log creation if caller lacks a staff profile (400)", async () => {
-      mockUser("admin", null, instA);
+      mockUser("super_admin", null, instA);
       const req = new Request("http://localhost/api/vehicles/logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

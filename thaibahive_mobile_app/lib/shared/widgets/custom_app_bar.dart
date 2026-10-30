@@ -1,6 +1,7 @@
 import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'problem_reporter_modal.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -37,7 +38,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final theme = Theme.of(context);
 
     return AppBar(
-      title: title != null ? Text(title!) : null,
+      title: title != null ? TripleTapDetector(child: Text(title!)) : null,
       leading: leading ??
           (showBack
               ? IconButton(

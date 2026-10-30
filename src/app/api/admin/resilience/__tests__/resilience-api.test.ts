@@ -1,12 +1,23 @@
-jest.mock("../../../../../../packages/auth/session", () => ({
-  verifySession: async () => ({ staffId: "user-admin", role: "admin", email: "admin@thaiba.edu" }),
-}));
+jest.mock("@thaiba/auth", () => {
+  const actual = jest.requireActual("@thaiba/auth");
+  return {
+    ...actual,
+    verifySession: async () => ({
+      sid: "sess_admin",
+      staffId: "user-admin",
+      role: "admin",
+      email: "admin@thaiba.edu",
+      institutionId: "inst-north",
+    }),
+    resolveInstitutionScopeForSession: async () => "inst-north",
+  };
+});
 
 import { GET as indexGET, POST as indexPOST } from "../index-tuning/route";
 import { GET as cbGET, POST as cbPOST } from "../circuit-breaker/route";
 import { GET as dlqGET, POST as dlqPOST } from "../dlq-retry/route";
 
-function createMockRequest(url: string, method: string = "GET", body?: any): Request {
+function createMockRequest(url: string, method: string = "GET", body?: unknown): Request {
   const headers = new Headers();
   headers.set("authorization", "Bearer mock-token");
   headers.set("x-user-role", "admin");

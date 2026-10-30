@@ -1,10 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../core/pilot/pilot_gate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants.dart';
+import '../core/providers/tab_scroll_to_top.dart';
 import 'capability_registry.dart' as caps;
 import '../core/services/logger_service.dart';
 import 'theme.dart';
@@ -13,6 +16,7 @@ import '../models/user_model.dart';
 import '../features/action_center/controller.dart';
 import '../features/action_center/action_producers.dart';
 import '../features/action_center/tray.dart';
+import '../shared/widgets/create_action_bottom_sheet.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/passkey_enrollment_screen.dart';
 import '../features/auth/presentation/welcome_screen.dart';
@@ -88,6 +92,7 @@ import '../features/agent_hub/presentation/plugin_detail_screen.dart';
 import '../features/sync/presentation/sync_status_screen.dart';
 import '../features/chat/presentation/channel_list_screen.dart';
 import '../shared/widgets/update_banner.dart';
+import '../shared/widgets/ambient_canvas_background.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/hardware/presentation/guard_patrol_screen.dart';
 import '../features/hardware/presentation/hardware_radar_screen.dart';
@@ -205,14 +210,6 @@ GoRouter buildRouter() {
             ),
           );
         },
-      ),
-      GoRoute(
-        path: '/attendance',
-        name: 'attendance',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const AttendanceScreen(),
-        ),
       ),
       GoRoute(
         path: '/me/attendance',
@@ -474,13 +471,28 @@ GoRouter buildRouter() {
           child: const AboutScreen(),
         ),
       ),
+      // ── My Hub menu-item fallbacks ────────────────────────────────────────
+      // These paths are pushed from _MenuItem rows in MeHubScreen. Until each
+      // gets a dedicated screen they land on /settings so a tap never throws
+      // GoException "no routes for location".
       GoRoute(
-        path: '/settings/diagnostics',
-        name: 'settingsDiagnostics',
-        pageBuilder: (context, state) => AppTransitions.slide(
-          state: state,
-          child: const CrashLogsScreen(),
-        ),
+        path: '/settings/notifications',
+        redirect: (context, state) => '/settings',
+      ),
+      GoRoute(
+        path: '/settings/display',
+        redirect: (context, state) => '/settings',
+      ),
+      GoRoute(
+        path: '/settings/sync',
+        redirect: (context, state) => '/settings',
+      ),
+      // "Biometric & Security" has a real destination already — the
+      // BiometricEnrollmentScreen at /biometric/enrollment — so send it there
+      // rather than back to the settings index.
+      GoRoute(
+        path: '/settings/biometric',
+        redirect: (context, state) => '/biometric/enrollment',
       ),
       GoRoute(
         path: '/biometric/enrollment',
@@ -1026,7 +1038,7 @@ GoRouter buildRouter() {
 /// Build shell branches dynamically
 List<StatefulShellBranch> _buildShellBranches() {
   return [
-    // Branch 0: Today (always visible)
+    // Branch 0: Today
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1036,8 +1048,20 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 1: Notices (always visible) — segmented Circulars/Announcements/
-    // Polls. Services moved to a pushed top-level route (D2).
+    // Branch 1: Attendance (Core V1.0 Pilot Tab)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/attendance',
+          name: 'attendance',
+          pageBuilder: (context, state) => AppTransitions.slide(
+            state: state,
+            child: const AttendanceScreen(),
+          ),
+        ),
+      ],
+    ),
+    // Branch 2: Notices (Core V1.0 Pilot Tab)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1047,7 +1071,7 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 2: My Hub (always visible)
+    // Branch 3: My Hub / Profile (Core V1.0 Pilot Tab)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1057,7 +1081,20 @@ List<StatefulShellBranch> _buildShellBranches() {
         ),
       ],
     ),
-    // Branch 3: Media (conditional)
+    // Branch 4: Diagnostics (Core V1.0 Pilot Tab)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/settings/diagnostics',
+          name: 'settingsDiagnostics',
+          pageBuilder: (context, state) => AppTransitions.slide(
+            state: state,
+            child: const CrashLogsScreen(),
+          ),
+        ),
+      ],
+    ),
+    // Branch 5: Media (Legacy / Post-pilot conditional)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -1088,10 +1125,6 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   final isWelcomeRoute = state.matchedLocation == '/';
   final isOnboardingRoute = state.matchedLocation == '/onboarding/affiliate';
 
-  if (isWelcomeRoute) {
-    return null;
-  }
-
   // Use cached token for zero-latency route transitions; fallback to storage on cold start.
   final token = _cachedToken ?? await _storage.read(key: AppConstants.storageTokenKey);
   if (token != null && token.isNotEmpty) {
@@ -1101,6 +1134,23 @@ Future<String?> _authGuard(BuildContext context, GoRouterState state) async {
   }
 
   final isLoggedIn = token != null && token.isNotEmpty;
+
+  if (isWelcomeRoute) {
+    if (isLoggedIn) {
+      final isFirstLogin = await _storage.read(key: 'is_first_login');
+      if (isFirstLogin == 'true') {
+        return '/onboarding/affiliate';
+      }
+      return '/today';
+    }
+    return null;
+  }
+
+  // Pilot freeze guard: block access to frozen modules in V1.0 pilot
+  if (isLoggedIn && isFrozenPath(state.matchedLocation)) {
+    logger.info('AUTH GUARD: Blocked access to frozen pilot route ${state.matchedLocation} -> /today');
+    return '/today?error=module_frozen';
+  }
 
   if (!isLoggedIn && !isAuthRoute && !isOnboardingRoute) {
     logger.info('AUTH GUARD: Unauthenticated access to ${state.matchedLocation} -> redirecting to login');
@@ -1150,10 +1200,28 @@ class _DynamicBottomNavShell extends ConsumerStatefulWidget {
 }
 
 class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> {
+  DateTime? _lastBackPressTime;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    // Surface pilot freeze toast if redirected with error=module_frozen
+    final queryError = GoRouterState.of(context).uri.queryParameters['error'];
+    if (queryError == 'module_frozen') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This module is frozen during the Version 1.0 Pilot.'),
+            backgroundColor: Color(0xFFC05621),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    }
 
     // Get user capabilities from auth state
     final authState = ref.watch(authProvider);
@@ -1170,42 +1238,112 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
     final unreadCount = ref.watch(unreadCountProvider).valueOrNull ?? 0;
     final onTodayBranch = widget.navigationShell.currentIndex == 0;
 
-    // Build dynamic tab list (D2: Today / Notices / My Hub / Media)
-    final tabs = [
-      const _TabData(
-        branchIndex: 0,
-        icon: Icons.today_rounded,
-        selectedIcon: Icons.today_rounded,
-        label: 'Today',
-      ),
-      const _TabData(
-        branchIndex: 1,
-        icon: Icons.notifications_outlined,
-        selectedIcon: Icons.notifications_rounded,
-        label: 'Notices',
-      ),
-      const _TabData(
-        branchIndex: 2,
-        icon: Icons.person_rounded,
-        selectedIcon: Icons.person_rounded,
-        label: 'My Hub',
-      ),
-      if (hasMediaCapability)
-        const _TabData(
-          branchIndex: 3,
-          icon: Icons.photo_library_rounded,
-          selectedIcon: Icons.photo_library_rounded,
-          label: 'Media',
-        ),
-    ];
+    // Build dynamic tab list: 5 Core V1.0 Pilot Tabs
+    final tabs = isPilotActive
+        ? [
+            const _TabData(
+              branchIndex: 0,
+              icon: Icons.today_outlined,
+              selectedIcon: Icons.today_rounded,
+              label: 'Today',
+            ),
+            const _TabData(
+              branchIndex: 1,
+              icon: Icons.access_time_rounded,
+              selectedIcon: Icons.access_time_filled_rounded,
+              label: 'Attendance',
+            ),
+            const _TabData(
+              branchIndex: 2,
+              icon: Icons.campaign_outlined,
+              selectedIcon: Icons.campaign_rounded,
+              label: 'Notices',
+            ),
+            const _TabData(
+              branchIndex: 4,
+              icon: Icons.terminal_outlined,
+              selectedIcon: Icons.terminal_rounded,
+              label: 'Diagnostics',
+            ),
+            const _TabData(
+              branchIndex: 3,
+              icon: Icons.person_outline_rounded,
+              selectedIcon: Icons.person_rounded,
+              label: 'My Hub',
+            ),
+          ]
+        : [
+            const _TabData(
+              branchIndex: 0,
+              icon: Icons.today_rounded,
+              selectedIcon: Icons.today_rounded,
+              label: 'Today',
+            ),
+            const _TabData(
+              branchIndex: 2,
+              icon: Icons.campaign_outlined,
+              selectedIcon: Icons.campaign_rounded,
+              label: 'Notices',
+            ),
+            if (hasMediaCapability)
+              const _TabData(
+                branchIndex: 5,
+                icon: Icons.photo_library_rounded,
+                selectedIcon: Icons.photo_library_rounded,
+                label: 'Media',
+              ),
+            const _TabData(
+              branchIndex: 3,
+              icon: Icons.person_rounded,
+              selectedIcon: Icons.person_rounded,
+              label: 'My Hub',
+            ),
+          ];
 
-    return Scaffold(
+    // Rule 3: the Create (+) action owns a dedicated center slot so it is
+    // always the middle destination of the dock — and never a navigation
+    // target, since its tap opens the quick-action sheet instead.
+    final createSlotIndex = (tabs.length + 1) ~/ 2;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final currentBranch = widget.navigationShell.currentIndex;
+        if (currentBranch != 0) {
+          widget.navigationShell.goBranch(0);
+          return;
+        }
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).removeCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          await SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+      backgroundColor: isDark ? const Color(0xFF171A17) : const Color(0xFFF4F7F4),
       // Single tray + single FAB layer, Today branch only (D5*).
       floatingActionButton: onTodayBranch && pendingActionCount > 0
           ? const ActionCenterFab()
           : null,
       body: Stack(
         children: [
+          // ── Ambient canvas shader — living gradient behind all content ──
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AmbientCanvasBackground(isDark: isDark),
+            ),
+          ),
+
           // Main navigation content
           widget.navigationShell,
 
@@ -1242,82 +1380,134 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.card),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            filter: ImageFilter.blur(
+              sigmaX: AppBlur.chrome,
+              sigmaY: AppBlur.chrome,
+            ),
             child: Container(
               decoration: BoxDecoration(
                 color: isDark
-                    ? const Color(0xFF22262b).withValues(alpha: 0.94)
-                    : Colors.white.withValues(alpha: 0.98),
+                    ? const Color(0xFF22262b).withValues(alpha: 0.88)
+                    : Colors.white.withValues(alpha: 0.90),
                 borderRadius: BorderRadius.circular(AppRadius.card),
                 border: Border.all(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.08)
                       : const Color(0xFFd4dbd4).withValues(alpha: 0.6),
-                  width: 1.0,
+                  width:
+                      isDark ? AppBorder.hairlineDark : AppBorder.hairline,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                boxShadow: AppShadows.chrome(Colors.black),
               ),
               child: NavigationBar(
-                selectedIndex: _getSelectedIndex(tabs),
+                selectedIndex: _destinationIndex(tabs, createSlotIndex),
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 elevation: AppElevation.level0,
                 height: 60,
                 onDestinationSelected: (destIndex) {
-                  final targetBranch = tabs[destIndex].branchIndex;
+                  HapticFeedback.lightImpact();
+                  // Center Create (+) slot (Rule 3): open the quick-action
+                  // sheet instead of switching branches.
+                  if (destIndex == createSlotIndex) {
+                    CreateActionBottomSheet.show(context);
+                    return;
+                  }
+                  final targetBranch = tabs[destIndex > createSlotIndex
+                          ? destIndex - 1
+                          : destIndex]
+                      .branchIndex;
+                  // Rule 9: re-tapping the active tab scrolls it to the top.
+                  if (targetBranch == widget.navigationShell.currentIndex) {
+                    ref
+                        .read(tabScrollToTopProvider.notifier)
+                        .trigger(targetBranch);
+                  }
                   widget.navigationShell.goBranch(
                     targetBranch,
                     initialLocation: targetBranch == widget.navigationShell.currentIndex,
                   );
                 },
-                destinations: tabs.map((tab) {
-                  // Bottom-nav badges (D12*): pending actions on Today,
-                  // unread notifications on Notices.
-                  final badgeCount = switch (tab.branchIndex) {
-                    0 => pendingActionCount,
-                    1 => unreadCount,
-                    _ => 0,
-                  };
-                  return NavigationDestination(
-                    icon: badgeCount > 0
-                        ? Badge(
-                            label: Text('$badgeCount'),
-                            child: Icon(tab.icon),
-                          )
-                        : Icon(tab.icon),
-                    selectedIcon: badgeCount > 0
-                        ? Badge(
-                            label: Text('$badgeCount'),
-                            child: Icon(tab.selectedIcon),
-                          )
-                        : Icon(tab.selectedIcon),
-                    label: tab.label,
-                  );
-                }).toList(),
+                destinations: [
+                  for (int i = 0; i < tabs.length; i++) ...[
+                    if (i == createSlotIndex) _buildCreateDestination(theme),
+                    _buildTabDestination(
+                      tabs[i],
+                      pendingActionCount,
+                      unreadCount,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
         ),
         ),
       ),
+    ),
     );
   }
 
-  int _getSelectedIndex(List<_TabData> tabs) {
+  /// Index inside the dock's destination list (tabs + Create slot) that
+  /// matches the active branch. The Create slot is skipped so it can never
+  /// render as the selected destination.
+  int _destinationIndex(List<_TabData> tabs, int createSlotIndex) {
     final currentBranch = widget.navigationShell.currentIndex;
     for (int i = 0; i < tabs.length; i++) {
       if (tabs[i].branchIndex == currentBranch) {
-        return i;
+        return i < createSlotIndex ? i : i + 1;
       }
     }
     return 0;
+  }
+
+  /// Tab destination with the D12* badges: pending actions on Today,
+  /// unread notifications on Notices.
+  NavigationDestination _buildTabDestination(
+    _TabData tab,
+    int pendingActionCount,
+    int unreadCount,
+  ) {
+    final badgeCount = switch (tab.branchIndex) {
+      0 => pendingActionCount,
+      2 => unreadCount,
+      _ => 0,
+    };
+    return NavigationDestination(
+      icon: badgeCount > 0
+          ? Badge(
+              label: Text('$badgeCount'),
+              child: Icon(tab.icon),
+            )
+          : Icon(tab.icon),
+      selectedIcon: badgeCount > 0
+          ? Badge(
+              label: Text('$badgeCount'),
+              child: Icon(tab.selectedIcon),
+            )
+          : Icon(tab.selectedIcon),
+      label: tab.label,
+    );
+  }
+
+  /// Center Create (+) action (Rule 3): renders as a raised circular button
+  /// so it reads as an action rather than a navigation destination.
+  NavigationDestination _buildCreateDestination(ThemeData theme) {
+    final color = theme.colorScheme.primary;
+    return NavigationDestination(
+      icon: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.add_rounded, size: 20, color: color),
+      ),
+      label: 'Create',
+    );
   }
 
   /// Registry-backed capability check (D7*): consults the mirrored

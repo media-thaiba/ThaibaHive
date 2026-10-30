@@ -6,6 +6,7 @@ import { Activity, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { LoginHeader } from "./_components/login-header";
 import { LoginForm } from "./_components/login-form";
 import type { AuthMode } from "./_components/login-header";
+import { DiagnosticsButton } from "@/components/diagnostics-button";
 
 // ── Theme definitions matching AuthMode (WCAG AA >= 4.5:1 with #ffffff text) ──
 const modeThemes = {
@@ -101,9 +102,12 @@ export default function LoginPage() {
           <Activity className="h-3 w-3 text-emerald-400" />
           <span>System Status: Operational</span>
         </div>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-medium">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          <span>v2.6 Secure Node</span>
+        <div className="flex items-center gap-2.5">
+          <DiagnosticsButton variant="pill" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-medium">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>v2.6 Secure Node</span>
+          </div>
         </div>
       </header>
 
@@ -205,6 +209,9 @@ export default function LoginPage() {
           &copy; 2026 Thaiba Garden Group of Institutions &bull; All Rights Reserved
         </p>
       </footer>
+
+      {/* Floating Diagnostics Button */}
+      <DiagnosticsButton variant="floating" />
     </div>
   );
 }

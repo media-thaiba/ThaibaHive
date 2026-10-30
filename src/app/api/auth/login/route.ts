@@ -1,7 +1,9 @@
+import crypto from "crypto";
+import { mintCsrfToken } from "@/lib/api/csrf";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
-import { verifyPassword, createSession } from "@/lib/auth";
+import { verifyPassword, createSession, createSessionWithRefresh } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth/schemas";
 import { logActivity } from "@/lib/api/activity-log";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -95,7 +97,7 @@ export const POST = withPublicApm(async function POST(request: Request) {
           deviceTrustScore = fingerprintToTrustScore(drift);
         } else {
           await db.insert(device_fingerprints).values({
-            id: `dev_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+            id: `dev_${crypto.randomUUID()}`,
             staff_id: staffMember.id,
             institution_id: null,
             composite_hash: compositeHash,
@@ -186,12 +188,34 @@ export const POST = withPublicApm(async function POST(request: Request) {
       tokenVersion: staffMember.tokenVersion ?? 0,
     };
 
-    const token = dpopThumbprint
-      ? await (await import("@/lib/auth")).createDPoPSession(sessionPayload, dpopThumbprint, rememberMe)
-      : await createSession(sessionPayload, rememberMe);
+    const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
+    let token: string;
+    let refreshToken: string | undefined;
+
+    if (dpopThumbprint) {
+      token = await (await import("@/lib/auth")).createDPoPSession(sessionPayload, dpopThumbprint, rememberMe);
+    } else if (isMobileClient && rememberMe) {
+      const ttlSeconds = 30 * 24 * 60 * 60; // 30 days for mobile remember-me
+      const res = await createSessionWithRefresh(
+        sessionPayload,
+        true,
+        "mobile",
+        ttlSeconds
+      );
+      token = res.token;
+      refreshToken = res.refreshToken;
+    } else {
+      token = await createSession(
+        sessionPayload,
+        rememberMe,
+        isMobileClient ? "mobile" : undefined,
+        isMobileClient ? 24 * 60 * 60 : undefined
+      );
+    }
 
     // Record session in identity_sessions table & log migration event (IDP-004)
-    const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const sessionId = `sess_${crypto.randomUUID()}`;
+    await mintCsrfToken();
     try {
       const { identity_sessions } = await import("@thaiba/db/schema");
       const { logMigrationEvent } = await import("@/lib/identity/migration-layer");
@@ -220,10 +244,8 @@ export const POST = withPublicApm(async function POST(request: Request) {
 
     // F-12: JWT in response body only for mobile clients presenting the
     // platform header; web clients rely on the httpOnly cookie alone.
-    const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
-
     return NextResponse.json({
-      ...(isMobileClient ? { token } : {}),
+      ...(isMobileClient ? { token, ...(refreshToken ? { refreshToken } : {}) } : {}),
       user: {
         id: staffMember.id,
         email: staffMember.email,

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { ArrowRight, Lock, Mail, User, ShieldCheck, Fingerprint, KeyRound } from "lucide-react";
@@ -12,6 +13,7 @@ import { DeviceFingerprintCollector } from "@/components/auth/device-fingerprint
 import { StepUpChallengeDialog } from "@/components/auth/stepup-challenge-dialog";
 import { useDPoP } from "@/lib/hooks/use-dpop";
 import type { DeviceFingerprint } from "@/lib/identity/device-fingerprint";
+import { telemetry } from "@/lib/diagnostics/logger";
 
 type LoginFormProps = {
   mode: AuthMode;
@@ -69,6 +71,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   const [resendState, setResendState] = useState<"idle" | "sending" | "sent">("idle");
   const [resendError, setResendError] = useState("");
   const [signupSent, setSignupSent] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [fingerprint, setFingerprint] = useState<DeviceFingerprint | null>(null);
   const [stepUpState, setStepUpState] = useState<{
@@ -84,14 +87,19 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
   });
   const { attachDPoP } = useDPoP();
 
-  const googleConfigured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS);
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS?.split(",")[0]?.trim() || "";
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const rawGoogleClientIds = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_IDS || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "")
+    .replace(/[\uFEFF\u200B\u00A0"']/g, "")
+    .trim();
+  const googleClientId = rawGoogleClientIds.split(",")[0]?.trim() || "";
+  const googleConfigured = Boolean(googleClientId);
   const [googleInitialized, setGoogleInitialized] = useState(false);
 
   const handleCredentialResponse = useCallback(async (response: { credential: string }) => {
     const idToken = response.credential;
     setError("");
     setLoading(true);
+    telemetry.info("[Google GIS] Received credential response, exchanging with /api/auth/google...");
     try {
       const res = await fetch("/api/auth/google", {
         method: "POST",
@@ -99,51 +107,100 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
         body: JSON.stringify({ idToken }),
       });
       if (res.ok) {
+        telemetry.info("[Google GIS] Authentication successful, navigating to root...");
         router.push("/");
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Google authentication failed");
+        const errMsg = data.error || "Google authentication failed";
+        telemetry.error("[Google GIS] Server error: " + errMsg);
+        setError(errMsg);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google authentication failed");
+      const errMsg = err instanceof Error ? err.message : "Google authentication failed";
+      telemetry.error("[Google GIS] Network/fetch error: " + errMsg);
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
   }, [router]);
 
   useEffect(() => {
-    if (!googleClientId || googleInitialized || typeof window === "undefined") return;
+    if (!googleClientId || typeof window === "undefined") {
+      if (!googleClientId) {
+        telemetry.warn("[Google GIS] NEXT_PUBLIC_GOOGLE_CLIENT_IDS is not configured");
+      }
+      return;
+    }
+
+    const initGsi = () => {
+      try {
+        if ((window as any).google?.accounts?.id) {
+          (window as any).google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+          try {
+            (window as any).google.accounts.id.disableAutoSelect();
+          } catch {}
+          setGoogleInitialized(true);
+          telemetry.info("[Google GIS] Initialized with Client ID: " + googleClientId.slice(0, 16) + "...");
+        }
+      } catch (err) {
+        telemetry.error("[Google GIS] Initialization failed: " + (err instanceof Error ? err.message : String(err)));
+      }
+    };
+
+    if ((window as any).google?.accounts?.id) {
+      initGsi();
+      return;
+    }
+
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleCredentialResponse,
-        });
-        setGoogleInitialized(true);
-      }
+      telemetry.info("[Google GIS] Script loaded from Google CDN");
+      initGsi();
+    };
+    script.onerror = () => {
+      telemetry.error("[Google GIS] Failed to load script from accounts.google.com");
     };
     document.head.appendChild(script);
-  }, [googleClientId, googleInitialized, handleCredentialResponse]);
+  }, [googleClientId, handleCredentialResponse]);
+
+  const renderGoogleButton = useCallback(() => {
+    if (typeof window === "undefined" || !(window as any).google?.accounts?.id) return;
+    const container = googleBtnRef.current || document.getElementById("google-signin-btn");
+    if (!container) return;
+    try {
+      container.innerHTML = "";
+      (window as any).google.accounts.id.renderButton(container, {
+        theme: "outline",
+        size: "large",
+        width: 300,
+        shape: "pill",
+        text: "continue_with",
+        logo_alignment: "left",
+      });
+      telemetry.info("[Google GIS] Rendered Google Sign-In button into DOM");
+    } catch (err) {
+      telemetry.error("[Google GIS] renderButton error: " + (err instanceof Error ? err.message : String(err)));
+    }
+  }, []);
 
   useEffect(() => {
-    if (mode === "google" && googleInitialized && typeof window !== "undefined" && (window as any).google?.accounts?.id) {
-      const container = document.getElementById("google-signin-btn");
-      if (container) {
-        container.innerHTML = "";
-        (window as any).google.accounts.id.renderButton(container, {
-          theme: "outline",
-          size: "large",
-          width: 280,
-          shape: "pill",
-          text: "continue_with",
-        });
-      }
+    if (mode === "google" && googleInitialized) {
+      const t1 = setTimeout(renderGoogleButton, 50);
+      const t2 = setTimeout(renderGoogleButton, 300);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
-  }, [mode, googleInitialized]);
+  }, [mode, googleInitialized, renderGoogleButton]);
 
   async function handlePasskeyLogin() {
     setPasskeyLoading(true);
@@ -264,6 +321,10 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
       setError("Passwords do not match");
       return;
     }
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service and acknowledge the Privacy Policy to register.");
+      return;
+    }
     setLoading(true);
     try {
       await signup({
@@ -286,13 +347,59 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
     e.preventDefault();
     setError("");
     setLoading(true);
+    telemetry.info("[Google GIS] Continue with Google button clicked");
+
     try {
       if (!(window as any)?.google?.accounts?.id) {
-        throw new Error("Google Identity Services not loaded");
+        throw new Error("Google Identity Services not loaded. Check connection or ad-blocker.");
       }
-      (window as any).google.accounts.id.prompt();
+
+      // Check if rendered button exists in DOM and delegate click to open standard popup
+      const container = googleBtnRef.current || document.getElementById("google-signin-btn");
+      const renderedBtn = container?.querySelector('div[role="button"]') as HTMLElement | null;
+      if (renderedBtn) {
+        telemetry.info("[Google GIS] Delegating click to rendered Google button");
+        renderedBtn.click();
+        setTimeout(() => setLoading(false), 2000);
+        return;
+      }
+
+      // Fallback: invoke prompt with notification callback so loading state is never stuck
+      telemetry.info("[Google GIS] Invoking google.accounts.id.prompt()...");
+      (window as any).google.accounts.id.prompt((notification: any) => {
+        const isDisplayed = notification.isDisplayed?.();
+        const isNotDisplayed = notification.isNotDisplayed?.();
+        const notDisplayedReason = notification.getNotDisplayedReason?.();
+        const isSkipped = notification.isSkippedMoment?.();
+        const skippedReason = notification.getSkippedReason?.();
+        const isDismissed = notification.isDismissedMoment?.();
+        const dismissedReason = notification.getDismissedReason?.();
+
+        telemetry.info(
+          `[Google GIS] Prompt notification: displayed=${isDisplayed}, notDisplayed=${isNotDisplayed} (${notDisplayedReason}), skipped=${isSkipped} (${skippedReason}), dismissed=${isDismissed} (${dismissedReason})`
+        );
+
+        if (isNotDisplayed || isSkipped || isDismissed) {
+          setLoading(false);
+          const reason = notDisplayedReason || skippedReason || dismissedReason;
+          if (reason === "opt_out_or_no_session") {
+            setError("No active Google account detected in browser. Please sign in to Google or use the button above.");
+          } else if (reason === "suppressed_by_user") {
+            setError("Google prompt was dismissed recently. Please click the Google button directly.");
+          } else if (reason) {
+            setError(`Google prompt status: ${reason}. Check Live Diagnostics for details.`);
+          }
+        }
+      });
+
+      // Safety timeout: reset loading if prompt never responds
+      setTimeout(() => {
+        setLoading(false);
+      }, 4000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google authentication failed");
+      const msg = err instanceof Error ? err.message : "Google authentication failed";
+      telemetry.error("[Google GIS] Submit error: " + msg);
+      setError(msg);
       setLoading(false);
     }
   }
@@ -616,6 +723,47 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               </div>
             </div>
 
+            {/* Mandatory legal consent — DPDP Act 2023 notice & Apple/Google store rules */}
+            <div className="rounded-xl border border-border/60 bg-card/50 p-3 space-y-2.5">
+              <label htmlFor="signup-terms" className="flex items-start gap-2.5 cursor-pointer group">
+                <input
+                  id="signup-terms"
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  aria-label="I agree to the Terms of Service and acknowledge the Privacy Policy"
+                  className="sr-only"
+                />
+                <div
+                  aria-hidden="true"
+                  className={`mt-0.5 w-[18px] h-[18px] shrink-0 rounded border transition-all duration-200 flex items-center justify-center ${
+                    agreedToTerms ? "bg-primary border-primary" : "border-border bg-background/80"
+                  }`}
+                >
+                  {agreedToTerms && (
+                    <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-[11px] leading-relaxed text-muted-foreground group-hover:text-foreground transition-colors">
+                  By registering, I agree to the{" "}
+                  <Link href="/terms" target="_blank" rel="noreferrer" className="font-semibold text-primary underline underline-offset-2">
+                    Terms of Service
+                  </Link>{" "}
+                  and acknowledge the{" "}
+                  <Link href="/privacy" target="_blank" rel="noreferrer" className="font-semibold text-primary underline underline-offset-2">
+                    Privacy Policy
+                  </Link>
+                  , including the{" "}
+                  <Link href="/legal/dpdp-notice" target="_blank" rel="noreferrer" className="font-semibold text-primary underline underline-offset-2">
+                    DPDP Act 2023 notice
+                  </Link>
+                  .
+                </span>
+              </label>
+            </div>
+
             {error && (
               <div aria-live="polite">
                 <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">{error}</Alert>
@@ -646,7 +794,7 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
             <div className="space-y-3 pt-3">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !agreedToTerms}
                 aria-label="Register account and sign in"
                 style={{ backgroundColor: activeTheme.accent }}
                 className="w-full hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-full h-11 flex items-center justify-center gap-1.5 transition-all shadow-md text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden"
@@ -683,7 +831,12 @@ export function LoginForm({ mode, handleModeChange, activeTheme }: LoginFormProp
               <p className="text-xs text-muted-foreground text-center leading-relaxed max-w-[260px]">
                 Authenticate your Google account securely without credentials.
               </p>
-              <div id="google-signin-btn" className="flex justify-center min-h-[44px] w-full" />
+              <div id="google-signin-btn" ref={googleBtnRef} className="flex justify-center min-h-[44px] w-full" />
+              {!googleConfigured && (
+                <p className="text-[11px] text-amber-400 font-medium text-center">
+                  Google Client ID is not configured. Check Live Diagnostics.
+                </p>
+              )}
             </div>
 
             {error && (

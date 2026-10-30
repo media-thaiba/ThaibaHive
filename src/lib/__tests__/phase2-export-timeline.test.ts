@@ -15,10 +15,21 @@ describe("Phase 2 — Staff Timeline Authorization & Export Engine Security", ()
 
     it("should allow super_admin and admin to access any staff timeline", async () => {
       const superAdminAllowed = await canAccessStaff("admin-001", "super_admin", "staff-999");
+
+      jest.spyOn(db, "select").mockImplementation((() => ({
+        from: () => ({
+          where: () => ({
+            all: () => [{ institutionId: "inst-A" }],
+          }),
+        }),
+      })) as unknown as typeof db.select);
+
       const adminAllowed = await canAccessStaff("admin-002", "admin", "staff-999");
 
       expect(superAdminAllowed).toBe(true);
       expect(adminAllowed).toBe(true);
+
+      jest.restoreAllMocks();
     });
 
     it("should verify principal branch: allow same institution, deny different institution", async () => {
@@ -26,13 +37,10 @@ describe("Phase 2 — Staff Timeline Authorization & Export Engine Security", ()
       const spySelect = jest.spyOn(db, "select").mockImplementation((() => ({
         from: () => ({
           where: () => ({
-            limit: (n: number) => {
-              // Return inst-A for caller, inst-B for target
-              return [{ institutionId: "inst-A" }];
-            },
+            all: () => [{ institutionId: "inst-A" }],
           }),
         }),
-      })) as any);
+      })) as unknown as typeof db.select);
 
       // Caller & target in same inst-A
       const sameAllowed = await canAccessStaff("principal-001", "principal", "staff-same-inst");
@@ -45,13 +53,13 @@ describe("Phase 2 — Staff Timeline Authorization & Export Engine Security", ()
       jest.spyOn(db, "select").mockImplementation((() => ({
         from: () => ({
           where: () => ({
-            limit: (n: number) => {
+            all: () => {
               callCount++;
-              return [{ institutionId: callCount === 1 ? "inst-A" : "inst-B" }];
+              return [{ institutionId: callCount <= 2 ? "inst-A" : "inst-B" }];
             },
           }),
         }),
-      })) as any);
+      })) as unknown as typeof db.select);
 
       const diffAllowed = await canAccessStaff("principal-001", "principal", "staff-diff-inst");
       expect(diffAllowed).toBe(false);
@@ -72,7 +80,7 @@ describe("Phase 2 — Staff Timeline Authorization & Export Engine Security", ()
             },
           }),
         }),
-      })) as any);
+      })) as unknown as typeof db.select);
 
       const allowedManaged = await canAccessStaff("hod-001", "hod", "managed-staff-002");
       expect(allowedManaged).toBe(true);

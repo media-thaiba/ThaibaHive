@@ -37,6 +37,9 @@ const basePermissions = {
     "system:cache:sync",
     "system:dr",
     "system:read",
+    "system:audit:read",
+    "system:audit:verify",
+    "system:diagnostics:read",
     "system:cron",
     "cache:manage",
     "media:reconcile",
@@ -116,7 +119,10 @@ const basePermissions = {
     "conference:manage",
     "notifications:read",
     "institutions:read",
-    "auth:logout"
+    "auth:logout",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue"
   ],
   institutional_head: [
     "academic.student.admissions",
@@ -293,7 +299,13 @@ const basePermissions = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   academic_coordinator: [
     "academic.grade.create",
@@ -425,7 +437,8 @@ const basePermissions = {
     "tasks:update",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view"
   ],
   inspector: [
     "reports:read",
@@ -474,6 +487,7 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
   inspector: basePermissions.inspector,
 
   regional_admin: [
+    "system:diagnostics:read",
     "academic.student.admissions",
     "academic.classes.manage",
     "academic.grade.create",
@@ -696,7 +710,13 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "conference:create",
     "conference:join",
     "conference:record",
-    "conference:manage"
+    "conference:manage",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   regional_auditor: [
     "regional:view",
@@ -776,9 +796,16 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "conference:join",
     "notifications:read",
     "institutions:read",
-    "auth:logout"
+    "auth:logout",
+    "system:sessions:view",
+    "system:sessions:terminate",
+    "system:audit:read",
+    "system:audit:verify",
+    "system:diagnostics:read"
   ],
   admin: [
+    "system:diagnostics:read",
+    "system:sessions:terminate",
     "academic.student.admissions",
     "students:create",
     "students:read",
@@ -1164,9 +1191,18 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   principal: [
+    "system:sessions:terminate",
+    "system:audit:read",
+    "system:audit:verify",
     "academic.student.admissions",
     "students:create",
     "students:read",
@@ -1482,7 +1518,13 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   hod: [
     "exam.marks.enter",
@@ -1639,7 +1681,11 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:fine:assess"
   ],
   staff: [
     "exam.marks.enter",
@@ -1745,7 +1791,11 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:bed:view",
+    "hostel:bed:allocate",
+    "hostel:pass:issue",
+    "hostel:pass:scan"
   ],
   accounts: [
     "staff:read",
@@ -1845,7 +1895,9 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "notifications:read",
     "institutions:read",
     "auth:logout",
-    "checklists:read"
+    "checklists:read",
+    "hostel:fine:assess",
+    "hostel:fine:waive"
   ],
   purchase: [
     "staff:read",
@@ -1987,4 +2039,99 @@ export function getRolePermissions(role: string) {
     return [];
   }
   return rolePermissions[role] ?? [];
+}
+
+export const ROLE_RANK_MAP: Record<StaffRole, number> = {
+  super_admin: 100,
+  regional_admin: 90,
+  principal: 70,
+  institutional_head: 70,
+  hod: 65,
+  coordinator: 65,
+  admin: 60,
+  accounts: 50,
+  purchase: 50,
+  regional_auditor: 50,
+  inspector: 45,
+  academic_coordinator: 45,
+  exam_coordinator: 45,
+  teacher: 40,
+  staff: 40,
+  system: 1000,
+};
+
+export function getRoleRank(role: unknown): number | null {
+  if (typeof role !== "string" || !Object.hasOwn(ROLE_RANK_MAP, role)) {
+    return null;
+  }
+  return ROLE_RANK_MAP[role as StaffRole];
+}
+
+export function canCreateRole(callerRole: unknown, targetRole: unknown): boolean {
+  if (targetRole === "system") return false;
+  if (callerRole === "system") return false;
+  const callerRank = getRoleRank(callerRole);
+  const targetRank = getRoleRank(targetRole);
+  if (callerRank === null || targetRank === null) return false;
+  if (callerRole === "super_admin") {
+    return targetRole === "super_admin" || targetRank < callerRank;
+  }
+  return targetRank < callerRank;
+}
+
+export function canMutateStaff(
+  callerRole: unknown,
+  targetCurrentRole: unknown,
+  targetNewRole?: unknown
+): boolean {
+  if (targetCurrentRole === "system" || targetNewRole === "system") return false;
+  if (callerRole === "system") return false;
+
+  const callerRank = getRoleRank(callerRole);
+  const currentRank = getRoleRank(targetCurrentRole);
+  if (callerRank === null || currentRank === null) return false;
+
+  if (callerRole === "super_admin") {
+    if (targetNewRole !== undefined) {
+      if (targetNewRole === "system") return false;
+      const newRank = getRoleRank(targetNewRole);
+      if (newRank === null) return false;
+    }
+    return true;
+  }
+
+  // Non-super_admin: Cannot mutate equal or higher current rank
+  if (currentRank >= callerRank) {
+    return false;
+  }
+
+  // Non-super_admin: Cannot elevate target to equal or higher rank
+  if (targetNewRole !== undefined) {
+    const newRank = getRoleRank(targetNewRole);
+    if (newRank === null || newRank >= callerRank) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function isAuthorizedDeveloper(user: { email?: string | null; role?: string | null; emailVerifiedAt: string | null } | null | undefined): boolean {
+  if (!user || !user.email) return false;
+  // Strict fail-closed: emailVerifiedAt MUST be present and truthy (Rule 32 / C2)
+  if (!user.emailVerifiedAt) return false;
+  const rawList = process.env.DEVELOPER_EMAILS || "";
+  const allowed = rawList.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+  return allowed.includes(user.email.toLowerCase().trim());
+}
+
+export const ALL_VALID_PERMISSIONS: Set<string> = new Set([
+  ...Object.values(rolePermissions).flat().filter(p => p !== "*"),
+  ...Object.keys(DOT_TO_COLON_MAP),
+  ...Object.values(DOT_TO_COLON_MAP),
+]);
+
+export function isValidPermission(permission: string): boolean {
+  if (permission === "*") return true;
+  return ALL_VALID_PERMISSIONS.has(permission);
 }

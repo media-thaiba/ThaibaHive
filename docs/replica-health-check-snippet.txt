@@ -1,0 +1,33 @@
+================================================================================
+PRESERVED SNIPPET: Replica Query Router Health Check Initialization
+Target File: packages/db/index.ts
+Target Location: Line 248 (immediately after export const replicaRouter = new ReplicaQueryRouter(...))
+Status: Stored pending implementation of startHealthCheck() on ReplicaQueryRouter in packages/db/replica-router.ts
+================================================================================
+
+// Start the periodic replica health-check loop so stale "healthy" defaults
+// get refreshed before the first read is routed to a dead replica.
+// The timer is unref'd so it never keeps the process alive on its own.
+if (replicaRouter.isEnabled()) {
+  replicaRouter.startHealthCheck();
+}
+
+================================================================================
+FULL SURROUNDING CONTEXT:
+================================================================================
+
+export const replicaRouter = new ReplicaQueryRouter(dbInstance, replicaInstances, {
+  primaryUrl: databaseUrl,
+  replicaUrls,
+  enabled: process.env.DB_READ_REPLICAS_ENABLED !== "false" && replicaInstances.length > 0,
+  sessionStickinessTtlMs: parseInt(process.env.DB_SESSION_STICKINESS_TTL_MS || "30000", 10),
+  maxLagMs: parseInt(process.env.DB_REPLICA_MAX_LAG_MS || "2000", 10),
+});
+
+// <--- INSERT SNIPPET HERE ONCE replicaRouter.startHealthCheck() EXISTS --->
+
+// Global Multi-Tenant Router instance
+export const tenantRouter = new TenantRouter(dbInstance, {
+  defaultRegion: "default",
+  regionTenants: {},
+});

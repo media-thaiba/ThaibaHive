@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { ImageCropper } from "@/components/ui/image-cropper";
-import { LogOut, Camera, Loader2, User, Shield, Bell } from "lucide-react";
+import { LogOut, Camera, Loader2, User, Shield, Bell, Trash2, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { staff, logout } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState({
     firstName: staff?.firstName || "",
     lastName: staff?.lastName || "",
@@ -28,6 +31,12 @@ export default function SettingsPage() {
   const [avatarMsg, setAvatarMsg] = useState("");
   const [showCropper, setShowCropper] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState("");
+
+  // Self-service account deletion (Apple 5.1.1(v) / Google Play / DPDP 2023 §12)
+  const [showDeleteZone, setShowDeleteZone] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const [notifPrefs, setNotifPrefs] = useState({
     announcements: true,
@@ -93,6 +102,34 @@ export default function SettingsPage() {
       setPassMsg(d.error || "Failed to change password. Please check your current password.");
     }
     setChangingPass(false);
+  }
+
+  async function deleteAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setDeleteError("");
+    if (!deleteConfirm.trim()) {
+      setDeleteError("Enter your password (or your account email for SSO accounts) to confirm.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/auth/account-deletion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deleteConfirm, confirmEmail: deleteConfirm }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteError(data.error || "Account deletion failed. Please try again.");
+        setDeleting(false);
+        return;
+      }
+      toast.success("Account deleted. Your sessions have been revoked.");
+      router.push("/auth/login");
+    } catch {
+      setDeleteError("Account deletion failed. Please try again.");
+      setDeleting(false);
+    }
   }
 
   async function uploadAvatar(e: React.ChangeEvent<HTMLInputElement>) {
@@ -346,6 +383,95 @@ export default function SettingsPage() {
             <span>Account ID</span>
             <span className="font-medium text-foreground font-mono text-xs">{staff?.id}</span>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Privacy & Account Deletion */}
+      <Card className="animate-slide-up border-destructive/30">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
+            <CardTitle className="text-base">Privacy &amp; Account Deletion</CardTitle>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Permanently delete your ThaibaHive account. This revokes every active session immediately and
+            anonymises your personal data. Records we must keep under Indian law (payroll, income tax and
+            audit trails) are retained for the statutory period only. Read the{" "}
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+              Privacy Policy
+            </Link>{" "}
+            and{" "}
+            <Link href="/account-deletion" className="underline underline-offset-2 hover:text-foreground">
+              deletion details
+            </Link>
+            .
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!showDeleteZone ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteZone(true)}
+              className="text-destructive hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20"
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" aria-hidden="true" />
+              Delete My Account
+            </Button>
+          ) : (
+            <form onSubmit={deleteAccount} className="space-y-3">
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <TriangleAlert className="h-4 w-4 shrink-0 text-destructive mt-0.5" aria-hidden="true" />
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  This cannot be undone. Enter your password to confirm (for SSO accounts, enter your account
+                  email address instead).
+                </p>
+              </div>
+              <label
+                htmlFor="delete-confirm"
+                className="text-xs font-semibold uppercase tracking-wider text-foreground"
+              >
+                Confirm to delete
+              </label>
+              <Input
+                id="delete-confirm"
+                type="password"
+                autoComplete="off"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Password or account email"
+                className="bg-background/80 border-border text-foreground placeholder:text-muted-foreground h-10 px-3 rounded-xl text-xs"
+              />
+              {deleteError && (
+                <div aria-live="polite">
+                  <Alert variant="error" className="py-2.5 px-3.5 text-xs rounded-xl">
+                    {deleteError}
+                  </Alert>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  disabled={deleting}
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                >
+                  {deleting ? "Deleting..." : "Permanently Delete Account"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={deleting}
+                  onClick={() => {
+                    setShowDeleteZone(false);
+                    setDeleteConfirm("");
+                    setDeleteError("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
 

@@ -10,6 +10,7 @@ jest.mock("@thaiba/auth", () => {
       return perm === "search:global";
     }),
     resolveScopedInstitutionId: jest.fn(async (instId?: string | null) => instId || "global"),
+    resolveInstitutionScopeForSession: jest.fn(async (s: any) => s?.institutionId || "inst-test"),
   };
 });
 

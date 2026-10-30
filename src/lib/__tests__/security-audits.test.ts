@@ -18,6 +18,7 @@ jest.mock("@thaiba/auth", () => {
   return {
     ...actual,
     verifySession: jest.fn(),
+    resolveInstitutionScopeForSession: jest.fn().mockResolvedValue("inst-1"),
     hasPermission: jest.fn((role, perm) => {
       // Forward to the real hasPermission from packages/auth/roles
       return require("../../../packages/auth/roles").hasPermission(role, perm);

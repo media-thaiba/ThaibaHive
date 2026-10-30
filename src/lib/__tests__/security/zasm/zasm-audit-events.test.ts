@@ -3,14 +3,15 @@ import { DeviceTrustScore } from '@/lib/security/trust/trust-types';
 import { db } from '@/db';
 import { auditLogs } from '@thaiba/db/schema';
 import { eq } from 'drizzle-orm';
-import { verifyAuditChain } from '@/lib/audit/crypto-audit-engine';
+import { verifyAuditChainIntegrity } from '@/lib/audit/verifier';
 
 describe('ZasmAuditLogger', () => {
   it('logs device trust evaluation and certificate events with Merkle chain persistence', async () => {
     const testDeviceId = `dev-audit-${Date.now()}`;
+    const testTenantId = `tenant-zasm-${Date.now()}`;
     const score: DeviceTrustScore = {
       deviceId: testDeviceId,
-      tenantId: 'tenant-audit',
+      tenantId: testTenantId,
       score: 95,
       tier: 'HIGH_TRUST',
       factorBreakdown: {
@@ -38,7 +39,8 @@ describe('ZasmAuditLogger', () => {
     expect(loggedEntries[0].currentHash).toBeDefined();
 
     // Verify cryptographic integrity of logged entries
-    const verification = verifyAuditChain(loggedEntries as any);
+    const verification = await verifyAuditChainIntegrity(testTenantId);
     expect(verification.valid).toBe(true);
   });
 });
+

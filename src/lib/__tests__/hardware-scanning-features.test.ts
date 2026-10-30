@@ -10,8 +10,8 @@ jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(() => true),
   resolveScopedInstitutionId: jest.fn(async (requested?: string | null) => requested || "global"),
-  getUserInstitutionScope: jest.fn(async () => "global"),
-  resolveInstitutionScopeForSession: jest.fn(async () => "global"),
+  getUserInstitutionScope: jest.fn(async () => "inst-1"),
+  resolveInstitutionScopeForSession: jest.fn(async (session: { institutionId?: string | null }) => session?.institutionId || "inst-1"),
 }));
 
 
@@ -22,7 +22,16 @@ jest.mock("@/lib/api/activity-log", () => ({
 jest.mock("@/db", () => {
   return {
     db: {
-      select: jest.fn(),
+      select: jest.fn(() => ({
+        from: jest.fn(() => ({
+          where: jest.fn(() => ({
+            limit: jest.fn(() => ({
+              get: jest.fn().mockResolvedValue({ institutionId: "inst-1" }),
+            })),
+            get: jest.fn().mockResolvedValue(null),
+          })),
+        })),
+      })),
       update: jest.fn().mockReturnValue({
         set: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
@@ -43,7 +52,7 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
 
   describe("1. GET /api/admin/attendance-locations/[id]/qr", () => {
     it("should return 404 if location is missing", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({ staffId: "admin-1", role: "admin" });
+      (verifySession as jest.Mock).mockResolvedValueOnce({ staffId: "admin-1", role: "admin", institutionId: "inst-1" });
       (db.select as jest.Mock).mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
@@ -59,11 +68,11 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
     });
 
     it("should return dynamic HMAC TOTP QR payload for active location", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({ staffId: "admin-1", role: "admin" });
+      (verifySession as jest.Mock).mockResolvedValueOnce({ staffId: "admin-1", role: "admin", institutionId: "inst-1" });
       (db.select as jest.Mock).mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
-            get: jest.fn().mockResolvedValue({ id: "loc-1", name: "Main Gate", isActive: true, qrSecret: "secret-key-123" }),
+            get: jest.fn().mockResolvedValue({ id: "loc-1", name: "Main Gate", isActive: true, qrSecret: "secret-key-123", institutionId: "inst-1" }),
           }),
         }),
       });
@@ -179,11 +188,11 @@ describe("Hardware & Scanning Mobile Features API Suite", () => {
     });
 
     it("should pair BLE beacon parameters to attendance location", async () => {
-      (verifySession as jest.Mock).mockResolvedValueOnce({ staffId: "admin-1", role: "admin" });
+      (verifySession as jest.Mock).mockResolvedValueOnce({ staffId: "admin-1", role: "admin", institutionId: "inst-1" });
       (db.select as jest.Mock).mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue({ id: "loc-1", name: "Library Entrance" }),
+            get: jest.fn().mockReturnValue({ id: "loc-1", name: "Library Entrance", institutionId: "inst-1" }),
           }),
         }),
       });

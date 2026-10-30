@@ -23,6 +23,7 @@ jest.mock("@thaiba/auth", () => {
     verifySession: jest.fn().mockImplementation(() => Promise.resolve(currentMockSession)),
     resolveScopedInstitutionId: jest.fn().mockImplementation(() => currentMockSession.institutionId),
     resolveRequestInstitution: jest.fn().mockImplementation(() => Promise.resolve(currentMockSession.institutionId)),
+    resolveInstitutionScopeForSession: jest.fn().mockImplementation(() => Promise.resolve(currentMockSession.institutionId)),
   };
 });
 

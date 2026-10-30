@@ -113,7 +113,7 @@ const myWorkItems: NavItem[] = [
   { href: "/my-work/expenses", label: "Expenses", desc: "Submit expense claims and track reimbursements", icon: Receipt, workspace: "my-work" },
   { href: "/my-work/availability", label: "Availability", desc: "Set your working-hours availability & time off", icon: CalendarClock, workspace: "my-work" },
   { href: "/my-work/recognition", label: "Recognition", desc: "Give kudos and celebrate peer achievements", icon: Award, workspace: "my-work" },
-  { href: "/my-work/grievances", label: "Complaints", desc: "Raise and track workplace complaints", icon: AlertTriangle, workspace: "my-work" },
+  { href: "/my-work/complaints", label: "Complaints", desc: "Raise and track workplace complaints", icon: AlertTriangle, workspace: "my-work" },
 ];
 
 // --- School ---

@@ -14,6 +14,11 @@ import {
 
 import { getJwtSecretBytes } from "@thaiba/auth/config";
 import { resolveLegacyRedirect } from "./lib/navigation/legacy-redirects";
+import {
+  isPilotFreezeActive,
+  isFrozenPilotPath,
+  pilotFrozenModuleResponse,
+} from "./lib/attendance/pilot-gate";
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
@@ -64,6 +69,13 @@ const exactPublicPaths = new Set([
   "/affiliation",
   "/apple-app-site-association",
   "/favicon.ico",
+  // Legal suite: required to be reachable without a session by Apple 5.1.1(v),
+  // Google Play and the DPDP Act 2023 (notice, grievance and deletion pages).
+  "/privacy",
+  "/terms",
+  "/cookies",
+  "/account-deletion",
+  "/legal/dpdp-notice",
 ]);
 
 const prefixPublicPaths = [
@@ -109,6 +121,41 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Gated test fixtures: /dev/ routes are strictly forbidden in production unless NEXT_PUBLIC_E2E=1
+  // Normalize path (decode percent-encoding up to 2 passes, lower-case, collapse multiple slashes/dots) to prevent bypasses.
+  // Stored in separate canonicalDevPath so original case-sensitive pathname is preserved for downstream routing.
+  let canonicalDevPath = pathname;
+  let isMalformedUri = false;
+  try {
+    let prev = "";
+    let curr = pathname;
+    for (let i = 0; i < 2 && prev !== curr; i++) {
+      prev = curr;
+      curr = decodeURIComponent(curr);
+    }
+    canonicalDevPath = curr.toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/\.\//g, "/");
+  } catch {
+    isMalformedUri = true;
+  }
+
+  // Fail closed on malformed percent encoding if path attempts to target /dev/
+  if (isMalformedUri && (/^\/(%|[dD][eE][vV])/i.test(pathname) || pathname.toLowerCase().includes("dev"))) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  if (canonicalDevPath.startsWith("/dev/") || canonicalDevPath === "/dev") {
+    const isE2E = process.env.NEXT_PUBLIC_E2E === "1";
+    const isDev = process.env.NODE_ENV !== "production";
+    if (!isE2E && !isDev) {
+      return new NextResponse(null, { status: 404 });
+    }
+    // Scope bypass strictly to the exact fixture route
+    if (canonicalDevPath === "/dev/sheet-harness" || canonicalDevPath === "/dev/sheet-harness/") {
+      return addSecurityHeaders(request, nextWithNonce(request, nonce), pathname, nonce);
+    }
+    return new NextResponse(null, { status: 404 });
+  }
+
   try {
     const method = request.method;
     const isWrite = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
@@ -135,6 +182,34 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       return addSecurityHeaders(request, NextResponse.redirect(new URL("/", request.url)), pathname, nonce);
     }
 
+    // V1.0 Pilot Freeze Gate: Intercept all frozen module routes and pages (fails closed)
+    if (isPilotFreezeActive()) {
+      const frozenModule = isFrozenPilotPath(pathname);
+      if (frozenModule) {
+        const isApiOrAction =
+          pathname.startsWith("/api/") ||
+          Boolean(request.headers.get("next-action")) ||
+          Boolean(request.headers.get("x-action-id")) ||
+          isWrite ||
+          request.headers.get("accept")?.includes("application/json");
+
+        if (isApiOrAction) {
+          return addSecurityHeaders(
+            request,
+            pilotFrozenModuleResponse(frozenModule),
+            pathname,
+            nonce
+          );
+        }
+        return addSecurityHeaders(
+          request,
+          NextResponse.redirect(new URL(`/workspace?error=module_frozen&module=${frozenModule}`, request.url)),
+          pathname,
+          nonce
+        );
+      }
+    }
+
     const legacyDest = resolveLegacyRedirect(pathname);
     if (legacyDest) {
       return addSecurityHeaders(
@@ -144,6 +219,7 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
         nonce
       );
     }
+
     const isProtectedPortal =
       pathname.startsWith("/portal/alumni") ||
       pathname.startsWith("/portal/facilities") ||
@@ -184,29 +260,33 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // SEC-01: Cryptographically verify session token signature at edge
+    // SEC-01: Cryptographically verify session token signature and sid at edge
     let verifiedRole: string | null = null;
     try {
       const { payload } = await jwtVerify(token, getJwtSecretBytes());
       if (payload.purpose === "mobile_handoff") {
         throw new Error("Mobile handoff nonce cannot be used as a general session token");
       }
-      verifiedRole = typeof payload.role === "string" ? payload.role : null;
-    } catch {
-      if (pathname.startsWith("/api/")) {
-        return addSecurityHeaders(
-          request,
-          NextResponse.json({ error: "Invalid or expired session token" }, { status: 401 }),
-          pathname,
-          nonce
-        );
+      if (!payload.sid || typeof payload.sid !== "string") {
+        const res = NextResponse.json({ error: "LEGACY_SESSION_EXPIRED" }, { status: 401 });
+        res.cookies?.delete?.("thaibahive_session");
+        return addSecurityHeaders(request, res, pathname, nonce);
       }
-      return addSecurityHeaders(
-        request,
-        NextResponse.redirect(new URL("/auth/login", request.url)),
-        pathname,
-        nonce
-      );
+      verifiedRole = typeof payload.role === "string" ? payload.role : null;
+    } catch (err: any) {
+      if (err?.message === "LEGACY_SESSION_EXPIRED") {
+        const res = NextResponse.json({ error: "LEGACY_SESSION_EXPIRED" }, { status: 401 });
+        res.cookies?.delete?.("thaibahive_session");
+        return addSecurityHeaders(request, res, pathname, nonce);
+      }
+      if (pathname.startsWith("/api/")) {
+        const res = NextResponse.json({ error: "Invalid or expired session token" }, { status: 401 });
+        res.cookies?.delete?.("thaibahive_session");
+        return addSecurityHeaders(request, res, pathname, nonce);
+      }
+      const res = NextResponse.redirect(new URL("/auth/login", request.url));
+      res.cookies?.delete?.("thaibahive_session");
+      return addSecurityHeaders(request, res, pathname, nonce);
     }
 
     // Workspace root redirect: /workspace -> /workspace/{role}

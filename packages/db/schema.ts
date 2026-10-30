@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index, unique, foreignKey, check } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // ─── Core Organization ───
@@ -87,6 +87,7 @@ export const staff = sqliteTable("staff", {
   biometricEnabled: integer("biometric_enabled", { mode: "boolean" }).notNull().default(false),
   modelVersion: text("model_version").default("facenet-512d-v1"),
   biometricStatus: text("biometric_status").default("active"),
+  googleSub: text("google_sub").unique(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
@@ -120,6 +121,7 @@ export const staffInstitutions = sqliteTable("staff_institutions", {
   staffIdIdx: index("idx_staff_institutions_staff_id").on(t.staffId),
   instIdIdx: index("idx_staff_institutions_inst_id").on(t.institutionId),
   staffInstUnique: uniqueIndex("idx_staff_institutions_staff_inst_unique").on(t.staffId, t.institutionId),
+  instStaffIdx: index("idx_staff_institutions_inst_staff").on(t.institutionId, t.staffId),
 }));
 
 export const academicYears = sqliteTable("academic_years", {
@@ -258,6 +260,7 @@ export const biometricLogs = sqliteTable("biometric_logs", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   staffIdIdx: index("idx_biometric_logs_staff_id").on(t.staffId),
+  createdAtIdx: index("idx_biometric_logs_created_at").on(t.createdAt),
 }));
 
 // ─── Shifts & Attendance ───
@@ -321,6 +324,8 @@ export const attendanceLogs = sqliteTable("attendance_logs", {
   instIdIdx: index("idx_attendance_inst").on(t.institutionId),
 }));
 
+export const attendance = attendanceLogs;
+
 export const attendanceLocations = sqliteTable("attendance_locations", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -340,6 +345,82 @@ export const attendanceLocations = sqliteTable("attendance_locations", {
   nfcTagIdx: uniqueIndex("idx_location_nfc_tag").on(t.nfcTagId).where(sql`deleted_at IS NULL`),
   qrSecretIdx: uniqueIndex("idx_location_qr_secret").on(t.qrSecret).where(sql`deleted_at IS NULL`),
   locationActiveIdx: index("idx_location_active").on(t.institutionId).where(sql`deleted_at IS NULL`),
+}));
+
+// ─── Append-Only Attendance Ledger & Event Sourcing (V1.0 Pilot) ───
+
+export const attendanceEvents = sqliteTable("attendance_events", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id")
+    .notNull()
+    .references(() => staff.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id")
+    .references(() => institutions.id, { onDelete: "cascade" }),
+  clientEventId: text("client_event_id").notNull(),
+  kind: text("kind").notNull(), // 'in' | 'out'
+  method: text("method").notNull().default("geofence"), // 'geofence' | 'nfc' | 'qr' | 'manual_correction'
+  effectiveAt: integer("effective_at").notNull(), // epoch ms
+  timeTrust: text("time_trust").notNull().default("server"), // 'server' | 'anchored' | 'device_claimed'
+  deviceClaimedAt: integer("device_claimed_at"), // epoch ms
+  receivedAt: integer("received_at").notNull(), // epoch ms
+  localDate: text("local_date").notNull(), // 'YYYY-MM-DD' in institution timezone
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  accuracyM: real("accuracy_m"),
+  isMocked: integer("is_mocked", { mode: "boolean" }).notNull().default(false),
+  geofenceId: text("geofence_id"),
+  deviceId: text("device_id"),
+  appVersion: text("app_version"),
+  flags: text("flags"), // json array: ['orphan_out', 'mock_location', 'poor_accuracy', 'clock_skew']
+  isPilot: integer("is_pilot", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  staffClientEventIdx: uniqueIndex("idx_att_events_staff_client").on(t.staffId, t.clientEventId),
+  staffDateEffectiveIdx: index("idx_att_events_staff_date_eff").on(t.staffId, t.localDate, t.effectiveAt),
+  instIdx: index("idx_att_events_inst").on(t.institutionId),
+}));
+
+export const attendanceDays = sqliteTable("attendance_days", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id")
+    .notNull()
+    .references(() => staff.id, { onDelete: "cascade" }),
+  institutionId: text("institution_id")
+    .references(() => institutions.id, { onDelete: "cascade" }),
+  localDate: text("local_date").notNull(), // 'YYYY-MM-DD'
+  firstIn: integer("first_in"), // epoch ms
+  lastOut: integer("last_out"), // epoch ms
+  firstInTime: text("first_in_time"), // 'HH:MM:SS'
+  lastOutTime: text("last_out_time"), // 'HH:MM:SS'
+  totalMinutes: integer("total_minutes").default(0),
+  status: text("status").notNull().default("present"), // 'present' | 'late' | 'half_day' | 'absent'
+  needsReview: integer("needs_review", { mode: "boolean" }).notNull().default(false),
+  reviewReason: text("review_reason"),
+  isPilot: integer("is_pilot", { mode: "boolean" }).notNull().default(true),
+  rebuiltAt: integer("rebuilt_at").notNull(), // epoch ms
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  staffLocalDateIdx: uniqueIndex("idx_att_days_staff_date").on(t.staffId, t.localDate),
+  instDateIdx: index("idx_att_days_inst_date").on(t.institutionId, t.localDate),
+}));
+
+export const punchAttempts = sqliteTable("punch_attempts", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id"),
+  requestId: text("request_id"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  appVersion: text("app_version"),
+  kind: text("kind"),
+  method: text("method"),
+  outcome: text("outcome").notNull(), // 'accepted' | 'duplicate' | 'rejected' | 'failed'
+  reason: text("reason"),
+  rawPayloadSnippet: text("raw_payload_snippet"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  requestIdx: index("idx_punch_attempts_req").on(t.requestId),
+  staffCreatedAtIdx: index("idx_punch_attempts_staff_created").on(t.staffId, t.createdAt),
 }));
 
 // ─── Leave Management ───
@@ -395,6 +476,7 @@ export const leaveRequests = sqliteTable("leave_requests", {
   staffCreatedAtIdx: index("idx_leave_requests_staff_created").on(t.staffId, t.createdAt),
   statusIdx: index("idx_leave_requests_status").on(t.status),
   instIdx: index("idx_leave_requests_institution").on(t.institutionId),
+  staffDatesIdx: index("idx_leave_requests_staff_dates").on(t.staffId, t.startDate, t.endDate),
 }));
 
 // ─── Tasks ───
@@ -431,7 +513,9 @@ export const taskComments = sqliteTable("task_comments", {
     .references(() => staff.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  taskIdIdx: index("idx_task_comments_task_id").on(t.taskId),
+}));
 
 // ─── Daily Reports ───
 
@@ -465,7 +549,9 @@ export const dailyReportTasks = sqliteTable("daily_report_tasks", {
   description: text("description").notNull(),
   hoursSpent: real("hours_spent"),
   status: text("status").notNull().default("completed"),
-});
+}, (t) => ({
+  reportIdIdx: index("idx_daily_report_tasks_report_id").on(t.reportId),
+}));
 
 // ─── Announcements ───
 
@@ -502,7 +588,9 @@ export const announcementReads = sqliteTable("announcement_reads", {
     .notNull()
     .references(() => staff.id, { onDelete: "cascade" }),
   readAt: text("read_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  announcementStaffUniq: uniqueIndex("idx_announcement_reads_announcement_staff_uniq").on(t.announcementId, t.staffId),
+}));
 
 // ─── Events ───
 
@@ -537,7 +625,9 @@ export const eventRsvps = sqliteTable("event_rsvps", {
     .references(() => staff.id, { onDelete: "cascade" }),
   status: text("status").notNull().default("pending"),
   respondedAt: text("responded_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  eventStaffUniq: uniqueIndex("idx_event_rsvps_event_staff_uniq").on(t.eventId, t.staffId),
+}));
 
 // ─── Documents / Circulars ───
 
@@ -550,7 +640,9 @@ export const circularDownloads = sqliteTable("circular_downloads", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   downloadedAt: text("downloaded_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  circularIdIdx: index("idx_circular_downloads_circular_id").on(t.circularId),
+}));
 
 export const circulars = sqliteTable("circulars", {
   id: text("id").primaryKey(),
@@ -648,6 +740,7 @@ export const bookings = sqliteTable("bookings", {
 }, (t) => ({
   instIdx: index("idx_bookings_institution").on(t.institutionId),
   resourceIdx: index("idx_bookings_resource_id").on(t.resourceId),
+  resourceTimesIdx: index("idx_bookings_resource_times").on(t.resourceId, t.startTime, t.endTime),
 }));
 
 // ─── Help Desk ───
@@ -670,6 +763,7 @@ export const helpDeskTickets = sqliteTable("help_desk_tickets", {
 }, (t) => ({
   instIdx: index("idx_help_desk_tickets_institution").on(t.institutionId),
   statusIdx: index("idx_help_desk_tickets_status").on(t.status),
+  assignedStatusIdx: index("idx_help_desk_tickets_assigned_status").on(t.assignedToId, t.status),
 }));
 
 export const helpDeskComments = sqliteTable("help_desk_comments", {
@@ -682,7 +776,9 @@ export const helpDeskComments = sqliteTable("help_desk_comments", {
     .references(() => staff.id),
   content: text("content").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  ticketIdIdx: index("idx_help_desk_comments_ticket_id").on(t.ticketId),
+}));
 
 // ─── Notifications ───
 
@@ -701,6 +797,7 @@ export const notifications = sqliteTable("notifications", {
 }, (t) => ({
   staffCreatedAtIdx: index("idx_notifications_staff_created").on(t.staffId, t.createdAt),
   staffIsReadIdx: index("idx_notifications_staff_is_read").on(t.staffId, t.isRead),
+  staffReadCreatedIdx: index("idx_notifications_staff_read_created").on(t.staffId, t.isRead, t.createdAt),
 }));
 
 // ─── Staff Recognition ───
@@ -715,7 +812,9 @@ export const staffRecognition = sqliteTable("staff_recognition", {
   recognizedById: text("recognized_by_id").references(() => staff.id),
   date: text("date").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  dateRecognizedByIdx: index("idx_staff_recognition_date_recognized").on(t.date, t.recognizedById),
+}));
 
 // ─── Asset Management ───
 
@@ -737,7 +836,9 @@ export const assets = sqliteTable("assets", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assignedStatusIdx: index("idx_assets_assigned_status").on(t.assignedToId, t.status),
+}));
 
 export const assetServiceHistory = sqliteTable("asset_service_history", {
   id: text("id").primaryKey(),
@@ -748,7 +849,9 @@ export const assetServiceHistory = sqliteTable("asset_service_history", {
   servicedBy: text("serviced_by"),
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assetIdIdx: index("idx_asset_service_history_asset_id").on(t.assetId),
+}));
 
 // ─── Expense Claims ───
 
@@ -770,6 +873,7 @@ export const expenseClaims = sqliteTable("expense_claims", {
   staffStatusIdx: index("idx_expense_claims_staff_status").on(t.staffId, t.status),
   statusIdx: index("idx_expense_claims_status").on(t.status),
   instIdx: index("idx_expense_claims_institution").on(t.institutionId),
+  createdAtIdx: index("idx_expense_claims_created_at").on(t.createdAt),
 }));
 
 // ─── Purchase Requests ───
@@ -832,17 +936,21 @@ export const grievances = sqliteTable("grievances", {
   respondedAt: text("responded_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  statusStaffIdx: index("idx_grievances_status_staff").on(t.status, t.staffId),
+}));
 
 // ─── Staff Availability Status ───
 
 export const staffAvailability = sqliteTable("staff_availability", {
   id: text("id").primaryKey(),
-  staffId: text("staff_id").notNull().unique().references(() => staff.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
   status: text("status").notNull().default("available"),
   expiresAt: text("expires_at"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffUniq: uniqueIndex("idx_staff_availability_staff_uniq").on(t.staffId),
+}));
 
 // ─── Performance Reviews ───
 
@@ -886,7 +994,10 @@ export const auditLog = sqliteTable("audit_log", {
   details: text("details", { mode: "json" }).$type<Record<string, unknown>>(),
   ipAddress: text("ip_address"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  entityIdx: index("idx_audit_log_entity").on(t.entityType, t.entityId),
+  createdAtIdx: index("idx_audit_log_created_at").on(t.createdAt),
+}));
 
 // ─── Financial / Accounts ───
 
@@ -936,7 +1047,9 @@ export const vehicleBookings = sqliteTable("vehicle_bookings", {
   approvedById: text("approved_by_id").references(() => staff.id),
   notes: text("notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  vehicleDateIdx: index("idx_vehicle_bookings_vehicle_date").on(t.vehicleId, t.date),
+}));
 
 export const vehicleLogs = sqliteTable("vehicle_logs", {
   id: text("id").primaryKey(),
@@ -972,7 +1085,7 @@ export const mealNotifications = sqliteTable("meal_notifications", {
 
 export const staffMealPreferences = sqliteTable("staff_meal_preferences", {
   id: text("id").primaryKey(),
-  staffId: text("staff_id").notNull().unique().references(() => staff.id),
+  staffId: text("staff_id").notNull().references(() => staff.id),
   defaultBreakfast: text("default_breakfast").notNull().default("eating"),
   defaultLunch: text("default_lunch").notNull().default("eating"),
   defaultDinner: text("default_dinner").notNull().default("eating"),
@@ -980,7 +1093,9 @@ export const staffMealPreferences = sqliteTable("staff_meal_preferences", {
   skipEndDate: text("skip_end_date"),
   recurringSkipDays: text("recurring_skip_days"),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffIdIdx: uniqueIndex("idx_staff_meal_preferences_staff_id").on(t.staffId),
+}));
 
 // ─── Approval Delegations ───
 
@@ -993,7 +1108,9 @@ export const approvalDelegations = sqliteTable("approval_delegations", {
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   reason: text("reason"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  delegateIdIdx: index("idx_approval_delegations_delegate_id").on(t.delegateId),
+}));
 
 // ─── Checklist Templates (Onboarding / Offboarding) ───
 
@@ -1014,7 +1131,9 @@ export const checklistTemplateItems = sqliteTable("checklist_template_items", {
   description: text("description"),
   order: integer("order").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  templateIdIdx: index("idx_checklist_template_items_template_id").on(t.templateId),
+}));
 
 export const staffChecklists = sqliteTable("staff_checklists", {
   id: text("id").primaryKey(),
@@ -1028,7 +1147,9 @@ export const staffChecklists = sqliteTable("staff_checklists", {
   createdById: text("created_by_id").references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffStatusIdx: index("idx_staff_checklists_staff_status").on(t.staffId, t.status),
+}));
 
 export const staffChecklistTasks = sqliteTable("staff_checklist_tasks", {
   id: text("id").primaryKey(),
@@ -1040,7 +1161,9 @@ export const staffChecklistTasks = sqliteTable("staff_checklist_tasks", {
   completedAt: text("completed_at"),
   order: integer("order").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  checklistIdIdx: index("idx_staff_checklist_tasks_checklist_id").on(t.checklistId),
+}));
 
 // ─── Marketplace / App Registry ───
 
@@ -1124,7 +1247,9 @@ export const usedNonces = sqliteTable("used_nonces", {
   jti: text("jti").primaryKey(),
   expiresAt: text("expires_at").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  expiresAtIdx: index("idx_used_nonces_expires_at").on(t.expiresAt),
+}));
 
 export const accessRequests = sqliteTable("access_requests", {
   id: text("id").primaryKey(),
@@ -1138,7 +1263,9 @@ export const accessRequests = sqliteTable("access_requests", {
   reviewNotes: text("review_notes"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  statusRoutedStaffIdx: index("idx_access_requests_status_routed_staff").on(t.status, t.routedToId, t.staffId),
+}));
 
 // ─── Presence Verification ───
 
@@ -1195,7 +1322,9 @@ export const fieldWorkSessions = sqliteTable("field_work_sessions", {
   locationSnapshots: text("location_snapshots"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  staffStatusIdx: index("idx_field_work_sessions_staff_status").on(t.staffId, t.status),
+}));
 
 // ─── Chat / Messaging ───
 
@@ -1236,6 +1365,7 @@ export const chatMessages = sqliteTable("chat_messages", {
 }, (t) => ({
   roomIdIdx: index("chat_messages_room_idx").on(t.roomId),
   senderIdIdx: index("chat_messages_sender_idx").on(t.senderId),
+  roomCreatedIdx: index("idx_chat_messages_room_created").on(t.roomId, t.createdAt),
 }));
 
 // ─── Presence & Activity Logs ───
@@ -1310,6 +1440,7 @@ export const mediaAssets = sqliteTable("media_assets", {
   fileTypeIdx: index("idx_media_assets_file_type").on(t.fileType),
   statusIdx: index("idx_media_assets_status").on(t.status),
   instIdx: index("idx_media_assets_institution").on(t.institutionId),
+  createdAtIdx: index("idx_media_assets_created_at").on(t.createdAt),
 }));
 
 export const mediaShareLinks = sqliteTable("media_share_links", {
@@ -1334,7 +1465,9 @@ export const mediaDownloads = sqliteTable("media_downloads", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   downloadedAt: text("downloaded_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assetDownloadedIdx: index("idx_media_downloads_asset_downloaded").on(t.assetId, t.downloadedAt),
+}));
 
 export const mediaUploads = sqliteTable("media_uploads", {
   id: text("id").primaryKey(),
@@ -1561,7 +1694,9 @@ export const examAuditLogs = sqliteTable("exam_audit_logs", {
   newState: text("new_state"),
   reason: text("reason"),
   timestamp: text("timestamp").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  examTimestampIdx: index("idx_exam_audit_logs_exam_timestamp").on(t.examId, t.timestamp),
+}));
 
 // ─── Services Module & Campus Operations (Sprint-006) ───
 
@@ -1576,7 +1711,9 @@ export const fleetRoutes = sqliteTable("fleet_routes", {
   vehicleId: text("vehicle_id").references(() => vehicles.id),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  driverVehicleIdx: index("idx_fleet_routes_driver_vehicle").on(t.driverId, t.vehicleId),
+}));
 
 export const fleetMaintenanceLogs = sqliteTable("fleet_maintenance_logs", {
   id: text("id").primaryKey(),
@@ -1590,7 +1727,9 @@ export const fleetMaintenanceLogs = sqliteTable("fleet_maintenance_logs", {
   performedBy: text("performed_by"),
   status: text("status").notNull().default("completed"), // scheduled | in_progress | completed
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  vehicleMaintenanceDateIdx: index("idx_fleet_maintenance_logs_vehicle_date").on(t.vehicleId, t.maintenanceDate),
+}));
 
 export const canteenItems = sqliteTable("canteen_items", {
   id: text("id").primaryKey(),
@@ -1639,7 +1778,9 @@ export const canteenTransactions = sqliteTable("canteen_transactions", {
   cashierStaffId: text("cashier_staff_id").references(() => staff.id),
   status: text("status").notNull().default("completed"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  passIdIdx: index("idx_canteen_transactions_pass_id").on(t.passId),
+}));
 
 export const visitorRequests = sqliteTable("visitor_requests", {
   id: text("id").primaryKey(),
@@ -1657,7 +1798,9 @@ export const visitorRequests = sqliteTable("visitor_requests", {
   rejectionReason: text("rejection_reason"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  hostStaffStatusIdx: index("idx_visitor_requests_host_status").on(t.hostStaffId, t.status),
+}));
 
 export const visitorPasses = sqliteTable("visitor_passes", {
   id: text("id").primaryKey(),
@@ -1675,7 +1818,9 @@ export const visitorPasses = sqliteTable("visitor_passes", {
   checkOutAt: text("check_out_at"),
   gatekeeperId: text("gatekeeper_id").references(() => staff.id),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  instStatusValidIdx: index("idx_visitor_passes_inst_status_valid").on(t.institutionId, t.status, t.validUntil),
+}));
 
 export const gateLogs = sqliteTable("gate_logs", {
   id: text("id").primaryKey(),
@@ -1802,7 +1947,9 @@ export const aiPredictions = sqliteTable("ai_predictions", {
   status: text("status").notNull().default("active"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  targetEntityIdx: index("idx_ai_predictions_target_entity").on(t.targetEntityType, t.targetEntityId),
+}));
 
 export const aiAnomalies = sqliteTable("ai_anomalies", {
   id: text("id").primaryKey(),
@@ -1922,7 +2069,9 @@ export const dwAggregatedAnalytics = sqliteTable("dw_aggregated_analytics", {
   aiRiskStudentCount: integer("ai_risk_student_count").notNull().default(0),
   activeAnomalyCount: integer("active_anomaly_count").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  regionInstDateUniq: uniqueIndex("idx_dw_aggregated_analytics_region_inst_date_uniq").on(t.regionalGroupId, t.institutionId, t.snapshotDate),
+}));
 
 export const dwMaterializedSnapshots = sqliteTable("dw_materialized_snapshots", {
   id: text("id").primaryKey(),
@@ -1942,7 +2091,9 @@ export const dwEtlRuns = sqliteTable("dw_etl_runs", {
   errorMessage: text("error_message"),
   startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
   completedAt: text("completed_at"),
-});
+}, (t) => ({
+  statusIdx: index("idx_dw_etl_runs_status").on(t.status),
+}));
 
 export const pushNotificationSubscriptions = sqliteTable("push_notification_subscriptions", {
   id: text("id").primaryKey(),
@@ -1953,7 +2104,9 @@ export const pushNotificationSubscriptions = sqliteTable("push_notification_subs
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   lastUsedAt: text("last_used_at").notNull().default(sql`(current_timestamp)`),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  userIdIdx: index("idx_push_notification_subs_user_id").on(t.userId),
+}));
 
 export const alertDeliveryLogs = sqliteTable("alert_delivery_logs", {
   id: text("id").primaryKey(),
@@ -1965,7 +2118,9 @@ export const alertDeliveryLogs = sqliteTable("alert_delivery_logs", {
   attemptCount: integer("attempt_count").notNull().default(1),
   errorMessage: text("error_message"),
   sentAt: text("sent_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  userSentIdx: index("idx_alert_delivery_logs_user_sent").on(t.userId, t.sentAt),
+}));
 
 export const regionalAccessLogs = sqliteTable("regional_access_logs", {
   id: text("id").primaryKey(),
@@ -1976,7 +2131,9 @@ export const regionalAccessLogs = sqliteTable("regional_access_logs", {
   details: text("details"),
   ipAddress: text("ip_address"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  userIdIdx: index("idx_regional_access_logs_user_id").on(t.userId),
+}));
 
 // ─── Autonomous Enterprise Operations & Self-Healing Platform Engine (Sprint-010) ───
 
@@ -1990,7 +2147,9 @@ export const autonomousWorkflows = sqliteTable("autonomous_workflows", {
   lastExecutedAt: text("last_executed_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  statusIdx: index("idx_autonomous_workflows_status").on(t.status),
+}));
 
 export const remediationRules = sqliteTable("remediation_rules", {
   id: text("id").primaryKey(),
@@ -2020,7 +2179,9 @@ export const remediationTickets = sqliteTable("remediation_tickets", {
   resolvedAt: text("resolved_at"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  assignedStaffIdx: index("idx_remediation_tickets_assigned_staff").on(t.assignedStaffId),
+}));
 
 export const remediationActions = sqliteTable("remediation_actions", {
   id: text("id").primaryKey(),
@@ -2150,7 +2311,9 @@ export const aiAgentCommunications = sqliteTable("ai_agent_communications", {
   payloadJson: text("payload_json").notNull(),
   hopCount: integer("hop_count").notNull().default(1),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
+}, (t) => ({
+  correlationIdIdx: index("idx_ai_agent_communications_correlation_id").on(t.correlationId),
+}));
 
 export const redisCircuitBreakerStates = sqliteTable("redis_circuit_breaker_states", {
   id: text("id").primaryKey(),
@@ -2683,6 +2846,7 @@ export const conferenceSignals = sqliteTable("conference_signals", {
   instIdx: index("idx_conference_signals_inst_id").on(t.institutionId),
   roomRecipIdx: index("idx_conference_signals_room_recip").on(t.roomId, t.recipientPeerId),
   createdIdx: index("idx_conference_signals_created").on(t.createdAt),
+  roomDeliveredCreatedIdx: index("idx_conference_signals_room_deliv_created").on(t.roomId, t.delivered, t.createdAt),
 }));
 
 // ─── PostgreSQL Multi-Node Cluster Certification ───
@@ -2809,7 +2973,9 @@ export const device_fingerprints = sqliteTable("device_fingerprints", {
   trust_score: integer("trust_score").notNull(),
   created_at: text("created_at").notNull().default(sql`(current_timestamp)`),
   last_seen: text("last_seen").notNull().default(sql`(current_timestamp)`)
-});
+}, (t) => ({
+  compositeHashIdx: index("idx_device_fingerprints_composite_hash").on(t.composite_hash),
+}));
 
 
 
@@ -3027,8 +3193,10 @@ export const auditLogs = sqliteTable("audit_logs", {
   entityType: text("entity_type").notNull(),
   entityId: text("entity_id"),
   payload: text("payload"), // JSON payload or diff
+  sequenceNumber: integer("sequence_number").notNull().default(1),
   previousHash: text("previous_hash"),
   currentHash: text("current_hash").notNull(),
+  signature: text("signature"),
   merkleRootId: text("merkle_root_id").references(() => auditMerkleRoots.id, { onDelete: "set null" }),
   merkleProof: text("merkle_proof"), // JSON array of proof hashes
   ipAddress: text("ip_address"),
@@ -3042,6 +3210,8 @@ export const auditLogs = sqliteTable("audit_logs", {
   currentHashIdx: index("idx_audit_logs_hash").on(t.currentHash),
   merkleRootIdx: index("idx_audit_logs_merkle_root").on(t.merkleRootId),
   timestampIdx: index("idx_audit_logs_timestamp").on(t.timestamp),
+  tenantSeqIdx: uniqueIndex("idx_audit_logs_tenant_seq").on(t.tenantId, t.sequenceNumber),
+  tenantHashIdx: uniqueIndex("idx_audit_logs_tenant_hash").on(t.tenantId, t.currentHash),
 }));
 
 export const complianceViolations = sqliteTable("compliance_violations", {
@@ -4808,6 +4978,29 @@ export const visionPrivacyAuditLogs = sqliteTable("vision_privacy_audit_logs", {
   visionPrivacyTypeIdx: index("idx_vision_privacy_type").on(t.eventType),
   visionPrivacyCamIdx: index("idx_vision_privacy_cam").on(t.cameraId),
   visionPrivacyTimeIdx: index("idx_vision_privacy_time").on(t.auditTimestamp),
+}));
+
+// ─── DPDP Act 2023 §9: durable consent ledger for surveillance & biometrics ───
+// Consent is NEVER assumed. For minors (userType 'student') both consent flags
+// default to false and stay false until a verified guardian in student_guardians
+// records verifiable parental consent.
+export const surveillanceConsents = sqliteTable("surveillance_consents", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull().default("global"),
+  userId: text("user_id").notNull(),
+  userType: text("user_type").notNull().default("student"), // 'student' | 'staff' | 'visitor'
+  hasConsentedSurveillance: integer("has_consented_surveillance", { mode: "boolean" }).notNull().default(false),
+  hasConsentedFacialAuth: integer("has_consented_facial_auth", { mode: "boolean" }).notNull().default(false),
+  parentalConsentVerified: integer("parental_consent_verified", { mode: "boolean" }).notNull().default(false),
+  parentalGuardianId: text("parental_guardian_id"),
+  parentalConsentAt: text("parental_consent_at"),
+  parentalConsentMethod: text("parental_consent_method"), // 'guardian_portal' | 'signed_form' | 'sms_otp'
+  optedOutZoneIds: text("opted_out_zone_ids", { mode: "json" }).$type<string[]>(),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  surveillanceConsentUniq: uniqueIndex("idx_surveillance_consents_tenant_user").on(t.institutionId, t.userId),
+  surveillanceConsentTypeIdx: index("idx_surveillance_consents_user_type").on(t.userType),
 }));
 
 // ─── ADVISE-MESH / CognitiveDegree OS: Curricular Graph & Autonomous Advising (Sprint-051) ───
@@ -7849,9 +8042,353 @@ export const crossCampusAllocations = sqliteTable("cross_campus_allocations", {
   ccaBookingIdx: index("idx_cross_campus_alloc_booking").on(t.bookingId),
 }));
 
+export const userSessions = sqliteTable("user_sessions", {
+  id: text("id").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role").notNull(),
+  institutionId: text("institution_id"),
+  status: text("status").notNull().default("active"),
+  clientIp: text("client_ip"),
+  userAgent: text("user_agent"),
+  deviceType: text("device_type"),
+  loginAt: integer("login_at", { mode: "number" }).notNull(),
+  lastActiveAt: integer("last_active_at", { mode: "number" }).notNull(),
+  expiresAt: integer("expires_at", { mode: "number" }).notNull(),
+  logoutAt: integer("logout_at", { mode: "number" }),
+  createdAt: integer("created_at", { mode: "number" }).notNull(),
+}, (t) => ({
+  userSessionsStaffStatusIdx: index("idx_user_sessions_staff_status").on(t.staffId, t.status),
+  userSessionsStatusIdx: index("idx_user_sessions_status").on(t.status),
+  userSessionsExpiresAtIdx: index("idx_user_sessions_expires_at").on(t.expiresAt),
+  userSessionsLastActiveAtIdx: index("idx_user_sessions_last_active_at").on(t.lastActiveAt),
+}));
 
+export const stepUpUsed = sqliteTable("step_up_used", {
+  jti: text("jti").primaryKey(),
+  staffId: text("staff_id").notNull().references(() => staff.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  expiresAt: integer("expires_at", { mode: "number" }).notNull(),
+  usedAt: integer("used_at", { mode: "number" }).notNull(),
+});
 
+// ─── TPSH Hostel ERP ───
 
+// 1. Hostel Settings (Tenant Config)
+export const hostelSettings = sqliteTable("hostel_settings", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  lateFineRatePerDayMinor: integer("late_fine_rate_per_day_minor").default(5000).notNull(), // ₹50.00 in paise
+  gracePeriodMinutes: integer("grace_period_minutes").default(60).notNull(),
+  roundingRule: text("rounding_rule", { enum: ["ceil", "floor"] }).default("ceil").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  unique("uq_settings_inst").on(table.institutionId),
+  check("chk_settings_positive", sql`late_fine_rate_per_day_minor > 0 AND grace_period_minutes >= 0`),
+  check("chk_ts_settings_updated", sql`length(updated_at) = 24 AND substr(updated_at,11,1) = 'T' AND substr(updated_at,24,1) = 'Z'`),
+  foreignKey({
+    columns: [table.institutionId],
+    foreignColumns: [institutions.id],
+  }).onDelete("restrict"),
+]);
 
+// 2. Hostel Blocks
+export const hostelBlocks = sqliteTable("hostel_blocks", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  name: text("name").notNull(),
+  gender: text("gender", { enum: ["boys", "girls"] }).notNull(),
+  deletedAt: text("deleted_at"),
+}, (table) => [
+  unique("uq_block_inst_id").on(table.institutionId, table.id),
+  uniqueIndex("idx_block_inst_name_active")
+    .on(table.institutionId, table.name)
+    .where(sql`deleted_at IS NULL`),
+  foreignKey({
+    columns: [table.institutionId],
+    foreignColumns: [institutions.id],
+  }).onDelete("restrict"),
+]);
 
+// 3. Hostel Block Wardens
+export const hostelBlockWardens = sqliteTable("hostel_block_wardens", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  blockId: text("block_id").notNull(),
+  staffId: text("staff_id").notNull(),
+  assignedAt: text("assigned_at").notNull(),
+  revokedAt: text("revoked_at"),
+}, (table) => [
+  uniqueIndex("idx_active_block_warden")
+    .on(table.institutionId, table.blockId, table.staffId)
+    .where(sql`revoked_at IS NULL`),
+  check("chk_ts_warden_assigned", sql`length(assigned_at) = 24 AND substr(assigned_at,11,1) = 'T' AND substr(assigned_at,24,1) = 'Z'`),
+  check("chk_ts_warden_revoked", sql`revoked_at IS NULL OR (length(revoked_at) = 24 AND substr(revoked_at,11,1) = 'T' AND substr(revoked_at,24,1) = 'Z')`),
+  foreignKey({
+    columns: [table.institutionId, table.blockId],
+    foreignColumns: [hostelBlocks.institutionId, hostelBlocks.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.staffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+]);
 
+// 4. Hostel Rooms
+export const hostelRooms = sqliteTable("hostel_rooms", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  blockId: text("block_id").notNull(),
+  roomNumber: text("room_number").notNull(),
+  capacity: integer("capacity").notNull(),
+  deletedAt: text("deleted_at"),
+}, (table) => [
+  unique("uq_room_inst_id").on(table.institutionId, table.id),
+  uniqueIndex("idx_room_inst_number_active")
+    .on(table.institutionId, table.blockId, table.roomNumber)
+    .where(sql`deleted_at IS NULL`),
+  check("chk_room_capacity_positive", sql`capacity > 0`),
+  foreignKey({
+    columns: [table.institutionId, table.blockId],
+    foreignColumns: [hostelBlocks.institutionId, hostelBlocks.id],
+  }).onDelete("restrict"),
+]);
+
+// 5. Hostel Beds
+export const hostelBeds = sqliteTable("hostel_beds", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  roomId: text("room_id").notNull(),
+  bedNumber: text("bed_number").notNull(),
+  isMaintenance: integer("is_maintenance", { mode: "boolean" }).default(false).notNull(),
+  deletedAt: text("deleted_at"),
+}, (table) => [
+  unique("uq_bed_inst_id").on(table.institutionId, table.id),
+  uniqueIndex("idx_bed_inst_number_active")
+    .on(table.institutionId, table.roomId, table.bedNumber)
+    .where(sql`deleted_at IS NULL`),
+  foreignKey({
+    columns: [table.institutionId, table.roomId],
+    foreignColumns: [hostelRooms.institutionId, hostelRooms.id],
+  }).onDelete("restrict"),
+  index("idx_beds_room_id").on(table.roomId, table.institutionId),
+]);
+
+// 6. Bed Allocations (Dialect-neutral vacated_at IS NULL)
+export const hostelBedAllocations = sqliteTable("hostel_bed_allocations", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  bedId: text("bed_id").notNull(),
+  studentId: text("student_id").notNull(),
+  academicYearId: text("academic_year_id").notNull(),
+  allocatedAt: text("allocated_at").notNull(),
+  vacatedAt: text("vacated_at"),
+  allocatedStaffId: text("allocated_staff_id").notNull(),
+}, (table) => [
+  uniqueIndex("idx_active_bed_allocation")
+    .on(table.institutionId, table.bedId)
+    .where(sql`vacated_at IS NULL`),
+  uniqueIndex("idx_active_student_allocation")
+    .on(table.institutionId, table.studentId)
+    .where(sql`vacated_at IS NULL`),
+  check("chk_ts_alloc_allocated", sql`length(allocated_at) = 24 AND substr(allocated_at,11,1) = 'T' AND substr(allocated_at,24,1) = 'Z'`),
+  check("chk_ts_alloc_vacated", sql`vacated_at IS NULL OR (length(vacated_at) = 24 AND substr(vacated_at,11,1) = 'T' AND substr(vacated_at,24,1) = 'Z')`),
+  foreignKey({
+    columns: [table.institutionId, table.bedId],
+    foreignColumns: [hostelBeds.institutionId, hostelBeds.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.studentId],
+    foreignColumns: [students.institutionId, students.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.allocatedStaffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.academicYearId],
+    foreignColumns: [academicYears.institutionId, academicYears.id],
+  }).onDelete("restrict"),
+]);
+
+// 7. Hostel Leaves
+export const hostelLeaves = sqliteTable("hostel_leaves", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  studentId: text("student_id").notNull(),
+  leaveType: text("leave_type", { enum: ["home", "medical", "emergency", "outing"] }).notNull(),
+  status: text("status", { enum: ["pending", "approved", "active", "completed", "rejected", "cancelled"] }).default("pending").notNull(),
+  expectedOutAt: text("expected_out_at").notNull(),
+  expectedInAt: text("expected_in_at").notNull(),
+  actualOutAt: text("actual_out_at"),
+  actualInAt: text("actual_in_at"),
+  authorizedPickupName: text("authorized_pickup_name").notNull(),
+  authorizedPickupPhone: text("authorized_pickup_phone").notNull(),
+  parentConsentReceived: integer("parent_consent_received", { mode: "boolean" }).default(false).notNull(),
+  approvedStaffId: text("approved_staff_id"),
+  approvedAt: text("approved_at"),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  unique("uq_leave_inst_id").on(table.institutionId, table.id),
+  unique("uq_leave_inst_id_student").on(table.institutionId, table.id, table.studentId),
+  check("chk_leave_time_order", sql`expected_in_at > expected_out_at`),
+  check("chk_ts_leave_exp_out", sql`length(expected_out_at) = 24 AND substr(expected_out_at,11,1) = 'T' AND substr(expected_out_at,24,1) = 'Z'`),
+  check("chk_ts_leave_exp_in", sql`length(expected_in_at) = 24 AND substr(expected_in_at,11,1) = 'T' AND substr(expected_in_at,24,1) = 'Z'`),
+  check("chk_ts_leave_act_out", sql`actual_out_at IS NULL OR (length(actual_out_at) = 24 AND substr(actual_out_at,11,1) = 'T' AND substr(actual_out_at,24,1) = 'Z')`),
+  check("chk_ts_leave_act_in", sql`actual_in_at IS NULL OR (length(actual_in_at) = 24 AND substr(actual_in_at,11,1) = 'T' AND substr(actual_in_at,24,1) = 'Z')`),
+  check("chk_ts_leave_app", sql`approved_at IS NULL OR (length(approved_at) = 24 AND substr(approved_at,11,1) = 'T' AND substr(approved_at,24,1) = 'Z')`),
+  check("chk_ts_leave_created", sql`length(created_at) = 24 AND substr(created_at,11,1) = 'T' AND substr(created_at,24,1) = 'Z'`),
+  foreignKey({
+    columns: [table.institutionId, table.studentId],
+    foreignColumns: [students.institutionId, students.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.approvedStaffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+]);
+
+// 8. Hostel Gate Passes
+export const hostelGatePasses = sqliteTable("hostel_gate_passes", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  leaveId: text("leave_id").notNull(),
+  studentId: text("student_id").notNull(),
+  passNumber: text("pass_number").notNull(),
+  tokenHash: text("token_hash").notNull(), // SHA-256 of single-reveal QR secret
+  validFrom: text("valid_from").notNull(),
+  validUntil: text("valid_until").notNull(),
+  status: text("status", { enum: ["issued", "used_out", "used_in", "revoked"] }).default("issued").notNull(),
+  issuedStaffId: text("issued_staff_id").notNull(),
+  issuedAt: text("issued_at").notNull(),
+  revokedAt: text("revoked_at"),
+  revokedStaffId: text("revoked_staff_id"),
+  revokeReason: text("revoke_reason"),
+}, (table) => [
+  unique("uq_pass_inst_id").on(table.institutionId, table.id),
+  uniqueIndex("idx_pass_token_hash").on(table.institutionId, table.tokenHash),
+  uniqueIndex("idx_pass_number").on(table.institutionId, table.passNumber),
+  // Exactly one live pass per leave
+  uniqueIndex("idx_one_live_pass_per_leave")
+    .on(table.institutionId, table.leaveId)
+    .where(sql`status != 'revoked'`),
+  check("chk_ts_pass_valid_from", sql`length(valid_from) = 24 AND substr(valid_from,11,1) = 'T' AND substr(valid_from,24,1) = 'Z'`),
+  check("chk_ts_pass_valid_until", sql`length(valid_until) = 24 AND substr(valid_until,11,1) = 'T' AND substr(valid_until,24,1) = 'Z'`),
+  check("chk_ts_pass_issued", sql`length(issued_at) = 24 AND substr(issued_at,11,1) = 'T' AND substr(issued_at,24,1) = 'Z'`),
+  check("chk_ts_pass_revoked", sql`revoked_at IS NULL OR (length(revoked_at) = 24 AND substr(revoked_at,11,1) = 'T' AND substr(revoked_at,24,1) = 'Z')`),
+  foreignKey({
+    columns: [table.institutionId, table.leaveId, table.studentId],
+    foreignColumns: [hostelLeaves.institutionId, hostelLeaves.id, hostelLeaves.studentId],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.issuedStaffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.revokedStaffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+  index("idx_pass_inst_status_valid").on(table.institutionId, table.status, table.validUntil),
+]);
+
+// 9. Hostel Gate Logs
+export const hostelGateLogs = sqliteTable("hostel_gate_logs", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  passId: text("pass_id"), // Nullable to log unknown/tampered attempts without FK failure
+  direction: text("direction", { enum: ["out", "in"] }).notNull(),
+  scannedAt: text("scanned_at").notNull(), // Device reported timestamp
+  receivedAt: text("received_at").notNull(), // Server arrival timestamp
+  deviceId: text("device_id").notNull(),
+  guardStaffId: text("guard_staff_id").notNull(),
+  verificationResult: text("verification_result", {
+    enum: ["verified", "tampered", "expired_rejected", "revoked_rejected", "out_of_window_rejected", "manual_override"]
+  }).notNull(),
+  overrideReason: text("override_reason"),
+  idempotencyKey: text("idempotency_key").notNull(),
+}, (table) => [
+  uniqueIndex("idx_gate_log_idempotency").on(table.institutionId, table.idempotencyKey),
+  // Prevent double gate-pass scan races on entry/exit
+  uniqueIndex("idx_unique_verified_scan")
+    .on(table.institutionId, table.passId, table.direction)
+    .where(sql`pass_id IS NOT NULL AND verification_result IN ('verified', 'manual_override')`),
+  check("chk_ts_log_scanned", sql`length(scanned_at) = 24 AND substr(scanned_at,11,1) = 'T' AND substr(scanned_at,24,1) = 'Z'`),
+  check("chk_ts_log_received", sql`length(received_at) = 24 AND substr(received_at,11,1) = 'T' AND substr(received_at,24,1) = 'Z'`),
+  foreignKey({
+    columns: [table.institutionId, table.passId],
+    foreignColumns: [hostelGatePasses.institutionId, hostelGatePasses.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.guardStaffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+]);
+
+// 10. Hostel Fines
+export const hostelFines = sqliteTable("hostel_fines", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  studentId: text("student_id").notNull(),
+  leaveId: text("leave_id"),
+  fineCategory: text("fine_category", { enum: ["late_return", "disciplinary", "property_damage", "misconduct"] }).notNull(),
+  daysLate: integer("days_late").default(0).notNull(),
+  ratePerDay: integer("rate_per_day").default(0).notNull(),
+  totalAmount: integer("total_amount").notNull(),
+  paidAmount: integer("paid_amount").default(0).notNull(),
+  status: text("status", { enum: ["assessed", "partially_paid", "paid", "waived"] }).default("assessed").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  unique("uq_fine_inst_id").on(table.institutionId, table.id),
+  // Single late fine per leave
+  uniqueIndex("idx_single_late_fine_per_leave")
+    .on(table.institutionId, table.leaveId)
+    .where(sql`leave_id IS NOT NULL AND fine_category = 'late_return'`),
+  check("chk_fine_amounts_positive", sql`total_amount > 0 AND paid_amount >= 0 AND paid_amount <= total_amount`),
+  check("chk_ts_fine_created", sql`length(created_at) = 24 AND substr(created_at,11,1) = 'T' AND substr(created_at,24,1) = 'Z'`),
+  check("chk_ts_fine_updated", sql`length(updated_at) = 24 AND substr(updated_at,11,1) = 'T' AND substr(updated_at,24,1) = 'Z'`),
+  foreignKey({
+    columns: [table.institutionId, table.studentId],
+    foreignColumns: [students.institutionId, students.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.leaveId, table.studentId],
+    foreignColumns: [hostelLeaves.institutionId, hostelLeaves.id, hostelLeaves.studentId],
+  }).onDelete("restrict"),
+  index("idx_fines_inst_student").on(table.institutionId, table.studentId),
+]);
+
+// 11. Hostel Fine Actions (Append-Only Ledger)
+export const hostelFineActions = sqliteTable("hostel_fine_actions", {
+  id: text("id").primaryKey(),
+  institutionId: text("institution_id").notNull(),
+  fineId: text("fine_id").notNull(),
+  actionType: text("action_type", { enum: ["ASSESSED", "WAIVED"] }).notNull(),
+  amount: integer("amount").notNull(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  actorType: text("actor_type", { enum: ["system", "staff"] }).notNull(),
+  actorStaffId: text("actor_staff_id"), // Nullable for system actors
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  uniqueIndex("idx_fine_action_idempotency").on(table.institutionId, table.idempotencyKey),
+  uniqueIndex("idx_single_assessed_per_fine")
+    .on(table.institutionId, table.fineId)
+    .where(sql`action_type = 'ASSESSED'`),
+  uniqueIndex("idx_single_waiver_per_fine")
+    .on(table.institutionId, table.fineId)
+    .where(sql`action_type = 'WAIVED'`),
+  check("chk_actor_system_consistency", sql`
+    (actor_type = 'system' AND actor_staff_id IS NULL) OR 
+    (actor_type = 'staff' AND actor_staff_id IS NOT NULL)
+  `),
+  check("chk_ts_fine_act_created", sql`length(created_at) = 24 AND substr(created_at,11,1) = 'T' AND substr(created_at,24,1) = 'Z'`),
+  foreignKey({
+    columns: [table.institutionId, table.fineId],
+    foreignColumns: [hostelFines.institutionId, hostelFines.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    columns: [table.institutionId, table.actorStaffId],
+    foreignColumns: [staffInstitutions.institutionId, staffInstitutions.staffId],
+  }).onDelete("restrict"),
+]);

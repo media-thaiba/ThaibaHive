@@ -21,6 +21,10 @@ export async function parseTenantContext(token: string): Promise<TenantContext> 
       throw new Error("Missing critical claims (tenantId or userId)");
     }
 
+    if (!payload.sid) {
+      throw new Error("Missing session id (sid) - legacy or invalid token");
+    }
+
     return {
       tenantId,
       userId,

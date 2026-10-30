@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,21 +101,21 @@ export function CircularComplianceDrawer({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-3xl">
+        <SheetHeader>
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary shrink-0" />
             <div className="min-w-0">
-              <DialogTitle className="text-base truncate">
+              <SheetTitle className="text-base truncate">
                 Campus Compliance Tracker
-              </DialogTitle>
+              </SheetTitle>
               <p className="text-xs text-muted-foreground truncate mt-0.5" title={circularTitle}>
                 {circularTitle}
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
         <div className="space-y-4 pt-2">
           {error && <Alert variant="error">{error}</Alert>}
@@ -226,13 +226,13 @@ export function CircularComplianceDrawer({
             </>
           ) : null}
 
-          <DialogFooter className="pt-2">
+          <SheetFooter className="pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

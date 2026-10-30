@@ -117,7 +117,9 @@ describe("Mobile Auth Handoff Engine", () => {
           staffId: "staff_123",
           email: "teacher@thaiba.edu",
           role: "staff",
-        })
+        }),
+        false,
+        "mobile"
       );
     });
 

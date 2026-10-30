@@ -43,6 +43,18 @@
 	</array>
 	<key>NFCReaderUsageDescription</key>
 	<string>ThaibaHive requires NFC access to scan and register staff cards and location checkpoints.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ThaibaHive requires location access to verify staff attendance punches within designated institution geofences.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ThaibaHive requires background location access to verify staff presence within campus boundaries during scheduled duty shifts.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ThaibaHive requires camera access to scan institution QR codes for attendance verification and student identity badges.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ThaibaHive requires microphone access to enable voice query navigation in the campus copilot assistant.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ThaibaHive requires photo library access to allow staff and students to upload profile pictures and document attachments.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>ThaibaHive uses Face ID to securely authenticate administrative operations and biometric session unlocks.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

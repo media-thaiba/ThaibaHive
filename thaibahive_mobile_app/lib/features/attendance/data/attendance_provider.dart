@@ -5,7 +5,10 @@ import 'package:thaibahive_mobile/features/settings/data/settings_provider.dart'
 import 'package:thaibahive_mobile/core/services/network_service.dart';
 import 'package:thaibahive_mobile/core/services/offline_queue.dart';
 import 'package:thaibahive_mobile/core/services/sync_coordinator.dart';
+import 'dart:async';
+import 'package:intl/intl.dart';
 import 'attendance_repository.dart';
+import 'attendance_sync_service.dart';
 
 class AttendanceState {
   final bool isLoading;
@@ -100,6 +103,91 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
         isLoading: false,
         error: 'Failed to load attendance data: $e',
       );
+    }
+  }
+
+  /// One-tap campus check-in / check-out with one-shot GPS capture.
+  /// Integrated directly with POST /api/attendance/sync append-only ledger.
+  Future<AttendancePunchOutcome?> punchOneTap({
+    required bool isCheckIn,
+    AttendancePunchMethod method = AttendancePunchMethod.geofence,
+    String? qrCode,
+    String? nfcTagId,
+  }) async {
+    // Button debouncing: ignore if already loading
+    if (state.isLoading) return null;
+
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final syncService = _ref?.read(attendanceSyncServiceProvider);
+      if (syncService == null) {
+        state = state.copyWith(isLoading: false, error: 'Attendance service unavailable');
+        return null;
+      }
+
+      // One-shot GPS capture
+      final position = await syncService.capturePosition();
+
+      final outcome = await syncService.recordPunch(
+        kind: isCheckIn ? AttendancePunchKind.inEvent : AttendancePunchKind.outEvent,
+        method: method,
+        position: position,
+        qrCode: qrCode,
+        nfcTagId: nfcTagId,
+      );
+
+      if (outcome.success) {
+        final nowStr = DateFormat('hh:mm a').format(DateTime.now());
+        final currentStats = state.stats;
+
+        // Optimistic UI state update
+        final updatedStats = currentStats != null
+            ? AttendanceStatsModel(
+                todayStatus: isCheckIn ? 'present' : currentStats.todayStatus,
+                lastCheckIn: isCheckIn ? nowStr : currentStats.lastCheckIn,
+                lastCheckOut: !isCheckIn ? nowStr : currentStats.lastCheckOut,
+                presentDays: currentStats.presentDays,
+                absentDays: currentStats.absentDays,
+                lateDays: currentStats.lateDays,
+                halfDays: currentStats.halfDays,
+                totalWorkedHours: currentStats.totalWorkedHours,
+              )
+            : AttendanceStatsModel(
+                todayStatus: isCheckIn ? 'present' : 'absent',
+                lastCheckIn: isCheckIn ? nowStr : null,
+                lastCheckOut: !isCheckIn ? nowStr : null,
+                presentDays: isCheckIn ? 1 : 0,
+                absentDays: 0,
+                lateDays: 0,
+                halfDays: 0,
+                totalWorkedHours: 0.0,
+              );
+
+        state = state.copyWith(
+          isLoading: false,
+          stats: updatedStats,
+          isOfflineCheckOut: outcome.isQueuedOffline,
+          pendingCheckOutId: outcome.clientEventId,
+          error: null,
+        );
+
+        // Background refresh to catch up with server ledger stats if online
+        unawaited(refresh());
+        return outcome;
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          error: outcome.message ?? 'Punch rejected',
+        );
+        return outcome;
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Punch failed: $e',
+      );
+      return null;
     }
   }
 

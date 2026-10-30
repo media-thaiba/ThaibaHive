@@ -15,6 +15,7 @@ import 'package:thaibahive_mobile/features/media/data/media_outbox.dart';
 import 'package:thaibahive_mobile/features/media/data/media_providers.dart';
 import 'package:thaibahive_mobile/features/chat/data/chat_outbox.dart';
 import 'offline_queue.dart';
+import '../../features/attendance/data/attendance_sync_service.dart';
 
 /// Sync action → entity/mutationType map (mirrors server SYNC_ACTION_ENTITY_MAP).
 /// Must stay in sync with server for payload v2 compliance.
@@ -194,6 +195,10 @@ class SyncCoordinator extends StateNotifier<SyncCoordinatorState> {
     try {
       final confirmed = await offlineQueue.flush(deviceId: _deviceId.isEmpty ? null : _deviceId);
       final conflicts = offlineQueue.getConflictEvents().length;
+
+      // Drain append-only attendance events to POST /api/attendance/sync
+      final attendanceSync = ref.read(attendanceSyncServiceProvider);
+      await attendanceSync.flushPendingAttendanceEvents();
 
       // Drain media outbox
       final mediaDrain = ref.read(mediaDrainProvider.notifier);

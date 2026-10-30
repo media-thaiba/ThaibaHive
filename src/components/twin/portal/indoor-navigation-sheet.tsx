@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Navigation, Footprints, Clock } from 'lucide-react';
 
@@ -26,14 +26,14 @@ export function IndoorNavigationSheet({
   ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="sm:max-w-[480px]">
+        <SheetHeader>
           <div className="flex items-center gap-2">
             <Navigation className="h-5 w-5 text-sky-600" />
-            <DialogTitle>Indoor 3D Wayfinding Navigation</DialogTitle>
+            <SheetTitle>Indoor 3D Wayfinding Navigation</SheetTitle>
           </div>
-        </DialogHeader>
+        </SheetHeader>
         <div className="space-y-4 pt-2 text-xs">
           <div className="flex items-center justify-between p-2.5 bg-sky-50 rounded-lg border border-sky-100">
             <div>
@@ -67,13 +67,13 @@ export function IndoorNavigationSheet({
             </div>
           </div>
 
-          <DialogFooter className="pt-2">
+          <SheetFooter className="pt-2">
             <Button type="button" onClick={onClose}>
               Close Navigation
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

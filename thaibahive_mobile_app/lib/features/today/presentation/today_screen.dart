@@ -13,6 +13,7 @@ import 'package:thaibahive_mobile/shared/widgets/quick_action_card.dart';
 
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
+import '../../../shared/widgets/problem_reporter_modal.dart';
 
 /// Today Screen — Server-Driven UI (SDUI) entry point.
 ///
@@ -82,7 +83,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   backgroundColor: Colors.transparent,
                   flexibleSpace: FlexibleSpaceBar(
                     titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-                    title: Column(
+                    title: TripleTapDetector(
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -106,6 +108,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                         ),
                       ],
                     ),
+                  ),
                   ),
                   actions: [
                     IconButton(

@@ -1,12 +1,14 @@
 import { db } from "@/db";
 import { auditLogs, auditMerkleRoots } from "@thaiba/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { 
-  computePayloadHash, 
-  computeAuditBlockHash, 
-  buildMerkleTree, 
-  GENESIS_PREV_HASH 
-} from "./crypto-audit-engine";
+import {
+  canonicalizePayload,
+
+  computeAuditBlockHash,
+  computeAuditHmac,
+  GENESIS_PREV_HASH,
+} from "./canonical";
+import { computeMerkleRoot } from "./merkle";
 import { AuditEntry } from "./types";
 import crypto from "crypto";
 
@@ -18,9 +20,11 @@ interface QueuedAuditItem {
   entityType: string;
   entityId?: string | null;
   payload?: any;
-  payloadHash: string;
+  canonicalPayloadJSON: string;
+  sequenceNumber: number;
   previousHash: string;
   currentHash: string;
+  signature: string;
   ipAddress?: string | null;
   userAgent?: string | null;
   timestamp: string;
@@ -29,7 +33,7 @@ interface QueuedAuditItem {
 
 export class CryptographicAuditWriter {
   private queue: QueuedAuditItem[] = [];
-  private lastHashesByTenant: Map<string, string> = new Map();
+  private lastStatesByTenant: Map<string, { sequenceNumber: number; currentHash: string }> = new Map();
   private tenantLogChains: Map<string, Promise<any>> = new Map();
   private isFlushing = false;
   private flushTimer: NodeJS.Timeout | null = null;
@@ -42,7 +46,7 @@ export class CryptographicAuditWriter {
 
   public clear(): void {
     this.queue = [];
-    this.lastHashesByTenant.clear();
+    this.lastStatesByTenant.clear();
     this.tenantLogChains.clear();
   }
 
@@ -61,54 +65,138 @@ export class CryptographicAuditWriter {
   }
 
   /**
-   * Retrieves or initializes the last known block hash for a tenant
+   * Retrieves the latest sequence number and currentHash head for a tenant
    */
-  async getLastHash(tenantId: string): Promise<string> {
-    if (this.lastHashesByTenant.has(tenantId)) {
-      return this.lastHashesByTenant.get(tenantId)!;
+  async getLastHead(tenantId: string, runner: any = db): Promise<{ sequenceNumber: number; currentHash: string }> {
+    if (runner === db && this.lastStatesByTenant.has(tenantId)) {
+      return this.lastStatesByTenant.get(tenantId)!;
     }
 
     try {
-      const lastEntry = await db
-        .select({ currentHash: auditLogs.currentHash })
+      const query = runner
+        .select({
+          sequenceNumber: auditLogs.sequenceNumber,
+          currentHash: auditLogs.currentHash,
+        })
         .from(auditLogs)
         .where(eq(auditLogs.tenantId, tenantId))
-        .orderBy(desc(auditLogs.timestamp), desc(auditLogs.createdAt))
+        .orderBy(desc(auditLogs.sequenceNumber))
         .limit(1);
 
-      const hash = lastEntry.length > 0 ? lastEntry[0].currentHash : GENESIS_PREV_HASH;
-      this.lastHashesByTenant.set(tenantId, hash);
-      return hash;
+      const rows = await (query.all ? query.all() : query);
+      if (rows && rows.length > 0) {
+        const head = {
+          sequenceNumber: rows[0].sequenceNumber,
+          currentHash: rows[0].currentHash,
+        };
+        if (runner === db) this.lastStatesByTenant.set(tenantId, head);
+        return head;
+      }
     } catch {
-      // If DB read fails during initial bootstrap, fallback to genesis
-      return GENESIS_PREV_HASH;
+      // Return genesis if table or records not yet initialized
     }
+
+    const genesis = { sequenceNumber: 0, currentHash: GENESIS_PREV_HASH };
+    if (runner === db) this.lastStatesByTenant.set(tenantId, genesis);
+    return genesis;
   }
 
   /**
-   * Sets the last known hash in-memory (useful for testing or cache seeding)
+   * Backward-compatible alias for getLastHead returning only hash
    */
+  async getLastHash(tenantId: string): Promise<string> {
+    const head = await this.getLastHead(tenantId);
+    return head.currentHash;
+  }
+
   setLastHash(tenantId: string, hash: string) {
-    this.lastHashesByTenant.set(tenantId, hash);
+    const current = this.lastStatesByTenant.get(tenantId) || { sequenceNumber: 0, currentHash: hash };
+    this.lastStatesByTenant.set(tenantId, { ...current, currentHash: hash });
   }
 
   /**
-   * Enqueues an audit event, sequentially calculating the SHA-256 block hash without race conditions
+   * Enqueues or synchronously commits an audit log entry.
+   * If a transaction handle `tx` is provided, executes synchronously through `tx` (Invariant B).
    */
-  async log(params: {
-    tenantId?: string;
-    userId?: string | null;
-    action: string;
-    entityType: string;
-    entityId?: string | null;
-    payload?: any;
-    ipAddress?: string | null;
-    userAgent?: string | null;
-    timestamp?: string;
-  }): Promise<AuditEntry> {
+  async log(
+    params: {
+      tenantId?: string;
+      userId?: string | null;
+      action: string;
+      entityType: string;
+      entityId?: string | null;
+      payload?: any;
+      ipAddress?: string | null;
+      userAgent?: string | null;
+      timestamp?: string;
+    },
+    tx?: any
+  ): Promise<AuditEntry & { sequenceNumber: number; signature: string }> {
     const tenantId = params.tenantId || "default";
-    const prevLock = this.tenantLogChains.get(tenantId) || Promise.resolve();
+    const timestamp = params.timestamp || new Date().toISOString();
+    const id = `aud_${crypto.randomUUID()}`;
+    const nonce = "0";
 
+    if (tx) {
+      // Transactional write: query latest sequence head strictly inside tx
+      const lastHead = await this.getLastHead(tenantId, tx);
+      const sequenceNumber = lastHead.sequenceNumber + 1;
+      const previousHash = lastHead.currentHash;
+
+      const canonicalPayloadJSON = canonicalizePayload(params.payload);
+      const currentHash = computeAuditBlockHash({
+        sequenceNumber,
+        previousHash,
+        tenantId,
+        userId: params.userId,
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        canonicalPayloadJSON,
+        timestamp,
+      });
+
+      const signature = computeAuditHmac(currentHash);
+
+      await tx.insert(auditLogs).values({
+        id,
+        tenantId,
+        userId: params.userId || null,
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId || null,
+        payload: canonicalPayloadJSON,
+        sequenceNumber,
+        previousHash,
+        currentHash,
+        signature,
+        ipAddress: params.ipAddress || null,
+        userAgent: params.userAgent || null,
+        timestamp,
+      });
+
+      // Clear in-memory cache to force next non-tx query to refresh
+      this.lastStatesByTenant.delete(tenantId);
+
+      return {
+        id,
+        tenantId,
+        userId: params.userId || null,
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId || null,
+        payload: params.payload,
+        sequenceNumber,
+        previousHash,
+        currentHash,
+        signature,
+        timestamp,
+        nonce,
+      };
+    }
+
+    // Queued non-transactional log execution serialized by tenant mutex chain
+    const prevLock = this.tenantLogChains.get(tenantId) || Promise.resolve();
     const currentLock = prevLock.then(async () => {
       return this._executeLog(params);
     });
@@ -127,29 +215,33 @@ export class CryptographicAuditWriter {
     ipAddress?: string | null;
     userAgent?: string | null;
     timestamp?: string;
-  }): Promise<AuditEntry> {
+  }): Promise<AuditEntry & { sequenceNumber: number; signature: string }> {
     const tenantId = params.tenantId || "default";
     const timestamp = params.timestamp || new Date().toISOString();
     const id = `aud_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const nonce = "0";
 
-    const previousHash = await this.getLastHash(tenantId);
-    const payloadHash = computePayloadHash(params.payload);
+    const lastHead = await this.getLastHead(tenantId, db);
+    const sequenceNumber = lastHead.sequenceNumber + 1;
+    const previousHash = lastHead.currentHash;
 
+    const canonicalPayloadJSON = canonicalizePayload(params.payload);
     const currentHash = computeAuditBlockHash({
+      sequenceNumber,
       previousHash,
-      timestamp,
       tenantId,
       userId: params.userId,
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      payloadHash,
-      nonce,
+      canonicalPayloadJSON,
+      timestamp,
     });
 
-    // Update in-memory head
-    this.lastHashesByTenant.set(tenantId, currentHash);
+    const signature = computeAuditHmac(currentHash);
+
+    // Update in-memory state head
+    this.lastStatesByTenant.set(tenantId, { sequenceNumber, currentHash });
 
     const queuedItem: QueuedAuditItem = {
       id,
@@ -159,9 +251,11 @@ export class CryptographicAuditWriter {
       entityType: params.entityType,
       entityId: params.entityId || null,
       payload: params.payload,
-      payloadHash,
+      canonicalPayloadJSON,
+      sequenceNumber,
       previousHash,
       currentHash,
+      signature,
       ipAddress: params.ipAddress || null,
       userAgent: params.userAgent || null,
       timestamp,
@@ -184,8 +278,10 @@ export class CryptographicAuditWriter {
       entityType: params.entityType,
       entityId: params.entityId || null,
       payload: params.payload,
+      sequenceNumber,
       previousHash,
       currentHash,
+      signature,
       ipAddress: params.ipAddress || null,
       userAgent: params.userAgent || null,
       timestamp,
@@ -194,7 +290,7 @@ export class CryptographicAuditWriter {
   }
 
   /**
-   * Flushes currently queued audit entries, building and persisting Merkle roots
+   * Flushes currently queued audit entries, persisting records and batch Merkle roots
    */
   async flush(): Promise<number> {
     if (this.isFlushing || this.queue.length === 0) return 0;
@@ -215,7 +311,6 @@ export class CryptographicAuditWriter {
 
       // 2. Process each tenant's batch separately
       for (const [tenantId, batchItems] of Object.entries(tenantBatches)) {
-        // Insert audit log entries
         for (const item of batchItems) {
           await db.insert(auditLogs).values({
             id: item.id,
@@ -224,73 +319,41 @@ export class CryptographicAuditWriter {
             action: item.action,
             entityType: item.entityType,
             entityId: item.entityId,
-            payload: item.payload ? JSON.stringify(item.payload) : null,
+            payload: item.canonicalPayloadJSON,
+            sequenceNumber: item.sequenceNumber,
             previousHash: item.previousHash,
             currentHash: item.currentHash,
+            signature: item.signature,
             ipAddress: item.ipAddress,
             userAgent: item.userAgent,
             timestamp: item.timestamp,
           });
         }
 
-        // Build Merkle Tree for the batch
+        // Build RFC 6962 Merkle Root for the batch
         const blockHashes = batchItems.map((i) => i.currentHash);
-        const merkleTree = buildMerkleTree(blockHashes);
+        const rootHash = computeMerkleRoot(blockHashes);
         const rootId = `mrk_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
 
         await db.insert(auditMerkleRoots).values({
           id: rootId,
           tenantId,
-          rootHash: merkleTree.root,
+          rootHash,
           startAuditId: batchItems[0].id,
           endAuditId: batchItems[batchItems.length - 1].id,
           leafCount: batchItems.length,
-          treeDepth: merkleTree.tree.length,
+          treeDepth: Math.ceil(Math.log2(batchItems.length)) + 1,
           createdAt: new Date().toISOString(),
         });
       }
       return itemsToProcess.length;
     } catch (err) {
-      // Re-queue items if insertion fails
       console.error("[@thaiba/audit] Flush error, re-queueing items:", err);
       this.queue = [...itemsToProcess, ...this.queue];
       return 0;
     } finally {
       this.isFlushing = false;
     }
-  }
-
-  /**
-   * Generates a cryptographic verification proof for a given audit entry
-   */
-  async getProof(auditEntryId: string): Promise<{
-    entry: any;
-    merkleRoot: string | null;
-    proof: string[];
-    valid: boolean;
-  } | null> {
-    const entries = await db
-      .select()
-      .from(auditLogs)
-      .where(eq(auditLogs.id, auditEntryId))
-      .limit(1);
-
-    if (entries.length === 0) return null;
-    const entry = entries[0];
-
-    // Find the Merkle root containing this entry
-    const roots = await db
-      .select()
-      .from(auditMerkleRoots)
-      .where(eq(auditMerkleRoots.tenantId, entry.tenantId || "default"))
-      .orderBy(desc(auditMerkleRoots.createdAt));
-
-    return {
-      entry,
-      merkleRoot: roots.length > 0 ? roots[0].rootHash : null,
-      proof: [],
-      valid: true,
-    };
   }
 }
 

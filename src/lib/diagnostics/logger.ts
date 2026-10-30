@@ -1,4 +1,4 @@
-type LogEntry = {
+export type LogEntry = {
   id: string;
   level: "info" | "warn" | "error" | "debug";
   message: string;
@@ -43,6 +43,8 @@ function saveLogs(logs: LogEntry[]) {
 }
 
 let isAddingEntry = false;
+type LogListener = (entry: LogEntry) => void;
+const logListeners = new Set<LogListener>();
 
 function addEntry(level: LogEntry["level"], message: string, data?: unknown) {
   if (isAddingEntry) return;
@@ -60,6 +62,9 @@ function addEntry(level: LogEntry["level"], message: string, data?: unknown) {
     };
     logs.push(entry);
     saveLogs(logs);
+    logListeners.forEach((fn) => {
+      try { fn(entry); } catch {}
+    });
     return entry;
   } catch {
     // Suppress console writes during error to prevent loop
@@ -218,7 +223,23 @@ export const telemetry = {
   error: (message: string, data?: unknown) => addEntry("error", message, data),
   debug: (message: string, data?: unknown) => addEntry("debug", message, data),
   getLogs: (): LogEntry[] => loadLogs(),
-  clearLogs: () => { try { localStorage.removeItem(STORAGE_KEY); } catch {} },
+  subscribe: (listener: LogListener): (() => void) => {
+    logListeners.add(listener);
+    return () => { logListeners.delete(listener); };
+  },
+  clearLogs: () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    logListeners.forEach((fn) => {
+      try {
+        fn({
+          id: generateUUID(),
+          level: "info",
+          message: "[telemetry] Logs cleared by user",
+          timestamp: new Date().toISOString(),
+        });
+      } catch {}
+    });
+  },
   getDiagnosticDump: (): string => {
     const logs = loadLogs();
     const lines = [

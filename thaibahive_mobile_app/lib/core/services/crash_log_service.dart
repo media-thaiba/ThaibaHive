@@ -30,6 +30,11 @@ class CrashLogService {
   String _osVersion = 'unknown';
   String _deviceModel = 'unknown';
 
+  String get appVersion => _appVersion;
+  String get buildNumber => _buildNumber;
+  String get osVersion => _osVersion;
+  String get deviceModel => _deviceModel;
+
   final List<Map<String, dynamic>> _pendingLogs = [];
 
   Future<void> init() async {

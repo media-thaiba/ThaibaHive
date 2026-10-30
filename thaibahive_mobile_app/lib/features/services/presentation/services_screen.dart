@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/pilot/pilot_gate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
@@ -169,7 +170,17 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
     ];
 
     // Filter categories based on search query
-    final filteredCategories = serviceCategories.where((category) {
+    final availableCategories = serviceCategories.map((category) {
+      final activeServices = category.services.where((s) => !isFrozenPath(s.route)).toList();
+      return _ServiceCategory(
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        services: activeServices,
+      );
+    }).where((category) => category.services.isNotEmpty).toList();
+
+    final filteredCategories = availableCategories.where((category) {
       if (_searchQuery.isEmpty) return true;
       final query = _searchQuery.toLowerCase();
       return category.name.toLowerCase().contains(query) ||
