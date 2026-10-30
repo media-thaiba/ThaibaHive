@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { db, credentialChallenges, webauthnCredentials, staff } from "@/db";
 import { eq, and, sql } from "drizzle-orm";
-import { createSession } from "@/lib/auth";
+import { createSession, createSessionWithRefresh } from "@/lib/auth";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 
 export async function POST(request: Request) {
@@ -157,13 +157,26 @@ export async function POST(request: Request) {
     tokenVersion: user.tokenVersion ?? 0,
   };
 
-  const token = await createSession(sessionPayload);
-
   // F-12: token-in-body only for mobile clients presenting the platform header.
   const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
+  let token: string;
+  let refreshToken: string | undefined;
+
+  if (isMobileClient) {
+    const res = await createSessionWithRefresh(
+      sessionPayload,
+      true,
+      "mobile",
+      30 * 24 * 60 * 60
+    );
+    token = res.token;
+    refreshToken = res.refreshToken;
+  } else {
+    token = await createSession(sessionPayload);
+  }
 
   return NextResponse.json({
-    ...(isMobileClient ? { token } : {}),
+    ...(isMobileClient ? { token, ...(refreshToken ? { refreshToken } : {}) } : {}),
     verified: true,
     user: {
       id: user.id,

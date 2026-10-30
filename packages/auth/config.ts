@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export type JwtSecretPurpose = "session" | "step-up" | "action-step-up" | "hall-ticket" | "mobile-handoff" | "audit-hmac";
+export type JwtSecretPurpose = "session" | "refresh" | "step-up" | "action-step-up" | "hall-ticket" | "mobile-handoff" | "audit-hmac";
 
 const HKDF_SALT = "thaibahive:jwt:salt:v1";
 
@@ -22,7 +22,11 @@ function derivePurposeSecret(masterSecret: string, purpose: JwtSecretPurpose): s
 }
 
 export function getJwtSecret(purpose: JwtSecretPurpose = "session"): string {
-  const secret = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET;
+  let secret = process.env.AUTH_JWT_SECRET;
+  if (!secret && process.env.JWT_SECRET) {
+    console.warn("[@thaiba/auth] JWT_SECRET is deprecated; set AUTH_JWT_SECRET instead. Falling back for now.");
+    secret = process.env.JWT_SECRET;
+  }
 
   if (!secret || secret.trim() === "") {
     if (process.env.NODE_ENV === "test") {

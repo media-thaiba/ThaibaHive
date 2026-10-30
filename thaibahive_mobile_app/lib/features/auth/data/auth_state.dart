@@ -68,6 +68,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final token = await _storage.read(key: AppConstants.storageTokenKey);
     if (token != null && token.isNotEmpty) {
       logger.info('[AuthState] Cached auth token found in secure storage. Restoring session...');
+      updateCachedAuthToken(token);
       state = state.copyWith(status: AuthStatus.loading);
       _repository.client.options.headers['Authorization'] = 'Bearer $token';
       try {
@@ -86,22 +87,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Re-register FCM token for silently-restored sessions.
         await _onLoginSuccess();
       } catch (e) {
-        final isAuthFailure = (e is DioException && (e.response?.statusCode == 401 || e.response?.statusCode == 403)) ||
-                              (e is AppException && (e.message.contains('Unauthorized') || e.message.contains('Forbidden')));
-        final isGenuineOffline = e is DioException &&
-            (e.type == DioExceptionType.connectionTimeout ||
-             e.type == DioExceptionType.sendTimeout ||
-             e.type == DioExceptionType.receiveTimeout ||
-             e.type == DioExceptionType.connectionError ||
-             e.error is SocketException);
+        int? statusCode;
+        if (e is DioException) {
+          statusCode = e.response?.statusCode;
+        } else if (e is AppException) {
+          statusCode = e.statusCode;
+        }
 
-        if (isAuthFailure || !isGenuineOffline) {
-          // Token explicitly rejected or revoked (or unexpected error) — clear session.
-          logger.warning('[AuthState] Cached token was revoked or invalid ($e). Clearing session.');
+        final isExplicitAuthRejection = statusCode == 401 || statusCode == 403;
+
+        if (isExplicitAuthRejection) {
+          // Token explicitly rejected or revoked — clear session.
+          logger.warning('[AuthState] Cached token was revoked or invalid ($statusCode). Clearing session.');
           await logout();
         } else {
-          // Genuine network connection error / offline. Load cached profile.
-          logger.warning('[AuthState] Device offline during session check. Restoring from cached profile.');
+          // Network connection error, timeout, server 500, or offline. Load cached profile without logging out.
+          logger.warning('[AuthState] Device offline or network error ($e) during session check. Restoring from cached profile.');
           final cachedProfileJson = await _storage.read(key: AppConstants.storageUserProfileKey);
           UserModel? cachedUser;
           if (cachedProfileJson != null) {
@@ -144,6 +145,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         value: jsonEncode(response.user.toJson()),
       );
       await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
+      updateCachedAuthToken(response.token);
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
@@ -177,7 +179,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
       }
       await _storage.write(key: 'remember_me', value: 'true');
+      await _storage.write(
+        key: AppConstants.storageUserProfileKey,
+        value: jsonEncode(response.user.toJson()),
+      );
       await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
+      updateCachedAuthToken(response.token);
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
@@ -203,7 +210,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
       }
       await _storage.write(key: 'remember_me', value: 'true');
+      await _storage.write(
+        key: AppConstants.storageUserProfileKey,
+        value: jsonEncode(response.user.toJson()),
+      );
       await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
+      updateCachedAuthToken(response.token);
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,
@@ -252,6 +264,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _storage.write(key: AppConstants.storageRefreshTokenKey, value: response.refreshToken);
       }
       await _storage.write(key: 'remember_me', value: 'true'); // signup defaults to keeping signed in
+      await _storage.write(
+        key: AppConstants.storageUserProfileKey,
+        value: jsonEncode(response.user.toJson()),
+      );
+      await _storage.write(key: 'is_first_login', value: response.user.isFirstLogin.toString());
+      updateCachedAuthToken(response.token);
       _repository.client.options.headers['Authorization'] = 'Bearer ${response.token}';
       state = AuthState(
         status: AuthStatus.authenticated,

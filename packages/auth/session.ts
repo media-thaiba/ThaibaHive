@@ -57,6 +57,12 @@ interface MintSessionOptions {
   deviceType?: string;
   clientIp?: string | null;
   userAgent?: string | null;
+  /**
+   * Renew an EXISTING session row (sid already persisted) instead of inserting
+   * a new one. Used by the refresh flow, where user_sessions.id already exists
+   * and a plain insert would violate the primary key.
+   */
+  renewExisting?: boolean;
 }
 
 /**
@@ -95,23 +101,43 @@ export async function mintSessionInternal(
 
   const deviceType = options.deviceType || detectDeviceType(userAgent);
 
-  // Insert session row into DB. Fail closed if DB write fails.
-  await db.insert(userSessions).values({
-    id: sid,
-    staffId: payload.staffId,
-    email: payload.email,
-    role: payload.role,
-    institutionId: payload.institutionId ?? null,
-    status: "active",
-    clientIp,
-    userAgent,
-    deviceType,
-    loginAt: nowMs,
-    lastActiveAt: nowMs,
-    expiresAt: expiresAtMs,
-    logoutAt: null,
-    createdAt: nowMs,
-  });
+  if (options.renewExisting) {
+    // Renewal: the row already exists, so UPDATE it (never re-insert — id is the PK).
+    // loginAt / createdAt / status are preserved so the original sign-in is kept.
+    const renewed = await db
+      .update(userSessions)
+      .set({
+        lastActiveAt: nowMs,
+        expiresAt: expiresAtMs,
+        clientIp,
+        userAgent,
+        deviceType,
+      })
+      .where(and(eq(userSessions.id, sid), eq(userSessions.staffId, payload.staffId)))
+      .returning({ id: userSessions.id });
+    if (renewed.length === 0) {
+      // Fail closed: no matching session row means the session is gone.
+      throw new Error(`SESSION_RENEWAL_FAILED: no active session row for sid ${sid}`);
+    }
+  } else {
+    // Insert session row into DB. Fail closed if DB write fails.
+    await db.insert(userSessions).values({
+      id: sid,
+      staffId: payload.staffId,
+      email: payload.email,
+      role: payload.role,
+      institutionId: payload.institutionId ?? null,
+      status: "active",
+      clientIp,
+      userAgent,
+      deviceType,
+      loginAt: nowMs,
+      lastActiveAt: nowMs,
+      expiresAt: expiresAtMs,
+      logoutAt: null,
+      createdAt: nowMs,
+    });
+  }
 
   const fullPayload: SessionPayload = {
     ...payload,
@@ -134,20 +160,21 @@ export async function mintSessionInternal(
 export async function createSession(
   payload: Omit<SessionPayload, "sid"> & { sid?: string },
   extendSession = false,
-  deviceType?: string
+  deviceType?: string,
+  ttlSeconds?: number
 ) {
-  const { token } = await mintSessionInternal(payload, { extendSession, deviceType });
+  const { token } = await mintSessionInternal(payload, { extendSession, deviceType, ttlSeconds });
 
   try {
     const cookieStore = await cookies();
-    const maxAge = extendSession
+    const maxAge = ttlSeconds ?? (extendSession
       ? 60 * 60 * 24 * 7  // 7 days with "Remember Me"
-      : 60 * 60 * 24;     // 24 hours default
+      : 60 * 60 * 24);    // 24 hours default
 
     const cookieOptions: Record<string, unknown> = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: process.env.COOKIE_SECURE !== "false",
+      sameSite: "lax",
       path: "/",
       maxAge,
     };
@@ -162,6 +189,128 @@ export async function createSession(
   }
 
   return token;
+}
+
+export async function createRefreshToken(
+  payload: {
+    sid: string;
+    staffId: string;
+    tokenVersion: number;
+    jti?: string;
+    familyId?: string;
+    generation?: number;
+  },
+  ttlSeconds: number = 60 * 60 * 24 * 30 // 30 days default
+): Promise<string> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const expSec = nowSec + ttlSeconds;
+  const jti =
+    payload.jti ||
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `rf_${payload.sid}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`);
+
+  const familyId =
+    payload.familyId ||
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `fam_${payload.sid}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`);
+
+  const generation = typeof payload.generation === "number" ? payload.generation : 0;
+
+  return new SignJWT({
+    ...payload,
+    familyId,
+    generation,
+    purpose: "refresh",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime(expSec)
+    .setIssuedAt(nowSec)
+    .setJti(jti)
+    .sign(getJwtSecretBytes("refresh"));
+}
+
+export async function verifyRefreshToken(
+  token: string
+): Promise<{
+  sid: string;
+  staffId: string;
+  tokenVersion: number;
+  jti?: string;
+  familyId?: string;
+  generation?: number;
+  exp?: number;
+} | null> {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecretBytes("refresh"));
+    if (payload.purpose !== "refresh") return null;
+    if (!payload.sid || typeof payload.sid !== "string") return null;
+    if (!payload.staffId || typeof payload.staffId !== "string") return null;
+    return {
+      sid: payload.sid,
+      staffId: payload.staffId,
+      tokenVersion: typeof payload.tokenVersion === "number" ? payload.tokenVersion : 0,
+      jti: typeof payload.jti === "string" ? payload.jti : undefined,
+      familyId: typeof payload.familyId === "string" ? payload.familyId : undefined,
+      generation: typeof payload.generation === "number" ? payload.generation : 0,
+      exp: typeof payload.exp === "number" ? payload.exp : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function createSessionWithRefresh(
+  payload: Omit<SessionPayload, "sid"> & { sid?: string },
+  extendSession = false,
+  deviceType?: string,
+  ttlSeconds?: number,
+  options?: { familyId?: string; generation?: number }
+): Promise<{ token: string; refreshToken: string; sid: string; expiresAtMs: number; familyId: string }> {
+  const effectiveTtl = ttlSeconds ?? (extendSession ? 30 * 24 * 60 * 60 : 24 * 60 * 60);
+  const { token, sid, expiresAtMs } = await mintSessionInternal(payload, {
+    extendSession,
+    deviceType,
+    ttlSeconds: effectiveTtl,
+    // A caller-supplied sid means this session row already exists (refresh flow).
+    renewExisting: payload.sid != null,
+  });
+
+  const familyId =
+    options?.familyId ||
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `fam_${sid}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`);
+
+  const generation = options?.generation ?? 0;
+
+  const refreshToken = await createRefreshToken({
+    sid,
+    staffId: payload.staffId,
+    tokenVersion: payload.tokenVersion ?? 0,
+    familyId,
+    generation,
+  }, effectiveTtl);
+
+  try {
+    const cookieStore = await cookies();
+    const cookieOptions: Record<string, unknown> = {
+      httpOnly: true,
+      secure: process.env.COOKIE_SECURE !== "false",
+      sameSite: "lax",
+      path: "/",
+      maxAge: effectiveTtl,
+    };
+    if (process.env.COOKIE_DOMAIN) {
+      cookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+    cookieStore.set(authConfig.cookieName, token, cookieOptions);
+  } catch {
+    // Non-request context
+  }
+
+  return { token, refreshToken, sid, expiresAtMs, familyId };
 }
 
 export async function createDPoPSession(
@@ -187,7 +336,7 @@ export async function createDPoPSession(
 
     const cookieOptions: Record<string, unknown> = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.COOKIE_SECURE !== "false",
       sameSite: "lax",
       path: "/",
       maxAge,
@@ -300,7 +449,7 @@ export async function verifySession(): Promise<SessionPayload | null> {
 
     return {
       ...session,
-      role: (row.role as string) || session.role,
+      role: row.role ?? session.role,
     };
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "LEGACY_SESSION_EXPIRED") {
@@ -367,7 +516,7 @@ export async function verifyDPoPSession(
 
     return {
       ...session,
-      role: (row.role as string) || session.role,
+      role: row.role ?? session.role,
       cnfJkt: cnf.jkt,
     };
   } catch (err) {

@@ -73,6 +73,14 @@ class ApiClient {
   InterceptorsWrapper _authInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
+        if (options.path.startsWith('/api/')) {
+          final normalizedBase = options.baseUrl.endsWith('/')
+              ? options.baseUrl.substring(0, options.baseUrl.length - 1)
+              : options.baseUrl;
+          if (normalizedBase.endsWith('/api')) {
+            options.path = options.path.substring(4);
+          }
+        }
         final token = await _storage.read(
           key: AppConstants.storageTokenKey,
         );
@@ -112,9 +120,13 @@ class ApiClient {
                   refreshDio.httpClientAdapter = _dio.httpClientAdapter;
                 }
                 
-                final response = await refreshDio.post('/auth/refresh', data: {
-                  'refreshToken': refreshToken,
-                });
+                final response = await refreshDio.post(
+                  '/auth/refresh',
+                  data: {
+                    'refreshToken': refreshToken,
+                  },
+                  options: Options(headers: {'X-Client-Platform': 'mobile'}),
+                );
                 
                 if (response.statusCode == 200 || response.statusCode == 201) {
                   final data = response.data;
@@ -125,6 +137,7 @@ class ApiClient {
                   if (newRefreshToken != null) {
                     await _storage.write(key: AppConstants.storageRefreshTokenKey, value: newRefreshToken);
                   }
+                  updateCachedAuthToken(token);
                   
                   _refreshCompleter!.complete(token);
                   newToken = token;
@@ -155,10 +168,12 @@ class ApiClient {
     );
   }
 
-  Future<void> _clearAuthData() async {
+  Future<void> _clearAuthData({bool preserveProfile = true}) async {
     await _storage.delete(key: AppConstants.storageTokenKey);
     await _storage.delete(key: AppConstants.storageRefreshTokenKey);
-    await _storage.delete(key: AppConstants.storageUserProfileKey);
+    if (!preserveProfile) {
+      await _storage.delete(key: AppConstants.storageUserProfileKey);
+    }
     updateCachedAuthToken(null);
   }
 

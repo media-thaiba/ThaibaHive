@@ -1,5 +1,5 @@
 export { hashPassword, verifyPassword } from "./password";
-export { createSession, createDPoPSession, verifySession, destroySession, createStepUpToken, verifyStepUpToken, verifyDPoPSession, touchSession, getClientIp } from "./session";
+export { createSession, createSessionWithRefresh, createRefreshToken, verifyRefreshToken, createDPoPSession, verifySession, destroySession, createStepUpToken, verifyStepUpToken, verifyDPoPSession, touchSession, getClientIp } from "./session";
 export { createActionStepUpToken, verifyActionStepUpToken, consumeStepUpTokenInTx, isStepUpReplayError } from "./step-up";
 export type { ActionStepUpPayload } from "./step-up";
 export type { SessionPayload, DPoPSessionPayload } from "./session";
@@ -13,3 +13,6 @@ export { loginSchema, signupSchema, passwordChangeSchema, profileUpdateSchema, i
 export { verifyGoogleToken } from "./google";
 export * from "./capability-schema";
 export * from "./capabilities";
+
+export * from "./membership-cache";
+export * from "./session-context";

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { staff, staffInstitutions } from "@/db/schema";
-import { createSession, verifyGoogleToken } from "@/lib/auth";
+import { createSession, createSessionWithRefresh, verifyGoogleToken } from "@/lib/auth";
 import { eq, and, or, sql } from "drizzle-orm";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import crypto from "crypto";
@@ -53,7 +53,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid Google token" }, { status: 401 });
     }
 
-    const { email, sub } = payload;
+    const { email, sub, jti } = payload;
+
+    // ── A1 FIX: TOKEN REPLAY PROTECTION VIA JTI SINGLE-USE CHECK ────────────
+    if (jti) {
+      const jtiCheck = await checkDistributedRateLimit(`auth:google:jti:${jti}`, {
+        windowMs: 3600_000, // 1 hour token expiration window
+        max: 1, // Single-use execution
+        keyPrefix: "jti",
+      });
+      if (!jtiCheck.allowed) {
+        console.warn(
+          JSON.stringify({
+            event: "google_token_replay_detected",
+            reason: "jti_already_used",
+            jtiHash: hashIdentifier(jti),
+            timestamp: new Date().toISOString(),
+          })
+        );
+        return NextResponse.json(
+          { error: "Token replay detected. Please sign in again." },
+          { status: 401 }
+        );
+      }
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     // ── D2 FIX: DETERMINISTIC MULTI-ROW / COLLISION AMBIGUITY CHECK ──────────
@@ -199,7 +223,12 @@ export async function POST(request: Request) {
 
     const resolvedInstitutionId = staffInstRow?.institutionId ?? null;
 
-    const token = await createSession({
+    // F-12: token-in-body only for mobile clients presenting the platform header.
+    const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
+    let token: string;
+    let refreshToken: string | undefined;
+
+    const sessionPayload = {
       staffId: staffMember.id,
       email: staffMember.email,
       role: staffMember.role,
@@ -207,13 +236,23 @@ export async function POST(request: Request) {
       name: `${staffMember.firstName} ${staffMember.lastName}`,
       tokenVersion: staffMember.tokenVersion ?? 0,
       institutionId: resolvedInstitutionId,
-    });
+    };
 
-    // F-12: token-in-body only for mobile clients presenting the platform header.
-    const isMobileClient = (request.headers.get("x-client-platform") ?? "").toLowerCase() === "mobile";
+    if (isMobileClient) {
+      const res = await createSessionWithRefresh(
+        sessionPayload,
+        true,
+        "mobile",
+        30 * 24 * 60 * 60
+      );
+      token = res.token;
+      refreshToken = res.refreshToken;
+    } else {
+      token = await createSession(sessionPayload);
+    }
 
     return NextResponse.json({
-      ...(isMobileClient ? { token } : {}),
+      ...(isMobileClient ? { token, ...(refreshToken ? { refreshToken } : {}) } : {}),
       needsOnboarding,
       isFirstLogin,
       user: {

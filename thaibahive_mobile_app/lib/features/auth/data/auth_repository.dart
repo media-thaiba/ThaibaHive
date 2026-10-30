@@ -53,7 +53,7 @@ class AuthRepository {
   Future<AuthResponseModel> refreshAccessToken(String refreshToken) async {
     final response = await client.post('/auth/refresh', data: {
       'refreshToken': refreshToken,
-    });
+    }, options: Options(headers: {'X-Client-Platform': 'mobile'}));
     return AuthResponseModel.fromJson(response.data);
   }
 
