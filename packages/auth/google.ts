@@ -18,6 +18,7 @@ export async function verifyGoogleToken(
   name?: string;
   picture?: string;
   sub: string;
+  jti?: string;
 }> {
   if (!idToken) {
     throw new Error("Google ID token is required");
@@ -43,5 +44,6 @@ export async function verifyGoogleToken(
     name: payload.name ? String(payload.name) : undefined,
     picture: payload.picture ? String(payload.picture) : undefined,
     sub: String(payload.sub),
+    jti: payload.jti ? String(payload.jti) : undefined,
   };
 }
