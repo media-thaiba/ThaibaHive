@@ -83,6 +83,7 @@ export default defineConfig({
       PAYMENT_ENCRYPTION_KEY: process.env.PAYMENT_ENCRYPTION_KEY,
       SYSTEM_UPDATE_SECRET: process.env.SYSTEM_UPDATE_SECRET,
       PLAYWRIGHT_TEST: "true",
+      NEXT_PUBLIC_E2E: "1",
       PORT: String(PORT),
       DATABASE_URL: resolvedDbPath,
       AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET,

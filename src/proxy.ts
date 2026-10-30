@@ -121,6 +121,41 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Gated test fixtures: /dev/ routes are strictly forbidden in production unless NEXT_PUBLIC_E2E=1
+  // Normalize path (decode percent-encoding up to 2 passes, lower-case, collapse multiple slashes/dots) to prevent bypasses.
+  // Stored in separate canonicalDevPath so original case-sensitive pathname is preserved for downstream routing.
+  let canonicalDevPath = pathname;
+  let isMalformedUri = false;
+  try {
+    let prev = "";
+    let curr = pathname;
+    for (let i = 0; i < 2 && prev !== curr; i++) {
+      prev = curr;
+      curr = decodeURIComponent(curr);
+    }
+    canonicalDevPath = curr.toLowerCase().replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/\.\//g, "/");
+  } catch {
+    isMalformedUri = true;
+  }
+
+  // Fail closed on malformed percent encoding if path attempts to target /dev/
+  if (isMalformedUri && (/^\/(%|[dD][eE][vV])/i.test(pathname) || pathname.toLowerCase().includes("dev"))) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  if (canonicalDevPath.startsWith("/dev/") || canonicalDevPath === "/dev") {
+    const isE2E = process.env.NEXT_PUBLIC_E2E === "1";
+    const isDev = process.env.NODE_ENV !== "production";
+    if (!isE2E && !isDev) {
+      return new NextResponse(null, { status: 404 });
+    }
+    // Scope bypass strictly to the exact fixture route
+    if (canonicalDevPath === "/dev/sheet-harness" || canonicalDevPath === "/dev/sheet-harness/") {
+      return addSecurityHeaders(request, nextWithNonce(request, nonce), pathname, nonce);
+    }
+    return new NextResponse(null, { status: 404 });
+  }
+
   try {
     const method = request.method;
     const isWrite = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";

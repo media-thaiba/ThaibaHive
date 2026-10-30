@@ -488,3 +488,36 @@ jobs:
           name: k6-load-test-reports
           path: k6-reports/
           retention-days: 3
+
+  prod-fixture-gate:
+    name: Production fixture gate (/dev/* must 404)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Clean slate: a stale E2E build left in .next would defeat the whole gate.
+      - name: Remove any previous build output
+        run: rm -rf .next
+
+      - name: Build (production, NOT build:e2e)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_E2E: ""        # explicitly empty
+          PLAYWRIGHT_TEST: ""
+
+      - name: Smoke - fixture routes must 404
+        run: node scripts/smoke-prod-404.mjs
+        env:
+          NODE_ENV: production

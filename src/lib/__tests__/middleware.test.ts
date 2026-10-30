@@ -540,4 +540,97 @@ describe("proxy", () => {
     });
   });
 
+  describe("Test Fixture Gating (/dev/*)", () => {
+    const origNodeEnv = process.env.NODE_ENV;
+    const origE2E = process.env.NEXT_PUBLIC_E2E;
+    const origPlaywright = process.env.PLAYWRIGHT_TEST;
+
+    afterEach(() => {
+      (process.env as any).NODE_ENV = origNodeEnv;
+      process.env.NEXT_PUBLIC_E2E = origE2E;
+      process.env.PLAYWRIGHT_TEST = origPlaywright;
+    });
+
+    it("returns 404 in production deploy when NEXT_PUBLIC_E2E is not set", async () => {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.PLAYWRIGHT_TEST;
+
+      const req = makeRequest("/dev/sheet-harness");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(404);
+    });
+
+    it("allows /dev/sheet-harness when NEXT_PUBLIC_E2E=1", async () => {
+      (process.env as any).NODE_ENV = "production";
+      process.env.NEXT_PUBLIC_E2E = "1";
+      delete process.env.PLAYWRIGHT_TEST;
+
+      const req = makeRequest("/dev/sheet-harness");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(200);
+    });
+
+    it("allows /dev/sheet-harness in development mode", async () => {
+      (process.env as any).NODE_ENV = "development";
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.PLAYWRIGHT_TEST;
+
+      const req = makeRequest("/dev/sheet-harness");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(200);
+    });
+
+    it("blocks other /dev/* routes even when NEXT_PUBLIC_E2E=1", async () => {
+      (process.env as any).NODE_ENV = "production";
+      process.env.NEXT_PUBLIC_E2E = "1";
+
+      const req = makeRequest("/dev/other-route");
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(404);
+    });
+
+    it.each([
+      { name: "percent-encoded d", path: "/%64ev/sheet-harness", expectedStatus: 404 },
+      { name: "mixed-case DEV", path: "/DEV/sheet-harness", expectedStatus: 404 },
+      { name: "dot-segment traversal", path: "/dev/%2e/sheet-harness", expectedStatus: 404 },
+      { name: "double slash bypass", path: "//dev/sheet-harness", expectedStatus: 404 },
+      { name: "double percent-encoded d", path: "/%2564ev/sheet-harness", expectedStatus: 404 },
+      { name: "encoded slash", path: "/dev%2fsheet-harness", expectedStatus: 404 },
+      { name: "encoded backslash", path: "/dev%5csheet-harness", expectedStatus: 404 },
+    ])("blocks bypass attempt via $name ($path) in production with 404", async ({ path, expectedStatus }) => {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_E2E;
+
+      const req = makeRequest(path);
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(expectedStatus);
+    });
+
+    it.each([
+      { name: "malformed hex digits", path: "/dev/%99" },
+      { name: "truncated UTF-8 sequence", path: "/%E0%A4%A/dev/sheet-harness" },
+      { name: "dangling percent sign", path: "/%/dev/sheet-harness" },
+    ])("fails closed with 404 on malformed percent encoding targeting dev ($name)", async ({ path }) => {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.NEXT_PUBLIC_E2E;
+
+      const req = makeRequest(path);
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(404);
+    });
+
+    it.each([
+      { name: "malformed hex on API route", path: "/api/circulars/%99", expectedStatus: 401 },
+      { name: "malformed hex on unauthenticated page", path: "/circulars/%99", expectedStatus: 307 },
+      { name: "dangling percent on normal login page", path: "/auth/login?redirect=/%", expectedStatus: 200 },
+    ])("returns exact expected status without 500 crash on normal routes with malformed encoding ($name)", async ({ path, expectedStatus }) => {
+      (process.env as any).NODE_ENV = "production";
+
+      const req = makeRequest(path);
+      const res = (await proxy(req as any)) as any;
+      expect(res.status).toBe(expectedStatus);
+    });
+  });
+
 });

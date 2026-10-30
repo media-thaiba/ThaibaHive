@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "build:e2e": "cross-env NEXT_PUBLIC_E2E=1 NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
     "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
+    "smoke:prod-404": "node scripts/smoke-prod-404.mjs",
     "postbuild": "tsx scripts/copy-standalone-assets.ts",
     "start": "next start",
     "lint": "eslint .",
