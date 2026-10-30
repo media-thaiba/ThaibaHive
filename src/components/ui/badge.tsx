@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide transition-colors",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 font-medium transition-colors tabular-nums",
   {
     variants: {
       variant: {
@@ -15,16 +15,22 @@ const badgeVariants = cva(
         warning: "border-amber-500/25 bg-amber-500/10 text-amber-600 dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-400 hover:bg-amber-500/15",
         info: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:border-sky-400/30 dark:bg-sky-400/15 dark:text-sky-400 hover:bg-sky-500/15",
       },
+      size: {
+        default: "text-[0.6875rem] uppercase tracking-wider",
+        dense: "text-[10px] uppercase tracking-normal",
+        sm: "text-[0.625rem] px-2 py-0.2 uppercase tracking-wide",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "default",
     },
   }
 );
 
 export const Badge = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>>(
-  ({ className, variant, ...props }, ref) => (
-    <span ref={ref} className={cn(badgeVariants({ variant }), className)} {...props} />
+  ({ className, variant, size, ...props }, ref) => (
+    <span ref={ref} className={cn(badgeVariants({ variant, size }), className)} {...props} />
   )
 );
 Badge.displayName = "Badge";

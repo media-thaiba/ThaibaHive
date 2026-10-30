@@ -179,6 +179,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  table, .tabular-nums, [data-tabular-nums] {
+    font-variant-numeric: tabular-nums;
+  }
   h1, h2, h3, h4 {
     @apply font-semibold tracking-tight;
     text-wrap: balance;
@@ -302,6 +305,12 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     line-height: 1.2;
+  }
+
+  /* Preserve Arabic and Indic script ligation & case neutrality */
+  [dir="rtl"], :lang(ar), :lang(ml), :lang(ar) * {
+    letter-spacing: normal !important;
+    text-transform: none !important;
   }
 
   @media (min-width: 640px) {
