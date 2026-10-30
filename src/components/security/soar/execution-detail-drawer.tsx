@@ -7,13 +7,13 @@
 
 import React from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SoarExecutionContext } from '@/lib/security/soar/soar-types';
@@ -28,19 +28,19 @@ export function ExecutionDetailDrawer({ execution, open, onClose }: ExecutionDet
   const steps = Object.values(execution.steps || {});
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <SheetContent className="sm:max-w-2xl">
+        <SheetHeader>
           <div className="flex items-center justify-between pr-4">
-            <DialogTitle className="text-lg font-bold">{execution.playbook_name}</DialogTitle>
+            <SheetTitle className="text-lg font-bold">{execution.playbook_name}</SheetTitle>
             <Badge variant="secondary" className="font-mono text-xs">
               {execution.execution_id.substring(0, 13)}...
             </Badge>
           </div>
-          <DialogDescription className="text-xs">
+          <SheetDescription className="text-xs">
             Target: {execution.target_entity?.type} ({execution.target_entity?.value}) · Started: {new Date(execution.started_at).toLocaleString()}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="space-y-4 py-3">
           {execution.error && (
@@ -92,12 +92,12 @@ export function ExecutionDetailDrawer({ execution, open, onClose }: ExecutionDet
           </div>
         </div>
 
-        <DialogFooter>
+        <SheetFooter>
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

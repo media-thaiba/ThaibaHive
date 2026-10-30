@@ -6,11 +6,11 @@ import { ChannelList } from "./channel-list";
 import { MessageThread } from "./message-thread";
 import { MessageInput } from "./message-input";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageSquare, X, WifiOff, Hash } from "lucide-react";
@@ -76,16 +76,17 @@ export function ChatDrawer({ open: controlledOpen, onOpenChange: controlledOnOpe
   const activeChannel = channels.find((c) => c.id === activeChannelId);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setOpen}>
-      <DialogContent
-        className="fixed right-0 top-0 bottom-0 left-auto h-screen max-h-screen w-full max-w-4xl p-0 gap-0 rounded-none border-l shadow-2xl bg-background flex flex-col translate-x-0 transition-transform duration-300"
+    <Sheet open={isOpen} onOpenChange={setOpen}>
+      <SheetContent
+        showCloseButton={false}
+        className="sm:max-w-4xl sm:h-screen sm:max-h-screen sm:rounded-none sm:border-l p-0 gap-0"
         aria-describedby="chat-drawer-desc"
       >
         <div className="sr-only">
-          <DialogTitle>Chat & Messaging Center</DialogTitle>
-          <DialogDescription id="chat-drawer-desc">
+          <SheetTitle>Chat & Messaging Center</SheetTitle>
+          <SheetDescription id="chat-drawer-desc">
             Bi-directional real-time chat with campus colleagues and departments.
-          </DialogDescription>
+          </SheetDescription>
         </div>
 
         {/* Top Drawer Header */}
@@ -170,7 +171,7 @@ export function ChatDrawer({ open: controlledOpen, onOpenChange: controlledOnOpe
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
