@@ -152,8 +152,25 @@ if (!EXTERNAL) {
         `(not build:e2e), or set SMOKE_SERVER / SMOKE_BASE_URL.`
     );
   }
+  const defaultSmokeEnv = {
+    DATABASE_URL: process.env.DATABASE_URL || `file:${path.resolve("dev.db").replace(/\\/g, "/")}`,
+    AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET || "smoke-prod-gate-auth-jwt-secret-32-chars",
+    CRON_SECRET: process.env.CRON_SECRET || "smoke-prod-gate-cron-secret-32-chars",
+    METRICS_SECRET: process.env.METRICS_SECRET || "smoke-prod-gate-metrics-secret-32",
+    PII_ENCRYPTION_KEY: process.env.PII_ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    RECEIPT_SIGNING_KEY: process.env.RECEIPT_SIGNING_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    MDM_ENROLLMENT_TOKEN: process.env.MDM_ENROLLMENT_TOKEN || "smoke-prod-gate-mdm-token-32-chars",
+    PAYMENT_ENCRYPTION_KEY: process.env.PAYMENT_ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    HEALTH_SECRET: process.env.HEALTH_SECRET || "smoke-prod-gate-health-secret-32",
+    SYSTEM_UPDATE_SECRET: process.env.SYSTEM_UPDATE_SECRET || "smoke-prod-gate-sys-secret-32",
+    JWT_SECRET: process.env.JWT_SECRET || process.env.AUTH_JWT_SECRET || "smoke-prod-gate-jwt-secret-32-chars",
+    BIOMETRIC_MASTER_KEY: process.env.BIOMETRIC_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    TENANT_ENCRYPTION_MASTER_KEY: process.env.TENANT_ENCRYPTION_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  };
   child = spawn(process.execPath, [SERVER_JS], {
     env: {
+      ...defaultSmokeEnv,
       ...process.env,
       NODE_ENV: "production",
       PORT,

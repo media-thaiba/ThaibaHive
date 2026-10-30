@@ -122,18 +122,6 @@ function getTouchSnapshot() {
   return window.matchMedia("(pointer: coarse)").matches;
 }
 
-function subscribeReducedMotion(callback: () => void) {
-  if (typeof window === "undefined" || !window.matchMedia) return () => {};
-  const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-  mql.addEventListener?.("change", callback);
-  return () => mql.removeEventListener?.("change", callback);
-}
-
-function getReducedMotionSnapshot() {
-  if (typeof window === "undefined" || !window.matchMedia) return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 // Global sheet stacking counter for scroll-lock preservation across nested sheets
 let activeSheetScrollLockCount = 0;
 

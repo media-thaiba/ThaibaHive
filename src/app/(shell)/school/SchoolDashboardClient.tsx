@@ -8,7 +8,6 @@ import {
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select, SelectItem } from "@/components/ui/select";
-import { SkeletonCard } from "@/components/ui/skeleton";
 
 export type Institution = { id: string; name: string };
 

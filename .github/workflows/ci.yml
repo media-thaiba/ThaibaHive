@@ -507,6 +507,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Setup database for smoke test
+        run: |
+          pnpm premigrate
+          pnpm db:migrate
+        env:
+          DATABASE_URL: file:./dev.db
+
       # Clean slate: a stale E2E build left in .next would defeat the whole gate.
       - name: Remove any previous build output
         run: rm -rf .next
@@ -516,8 +523,12 @@ jobs:
         env:
           NEXT_PUBLIC_E2E: ""        # explicitly empty
           PLAYWRIGHT_TEST: ""
+          DATABASE_URL: file:./dev.db
+          AUTH_JWT_SECRET: "smoke-prod-gate-auth-jwt-secret-32-chars"
 
       - name: Smoke - fixture routes must 404
         run: node scripts/smoke-prod-404.mjs
         env:
           NODE_ENV: production
+          DATABASE_URL: file:./dev.db
+          AUTH_JWT_SECRET: "smoke-prod-gate-auth-jwt-secret-32-chars"
