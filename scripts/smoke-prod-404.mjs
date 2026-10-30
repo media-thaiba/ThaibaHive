@@ -167,6 +167,9 @@ if (!EXTERNAL) {
     BIOMETRIC_MASTER_KEY: process.env.BIOMETRIC_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     TENANT_ENCRYPTION_MASTER_KEY: process.env.TENANT_ENCRYPTION_MASTER_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    APP_URL: process.env.APP_URL || `http://127.0.0.1:${PORT}`,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || `http://127.0.0.1:${PORT}`,
+    SKIP_ENV_VALIDATION: "true",
   };
   child = spawn(process.execPath, [SERVER_JS], {
     env: {
@@ -267,6 +270,10 @@ cleanup();
 if (failures.length) {
   console.error(`\n✖ GATE FAILED (${failures.length}):`);
   failures.forEach((f) => console.error(`  - ${f}`));
+  if (logs.length) {
+    console.error("\n--- server stdout/stderr ---");
+    console.error(logs.join(""));
+  }
   console.error(
     "\nIf you changed the fixture page text, update HARNESS_MARKERS in this script."
   );

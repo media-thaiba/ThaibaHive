@@ -525,6 +525,12 @@ jobs:
           PLAYWRIGHT_TEST: ""
           DATABASE_URL: file:./dev.db
           AUTH_JWT_SECRET: "smoke-prod-gate-auth-jwt-secret-32-chars"
+          NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3199"
+
+      - name: Copy public and static assets to standalone output
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
 
       - name: Smoke - fixture routes must 404
         run: node scripts/smoke-prod-404.mjs
@@ -532,3 +538,6 @@ jobs:
           NODE_ENV: production
           DATABASE_URL: file:./dev.db
           AUTH_JWT_SECRET: "smoke-prod-gate-auth-jwt-secret-32-chars"
+          NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3199"
+          APP_URL: "http://127.0.0.1:3199"
+          SKIP_ENV_VALIDATION: "true"
