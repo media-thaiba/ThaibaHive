@@ -59,7 +59,7 @@ async function generate() {
         nowMs,
       ],
     });
-  } catch (err) {
+  } catch (_err) {
     // Non-fatal if DB write fails during token generation in isolated contexts
   }
 
