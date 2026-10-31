@@ -354,10 +354,9 @@ export const NAV_VISIBILITY_MATRIX: Record<string, Record<string, boolean>> = {
   "/my-work/polls": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
   "/my-work/expenses": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
   "/my-work/canteen": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/my-work/grievances": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
+  "/my-work/complaints": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
   "/my-work/recognition": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
   "/my-work/availability": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
-  "/my-work/settings": { super_admin: true, admin: true, principal: true, hod: true, staff: true, accounts: true, purchase: true },
 
   // School (workspace: super_admin, admin, principal, hod)
   "/school": { super_admin: true, admin: true, principal: true, hod: true, staff: false, accounts: false, purchase: false },

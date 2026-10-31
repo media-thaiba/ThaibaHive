@@ -454,7 +454,7 @@ await client.execute(`
         await client.execute(`
       CREATE TABLE IF NOT EXISTS \`financial_budget_models\` (
         \`id\` text PRIMARY KEY NOT NULL,
-        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`),
+        \`institution_id\` text NOT NULL REFERENCES \`institutions\`(\`id\`),
         \`fiscal_year\` text NOT NULL,
         \`target_budget_amount\` real NOT NULL,
         \`baseline_velocity\` real DEFAULT 1.0 NOT NULL,
@@ -467,7 +467,7 @@ await client.execute(`
     await client.execute(`
       CREATE TABLE IF NOT EXISTS \`financial_forecast_runs\` (
         \`id\` text PRIMARY KEY NOT NULL,
-        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`),
+        \`institution_id\` text NOT NULL REFERENCES \`institutions\`(\`id\`),
         \`horizon_days\` integer DEFAULT 90 NOT NULL,
         \`forecast_p10\` real NOT NULL,
         \`forecast_p50\` real NOT NULL,
@@ -493,7 +493,7 @@ await client.execute(`
     await client.execute(`
       CREATE TABLE IF NOT EXISTS \`report_schedules\` (
         \`id\` text PRIMARY KEY NOT NULL,
-        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`) ON DELETE CASCADE,
+        \`institution_id\` text NOT NULL REFERENCES \`institutions\`(\`id\`) ON DELETE CASCADE,
         \`user_id\` text NOT NULL,
         \`title\` text NOT NULL,
         \`frequency\` text NOT NULL,
@@ -508,7 +508,7 @@ await client.execute(`
       CREATE TABLE IF NOT EXISTS \`report_history\` (
         \`id\` text PRIMARY KEY NOT NULL,
         \`schedule_id\` text REFERENCES \`report_schedules\`(\`id\`) ON DELETE SET NULL,
-        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`) ON DELETE CASCADE,
+        \`institution_id\` text NOT NULL REFERENCES \`institutions\`(\`id\`) ON DELETE CASCADE,
         \`file_path\` text NOT NULL,
         \`format\` text NOT NULL,
         \`status\` text NOT NULL,
@@ -520,7 +520,7 @@ await client.execute(`
     await client.execute(`
       CREATE TABLE IF NOT EXISTS \`scheduled_jobs\` (
         \`id\` text PRIMARY KEY NOT NULL,
-        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`) ON DELETE CASCADE,
+        \`institution_id\` text NOT NULL REFERENCES \`institutions\`(\`id\`) ON DELETE CASCADE,
         \`type\` text NOT NULL,
         \`format\` text NOT NULL,
         \`options\` text NOT NULL,
@@ -552,11 +552,52 @@ await client.execute(`
         \`old_value\` text,
         \`new_value\` text NOT NULL,
         \`ip_address\` text,
-        \`institution_id\` text REFERENCES \`institution\`(\`id\`) ON DELETE SET NULL
+        \`institution_id\` text REFERENCES \`institutions\`(\`id\`) ON DELETE SET NULL
       )
     `);
 
-    if (appliedCount === 0) {
+        await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`swarm_negotiations\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`session_id\` text NOT NULL,
+        \`agent_id\` text NOT NULL,
+        \`institution_id\` text,
+        \`status\` text NOT NULL,
+        \`created_at\` text NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`negotiation_bids\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`session_id\` text NOT NULL,
+        \`agent_id\` text NOT NULL,
+        \`bid_amount\` real NOT NULL,
+        \`created_at\` text NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`negotiation_outcomes\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`session_id\` text NOT NULL,
+        \`winner_id\` text NOT NULL,
+        \`final_price\` real NOT NULL,
+        \`created_at\` text NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`compliance_reports\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`framework\` text NOT NULL,
+        \`status\` text NOT NULL,
+        \`findings\` text
+      )
+    `);
+
+if (appliedCount === 0) {
       console.log("[db:migrate] All SQLite/LibSQL migrations are already up to date.");
     } else {
       console.log(`[db:migrate] Successfully applied ${appliedCount} migration(s).`);
