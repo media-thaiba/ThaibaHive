@@ -94,6 +94,8 @@ export default defineConfig({
       NODE_ENV: "production",
       NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
       APP_URL: `http://localhost:${PORT}`,
+      V1_PILOT_MODE: "false",
+      NEXT_PUBLIC_V1_PILOT: "false",
     },
   },
 });

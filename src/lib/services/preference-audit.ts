@@ -6,38 +6,37 @@ import crypto from "crypto";
 
 export class PreferenceAuditService {
   /**
-   * Logs a user personalization preference update event asynchronously.
-   * Runs in the background (non-blocking) to ensure sub-second response latency.
+   * Logs a user personalization preference update event.
+   * Awaits insert to ensure database consistency across audit trail assertions.
    */
-  static logPreferenceChange(
+  static async logPreferenceChange(
     userId: string,
     preferenceKey: string,
     oldValue: string | null,
     newValue: string,
     institutionId: string | null,
     ipAddress: string | null
-  ): void {
+  ): Promise<void> {
     const id = crypto.randomUUID();
     const effectiveInstId = institutionId && institutionId !== "global" ? institutionId : null;
 
-    db.insert(preferenceAuditLog)
-      .values({
-        id,
-        userId,
-        preferenceKey,
-        oldValue,
-        newValue,
-        institutionId: effectiveInstId,
-        ipAddress,
-        timestamp: new Date().toISOString(),
-      })
-      .run()
-      .then(() => {
-        logger.info(`[PreferenceAuditService] Preference logged successfully: id=${id}, user=${userId}, key=${preferenceKey}`);
-      })
-      .catch((err) => {
-        console.error("[PreferenceAuditService] Failed to log preference change asynchronously:", err);
-      });
+    try {
+      await db.insert(preferenceAuditLog)
+        .values({
+          id,
+          userId,
+          preferenceKey,
+          oldValue,
+          newValue,
+          institutionId: effectiveInstId,
+          ipAddress,
+          timestamp: new Date().toISOString(),
+        })
+        .run();
+      logger.info(`[PreferenceAuditService] Preference logged successfully: id=${id}, user=${userId}, key=${preferenceKey}`);
+    } catch (err) {
+      console.error("[PreferenceAuditService] Failed to log preference change:", err);
+    }
   }
 
   /**

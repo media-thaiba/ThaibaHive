@@ -123,6 +123,101 @@ export async function runMigrations() {
     await ensureColumn("staff", "model_version", "TEXT DEFAULT 'facenet-512d-v1'");
     await ensureColumn("staff", "biometric_status", "TEXT DEFAULT 'active'");
     await ensureColumn("staff", "google_sub", "TEXT");
+    await ensureColumn("performance_reviews", "institution_id", "TEXT");
+    await ensureColumn("performance_reviews", "cycle_id", "TEXT");
+    await ensureColumn("performance_reviews", "evaluator_staff_id", "TEXT");
+    await ensureColumn("performance_reviews", "form_template_id", "TEXT");
+    await ensureColumn("performance_reviews", "self_score", "REAL");
+    await ensureColumn("performance_reviews", "manager_score", "REAL");
+    await ensureColumn("performance_reviews", "final_score", "REAL");
+    await ensureColumn("performance_reviews", "grade", "TEXT");
+    await ensureColumn("performance_reviews", "self_comments", "TEXT");
+    await ensureColumn("performance_reviews", "manager_comments", "TEXT");
+    await ensureColumn("performance_reviews", "hr_comments", "TEXT");
+    await ensureColumn("performance_reviews", "achievements", "TEXT");
+    await ensureColumn("performance_reviews", "areas_for_improvement", "TEXT");
+    await ensureColumn("performance_reviews", "goals", "TEXT");
+    await ensureColumn("performance_reviews", "ratings_json", "TEXT");
+    await ensureColumn("performance_reviews", "submitted_at", "TEXT");
+    await ensureColumn("performance_reviews", "approved_at", "TEXT");
+    await ensureColumn("performance_reviews", "completed_at", "TEXT");
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`performance_cycles\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`title\` text NOT NULL,
+        \`cycle_type\` text DEFAULT 'quarterly' NOT NULL,
+        \`start_date\` text NOT NULL,
+        \`end_date\` text NOT NULL,
+        \`self_assessment_deadline\` text NOT NULL,
+        \`manager_review_deadline\` text NOT NULL,
+        \`status\` text DEFAULT 'draft' NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`competency_frameworks\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`name\` text NOT NULL,
+        \`department_id\` text,
+        \`role_scope\` text DEFAULT 'all',
+        \`metrics_json\` text NOT NULL,
+        \`is_active\` integer DEFAULT 1 NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`evaluation_forms\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`framework_id\` text NOT NULL,
+        \`title\` text NOT NULL,
+        \`description\` text,
+        \`metrics_config_json\` text NOT NULL,
+        \`rating_scale\` text DEFAULT '1-5',
+        \`is_active\` integer DEFAULT 1 NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`performance_goals\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`staff_id\` text NOT NULL,
+        \`review_id\` text,
+        \`title\` text NOT NULL,
+        \`description\` text,
+        \`target_date\` text NOT NULL,
+        \`progress_percentage\` integer DEFAULT 0 NOT NULL,
+        \`status\` text DEFAULT 'in_progress' NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`feedback_requests\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`review_id\` text NOT NULL,
+        \`requester_staff_id\` text NOT NULL,
+        \`peer_staff_id\` text NOT NULL,
+        \`feedback_text\` text,
+        \`rating\` real,
+        \`status\` text DEFAULT 'pending' NOT NULL,
+        \`submitted_at\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
 
     await client.execute(`
       CREATE TABLE IF NOT EXISTS \`guardians\` (

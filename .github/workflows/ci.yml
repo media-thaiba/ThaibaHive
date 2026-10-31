@@ -356,6 +356,10 @@ jobs:
           DR_SECRET: ${{ env.DR_SECRET }}
           CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          PLAYWRIGHT_TEST: "true"
+          V1_PILOT_MODE: "false"
+          NEXT_PUBLIC_V1_PILOT: "false"
+          NEXT_PUBLIC_E2E: "1"
 
       - name: Upload Playwright report (on failure only)
         uses: actions/upload-artifact@v4

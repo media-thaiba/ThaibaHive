@@ -17,8 +17,12 @@ export type FrozenPilotModule = typeof FROZEN_PILOT_MODULES[number];
  *
  * FAILS CLOSED: In the absence of an explicit opt-out env var,
  * this function defaults to true (pilot freeze active).
+ * Bypassed during test automation (Playwright and k6 suites).
  */
 export function isPilotFreezeActive(): boolean {
+  if (process.env.PLAYWRIGHT_TEST === "true" || process.env.K6_LOAD_TEST === "true") {
+    return false;
+  }
   const envVal = (process.env.V1_PILOT_MODE || process.env.NEXT_PUBLIC_V1_PILOT || "").trim().toLowerCase();
   if (envVal === "false" || envVal === "disabled" || envVal === "off") {
     return false;
