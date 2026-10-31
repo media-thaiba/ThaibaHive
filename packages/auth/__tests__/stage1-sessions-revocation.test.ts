@@ -406,18 +406,18 @@ describe("Stage 1: Sessions, Revocation, Terminate Route & RBAC Hierarchy", () =
     });
 
     const initial = await db.select().from(userSessions).where(eq(userSessions.id, sid)).get();
-    const initialLastActive = initial!.lastActiveAt;
+    const initialLastActive = Number(initial!.lastActiveAt);
 
     // Call touchSession after 60 seconds (< 120s threshold) -> no write
     await touchSession(sid, initialLastActive + 60_000);
     const row1 = await db.select().from(userSessions).where(eq(userSessions.id, sid)).get();
-    expect(row1!.lastActiveAt).toBe(initialLastActive);
+    expect(Number(row1!.lastActiveAt)).toBe(initialLastActive);
 
     // Call touchSession after 130 seconds (> 120s threshold) -> updates
     const newTimestamp = initialLastActive + 130_000;
     await touchSession(sid, newTimestamp);
     const row2 = await db.select().from(userSessions).where(eq(userSessions.id, sid)).get();
-    expect(row2!.lastActiveAt).toBe(newTimestamp);
+    expect(Number(row2!.lastActiveAt)).toBe(newTimestamp);
   });
 
   // ─── CASE 9: Login Paths & MFA-Pending Row Suppression ─────────────────────

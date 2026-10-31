@@ -148,7 +148,7 @@ describe("Stage 4: Enterprise Diagnostics Health Suite (C4.6 & C4.9)", () => {
     const json = await res.json();
     expect(json.status).toBe("healthy");
     expect(json.database.status).toBe("connected");
-    expect(json.database.dialect).toBe("sqlite");
+    expect(["sqlite", "postgres"]).toContain(json.database.dialect);
     expect(typeof json.database.latencyMs).toBe("number");
 
     expect(json.immutabilityTriggers.status).toBe("active");

@@ -6,7 +6,10 @@ import { createClient } from "@libsql/client";
 
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { getTableColumns, isTable } from "drizzle-orm";
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// Ensure PostgreSQL INT8 (bigint / count(*)) is parsed as JavaScript number
+types.setTypeParser(types.builtins.INT8, (val: string) => Number(val));
 import { ReplicaQueryRouter } from "./replica-router";
 import { TenantRouter } from "./tenant-router";
 

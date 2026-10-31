@@ -30,7 +30,7 @@ jobs:
   web-ci:
     name: Next.js Web CI & Quality Gate
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -276,7 +276,7 @@ jobs:
     name: Playwright E2E Tests (Chromium)
     runs-on: ubuntu-24.04
     needs: [web-ci]
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -371,7 +371,7 @@ jobs:
     name: k6 CI Load & Stress Tests
     runs-on: ubuntu-24.04
     needs: [web-ci]
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

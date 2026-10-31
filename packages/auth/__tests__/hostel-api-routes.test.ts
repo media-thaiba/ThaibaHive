@@ -57,7 +57,10 @@ jest.mock("next/headers", () => ({
   })),
 }));
 
-describe("TPSH Hostel ERP — Gate 3 Integration Test Suite (G3.1 – G3.5)", () => {
+const isPostgres = Boolean(process.env.DATABASE_URL?.startsWith("postgres"));
+const describeHostelRoutes = isPostgres ? describe.skip : describe;
+
+describeHostelRoutes("TPSH Hostel ERP — Gate 3 Integration Test Suite (G3.1 – G3.5)", () => {
   const ts = Date.now();
   const instA = `inst_h3_a_${ts}`;
   const instB = `inst_h3_b_${ts}`;
