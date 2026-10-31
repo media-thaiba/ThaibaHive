@@ -289,7 +289,26 @@ export function wrapPgDb(pgDb: any): any {
         };
       }
 
+      if (prop === "execute") {
+        return async function(query: any) {
+          if (query && typeof query === "object" && typeof query.sql === "string") {
+            const args = query.args || [];
+            let idx = 0;
+            const pgSql = query.sql.replace(/\?/g, () => `$${++idx}`);
+            const pool = (pgDb as any).session?.client || (pgDb as any).client || pgDb;
+            if (typeof pool?.query === "function") {
+              const res = await pool.query(pgSql, args);
+              return { rows: res.rows || [] };
+            }
+          }
+          return target.execute(query);
+        };
+      }
+
       const val = Reflect.get(target, prop, receiver);
+      if (typeof val === "function" && ((val as any).mock || (val as any)._isMockFunction)) {
+        return val;
+      }
 
       if (typeof val === "function" && ["select", "insert", "update", "delete"].includes(prop as string)) {
         return function(...args: any[]) {
