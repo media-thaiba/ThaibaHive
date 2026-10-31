@@ -1,5 +1,5 @@
 import { db } from "../packages/db";
-import { staff, leaveTypes, leaveBalances, departments, staffDepartments, staffInstitutions, institutions, exams, examSchedules, gradeScales, students, markEntries } from "../packages/db/schema";
+import { staff, leaveTypes, leaveBalances, departments, staffDepartments, staffInstitutions, institutions, exams, examSchedules, gradeScales, students, markEntries, userSessions } from "../packages/db/schema";
 import { hashPassword } from "../src/lib/auth";
 import { eq, and, sql } from "drizzle-orm";
 import * as crypto from "crypto";
@@ -345,7 +345,28 @@ async function globalSetup() {
   ];
 
   for (const u of testUsers) {
+    const sid = "sess_" + crypto.randomUUID().replace(/-/g, "").slice(0, 24);
+    const nowMs = Date.now();
+    const expiresAtMs = nowMs + 7 * 24 * 60 * 60 * 1000;
+
+    await db.insert(userSessions).values({
+      id: sid,
+      staffId: u.staffId,
+      email: u.email,
+      role: u.role,
+      institutionId,
+      status: "active",
+      clientIp: "127.0.0.1",
+      userAgent: "playwright",
+      deviceType: "desktop",
+      loginAt: nowMs,
+      lastActiveAt: nowMs,
+      expiresAt: expiresAtMs,
+      createdAt: nowMs,
+    }).run();
+
     const token = await new SignJWT({
+      sid,
       staffId: u.staffId,
       email: u.email,
       role: u.role,

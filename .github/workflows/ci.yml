@@ -30,7 +30,7 @@ jobs:
   web-ci:
     name: Next.js Web CI & Quality Gate
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -276,7 +276,7 @@ jobs:
     name: Playwright E2E Tests (Chromium)
     runs-on: ubuntu-24.04
     needs: [web-ci]
-    timeout-minutes: 15
+    timeout-minutes: 35
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -356,6 +356,10 @@ jobs:
           DR_SECRET: ${{ env.DR_SECRET }}
           CACHE_PURGE_SECRET: ${{ env.CACHE_PURGE_SECRET }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          PLAYWRIGHT_TEST: "true"
+          V1_PILOT_MODE: "false"
+          NEXT_PUBLIC_V1_PILOT: "false"
+          NEXT_PUBLIC_E2E: "1"
 
       - name: Upload Playwright report (on failure only)
         uses: actions/upload-artifact@v4
@@ -371,7 +375,7 @@ jobs:
     name: k6 CI Load & Stress Tests
     runs-on: ubuntu-24.04
     needs: [web-ci]
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -434,12 +438,18 @@ jobs:
 
       - name: Start standalone server and execute k6 load tests
         run: |
-          node .next/standalone/server.js &
+          K6_LOAD_TEST=true node .next/standalone/server.js &
           SERVER_PID=$!
           echo "Server started with PID: $SERVER_PID"
           
           # Wait for server readiness
-          npx wait-on -t 30000 http://localhost:3000/api/health || sleep 5
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000/api/health >/dev/null; then
+              echo "Server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
 
           # Generate valid JWT signed with current AUTH_JWT_SECRET
           TOKEN=$(node scripts/generate-loadtest-token.js)

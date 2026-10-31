@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { SignJWT } = require("jose");
+const { createClient } = require("@libsql/client");
 
 const HKDF_SALT = "thaibahive:jwt:salt:v1";
 
@@ -25,7 +26,12 @@ function getJwtSecretBytes(purpose = "session") {
 }
 
 async function generate() {
+  const sid = "sess_" + crypto.randomBytes(16).toString("hex");
+  const nowMs = Date.now();
+  const expiresAtMs = nowMs + 24 * 60 * 60 * 1000;
+
   const payload = {
+    sid,
     staffId: "34c45253-9416-4512-9fb6-179e257e346b",
     email: "admin@thaibahive.local",
     role: "super_admin",
@@ -34,6 +40,28 @@ async function generate() {
     institutionId: "inst_campus_main",
     tokenVersion: 0,
   };
+
+  const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
+  try {
+    const client = createClient({ url: dbUrl });
+    await client.execute({
+      sql: `INSERT OR REPLACE INTO user_sessions (id, staff_id, email, role, institution_id, status, client_ip, user_agent, device_type, login_at, last_active_at, expires_at, created_at)
+            VALUES (?, ?, ?, ?, ?, 'active', '127.0.0.1', 'k6-load-test', 'desktop', ?, ?, ?, ?)`,
+      args: [
+        sid,
+        payload.staffId,
+        payload.email,
+        payload.role,
+        payload.institutionId,
+        nowMs,
+        nowMs,
+        expiresAtMs,
+        nowMs,
+      ],
+    });
+  } catch (_err) {
+    // Non-fatal if DB write fails during token generation in isolated contexts
+  }
 
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
@@ -48,4 +76,3 @@ generate().catch((err) => {
   console.error("Token generation failed:", err);
   process.exit(1);
 });
-

@@ -65,6 +65,8 @@ export const EXACT_EXEMPTION_ALLOWLIST: Record<string, string> = {
   "/api/auth/saml/metadata": "Pre-auth SAML service provider metadata XML publisher",
   "/api/auth/webauthn/login/begin": "Pre-auth FIDO2/WebAuthn assertion challenge initiator",
   "/api/auth/webauthn/login/complete": "Pre-auth FIDO2/WebAuthn ceremony signature verifier",
+  "/api/auth/csrf": "Pre-auth CSRF token generation and cookie establishment",
+  "/api/auth/refresh": "Pre-auth JWT refresh token rotation and session renewal",
   "/api/auth/logout": "Session termination and presence cleanup endpoint (supports expired session cleanup)",
   "/api/alumni/verify/donation/[hash]": "Public alumni donation receipt cryptographic hash verification",
   "/api/finance/fees/verify/[hash]": "Public student fee receipt cryptographic hash verification",

@@ -301,6 +301,14 @@ async function handleProxy(request: NextRequest): Promise<NextResponse> {
       };
       const dest = role ? workspaceMap[role] : null;
       if (dest) {
+        if (isPilotFreezeActive() && isFrozenPilotPath(dest)) {
+          return addSecurityHeaders(
+            request,
+            NextResponse.redirect(new URL("/my-work/tasks", request.url)),
+            pathname,
+            nonce
+          );
+        }
         return addSecurityHeaders(
           request,
           NextResponse.redirect(new URL(dest, request.url)),

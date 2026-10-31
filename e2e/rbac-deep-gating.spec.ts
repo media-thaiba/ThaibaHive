@@ -45,7 +45,14 @@ test.describe("Sidebar Navigation Visibility by Role", () => {
         }
 
         for (const [ws, entries] of byWorkspace) {
-          await gating.switchWorkspace(ws);
+          const switched = await gating.switchWorkspace(ws);
+          if (!switched) {
+            for (const [href, visibility] of entries) {
+              const shouldBeVisible = visibility[role] === true;
+              expect(shouldBeVisible, `Role ${role} should not see ${href} in unaccessible workspace ${ws}`).toBe(false);
+            }
+            continue;
+          }
           await gating.ensureSidebarGroupExpanded();
           for (const [href, visibility] of entries) {
             const shouldBeVisible = visibility[role] === true;

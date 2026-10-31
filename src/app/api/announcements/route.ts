@@ -11,6 +11,8 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { verifyDepartmentInstitution, getStaffPrimaryInstitutionId } from "@/lib/announcements/utils";
 import type { StaffRole } from "@/types";
 
+export const maxDuration = 60;
+
 const ADMIN_ROLES: StaffRole[] = ["super_admin", "admin", "principal"];
 
 function pinnedUntilOrderSql() {

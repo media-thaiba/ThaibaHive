@@ -358,12 +358,12 @@ export async function touchSession(sid: string, now: number = Date.now()): Promi
   try {
     await db
       .update(userSessions)
-      .set({ lastActiveAt: now })
+      .set({ lastActiveAt: Number(now) })
       .where(
         and(
           eq(userSessions.id, sid),
           eq(userSessions.status, "active"),
-          lt(userSessions.lastActiveAt, now - 120_000)
+          lt(userSessions.lastActiveAt, Number(now) - 120_000)
         )
       )
       .run();

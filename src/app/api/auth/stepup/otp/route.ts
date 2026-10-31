@@ -41,11 +41,26 @@ export async function POST(request: Request) {
         channel: "email",
       });
 
-      await sendStepUpOTPEmail(
+      const sendResult = await sendStepUpOTPEmail(
         user.email,
         user.firstName || "Staff Member",
         code,
       );
+
+      if (sendResult?.status === "failed") {
+        return NextResponse.json(
+          { error: "Unable to deliver verification code. Please contact your administrator." },
+          { status: 502 }
+        );
+      }
+
+      if (sendResult?.status === "unknown") {
+        return NextResponse.json({
+          sent: true,
+          status: "unknown",
+          message: "If you do not receive the verification code shortly, please request another.",
+        });
+      }
     }
   } catch (err) {
     serverLogger.error("Failed to dispatch step-up OTP email", {

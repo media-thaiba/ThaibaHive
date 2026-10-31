@@ -25,6 +25,8 @@ process.env.NEXT_PUBLIC_APP_URL = `http://localhost:${PORT}`;
 process.env.APP_URL = `http://localhost:${PORT}`;
 process.env.PLAYWRIGHT_TEST = "true";
 process.env.NEXT_PUBLIC_E2E = "1";
+process.env.V1_PILOT_MODE = "false";
+process.env.NEXT_PUBLIC_V1_PILOT = "false";
 
 // Require standalone server
 require(path.resolve(__dirname, "../.next/standalone/server.js"));
