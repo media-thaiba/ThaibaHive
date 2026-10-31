@@ -13,6 +13,11 @@ jest.mock("@thaiba/auth", () => ({
 
 jest.mock("@/lib/mobile/sync-appliers", () => ({
   applySyncMutation: jest.fn().mockResolvedValue({ success: true }),
+  // The route imports runWithTx from this module — partial mocks must supply
+  // it too, otherwise every mutation throws "runWithTx is not a function".
+  runWithTx: jest.fn(async (client: unknown, fn: (tx: unknown) => unknown) =>
+    fn(client)
+  ),
 }));
 
 jest.mock("@/db", () => ({

@@ -1,3 +1,4 @@
+import type { DbOrTx } from "./sync-appliers";
 import { db } from "@/db";
 import {
   attendanceLogs,
@@ -99,14 +100,14 @@ export async function fetchSyncServerRecord(
   entityType: string,
   entityId: string,
   ctx: SyncActorScope,
-  payload: Record<string, unknown> = {}
+  payload: Record<string, unknown> = {},
+  client: DbOrTx = db
 ): Promise<EntityRecord | undefined> {
   const scope = syncActorScope(ctx);
 
   switch (entityType) {
     case "attendance": {
-      const row = await db
-        .select()
+      const row = await client.select()
         .from(attendanceLogs)
         .where(and(eq(attendanceLogs.staffId, ctx.staffId), eq(attendanceLogs.date, entityId)))
         .get();
@@ -122,16 +123,14 @@ export async function fetchSyncServerRecord(
         : undefined;
     }
     case "task": {
-      const row = await db
-        .select()
+      const row = await client.select()
         .from(tasks)
         .where(scope ? and(eq(tasks.id, entityId), eq(tasks.institutionId, scope)) : eq(tasks.id, entityId))
         .get();
       return row ? toRecord("task", entityId, scope, row as unknown as Row) : undefined;
     }
     case "leave": {
-      const row = await db
-        .select()
+      const row = await client.select()
         .from(leaveRequests)
         .where(
           scope
@@ -143,8 +142,7 @@ export async function fetchSyncServerRecord(
       return toRecord("leave", entityId, scope, row as unknown as Row);
     }
     case "expense": {
-      const row = await db
-        .select()
+      const row = await client.select()
         .from(expenseClaims)
         .where(
           scope
@@ -156,8 +154,7 @@ export async function fetchSyncServerRecord(
       return toRecord("expense", entityId, scope, row as unknown as Row);
     }
     case "purchase": {
-      const row = await db
-        .select()
+      const row = await client.select()
         .from(purchaseRequests)
         .where(
           scope
@@ -168,8 +165,7 @@ export async function fetchSyncServerRecord(
       return row ? toRecord("purchase", entityId, scope, row as unknown as Row) : undefined;
     }
     case "reconciliation_item": {
-      const row = await db
-        .select()
+      const row = await client.select()
         .from(financialReconciliationItems)
         .where(eq(financialReconciliationItems.id, entityId))
         .get();
@@ -179,12 +175,11 @@ export async function fetchSyncServerRecord(
     }
     case "approval": {
       const targetType = typeof payload.type === "string" ? payload.type : "";
-      if (targetType === "leave") return fetchSyncServerRecord("leave", entityId, ctx, payload);
-      if (targetType === "expense") return fetchSyncServerRecord("expense", entityId, ctx, payload);
-      if (targetType === "purchase") return fetchSyncServerRecord("purchase", entityId, ctx, payload);
+      if (targetType === "leave") return fetchSyncServerRecord("leave", entityId, ctx, payload, client);
+      if (targetType === "expense") return fetchSyncServerRecord("expense", entityId, ctx, payload, client);
+      if (targetType === "purchase") return fetchSyncServerRecord("purchase", entityId, ctx, payload, client);
       if (targetType === "booking") {
-        const row = await db
-          .select()
+        const row = await client.select()
           .from(bookings)
           .where(
             scope ? and(eq(bookings.id, entityId), eq(bookings.institutionId, scope)) : eq(bookings.id, entityId)

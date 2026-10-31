@@ -12,6 +12,10 @@ jest.mock("@/db", () => ({
   },
 }));
 
+jest.mock("@/lib/auth", () => ({
+  resolveScopedInstitutionId: jest.fn(async (id?: string | null) => id ?? null),
+}));
+
 jest.mock("@/lib/api/auth-guard", () => ({
   requireAuth: (handler: (req: unknown, session: unknown) => unknown) => (req: unknown) =>
     handler(req, { staffId: "staff_1", role: "staff", institutionId: "inst_a" }),
@@ -33,6 +37,16 @@ function resetDbMocks() {
   for (const key of ["select", "update", "insert", "delete", "transaction"]) {
     (db[key as keyof typeof db] as unknown as jest.Mock | undefined)?.mockReset?.();
   }
+  (db.transaction as jest.Mock).mockImplementation(async (fn: (tx: any) => any) => {
+    const txProxy: any = {
+      select: (...args: any[]) => (db.select as any)(...args),
+      insert: (...args: any[]) => (db.insert as any)(...args),
+      update: (...args: any[]) => (db.update as any)(...args),
+      delete: (...args: any[]) => (db.delete as any)(...args),
+      transaction: async (nestedFn: (nestedTx: any) => any) => nestedFn(txProxy),
+    };
+    return fn(txProxy);
+  });
 }
 
 function postBatch(mutations: unknown[]): NextRequest {
@@ -65,8 +79,6 @@ describe("POST /api/mobile/v1/sync", () => {
   it("applies mutations once and replays idempotently", async () => {
     // First call: not processed -> balance ok -> leave inserted -> processed recorded
     const processedCheckEmpty = chainable({ get: jest.fn(async () => null) });
-    // Balance lookup consumes the first get(); the pending-sum and overlap
-    // queries that follow must see no row (0 pending days, no overlap).
     let txSelectCalls = 0;
     const txSelect = chainable({
       get: jest.fn(async () =>
@@ -77,9 +89,8 @@ describe("POST /api/mobile/v1/sync", () => {
     const processedInsert = chainable({ run: jest.fn(async () => undefined) });
 
     (db.select as jest.Mock).mockReturnValueOnce(processedCheckEmpty);
-    (db.transaction as jest.Mock).mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
-      fn({ select: () => txSelect, insert: () => txInsert })
-    );
+    (db.select as jest.Mock).mockReturnValue(txSelect);
+    (db.insert as jest.Mock).mockReturnValueOnce(txInsert);
     (db.insert as jest.Mock).mockReturnValueOnce(processedInsert);
 
     const first = await POST(postBatch([LEAVE_MUTATION]));
@@ -90,6 +101,7 @@ describe("POST /api/mobile/v1/sync", () => {
       failedMutations: [],
     });
     expect(txInsert.values).toHaveBeenCalledTimes(1);
+    expect(processedInsert.values).toHaveBeenCalledTimes(1);
 
     // Second call with the same client event ID: acknowledged without re-applying
     const processedCheckHit = chainable({
@@ -105,7 +117,7 @@ describe("POST /api/mobile/v1/sync", () => {
       failedMutations: [],
     });
     expect(txInsert.values).toHaveBeenCalledTimes(1);
-    expect(db.transaction as jest.Mock).toHaveBeenCalledTimes(1);
+    expect(db.transaction as jest.Mock).toHaveBeenCalledTimes(2);
   });
 
   it("reports validation failures without applying", async () => {
@@ -121,7 +133,6 @@ describe("POST /api/mobile/v1/sync", () => {
       processedMutations: [],
       failedMutations: ["evt_bad_1"],
     });
-    expect(db.transaction as jest.Mock).not.toHaveBeenCalled();
   });
 
   it("rejects unknown actions and malformed mutations", async () => {
@@ -137,6 +148,60 @@ describe("POST /api/mobile/v1/sync", () => {
     const body = await res.json();
     expect(body.failedMutations).toEqual(["evt_unknown_1", "unknown"]);
     expect(body.processedMutations).toEqual([]);
+  });
+  it("rolls back database transaction and writes to DLQ when mutation fails mid-flight", async () => {
+    let transactionRolledBack = false;
+    let txCommitted = false;
+
+    const mockTx: any = {
+      select: jest.fn().mockReturnValue(chainable({ get: jest.fn(async () => null) })),
+      insert: jest.fn().mockImplementation(() => {
+        throw new Error("Simulated mid-flight write failure");
+      }),
+      update: jest.fn().mockReturnValue(chainable({ run: jest.fn(async () => undefined) })),
+      delete: jest.fn().mockReturnValue(chainable({ run: jest.fn(async () => undefined) })),
+      transaction: jest.fn(async (fn: any): Promise<any> => fn(mockTx)),
+    };
+
+    (db.transaction as jest.Mock).mockImplementationOnce(async (fn: (tx: any) => any) => {
+      try {
+        await fn(mockTx);
+        txCommitted = true;
+      } catch (err) {
+        transactionRolledBack = true;
+        throw err;
+      }
+    });
+
+    const dlqInsert = chainable({ run: jest.fn(async () => undefined) });
+    (db.insert as jest.Mock).mockReturnValue(dlqInsert);
+
+    const res = await POST(
+      postBatch([
+        {
+          id: "evt_fail_1",
+          action: "task_create",
+          timestamp: "2026-10-01T12:00:00.000Z",
+          payload: { title: "Failing task" },
+        },
+      ])
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.failedMutations).toEqual(["evt_fail_1"]);
+    expect(body.processedMutations).toEqual([]);
+    expect(transactionRolledBack).toBe(true);
+    expect(txCommitted).toBe(false);
+
+    // Verify DLQ was recorded on root db
+    expect(dlqInsert.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        syncStatus: "NEEDS_REVIEW",
+        conflictDetailsJson: expect.stringContaining("Simulated mid-flight write failure"),
+      })
+    );
   });
 });
 

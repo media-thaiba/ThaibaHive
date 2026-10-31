@@ -37,6 +37,15 @@ import {
 import { eq, and, ne } from "drizzle-orm";
 import crypto from "crypto";
 
+export type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function runWithTx(client: DbOrTx, fn: (tx: any) => Promise<any>): Promise<any> {
+  if (client && typeof client.transaction === "function") {
+    return client.transaction(fn);
+  }
+  return fn(client);
+}
+
 export interface SyncApplierContext {
   staffId: string;
   role: string;
@@ -61,33 +70,34 @@ function actorScope(ctx: SyncApplierContext): string | null {
 export async function applySyncMutation(
   ctx: SyncApplierContext,
   action: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  client: DbOrTx = db
 ): Promise<void> {
   switch (action) {
     case "leave_apply":
-      return applyLeaveApply(ctx, payload);
+      return applyLeaveApply(ctx, payload, client);
     case "leave_cancel":
-      return applyLeaveCancel(ctx, payload);
+      return applyLeaveCancel(ctx, payload, client);
     case "task_create":
-      return applyTaskCreate(ctx, payload);
+      return applyTaskCreate(ctx, payload, client);
     case "task_update":
-      return applyTaskUpdate(ctx, payload);
+      return applyTaskUpdate(ctx, payload, client);
     case "task_delete":
-      return applyTaskDelete(ctx, payload);
+      return applyTaskDelete(ctx, payload, client);
     case "expense_create":
-      return applyExpenseCreate(ctx, payload);
+      return applyExpenseCreate(ctx, payload, client);
     case "attendance_nfc_checkin":
-      return applyAttendanceNfcCheckin(ctx, payload);
+      return applyAttendanceNfcCheckin(ctx, payload, client);
     case "attendance_punch":
     case "attendance_checkout":
-      return applyAttendancePunch(ctx, payload);
+      return applyAttendancePunch(ctx, payload, client);
     case "finance_purchase_action":
-      return applyFinancePurchaseAction(ctx, payload);
+      return applyFinancePurchaseAction(ctx, payload, client);
     case "finance_reconciliation_match":
-      return applyFinanceReconciliationMatch(ctx, payload);
+      return applyFinanceReconciliationMatch(ctx, payload, client);
     case "approval_approve":
     case "approval_reject":
-      return applyApprovalDecision(ctx, action === "approval_approve" ? "approve" : "reject", payload);
+      return applyApprovalDecision(ctx, action === "approval_approve" ? "approve" : "reject", payload, client);
     default:
       throw new Error(`Unsupported offline action: ${action}`);
   }
@@ -107,7 +117,7 @@ function asString(value: unknown, field: string): string {
 
 // ─── Leave ───
 
-async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const parsed = leaveCreateSchema.safeParse({
     leaveTypeId: payload.leaveTypeId ?? payload.leave_type_id,
@@ -125,7 +135,7 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
   const year = leaveYearFor(startDate);
   const scope = actorScope(ctx);
 
-  await db.transaction(async (tx) => {
+  await runWithTx(client, async (tx) => {
     const balance = await tx
       .select()
       .from(leaveBalances)
@@ -192,14 +202,14 @@ async function applyLeaveApply(ctx: SyncApplierContext, raw: Record<string, unkn
   });
 }
 
-async function applyLeaveCancel(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyLeaveCancel(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const id = asString(payload.id, "id");
   const scope = actorScope(ctx);
   const idClause = eq(leaveRequests.id, id);
   const whereClause = scope ? and(idClause, eq(leaveRequests.institutionId, scope)) : idClause;
 
-  const existing = await db
+  const existing = await client
     .select()
     .from(leaveRequests)
     .where(whereClause)
@@ -212,7 +222,7 @@ async function applyLeaveCancel(ctx: SyncApplierContext, raw: Record<string, unk
     throw new Error(`Leave request is already ${existing.status}`);
   }
 
-  await db
+  await client
     .update(leaveRequests)
     .set({ status: "cancelled", updatedAt: new Date().toISOString() })
     .where(
@@ -229,7 +239,7 @@ async function applyLeaveCancel(ctx: SyncApplierContext, raw: Record<string, unk
 
 const TASK_UPDATE_FIELDS = ["title", "description", "status", "priority", "dueDate", "due_date"] as const;
 
-async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const parsed = taskCreateSchema.safeParse(payload);
   if (!parsed.success) {
@@ -237,14 +247,14 @@ async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unkn
   }
 
   const scope = actorScope(ctx);
-  const instRow = await db
+  const instRow = await client
     .select({ institutionId: staffInstitutions.institutionId })
     .from(staffInstitutions)
     .where(eq(staffInstitutions.staffId, ctx.staffId))
     .get();
   const actorInstId = instRow?.institutionId ?? null;
 
-  await db
+  await client
     .insert(tasks)
     .values({
       id: crypto.randomUUID(),
@@ -261,11 +271,11 @@ async function applyTaskCreate(ctx: SyncApplierContext, raw: Record<string, unkn
     .run();
 }
 
-async function loadOwnedTask(ctx: SyncApplierContext, id: string) {
+async function loadOwnedTask(ctx: SyncApplierContext, id: string, client: DbOrTx = db) {
   const scope = actorScope(ctx);
   const idClause = eq(tasks.id, id);
   const whereClause = scope ? and(idClause, eq(tasks.institutionId, scope)) : idClause;
-  const existing = await db.select().from(tasks).where(whereClause).get();
+  const existing = await client.select().from(tasks).where(whereClause).get();
   if (!existing) throw new Error("Task not found");
 
   const elevated = ctx.role === "super_admin" || ctx.role === "admin";
@@ -275,10 +285,10 @@ async function loadOwnedTask(ctx: SyncApplierContext, id: string) {
   return existing;
 }
 
-async function applyTaskUpdate(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyTaskUpdate(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const id = asString(payload.id, "id");
-  await loadOwnedTask(ctx, id);
+  await loadOwnedTask(ctx, id, client);
 
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   for (const field of TASK_UPDATE_FIELDS) {
@@ -292,20 +302,20 @@ async function applyTaskUpdate(ctx: SyncApplierContext, raw: Record<string, unkn
 
   const scope = actorScope(ctx);
   const idClause = eq(tasks.id, id);
-  await db
+  await client
     .update(tasks)
     .set(updates)
     .where(scope ? and(idClause, eq(tasks.institutionId, scope)) : idClause)
     .run();
 }
 
-async function applyTaskDelete(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyTaskDelete(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const id = asString(payload.id, "id");
-  await loadOwnedTask(ctx, id);
+  await loadOwnedTask(ctx, id, client);
   const scope = actorScope(ctx);
   const idClause = eq(tasks.id, id);
-  await db
+  await client
     .delete(tasks)
     .where(scope ? and(idClause, eq(tasks.institutionId, scope)) : idClause)
     .run();
@@ -313,14 +323,14 @@ async function applyTaskDelete(ctx: SyncApplierContext, raw: Record<string, unkn
 
 // ─── Expenses ───
 
-async function applyExpenseCreate(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyExpenseCreate(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const parsed = expenseClaimCreateSchema.safeParse(payload);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "Invalid expense claim payload");
   }
 
-  await db
+  await client
     .insert(expenseClaims)
     .values({
       id: crypto.randomUUID(),
@@ -337,7 +347,7 @@ async function applyExpenseCreate(ctx: SyncApplierContext, raw: Record<string, u
 
 // ─── Attendance (NFC) ───
 
-async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const tagData = payload.tagData !== undefined ? asRecord(payload.tagData) : {};
   const nfcTagId =
@@ -382,7 +392,7 @@ async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<st
     ctx.institutionId && ctx.institutionId !== "global" ? ctx.institutionId : null;
 
   try {
-    await db
+    await client
       .insert(attendanceLogs)
       .values({
         id: crypto.randomUUID(),
@@ -407,7 +417,7 @@ async function applyAttendanceNfcCheckin(ctx: SyncApplierContext, raw: Record<st
 
 const PUNCH_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
-async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string, unknown>): Promise<void> {
+async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string, unknown>, client: DbOrTx = db): Promise<void> {
   const payload = asRecord(raw);
   const parsed = attendancePunchSchema.safeParse({
     mode: payload.mode ?? "checkout",
@@ -430,7 +440,7 @@ async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string,
   const at = new Date(atMs).toISOString();
   const date = at.split("T")[0] || new Date(nowMs).toISOString().split("T")[0];
 
-  const log = await db
+  const log = await client
     .select()
     .from(attendanceLogs)
     .where(and(eq(attendanceLogs.staffId, ctx.staffId), eq(attendanceLogs.date, date)))
@@ -459,7 +469,7 @@ async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string,
     // Shift could not be resolved — keep defaults rather than failing the punch
   }
 
-  await db
+  await client
     .update(attendanceLogs)
     .set({ checkOut: at, workedMinutes, earlyExitMinutes })
     .where(eq(attendanceLogs.id, log.id))
@@ -470,7 +480,8 @@ async function applyAttendancePunch(ctx: SyncApplierContext, raw: Record<string,
 
 async function applyFinancePurchaseAction(
   ctx: SyncApplierContext,
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
+  _client: DbOrTx = db
 ): Promise<void> {
   const payload = asRecord(raw);
   const parsed = purchaseApprovalActionSchema.safeParse({
@@ -499,7 +510,8 @@ async function applyFinancePurchaseAction(
 
 async function applyFinanceReconciliationMatch(
   ctx: SyncApplierContext,
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
+  _client: DbOrTx = db
 ): Promise<void> {
   if (
     !hasPermission(ctx.role as AuthRole, "finance:reconciliation:execute") &&
@@ -537,7 +549,8 @@ async function applyFinanceReconciliationMatch(
 async function applyApprovalDecision(
   ctx: SyncApplierContext,
   decision: "approve" | "reject",
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
+  client: DbOrTx = db
 ): Promise<void> {
   const payload = asRecord(raw);
   const type = asString(payload.type, "type");
@@ -553,7 +566,7 @@ async function applyApprovalDecision(
     }
 
     const leaveIdClause = eq(leaveRequests.id, id);
-    const leave = await db
+    const leave = await client
       .select()
       .from(leaveRequests)
       .where(scope ? and(leaveIdClause, eq(leaveRequests.institutionId, scope)) : leaveIdClause)
@@ -568,7 +581,7 @@ async function applyApprovalDecision(
       nextStatus = "hod_approved";
     }
 
-    await db.transaction(async (tx) => {
+    await runWithTx(client, async (tx) => {
       // Transition status first — the WHERE clause guards against concurrent
       // or repeated approvals (0 rows → already terminal → error, no
       // deduction). Fund the deduction only after a successful transition;
@@ -602,7 +615,7 @@ async function applyApprovalDecision(
   }
 
   if (type === "expense") {
-    const claim = await db
+    const claim = await client
       .select()
       .from(expenseClaims)
       .where(
@@ -635,7 +648,7 @@ async function applyApprovalDecision(
       claim.amount ?? 0
     );
 
-    const updated = await db
+    const updated = await client
       .update(expenseClaims)
       .set({ status: nextStatus, reviewedById: ctx.staffId, reviewedAt: now, reviewNotes: notes, updatedAt: now })
       .where(
@@ -656,7 +669,7 @@ async function applyApprovalDecision(
       throw new Error("Forbidden: Insufficient permissions to review purchase requests.");
     }
 
-    const purchase = await db
+    const purchase = await client
       .select()
       .from(purchaseRequests)
       .where(
@@ -671,7 +684,7 @@ async function applyApprovalDecision(
     }
 
     if (decision === "reject") {
-      const updated = await db
+      const updated = await client
         .update(purchaseRequests)
         .set({ status: "rejected", notes: notes, updatedAt: now })
         .where(
@@ -716,7 +729,7 @@ async function applyApprovalDecision(
     }
     if (notes) updates.notes = notes;
 
-    const updated = await db
+    const updated = await client
       .update(purchaseRequests)
       .set(updates)
       .where(
@@ -738,7 +751,7 @@ async function applyApprovalDecision(
     }
 
     const bookingIdClause = eq(bookings.id, id);
-    const booking = await db
+    const booking = await client
       .select()
       .from(bookings)
       .where(scope ? and(bookingIdClause, eq(bookings.institutionId, scope)) : bookingIdClause)
@@ -748,7 +761,7 @@ async function applyApprovalDecision(
       throw new Error("Requesters cannot review their own booking requests.");
     }
 
-    const updated = await db
+    const updated = await client
       .update(bookings)
       .set({
         status: decision === "approve" ? "approved" : "rejected",
