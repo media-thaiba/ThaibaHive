@@ -46,6 +46,7 @@ test.describe("Performance Reviews — Staff self-evaluation workflow", () => {
         id: "e2e_staff_self_eval",
         institutionId: "inst_campus_main",
         staffId: staffRow!.id,
+        reviewerId: staffRow!.id,
         period: STAFF_PERIOD,
         status: "draft",
       })
@@ -131,18 +132,20 @@ test.describe("Performance Reviews — Admin create & complete workflow", () => 
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("heading", { name: "Performance Review" })).toBeVisible();
     await expect(dialog.getByText("Ship E2E review workflow")).toBeVisible();
+    await expect(dialog.locator('textarea[placeholder="Provide feedback on performance..."]')).toBeVisible({ timeout: 15000 });
 
     // Manager review: pick 4 stars, add comments, complete.
     const stars = dialog.locator("button:has(svg.lucide-star)");
     await expect(stars).toHaveCount(5);
     await stars.nth(3).click();
+    await expect(stars.nth(3)).toHaveClass(/text-yellow-400/);
 
     await dialog
       .locator('textarea[placeholder="Provide feedback on performance..."]')
       .fill("Solid quarter — verified by E2E.");
 
     await dialog.getByRole("button", { name: "Complete Review" }).click();
-    await expect(page.locator("text=Review completed")).toBeVisible();
+    await expect(page.locator("text=Review completed")).toBeVisible({ timeout: 15000 });
 
     const updatedRow = page
       .locator(`span:text-is("Period: ${period}")`)

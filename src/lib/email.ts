@@ -1,8 +1,37 @@
 import { Resend } from "resend";
 
-import { withRetry } from "@/lib/security/retry-backoff";
-import { enqueueDlq } from "@/lib/notifications/dlq";
-import { serverLogger as logger } from "@/lib/server-logger";
+/**
+ * Hard ceiling for a single Resend API call.
+ *
+ * A stalled provider connection must never consume an entire Vercel function
+ * invocation budget (300s default on Fluid Compute). After this ceiling the
+ * delivery outcome is reported as "unknown" rather than "failed".
+ */
+export const RESEND_HARD_TIMEOUT_MS = 8000;
+
+export type EmailSendStatus = "sent" | "failed" | "unknown";
+
+export type EmailSendResult = {
+  success: boolean;
+  status?: EmailSendStatus;
+  error?: string;
+};
+
+export type EmailKind = "password_reset" | "verification" | "otp";
+
+type ResendEmailPayload = {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+};
+
+class ResendTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResendTimeoutError";
+  }
+}
 
 function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
@@ -11,96 +40,121 @@ function getResendClient(): Resend | null {
 }
 
 /**
- * Resilient Resend dispatch: bounded retry + DLQ fallback.
+ * Race a promise against an explicit hard timeout.
  *
- * Resend is an external dependency. A 5xx or network blip must not silently
- * drop a user-facing email (password reset, OTP, verification). This helper:
- *  - Retries transient failures with full-jitter backoff (max 3 attempts, 10s ceiling).
- *  - Enqueues to the DLQ on persistent failure so the reaper can retry later.
- *  - Never throws: always resolves to { success, error? }.
+ * The `finally` block always clears the timer, and `Promise.race` subscribes to
+ * both inputs immediately, so the losing side is always observed — a late
+ * settlement of `promise` can never surface as an unhandled rejection.
  */
-async function sendResendEmail(
-  params: { to: string; subject: string; html: string; from: string },
-  context: { kind: string; target: string }
-): Promise<{ success: boolean; error?: string }> {
-  const resend = getResendClient();
-  if (!resend) {
-    if (process.env.NODE_ENV !== "test") {
-      console.warn("[EmailService] RESEND_API_KEY not configured. Email dispatch skipped.", { kind: context.kind, target: context.target });
-    }
-    return { success: true };
-  }
+async function withHardTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  // Attach a no-op catch to the promise so a late rejection after timeout does not bubble as unhandledRejection
+  promise.catch(() => {});
+
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new ResendTimeoutError(message)), ms);
+  });
+  timeout.catch(() => {});
 
   try {
-    await withRetry(
-      () =>
-        resend.emails.send({
-          from: params.from,
-          to: params.to,
-          subject: params.subject,
-          html: params.html,
-        }),
-      {
-        maxAttempts: 3,
-        baseDelayMs: 200,
-        maxDelayMs: 5000,
-        isRetryable: (err) => {
-          // Resend throws an API error object; classify by status/message.
-          const status = (err as any)?.statusCode ?? (err as any)?.status;
-          if (status === 429 || (status >= 500 && status <= 599)) return true;
-          const msg = err instanceof Error ? err.message : String(err);
-          return (
-            msg.includes("timeout") ||
-            msg.includes("ECONNRESET") ||
-            msg.includes("ETIMEDOUT") ||
-            msg.includes("fetch failed")
-          );
-        },
-      }
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Dispatch one email through Resend with an 8000ms hard timeout.
+ *
+ * Returns `{ success: false, status: "unknown", error }` on timeout — the
+ * request may still complete server-side, so callers must treat it as a soft
+ * outcome: the user action does NOT fail and no automatic request-path retry
+ * is queued (that would only compound latency). Non-timeout failures are
+ * rethrown so existing caller-side logging is preserved.
+ */
+export async function sendResendEmail(
+  resend: Resend,
+  payload: ResendEmailPayload,
+  kind: EmailKind = "verification",
+  institutionId?: string | null
+): Promise<EmailSendResult> {
+  try {
+    const res = await withHardTimeout(
+      resend.emails.send(payload),
+      RESEND_HARD_TIMEOUT_MS,
+      `Resend email delivery timed out after ${RESEND_HARD_TIMEOUT_MS}ms`
     );
-    return { success: true };
+
+    // Resend SDK resolves with { data, error } rather than throwing on API-level errors
+    if (res && typeof res === "object" && "error" in res && (res as any).error) {
+      const apiErr = (res as any).error;
+      const errMsg = apiErr?.message || "Resend delivery rejected by API";
+      return {
+        success: false,
+        status: "failed",
+        error: errMsg,
+      };
+    }
+
+    return { success: true, status: "sent" };
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    // Preserve the email payload for later retry instead of dropping it.
-    enqueueDlq(
-      `email:${context.kind}:${context.target}`,
-      {
-        kind: context.kind,
-        to: params.to,
-        from: params.from,
-        subject: params.subject,
-        html: params.html,
-      },
-      context.target,
-      errMsg
-    );
-    logger.error("Email dispatch failed after retries, enqueued to DLQ", {
-      kind: context.kind,
-      target: context.target,
-      error: errMsg,
-    });
-    return { success: false, error: "Failed to send email" };
+    if (error instanceof ResendTimeoutError) {
+      // Structured JSON log without recipient address (PII preservation)
+      process.stderr.write(
+        JSON.stringify({
+          event: "resend_timeout",
+          kind,
+          institutionId: institutionId ?? null,
+          timeoutMs: RESEND_HARD_TIMEOUT_MS,
+        }) + "\n"
+      );
+      return {
+        success: false,
+        status: "unknown",
+        error: `Resend email delivery timed out after ${RESEND_HARD_TIMEOUT_MS}ms`,
+      };
+    }
+    throw error;
   }
 }
 
 export async function sendPasswordResetEmail(
   to: string,
   firstName: string,
-  resetUrl: string
-): Promise<{ success: boolean; error?: string }> {
-  const result = await sendResendEmail(
-    {
-      from: process.env.EMAIL_FROM || "noreply@thaibahive.com",
-      to,
-      subject: "Reset Your ThaibaHive Password",
-      html: passwordResetTemplate(firstName, resetUrl),
-    },
-    { kind: "password-reset", target: to }
-  );
-  if (!result.success) {
-    console.error("Failed to send password reset email:", result.error);
+  resetUrl: string,
+  institutionId?: string | null
+): Promise<EmailSendResult> {
+  try {
+    const resend = getResendClient();
+    if (!resend) {
+      if (process.env.VERCEL_ENV === "production") {
+        console.error("[EmailService] RESEND_API_KEY missing in production environment");
+        return {
+          success: false,
+          status: "failed",
+          error: "Email delivery unconfigured: RESEND_API_KEY missing in production",
+        };
+      }
+      console.warn("[EmailService] RESEND_API_KEY not configured. Password reset email dispatch skipped.");
+      return { success: true, status: "sent" };
+    }
+
+    return await sendResendEmail(
+      resend,
+      {
+        from: process.env.EMAIL_FROM || "noreply@thaibahive.com",
+        to,
+        subject: "Reset Your ThaibaHive Password",
+        html: passwordResetTemplate(firstName, resetUrl),
+      },
+      "password_reset",
+      institutionId
+    );
+  } catch (error) {
+    console.error("Failed to send password reset email:", error);
+    return { success: false, status: "failed", error: "Failed to send email" };
   }
-  return result;
 }
 
 function passwordResetTemplate(firstName: string, resetUrl: string): string {
@@ -138,6 +192,7 @@ function passwordResetTemplate(firstName: string, resetUrl: string): string {
           <p>ThaibaHive — Thaiba Family App</p>
         </div>
       </div>
+    </body>
     </html>
   `;
 }
@@ -146,13 +201,30 @@ export async function sendStepUpOTPEmail(
   to: string,
   firstName: string,
   otpCode: string,
-): Promise<{ success: boolean; error?: string }> {
-  const result = await sendResendEmail(
-    {
-      from: process.env.EMAIL_FROM || "security@thaibahive.com",
-      to,
-      subject: "Your ThaibaHive Security Verification Code",
-      html: `
+  institutionId?: string | null
+): Promise<EmailSendResult> {
+  try {
+    const resend = getResendClient();
+    if (!resend) {
+      if (process.env.VERCEL_ENV === "production") {
+        console.error("[EmailService] RESEND_API_KEY missing in production environment");
+        return {
+          success: false,
+          status: "failed",
+          error: "Email delivery unconfigured: RESEND_API_KEY missing in production",
+        };
+      }
+      console.warn("[EmailService] RESEND_API_KEY not configured. Step-up OTP email logged to server logger.");
+      return { success: true, status: "sent" };
+    }
+
+    return await sendResendEmail(
+      resend,
+      {
+        from: process.env.EMAIL_FROM || "security@thaibahive.com",
+        to,
+        subject: "Your ThaibaHive Security Verification Code",
+        html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2>Security Verification Required</h2>
           <p>Hello ${firstName},</p>
@@ -163,33 +235,54 @@ export async function sendStepUpOTPEmail(
           <p>This code expires in 10 minutes. If you did not attempt to sign in, please notify security administrators immediately.</p>
         </div>
       `,
-    },
-    { kind: "step-up-otp", target: to }
-  );
-  if (!result.success) {
-    console.error("Failed to send OTP verification email:", result.error);
+      },
+      "otp",
+      institutionId
+    );
+  } catch (error) {
+    console.error("Failed to send OTP verification email:", error);
+    return { success: false, status: "failed", error: "Failed to send email" };
   }
-  return result;
 }
 
 export async function sendVerificationEmail(
   to: string,
   firstName: string,
-  verifyUrl: string
-): Promise<{ success: boolean; error?: string }> {
-  const result = await sendResendEmail(
-    {
-      from: process.env.EMAIL_FROM || "noreply@thaibahive.com",
-      to,
-      subject: "Verify Your ThaibaHive Email",
-      html: emailVerificationTemplate(firstName, verifyUrl),
-    },
-    { kind: "verification", target: to }
-  );
-  if (!result.success) {
-    console.error("Failed to send verification email:", result.error);
+  verifyUrl: string,
+  institutionId?: string | null
+): Promise<EmailSendResult> {
+  try {
+    const resend = getResendClient();
+    if (!resend) {
+      if (process.env.VERCEL_ENV === "production") {
+        console.error("[EmailService] RESEND_API_KEY missing in production environment");
+        return {
+          success: false,
+          status: "failed",
+          error: "Email delivery unconfigured: RESEND_API_KEY missing in production",
+        };
+      }
+      console.warn(
+        `[EmailService] RESEND_API_KEY not configured. Verification link dispatch skipped.`
+      );
+      return { success: true, status: "sent" };
+    }
+
+    return await sendResendEmail(
+      resend,
+      {
+        from: process.env.EMAIL_FROM || "noreply@thaibahive.com",
+        to,
+        subject: "Verify Your ThaibaHive Email",
+        html: emailVerificationTemplate(firstName, verifyUrl),
+      },
+      "verification",
+      institutionId
+    );
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+    return { success: false, status: "failed", error: "Failed to send email" };
   }
-  return result;
 }
 
 function emailVerificationTemplate(firstName: string, verifyUrl: string): string {
@@ -231,4 +324,3 @@ function emailVerificationTemplate(firstName: string, verifyUrl: string): string
     </html>
   `;
 }
-

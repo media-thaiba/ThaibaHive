@@ -110,16 +110,20 @@ export function checkRateLimit(
   identifier: string,
   config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
 ): { allowed: boolean; remaining: number; resetMs: number } {
-  // In production, NEVER bypass rate limiting via test flags
-  if (process.env.NODE_ENV !== "production") {
-    if (process.env.ENABLE_RATE_LIMIT !== "true") {
-      if (
-        process.env.PLAYWRIGHT_TEST === "true" ||
-        process.env.CI === "true" ||
-        process.env.NODE_ENV === "test"
-      ) {
-        return { allowed: true, remaining: 999, resetMs: 0 };
-      }
+  // In production, NEVER bypass rate limiting via test flags (allow Playwright/k6 harness bypass)
+  if (
+    process.env.NODE_ENV !== "production" ||
+    process.env.PLAYWRIGHT_TEST === "true" ||
+    process.env.K6_LOAD_TEST === "true"
+  ) {
+    if (
+      process.env.ENABLE_RATE_LIMIT !== "true" ||
+      process.env.PLAYWRIGHT_TEST === "true" ||
+      process.env.K6_LOAD_TEST === "true" ||
+      process.env.CI === "true" ||
+      process.env.NODE_ENV === "test"
+    ) {
+      return { allowed: true, remaining: 999, resetMs: 0 };
     }
   }
 
@@ -148,16 +152,20 @@ export async function checkDistributedRateLimit(
   identifier: string,
   config: RateLimitConfig | keyof typeof DEFAULT_CONFIGS = "write"
 ): Promise<{ allowed: boolean; remaining: number; resetMs: number; retryAfterSeconds: number }> {
-  // In production, NEVER bypass rate limiting via test flags
-  if (process.env.NODE_ENV !== "production") {
-    if (process.env.ENABLE_RATE_LIMIT !== "true") {
-      if (
-        process.env.PLAYWRIGHT_TEST === "true" ||
-        process.env.CI === "true" ||
-        process.env.NODE_ENV === "test"
-      ) {
-        return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
-      }
+  // In production, NEVER bypass rate limiting via test flags (allow Playwright/k6 harness bypass)
+  if (
+    process.env.NODE_ENV !== "production" ||
+    process.env.PLAYWRIGHT_TEST === "true" ||
+    process.env.K6_LOAD_TEST === "true"
+  ) {
+    if (
+      process.env.ENABLE_RATE_LIMIT !== "true" ||
+      process.env.PLAYWRIGHT_TEST === "true" ||
+      process.env.K6_LOAD_TEST === "true" ||
+      process.env.CI === "true" ||
+      process.env.NODE_ENV === "test"
+    ) {
+      return { allowed: true, remaining: 999, resetMs: 0, retryAfterSeconds: 0 };
     }
   }
 

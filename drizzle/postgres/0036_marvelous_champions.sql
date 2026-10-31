@@ -1,8 +1,8 @@
-ALTER TABLE "academic_years" DROP CONSTRAINT "uq_ay_inst_id";--> statement-breakpoint
-ALTER TABLE "staff_availability" DROP CONSTRAINT "staff_availability_staff_id_unique";--> statement-breakpoint
-ALTER TABLE "staff_institutions" DROP CONSTRAINT "uq_staff_inst";--> statement-breakpoint
-ALTER TABLE "staff_meal_preferences" DROP CONSTRAINT "staff_meal_preferences_staff_id_unique";--> statement-breakpoint
-ALTER TABLE "students" DROP CONSTRAINT "uq_student_inst_id";--> statement-breakpoint
+ALTER TABLE "academic_years" DROP CONSTRAINT "uq_ay_inst_id" CASCADE;--> statement-breakpoint
+ALTER TABLE "staff_availability" DROP CONSTRAINT "staff_availability_staff_id_unique" CASCADE;--> statement-breakpoint
+ALTER TABLE "staff_institutions" DROP CONSTRAINT "uq_staff_inst" CASCADE;--> statement-breakpoint
+ALTER TABLE "staff_meal_preferences" DROP CONSTRAINT "staff_meal_preferences_staff_id_unique" CASCADE;--> statement-breakpoint
+ALTER TABLE "students" DROP CONSTRAINT "uq_student_inst_id" CASCADE;--> statement-breakpoint
 CREATE INDEX "idx_access_requests_status_routed_staff" ON "access_requests" USING btree ("status","routed_to_id","staff_id");--> statement-breakpoint
 CREATE INDEX "idx_ai_agent_communications_correlation_id" ON "ai_agent_communications" USING btree ("correlation_id");--> statement-breakpoint
 CREATE INDEX "idx_ai_predictions_target_entity" ON "ai_predictions" USING btree ("target_entity_type","target_entity_id");--> statement-breakpoint

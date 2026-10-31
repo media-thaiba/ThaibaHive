@@ -6,7 +6,10 @@ import { createClient } from "@libsql/client";
 
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { getTableColumns, isTable } from "drizzle-orm";
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// Ensure PostgreSQL INT8 (bigint / count(*)) is parsed as JavaScript number
+types.setTypeParser(types.builtins.INT8, (val: string) => Number(val));
 import { ReplicaQueryRouter } from "./replica-router";
 import { TenantRouter } from "./tenant-router";
 
@@ -228,8 +231,8 @@ if (isPostgres) {
         process.exit(1);
       }
     });
-    void client.execute("PRAGMA busy_timeout = 15000;").catch((err) => {
-      console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 15000 failed: ${err?.message || err}`);
+    void client.execute("PRAGMA busy_timeout = 30000;").catch((err) => {
+      console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 30000 failed: ${err?.message || err}`);
       if (typeof process !== "undefined" && typeof process.exit === "function") {
         process.exit(1);
       }
@@ -310,7 +313,26 @@ export function wrapPgDb(pgDb: any): any {
         };
       }
 
+      if (prop === "execute") {
+        return async function(query: any) {
+          if (query && typeof query === "object" && typeof query.sql === "string") {
+            const args = query.args || [];
+            let idx = 0;
+            const pgSql = query.sql.replace(/\?/g, () => `$${++idx}`);
+            const pool = (pgDb as any).session?.client || (pgDb as any).client || pgDb;
+            if (typeof pool?.query === "function") {
+              const res = await pool.query(pgSql, args);
+              return { rows: res.rows || [] };
+            }
+          }
+          return target.execute(query);
+        };
+      }
+
       const val = Reflect.get(target, prop, receiver);
+      if (typeof val === "function" && ((val as any).mock || (val as any)._isMockFunction)) {
+        return val;
+      }
 
       if (typeof val === "function" && ["select", "insert", "update", "delete"].includes(prop as string)) {
         return function(...args: any[]) {

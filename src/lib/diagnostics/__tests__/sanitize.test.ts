@@ -20,6 +20,17 @@ describe("Sanitization Utility (src/lib/diagnostics/sanitize.ts)", () => {
     expect(cleaned).toContain("values ([REDACTED])");
   });
 
+
+  test("redacts multi-row VALUES clauses with gi flags and prevents email leak across multiple rows", () => {
+    const rawMsg = "syntax error at or near VALUES ('a@x.com', 123), ('b@x.com', 456)";
+    const cleaned = sanitizeErrorMessage(rawMsg);
+
+    expect(cleaned).not.toContain("a@x.com");
+    expect(cleaned).not.toContain("b@x.com");
+    expect(cleaned).toContain("values ([REDACTED])");
+  });
+
+
   test("truncates extremely long messages to 500 chars", () => {
     const longMsg = "A".repeat(600);
     const cleaned = sanitizeErrorMessage(longMsg);

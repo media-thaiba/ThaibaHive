@@ -28,6 +28,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
     await db.delete(staffInstitutions).where(eq(staffInstitutions.institutionId, instId)).run();
     await db.delete(institutions).where(eq(institutions.id, instId)).run();
     await db.delete(staff).where(eq(staff.id, adminId)).run();
+    await db.delete(staff).where(eq(staff.id, superAdminId)).run();
 
     await db.insert(institutions).values({
       id: instId,
@@ -46,6 +47,17 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
       tokenVersion: 0,
     }).run();
 
+    await db.insert(staff).values({
+      id: superAdminId,
+      email: "root.media.admin@thaiba.local",
+      employeeId: "EMP-ROOT-SA",
+      firstName: "Root",
+      lastName: "Admin",
+      role: "super_admin",
+      isActive: true,
+      tokenVersion: 0,
+    }).run();
+
     await db.insert(staffInstitutions).values({
       id: "si-admin-jest",
       staffId: adminId,
@@ -57,6 +69,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
     await db.delete(staffInstitutions).where(eq(staffInstitutions.institutionId, instId)).run();
     await db.delete(institutions).where(eq(institutions.id, instId)).run();
     await db.delete(staff).where(eq(staff.id, adminId)).run();
+    await db.delete(staff).where(eq(staff.id, superAdminId)).run();
   });
 
   it("blocks reset-sso when step-up token is missing (returns 403 STEP_UP_REQUIRED)", async () => {
@@ -193,7 +206,7 @@ describe("Route-Level: Staff Reset-SSO & Deactivate Boundary Guards", () => {
 
     // Verify targetId is now inactive and active count is exactly 1 (only callerId remains active)
     const activeCountAfter = (await db.select({ count: sql<number>`count(*)` }).from(staff).where(and(eq(staff.role, "super_admin"), eq(staff.isActive, true))).get())?.count;
-    expect(activeCountAfter).toBe(1);
+    expect(Number(activeCountAfter)).toBe(1);
 
     // 2. Second deactivation attempt: targetId was deactivated in step 1, leaving exactly 1 active super_admin (callerId).
     // Now caller attempts to delete targetId again (or another super_admin). Since active count is now 1 (<= 1),

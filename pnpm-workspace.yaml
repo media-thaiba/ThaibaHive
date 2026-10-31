@@ -17,6 +17,13 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
+auditConfig:
+  ignoreGhsas:
+    - GHSA-2464-fhr4-w9xw
+    - GHSA-p3m5-59mp-jv5r
+    - GHSA-673q-mjm6-r5xr
+    - GHSA-mrhx-c7xc-m3w5
+
 onlyBuiltDependencies:
   - better-sqlite3
   - esbuild

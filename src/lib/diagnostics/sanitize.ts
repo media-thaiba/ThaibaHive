@@ -1,13 +1,21 @@
+/**
+ * Diagnostic Sanitization Utilities
+ * Prevents raw SQL queries, bound parameters, and PII from leaking into logs or monitoring.
+ */
+
 export function sanitizeErrorMessage(msg: string): string {
   if (!msg) return "";
   let clean = msg;
-  // If message begins with or contains a Drizzle "Failed query:", completely redact the query body
-  clean = clean.replace(/Failed query:\s*[\s\S]*?(\bparams\s*:|$)/i, "Failed query: [REDACTED]\nparams: ");
-  // Redact everything following params: to the end of string (matches Drizzle query error: `Failed query: ...\nparams: ...`)
+  // 1. Redact entire SQL query bodies
+  clean = clean.replace(/((?:Failed query|query):\s*)[\s\S]*?(\bparams\s*:\s*|$)/i, (_match, prefix, suffix) => {
+    return prefix + "[REDACTED] " + suffix;
+  });
+  // 2. Redact all parameters following 'params:'
   clean = clean.replace(/\bparams\s*:\s*[\s\S]*$/i, "params: [REDACTED]");
-  // Also redact bracketed params and inline values (...) if present
+  // 3. Also redact bracketed params and inline values (...) if present
   clean = clean.replace(/params:\s*\[[\s\S]*?\]/gi, "params: [REDACTED]");
-  clean = clean.replace(/values\s*\([\s\S]*?\)/gi, "values ([REDACTED])");
+  // 4. Redact VALUES (...) and multi-row VALUES (...), (...) clauses in raw queries
+  clean = clean.replace(/\bvalues\s*\([\s\S]*?\)(?:\s*,\s*\([\s\S]*?\))*/gi, "values ([REDACTED])");
   return clean.length > 500 ? clean.slice(0, 500) + "... [TRUNCATED]" : clean;
 }
 

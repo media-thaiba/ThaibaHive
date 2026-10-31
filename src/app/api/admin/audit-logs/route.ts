@@ -1,4 +1,4 @@
-import { resolveRequestInstitution } from "@/lib/api/auth-guard";
+import { resolveRequestInstitution, isGlobalScopeRole } from "@thaiba/auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { preferenceAuditLog } from "@thaiba/db/schema";
@@ -39,7 +39,11 @@ async function handler(req: Request, session: any) {
     }
 
     const { userId, preferenceKey, institutionId: reqInst, page, limit, sortBy, sortOrder } = parsed.data;
-    const institutionId = await resolveRequestInstitution(session, reqInst);
+    const institutionId = reqInst
+      ? await resolveRequestInstitution(session, reqInst)
+      : isGlobalScopeRole(session.role)
+        ? undefined
+        : await resolveRequestInstitution(session, undefined);
 
     const conditions = [];
     if (userId) conditions.push(eq(preferenceAuditLog.userId, userId));
