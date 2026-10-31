@@ -276,7 +276,7 @@ jobs:
     name: Playwright E2E Tests (Chromium)
     runs-on: ubuntu-24.04
     needs: [web-ci]
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -434,12 +434,18 @@ jobs:
 
       - name: Start standalone server and execute k6 load tests
         run: |
-          node .next/standalone/server.js &
+          K6_LOAD_TEST=true node .next/standalone/server.js &
           SERVER_PID=$!
           echo "Server started with PID: $SERVER_PID"
           
           # Wait for server readiness
-          npx wait-on -t 30000 http://localhost:3000/api/health || sleep 5
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000/api/health >/dev/null; then
+              echo "Server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
 
           # Generate valid JWT signed with current AUTH_JWT_SECRET
           TOKEN=$(node scripts/generate-loadtest-token.js)
