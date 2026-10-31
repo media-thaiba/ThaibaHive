@@ -451,6 +451,111 @@ await client.execute(`
       )
     `);
 
+        await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`financial_budget_models\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`),
+        \`fiscal_year\` text NOT NULL,
+        \`target_budget_amount\` real NOT NULL,
+        \`baseline_velocity\` real DEFAULT 1.0 NOT NULL,
+        \`historical_coefficients_json\` text,
+        \`is_active\` integer DEFAULT 1 NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`financial_forecast_runs\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`),
+        \`horizon_days\` integer DEFAULT 90 NOT NULL,
+        \`forecast_p10\` real NOT NULL,
+        \`forecast_p50\` real NOT NULL,
+        \`forecast_p90\` real NOT NULL,
+        \`realization_deficit_percent\` real NOT NULL,
+        \`risk_level\` text DEFAULT 'low_risk' NOT NULL,
+        \`generated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`workspace_analytics_cache\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`role\` text NOT NULL,
+        \`metric_name\` text NOT NULL,
+        \`metric_value\` text NOT NULL,
+        \`calculated_at\` text NOT NULL,
+        \`time_bucket\` text
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`report_schedules\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`) ON DELETE CASCADE,
+        \`user_id\` text NOT NULL,
+        \`title\` text NOT NULL,
+        \`frequency\` text NOT NULL,
+        \`format\` text NOT NULL,
+        \`recipients\` text NOT NULL,
+        \`is_active\` integer DEFAULT 1 NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`report_history\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`schedule_id\` text REFERENCES \`report_schedules\`(\`id\`) ON DELETE SET NULL,
+        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`) ON DELETE CASCADE,
+        \`file_path\` text NOT NULL,
+        \`format\` text NOT NULL,
+        \`status\` text NOT NULL,
+        \`generated_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`size_bytes\` integer DEFAULT 0 NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`scheduled_jobs\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL REFERENCES \`institution\`(\`id\`) ON DELETE CASCADE,
+        \`type\` text NOT NULL,
+        \`format\` text NOT NULL,
+        \`options\` text NOT NULL,
+        \`status\` text DEFAULT 'queued' NOT NULL,
+        \`error\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`job_executions\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`job_id\` text NOT NULL REFERENCES \`scheduled_jobs\`(\`id\`) ON DELETE CASCADE,
+        \`status\` text NOT NULL,
+        \`retry_count\` integer DEFAULT 0 NOT NULL,
+        \`started_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`completed_at\` text,
+        \`error_message\` text
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`preference_audit_log\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`timestamp\` text DEFAULT (current_timestamp) NOT NULL,
+        \`user_id\` text NOT NULL,
+        \`preference_key\` text NOT NULL,
+        \`old_value\` text,
+        \`new_value\` text NOT NULL,
+        \`ip_address\` text,
+        \`institution_id\` text REFERENCES \`institution\`(\`id\`) ON DELETE SET NULL
+      )
+    `);
+
     if (appliedCount === 0) {
       console.log("[db:migrate] All SQLite/LibSQL migrations are already up to date.");
     } else {

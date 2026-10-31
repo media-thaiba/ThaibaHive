@@ -29,7 +29,11 @@ export class RoleGatingPage {
    * is a no-op then, so the sidebar label never changes).
    */
   async switchWorkspace(label: string): Promise<boolean> {
-    const button = this.page.locator(`button[aria-label="Switch to ${label} workspace"]`);
+    const button = this.page.locator(`button[aria-label="Switch to ${label} workspace"]`).first();
+    const isAvailable = await button.isVisible({ timeout: 2000 }).catch(() => false);
+    if (!isAvailable) {
+      return false;
+    }
     await button.click();
     const nav = this.page.locator(`nav[aria-label="${label} navigation"]`);
     try {
@@ -43,9 +47,11 @@ export class RoleGatingPage {
   /** The sidebar renders a single collapsible group for the active workspace. */
   async ensureSidebarGroupExpanded() {
     const toggle = this.sidebarNav.locator("button[aria-expanded]").first();
-    if ((await toggle.getAttribute("aria-expanded")) !== "true") {
-      await toggle.click();
-      await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 3000 });
+    if ((await toggle.count()) > 0) {
+      if ((await toggle.getAttribute("aria-expanded")) !== "true") {
+        await toggle.click();
+        await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 3000 });
+      }
     }
   }
 
@@ -384,12 +390,12 @@ export const NAV_WORKSPACE: Record<string, string> = Object.fromEntries(
   Object.keys(NAV_VISIBILITY_MATRIX).map((href) => [
     href,
     href.startsWith("/school")
-      ? "School"
+      ? "Academics"
       : href.startsWith("/operations")
         ? "Operations"
         : href.startsWith("/admin")
-          ? "Administration"
-          : "My Work",
+          ? "Admin"
+          : "My Space",
   ])
 );
 
