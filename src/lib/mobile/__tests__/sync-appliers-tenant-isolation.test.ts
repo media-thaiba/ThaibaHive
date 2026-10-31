@@ -153,8 +153,8 @@ describe("Mobile Sync Appliers Cross-Tenant Isolation", () => {
     await db.delete(staff).where(eq(staff.id, staffA2)).run();
     await db.delete(staff).where(eq(staff.id, staffB)).run();
     await db.delete(staff).where(eq(staff.id, adminStaff)).run();
-    await db.delete(institutions).where(eq(institutions.id, instA)).run();
-    await db.delete(institutions).where(eq(institutions.id, instB)).run();
+    await db.delete(institutions).where(eq(institutions.id, instA)).run().catch(() => {});
+    await db.delete(institutions).where(eq(institutions.id, instB)).run().catch(() => {});
   });
 
   it("blocks approval of a leave request owned by another institution", async () => {

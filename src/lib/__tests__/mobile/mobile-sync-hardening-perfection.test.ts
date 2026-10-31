@@ -18,6 +18,7 @@ jest.mock("@thaiba/auth", () => {
     verifySession: jest.fn(),
     hasPermission: jest.fn(),
     resolveInstitutionScopeForSession: jest.fn().mockImplementation((session: any) => Promise.resolve(session?.institutionId ?? null)),
+    resolveScopedInstitutionId: jest.fn().mockImplementation(async (id: any) => id ?? null),
   };
 });
 
