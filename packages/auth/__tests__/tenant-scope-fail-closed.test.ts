@@ -263,5 +263,21 @@ describe("Tenant Scope Fail-Closed & Multi-Tenant Enforcement (Task A2 / Blocker
       expect(await resolveRequestInstitution(multiSession, instBeta)).toBe(instBeta);
       await expect(resolveRequestInstitution(multiSession, instGamma)).rejects.toThrow(TenantMismatchError);
     });
+    it("should fail closed and throw TenantMismatchError if session claims an unassigned or revoked institutionId", async () => {
+      const revokedSession = {
+        sid: "sess_test",
+        staffId: staffAlpha,
+        role: "staff",
+        email: "alpha@test.com",
+        employeeId: "EMP_ALP",
+        name: "Alpha",
+        tokenVersion: 1,
+        institutionId: instGamma,
+      };
+
+      await expect(resolveRequestInstitution(revokedSession, null)).rejects.toThrow(TenantMismatchError);
+      await expect(resolveScopedInstitutionId(null, revokedSession)).rejects.toThrow(TenantMismatchError);
+    });
+
   });
 });

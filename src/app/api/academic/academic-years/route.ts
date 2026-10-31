@@ -81,43 +81,65 @@ export const POST = requireAuth(async (request: Request, session) => {
     );
   }
 
-  // Date overlap collision check within same institution
-  const existingYears = await db
-    .select({
-      id: academicYears.id,
-      name: academicYears.name,
-      startDate: academicYears.startDate,
-      endDate: academicYears.endDate,
-    })
-    .from(academicYears)
-    .where(eq(academicYears.institutionId, institutionId))
-    .all();
+  let result: any;
+  let overlapError: string | null = null;
 
-  const overlapping = existingYears.find(
-    (ey) => validData.startDate <= ey.endDate && validData.endDate >= ey.startDate
-  );
+  await db.transaction(async (tx) => {
+    // 1. Re-check name uniqueness inside transaction to avoid race
+    const duplicate = await tx
+      .select({ id: academicYears.id })
+      .from(academicYears)
+      .where(
+        and(
+          eq(academicYears.institutionId, institutionId),
+          eq(academicYears.name, validData.name)
+        )
+      )
+      .get();
 
-  if (overlapping) {
-    return NextResponse.json(
-      {
-        error: `Academic year dates overlap with existing session '${overlapping.name}' (${overlapping.startDate} to ${overlapping.endDate})`,
-      },
-      { status: 409 }
+    if (duplicate) {
+      overlapError = "An academic year with this name already exists in this institution";
+      return;
+    }
+
+    // 2. Date overlap collision check within same institution inside transaction
+    const existingYears = await tx
+      .select({
+        id: academicYears.id,
+        name: academicYears.name,
+        startDate: academicYears.startDate,
+        endDate: academicYears.endDate,
+      })
+      .from(academicYears)
+      .where(eq(academicYears.institutionId, institutionId))
+      .all();
+
+    const overlapping = existingYears.find(
+      (ey) => validData.startDate <= ey.endDate && validData.endDate >= ey.startDate
     );
-  }
 
-  const result = await db
-    .insert(academicYears)
-    .values({
-      id: crypto.randomUUID(),
-      name: validData.name,
-      startDate: validData.startDate,
-      endDate: validData.endDate,
-      isActive: validData.isActive ?? true,
-      institutionId,
-    })
-    .returning()
-    .get();
+    if (overlapping) {
+      overlapError = `Academic year dates overlap with existing session '${overlapping.name}' (${overlapping.startDate} to ${overlapping.endDate})`;
+      return;
+    }
+
+    result = await tx
+      .insert(academicYears)
+      .values({
+        id: crypto.randomUUID(),
+        name: validData.name,
+        startDate: validData.startDate,
+        endDate: validData.endDate,
+        isActive: validData.isActive ?? true,
+        institutionId,
+      })
+      .returning()
+      .get();
+  });
+
+  if (overlapError) {
+    return NextResponse.json({ error: overlapError }, { status: 409 });
+  }
 
   return NextResponse.json({ academicYear: result }, { status: 201 });
 }, "academic_years:manage");

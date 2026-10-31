@@ -1257,7 +1257,7 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
               branchIndex: 2,
               icon: Icons.campaign_outlined,
               selectedIcon: Icons.campaign_rounded,
-              label: 'Notices',
+              label: 'Bulletin',
             ),
             const _TabData(
               branchIndex: 4,
@@ -1283,7 +1283,7 @@ class _DynamicBottomNavShellState extends ConsumerState<_DynamicBottomNavShell> 
               branchIndex: 2,
               icon: Icons.campaign_outlined,
               selectedIcon: Icons.campaign_rounded,
-              label: 'Notices',
+              label: 'Bulletin',
             ),
             if (hasMediaCapability)
               const _TabData(

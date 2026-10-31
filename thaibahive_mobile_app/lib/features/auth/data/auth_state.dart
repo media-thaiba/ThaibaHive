@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
 import 'package:thaibahive_mobile/core/services/logger_service.dart';
+import 'package:thaibahive_mobile/features/attendance/data/services/attendance_reminder_service.dart';
 import 'package:thaibahive_mobile/core/network/api_exception.dart';
 import 'package:thaibahive_mobile/core/errors/auth_error_mapper.dart';
 import 'package:thaibahive_mobile/core/services/fcm_service.dart';
@@ -311,6 +312,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {}
     try {
       await FCMService().onUserLogout().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+    try {
+      await AttendanceReminderService().cancelAllReminders();
     } catch (_) {}
 
     logger.info('[AuthState] Logout completed. Session cleared.');

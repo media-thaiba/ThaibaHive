@@ -1,22 +1,42 @@
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
 import 'package:thaibahive_mobile/core/constants.dart';
+import 'package:thaibahive_mobile/core/providers/tab_scroll_to_top.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 import 'package:thaibahive_mobile/models/user_model.dart';
-import 'package:thaibahive_mobile/shared/widgets/app_card.dart';
+import 'package:thaibahive_mobile/shared/widgets/app_grouped_card.dart';
 
 /// My Hub Screen - Strictly "Things About Me"
 /// Personal profile, ID card, attendance history, leave balance/requests, settings
 /// Services (Canteen, Helpdesk, Gate pass) live in Services catalog, NOT here
-class MeHubScreen extends ConsumerWidget {
+class MeHubScreen extends ConsumerStatefulWidget {
   const MeHubScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MeHubScreen> createState() => _MeHubScreenState();
+}
+
+class _MeHubScreenState extends ConsumerState<MeHubScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState.user;
+
+    // Rule 9: re-tapping the My Hub tab scrolls the profile back to the top.
+    ref.listen(tabScrollToTopProvider, (previous, next) {
+      if (next?.branch == 3) _scrollController.animateToTop();
+    });
 
     if (user == null) {
       return const Scaffold(
@@ -25,17 +45,13 @@ class MeHubScreen extends ConsumerWidget {
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('My Hub'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            onPressed: () => context.push('/settings'),
-            tooltip: 'Settings',
-          ),
-        ],
+        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,96 +245,92 @@ class _DigitalIdCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
+    // Single unified card — no nested wrapper, so the gradient surface reads
+    // as one sleek object instead of a frame inside a frame.
     return Container(
       margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withValues(alpha: 0.8),
-          ],
+          colors: isDark
+              ? const [Color(0xFF0D5C3A), Color(0xFF094229)]
+              : const [Color(0xFF107C4A), Color(0xFF0B633A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.15),
+          width: AppBorder.hairline,
+        ),
+        boxShadow: AppShadows.card(Colors.black),
       ),
-      child: AppCard(
-        margin: EdgeInsets.zero,
-        padding: EdgeInsets.zero,
-        variant: AppCardVariant.glass,
-        child: Column(
-          children: [
-            // Header row with avatar, name, QR
-            Row(
-              children: [
-                // Avatar
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  backgroundImage: user.avatarUrl != null
-                      ? NetworkImage(user.avatarUrl!)
-                      : null,
-                  child: user.avatarUrl == null
-                      ? Text(
-                          user.initials,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                // Name & Role
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.fullName,
+      child: Column(
+        children: [
+          // Header row with avatar, name, QR
+          Row(
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                backgroundImage: user.avatarUrl != null
+                    ? NetworkImage(user.avatarUrl!)
+                    : null,
+                child: user.avatarUrl == null
+                    ? Text(
+                        user.initials,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              // Name & Role
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.fullName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              user.role.toUpperCase(),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            user.role.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            user.designation ?? 'Staff',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          user.designation ?? 'Staff',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
               // QR Code placeholder
               Container(
                 width: 56,
@@ -327,8 +339,22 @@ class _DigitalIdCard extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
-                  child: Icon(Icons.qr_code_rounded, size: 32, color: Colors.black),
+                padding: const EdgeInsets.all(4),
+                child: QrImageView(
+                  data: 'thaibahive:staff:${user.id}',
+                  version: QrVersions.auto,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  gapless: true,
+                  size: 48.0,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black,
+                  ),
                 ),
               ),
             ],
@@ -366,7 +392,6 @@ class _DigitalIdCard extends StatelessWidget {
           ),
         ],
       ),
-      ),
     );
   }
 }
@@ -376,38 +401,46 @@ class _QuickStatsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            title: 'Attendance',
-            value: '98.5%',
-            subtitle: 'This month',
-            icon: Icons.check_circle_rounded,
-            color: Colors.green,
+    // IntrinsicHeight + stretch forces all three cards to the height of the
+    // tallest, so icons/values line up even when a subtitle wraps to 2 lines.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _StatCard(
+              title: 'Attendance',
+              value: '98.5%',
+              subtitle: 'This month',
+              icon: Icons.check_circle_rounded,
+              color: Colors.green,
+              onTap: () => context.push('/me/attendance'),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatCard(
-            title: 'Leave Balance',
-            value: '12 days',
-            subtitle: 'Casual + Medical',
-            icon: Icons.balance_rounded,
-            color: Colors.blue,
+          const SizedBox(width: 12),
+          Expanded(
+            child: _StatCard(
+              title: 'Leave',
+              value: '12 days',
+              subtitle: 'Casual + Medical',
+              icon: Icons.balance_rounded,
+              color: Colors.blue,
+              onTap: () => context.push('/me/leaves/balance'),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatCard(
-            title: 'Pending',
-            value: '2',
-            subtitle: 'Approvals needed',
-            icon: Icons.pending_actions_rounded,
-            color: Colors.orange,
+          const SizedBox(width: 12),
+          Expanded(
+            child: _StatCard(
+              title: 'Pending',
+              value: '2',
+              subtitle: 'Approvals needed',
+              icon: Icons.pending_actions_rounded,
+              color: Colors.orange,
+              onTap: () => context.push('/approvals'),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -418,6 +451,7 @@ class _StatCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.title,
@@ -425,52 +459,70 @@ class _StatCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E242C) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : const Color(0xFFd4dbd4).withValues(alpha: 0.5),
+              width: isDark ? AppBorder.hairlineDark : AppBorder.hairline,
             ),
-            child: Icon(icon, color: color, size: 20),
+            boxShadow: AppShadows.card(Colors.black),
           ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          // Top-anchored (not spaceBetween) with fixed gaps so all three cards'
+          // icons, values, titles, and subtitles share one horizontal baseline.
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          Text(
-            title,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -507,7 +559,7 @@ class _PersonalSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        ...children,
+        AppGroupedCard(children: children),
       ],
     );
   }
@@ -537,13 +589,8 @@ class _MenuItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-              width: 0.5,
-            ),
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
           ),
           child: Row(
             children: [
@@ -623,7 +670,7 @@ class _IdDetail extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 10,
+            fontSize: 11,
           ),
         ),
       ],

@@ -11,6 +11,8 @@ import '../features/auth/data/biometric_provider.dart';
 import '../features/auth/presentation/biometric_lock_screen.dart';
 import '../features/settings/data/settings_provider.dart';
 import '../core/services/fcm_service.dart';
+import '../features/attendance/data/attendance_provider.dart';
+import '../features/attendance/data/services/attendance_reminder_service.dart';
 import '../shared/widgets/offline_banner.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -68,6 +70,12 @@ class _ThaibaHiveAppState extends ConsumerState<ThaibaHiveApp> with WidgetsBindi
       ref.read(biometricLockProvider.notifier).onAppPaused();
     } else if (state == AppLifecycleState.resumed) {
       ref.read(biometricLockProvider.notifier).onAppResumed();
+      final user = ref.read(authProvider).user;
+      final attendanceState = ref.read(attendanceProvider);
+      ref.read(attendanceReminderServiceProvider).rebuildSchedule(
+        attendanceState,
+        userId: user?.id,
+      );
     }
   }
 

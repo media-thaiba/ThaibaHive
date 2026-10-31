@@ -193,7 +193,10 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
     final balancesAsync = ref.watch(leaveBalanceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Apply for Leave')),
+      appBar: AppBar(
+        leading: const CloseButton(),
+        title: const Text('Apply for Leave'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(

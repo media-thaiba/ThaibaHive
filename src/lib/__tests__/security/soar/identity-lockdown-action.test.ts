@@ -1,12 +1,34 @@
 import { identityLockdownAction } from '@/lib/security/soar/actions/identity-lockdown-action';
-import { revocationStore } from '@/lib/identity/revocation-store';
+import { db } from '@/db';
 import { SoarExecutionContext } from '@/lib/security/soar/soar-types';
 
-describe('IdentityLockdownAction', () => {
-  beforeEach(() => {
-    revocationStore._reset();
-  });
+jest.mock('@/db', () => {
+  return {
+    db: {
+      transaction: jest.fn().mockImplementation(async (callback) => {
+        const tx = {
+          update: jest.fn().mockReturnValue({
+            set: jest.fn().mockReturnValue({
+              where: jest.fn().mockReturnValue({
+                run: jest.fn(),
+              }),
+            }),
+          }),
+        };
+        return callback(tx);
+      }),
+      update: jest.fn().mockReturnValue({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            run: jest.fn(),
+          }),
+        }),
+      }),
+    },
+  };
+});
 
+describe('IdentityLockdownAction', () => {
   const mockContext: SoarExecutionContext = {
     execution_id: 'exec-id-lockdown',
     playbook_id: 'pb-account-lockdown',
@@ -19,19 +41,17 @@ describe('IdentityLockdownAction', () => {
     started_at: new Date().toISOString(),
   };
 
-  it('should lock user account and revoke access', async () => {
+  it('should lock user account and terminate sessions in db.transaction', async () => {
     const output = await identityLockdownAction.execute({ user_id: 'usr_suspicious_99' }, mockContext);
 
     expect(output.locked).toBe(true);
     expect(output.user_id).toBe('usr_suspicious_99');
-    expect(revocationStore.isUserRevoked('usr_suspicious_99')).toBe(true);
+    expect(db.transaction).toHaveBeenCalled();
   });
 
-  it('should unrevoke user on compensation', async () => {
+  it('should restore isActive on compensation', async () => {
     const output = await identityLockdownAction.execute({ user_id: 'usr_suspicious_99' }, mockContext);
-    expect(revocationStore.isUserRevoked('usr_suspicious_99')).toBe(true);
-
     await identityLockdownAction.compensate!({ user_id: 'usr_suspicious_99' }, output, mockContext);
-    expect(revocationStore.isUserRevoked('usr_suspicious_99')).toBe(false);
+    expect(db.update).toHaveBeenCalled();
   });
 });

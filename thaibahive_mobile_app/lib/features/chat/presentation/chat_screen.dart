@@ -231,7 +231,7 @@ class _ChatMessageBubble extends StatelessWidget {
                 Text(
                   _formatTime(message.createdAt),
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     color: isMe
                         ? theme.colorScheme.onPrimary.withOpacity(0.7)
                         : theme.colorScheme.outline,

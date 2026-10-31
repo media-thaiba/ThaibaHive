@@ -1,3 +1,4 @@
+import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -215,21 +216,25 @@ class _LocationQrManagementScreenState extends ConsumerState<LocationQrManagemen
                                       border: Border.all(color: theme.colorScheme.outlineVariant),
                                     ),
                                     alignment: Alignment.center,
-                                    child: _currentQrString != null
-                                        ? Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.qr_code_2_rounded, size: 140, color: theme.colorScheme.primary),
-                                              const SizedBox(height: 8),
-                                              Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                                child: Text(
-                                                  'HMAC Signed Checkpoint',
-                                                  style: theme.textTheme.bodySmall,
-                                                  textAlign: TextAlign.center,
-                                                ),
+                                    child: (_currentQrString != null && _currentQrString!.isNotEmpty)
+                                        ? Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: QrImageView(
+                                              data: _currentQrString!,
+                                              version: QrVersions.auto,
+                                              errorCorrectionLevel: QrErrorCorrectLevel.M,
+                                              gapless: true,
+                                              size: 216.0,
+                                              backgroundColor: Colors.white,
+                                              eyeStyle: const QrEyeStyle(
+                                                eyeShape: QrEyeShape.square,
+                                                color: Color(0xFF171A17),
                                               ),
-                                            ],
+                                              dataModuleStyle: const QrDataModuleStyle(
+                                                dataModuleShape: QrDataModuleShape.square,
+                                                color: Color(0xFF171A17),
+                                              ),
+                                            ),
                                           )
                                         : const CircularProgressIndicator(),
                                   ),

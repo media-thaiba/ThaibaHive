@@ -1,5 +1,14 @@
 import { NextResponse } from "next/server";
-import { verifySession, resolveInstitutionScopeForSession, resolveRequestInstitution, getStaffInstitutionMemberships, type SessionPayload, hasPermission } from "@thaiba/auth";
+import {
+  verifySession,
+  resolveInstitutionScopeForSession,
+  resolveRequestInstitution,
+  getStaffInstitutionMemberships,
+  type SessionPayload,
+  hasPermission,
+  withMembershipCache,
+  sessionAls,
+} from "@thaiba/auth";
 import type { StaffRole } from "@/types";
 import { normalizeRoutePath } from "../observability/route-normalizer";
 import { SlidingWindowAggregator } from "../observability/sliding-window-aggregator";
@@ -21,9 +30,19 @@ type HandlerWithSession<TParams = Record<string, string>> = (
   context?: { params: Promise<TParams> }
 ) => Promise<Response>;
 
-interface GlobalWithActiveSession {
-  __activeSession?: SessionPayload;
-}
+const runInSession = (session: SessionPayload, fn: () => Promise<Response>): Promise<Response> => {
+  if (sessionAls && typeof sessionAls.run === "function") {
+    return sessionAls.run(session, fn);
+  }
+  return fn();
+};
+
+const runInMembershipCache = (fn: () => Promise<Response>): Promise<Response> => {
+  if (typeof withMembershipCache === "function") {
+    return withMembershipCache(fn);
+  }
+  return fn();
+};
 
 export function requireAuth<TParams = Record<string, string>>(
   handler: HandlerWithSession<TParams>,
@@ -151,7 +170,6 @@ export function requireAuth<TParams = Record<string, string>>(
               staffId: session.staffId,
               role: session.role,
               url: request.url,
-              method,
               timestamp: new Date().toISOString(),
             })
           );
@@ -202,62 +220,61 @@ export function requireAuth<TParams = Record<string, string>>(
       }
     }
 
-    const activeGlobal = globalThis as unknown as GlobalWithActiveSession;
-    const prevSession = activeGlobal.__activeSession;
-    activeGlobal.__activeSession = session;
-    try {
-      const response = await handler(
-        request,
-        session,
-        context as { params: Promise<TParams> } | undefined
-      );
-      recordApm(response.status || 200);
+    return runInSession(session, async () => {
+      try {
+        const response = await runInMembershipCache(() =>
+          handler(
+            request,
+            session,
+            context as { params: Promise<TParams> } | undefined
+          )
+        );
+        recordApm(response.status || 200);
 
-      // Inject RFC 8594 headers safely
-      if (response && response.headers && typeof response.headers.set === "function") {
-        for (const [k, v] of Object.entries(deprecationHeaders)) {
-          response.headers.set(k, v);
+        // Inject RFC 8594 headers safely
+        if (response && response.headers && typeof response.headers.set === "function") {
+          for (const [k, v] of Object.entries(deprecationHeaders)) {
+            response.headers.set(k, v);
+          }
         }
-      }
 
-      return response;
-    } catch (error) {
-      if (
-        (typeof error === "object" && error !== null && "name" in error && (error as { name: string }).name === "TenantMismatchError") ||
-        (error instanceof Error && (error.name === "TenantMismatchError" || error.message.startsWith("Forbidden:")))
-      ) {
-        const forbiddenMsg = error instanceof Error ? error.message : "Forbidden";
-        console.warn(
+        return response;
+      } catch (error) {
+        if (
+          (typeof error === "object" && error !== null && "name" in error && (error as { name: string }).name === "TenantMismatchError") ||
+          (error instanceof Error && (error.name === "TenantMismatchError" || error.message.startsWith("Forbidden:")))
+        ) {
+          const forbiddenMsg = error instanceof Error ? error.message : "Forbidden";
+          console.warn(
+            JSON.stringify({
+              event: "tenant_mismatch_blocked",
+              staffId: session.staffId,
+              role: session.role,
+              url: request.url,
+              error: forbiddenMsg,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          recordApm(403);
+          return NextResponse.json({ error: forbiddenMsg }, { status: 403 });
+        }
+
+        recordApm(500);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : undefined;
+        console.error(
           JSON.stringify({
-            event: "tenant_mismatch_blocked",
-            staffId: session.staffId,
-            role: session.role,
+            event: "api_route_error",
             url: request.url,
-            error: forbiddenMsg,
+            method: request.method,
+            error: errorMsg,
+            stack,
             timestamp: new Date().toISOString(),
           })
         );
-        recordApm(403);
-        return NextResponse.json({ error: forbiddenMsg }, { status: 403 });
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
       }
-
-      recordApm(500);
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const stack = error instanceof Error ? error.stack : undefined;
-      console.error(
-        JSON.stringify({
-          event: "api_route_error",
-          url: request.url,
-          method: request.method,
-          error: errorMsg,
-          stack,
-          timestamp: new Date().toISOString(),
-        })
-      );
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    } finally {
-      activeGlobal.__activeSession = prevSession;
-    }
+    });
   };
 }
 
@@ -288,4 +305,3 @@ export async function resolveInstitutionContext(
   const memberships = await getStaffInstitutionMemberships(session.staffId);
   return memberships[0] ?? null;
 }
-

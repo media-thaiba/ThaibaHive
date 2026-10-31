@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,64 +17,26 @@ import 'package:go_router/go_router.dart';
 class AppTransitions {
   AppTransitions._();
 
-  /// Slide from right (forward navigation).
-  static CustomTransitionPage<void> slide({
+  /// Slide from right (forward navigation) with interactive edge-swipe back support.
+  static Page<void> slide({
     required GoRouterState state,
     required Widget child,
   }) {
-    return CustomTransitionPage<void>(
+    return CupertinoPage<void>(
       key: state.pageKey,
       child: child,
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 240),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(1.0, 0.0);
-        const end = Offset.zero;
-        const curve = Curves.easeInOut;
-
-        final tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
-
-        final offsetAnimation = animation.drive(tween);
-
-        return SlideTransition(
-          position: offsetAnimation,
-          child: child,
-        );
-      },
     );
   }
 
   /// Slide from bottom (modals, sheets).
-  static CustomTransitionPage<void> slideUp({
+  static Page<void> slideUp({
     required GoRouterState state,
     required Widget child,
   }) {
-    return CustomTransitionPage<void>(
+    return CupertinoPage<void>(
       key: state.pageKey,
+      fullscreenDialog: true,
       child: child,
-      opaque: false,
-      barrierDismissible: true,
-      barrierColor: Colors.black45,
-      transitionDuration: const Duration(milliseconds: 300),
-      reverseTransitionDuration: const Duration(milliseconds: 250),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(0.0, 1.0);
-        const end = Offset.zero;
-        const curve = Curves.easeOutCubic;
-
-        final tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
-
-        final offsetAnimation = animation.drive(tween);
-
-        return SlideTransition(
-          position: offsetAnimation,
-          child: child,
-        );
-      },
     );
   }
 

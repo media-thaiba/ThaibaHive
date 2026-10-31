@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Wraps a child with a subtle scale animation on tap.
+/// Wraps a child with a subtle scale animation and a light haptic tick on tap.
+///
+/// The haptic fires on touch-down (not release) so the surface feels
+/// responsive the instant it is pressed.
 ///
 /// Usage:
 /// ```dart
@@ -15,12 +19,17 @@ class TapScale extends StatefulWidget {
   final double scale;
   final Duration duration;
 
+  /// Optional stronger feedback for high-stakes actions such as an
+  /// attendance punch or an approval confirmation.
+  final Future<void> Function()? hapticFeedback;
+
   const TapScale({
     super.key,
     required this.child,
     this.onTap,
     this.scale = 0.97,
     this.duration = const Duration(milliseconds: 120),
+    this.hapticFeedback,
   });
 
   @override
@@ -57,7 +66,12 @@ class _TapScaleState extends State<TapScale>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => _controller.forward() : null,
+      onTapDown: widget.onTap != null
+          ? (_) {
+              _controller.forward();
+              (widget.hapticFeedback ?? HapticFeedback.lightImpact)();
+            }
+          : null,
       onTapUp: widget.onTap != null
           ? (_) {
               _controller.reverse();

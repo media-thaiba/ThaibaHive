@@ -97,7 +97,6 @@ describe('FinanceOS Security, Threat & Fault Tolerance Suite (Sprint-057 - FEE-0
     const dlq = DLQManager.getInstance();
     dlq.clearQueue();
     const processor = new WebhookProcessor(undefined, dlq, store);
-    processor.clearProcessedKeys();
 
     const key = processor.generateIdempotencyKey('razorpay', 'evt_replay_100', 'pay_replay_100');
     expect(key).toBeDefined();
@@ -107,7 +106,25 @@ describe('FinanceOS Security, Threat & Fault Tolerance Suite (Sprint-057 - FEE-0
   it('Threat 4: Cash Drawer Variance - Detects physical cash discrepancy during shift close', async () => {
     const engine = new CounterRegisterEngine(store);
     const shift = await engine.openShift('inst-1', 'cashier-1', 'Main Gate Counter', 5000);
-    await engine.recordShiftTransaction(shift.id, 'cash', 20000);
+    await store.recordPayment({
+      id: 'pay-var-1',
+      paymentNumber: 'PAY-VAR-01',
+      institutionId: 'inst-1',
+      allocationId: 'alloc-1',
+      studentId: 'stud-1',
+      amount: 20000,
+      fineAmount: 0,
+      discountAmount: 0,
+      netAmount: 20000,
+      currency: 'INR',
+      paymentMethod: 'cash',
+      paymentStatus: 'completed',
+      counterRegisterId: shift.id,
+      paidAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    await engine.recordShiftTransaction(shift.id, 'cash', 20000, 'pay-var-1');
 
     // Expected cash: 25,000. Declared physical: 24,000 (Shortage of ₹1,000)
     const summary = await engine.closeShift(shift.id, 24000, 'supervisor-1', 'Shortage noted');

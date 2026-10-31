@@ -99,6 +99,7 @@ class _BookingCreateScreenState extends ConsumerState<BookingCreateScreen> {
 
     return AppScaffold(
       title: 'Create Booking',
+      isModal: true,
       body: Form(
         key: _formKey,
         child: ListView(

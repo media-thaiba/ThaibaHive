@@ -164,13 +164,7 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E2228) : Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
+          boxShadow: AppShadows.card(Colors.black),
         ),
         child: Column(
           children: [
@@ -613,7 +607,7 @@ class _SearchBottomSheetState extends ConsumerState<SearchBottomSheet> {
                   child: Text(
                     _formatEntityType(result.entityType),
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: isDark ? Colors.grey[300] : Colors.grey[700],
                     ),

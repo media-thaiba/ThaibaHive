@@ -27,6 +27,11 @@ export const DOT_TO_COLON_MAP: Record<string, string> = {
   "campus.approve": "affiliations:manage",
 };
 
+const PERMISSION_ALIAS_MAP: Map<string, string> = new Map([
+  ...Object.entries(DOT_TO_COLON_MAP),
+  ...Object.entries(DOT_TO_COLON_MAP).map(([dot, colon]): [string, string] => [colon, dot]),
+]);
+
 const basePermissions = {
   system: [
     "system:update",
@@ -834,7 +839,6 @@ export const rolePermissions: Record<StaffRole, Permission[]> = {
     "reports:create",
     "announcements:read",
     "announcements:create",
-    "announcements:manage",
     "announcements:manage",
     "events:read",
     "events:create",
@@ -2019,16 +2023,10 @@ export function hasPermission(role: string, permission: Permission) {
   const perms = rolePermissions[role] ?? [];
   if (perms.includes(permission)) return true;
 
-  // Check alias mappings (dot-notation <-> colon-notation)
-  if (DOT_TO_COLON_MAP[permission] && perms.includes(DOT_TO_COLON_MAP[permission])) {
+  // Check alias mappings (dot-notation <-> colon-notation in O(1))
+  const alias = PERMISSION_ALIAS_MAP.get(permission);
+  if (alias && perms.includes(alias)) {
     return true;
-  }
-
-  // Check reverse mapping
-  for (const [dot, colon] of Object.entries(DOT_TO_COLON_MAP)) {
-    if (colon === permission && perms.includes(dot)) {
-      return true;
-    }
   }
 
   return false;

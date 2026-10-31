@@ -21,6 +21,16 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 class FCMService {
+  /// Explicit user permission request (Rule 13 contextual gating)
+  static Future<NotificationSettings> requestNotificationPermissions() async {
+    return await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+  }
+
   static final FCMService _instance = FCMService._internal();
   factory FCMService() => _instance;
   FCMService._internal();
@@ -94,7 +104,7 @@ class FCMService {
       alert: true,
       badge: true,
       sound: true,
-      provisional: false,
+      provisional: true,
     );
     if (kDebugMode) {
       print('[FCMService] Permission status: ${settings.authorizationStatus}');

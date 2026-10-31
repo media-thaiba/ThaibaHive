@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as latlong;
+
+import '../../app/theme.dart';
 import 'package:thaibahive_mobile/core/services/location_service.dart';
 
 class MapLocationResult {
@@ -389,13 +391,7 @@ class _MapLocationPickerModalState extends State<MapLocationPickerModal> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ],
+              boxShadow: AppShadows.card(Colors.black),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

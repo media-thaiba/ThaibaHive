@@ -586,5 +586,136 @@ describe("Version 1.0 Attendance Event-Sourcing & Sync Engine Test Suite", () =>
       expect(day[0].reviewReason).toContain("invalid_sequence: lastOut is earlier than firstIn");
       expect(day[0].totalMinutes).toBe(0);
     });
+
+    it("should filter out flagged punches from authoritative firstIn, lastOut, and worked minutes", async () => {
+      const today = deriveLocalDate(Date.now(), "Asia/Kolkata");
+      const morningValidIn = new Date(`${today}T09:00:00.000Z`).getTime();
+      const mockPunchAt = new Date(`${today}T06:00:00.000Z`).getTime(); // Flagged mock punch early morning
+      const eveningValidOut = new Date(`${today}T17:00:00.000Z`).getTime();
+
+      // Directly insert events with flags
+      await db.insert(attendanceEvents).values([
+        {
+          id: `evt_mock_${Date.now()}`,
+          clientEventId: `client_mock_${Date.now()}`,
+          staffId: testStaffId,
+          institutionId: testInstId,
+          localDate: today,
+          kind: "in",
+          method: "geofence",
+          deviceClaimedAt: mockPunchAt,
+          receivedAt: mockPunchAt,
+          effectiveAt: mockPunchAt,
+          timeTrust: "network",
+          flags: "mock_location",
+        },
+        {
+          id: `evt_valid_in_${Date.now()}`,
+          clientEventId: `client_valid_in_${Date.now()}`,
+          staffId: testStaffId,
+          institutionId: testInstId,
+          localDate: today,
+          kind: "in",
+          method: "geofence",
+          deviceClaimedAt: morningValidIn,
+          receivedAt: morningValidIn,
+          effectiveAt: morningValidIn,
+          timeTrust: "network",
+          flags: null,
+        },
+        {
+          id: `evt_valid_out_${Date.now()}`,
+          clientEventId: `client_valid_out_${Date.now()}`,
+          staffId: testStaffId,
+          institutionId: testInstId,
+          localDate: today,
+          kind: "out",
+          method: "geofence",
+          deviceClaimedAt: eveningValidOut,
+          receivedAt: eveningValidOut,
+          effectiveAt: eveningValidOut,
+          timeTrust: "network",
+          flags: null,
+        },
+      ]);
+
+      await rebuildAttendanceDayProjection(testStaffId, today, testInstId);
+
+      const day = await db
+        .select()
+        .from(attendanceDays)
+        .where(
+          and(
+            eq(attendanceDays.staffId, testStaffId),
+            eq(attendanceDays.localDate, today)
+          )
+        );
+
+      expect(day.length).toBe(1);
+      // firstIn must be 09:00 (valid), NOT 06:00 (mock_location)
+      expect(day[0].firstIn).toBe(morningValidIn);
+      expect(day[0].lastOut).toBe(eveningValidOut);
+      expect(day[0].totalMinutes).toBe(480);
+      expect(day[0].needsReview).toBe(true);
+      expect(day[0].reviewReason).toContain("mock_location");
+    });
+
+    it("should mark day absent and needsReview when ALL punches on a day are flagged", async () => {
+      const today = deriveLocalDate(Date.now() - 86400000 * 3, "Asia/Kolkata"); // 3 days ago
+      const mockPunch1 = new Date(`${today}T09:00:00.000Z`).getTime();
+      const mockPunch2 = new Date(`${today}T17:00:00.000Z`).getTime();
+
+      await db.insert(attendanceEvents).values([
+        {
+          id: `evt_allmock_1_${Date.now()}`,
+          clientEventId: `client_allmock_1_${Date.now()}`,
+          staffId: testStaffId,
+          institutionId: testInstId,
+          localDate: today,
+          kind: "in",
+          method: "geofence",
+          deviceClaimedAt: mockPunch1,
+          receivedAt: mockPunch1,
+          effectiveAt: mockPunch1,
+          timeTrust: "device_unverified",
+          flags: "clock_skew",
+        },
+        {
+          id: `evt_allmock_2_${Date.now()}`,
+          clientEventId: `client_allmock_2_${Date.now()}`,
+          staffId: testStaffId,
+          institutionId: testInstId,
+          localDate: today,
+          kind: "out",
+          method: "geofence",
+          deviceClaimedAt: mockPunch2,
+          receivedAt: mockPunch2,
+          effectiveAt: mockPunch2,
+          timeTrust: "device_unverified",
+          flags: "geofence_violation",
+        },
+      ]);
+
+      await rebuildAttendanceDayProjection(testStaffId, today, testInstId);
+
+      const day = await db
+        .select()
+        .from(attendanceDays)
+        .where(
+          and(
+            eq(attendanceDays.staffId, testStaffId),
+            eq(attendanceDays.localDate, today)
+          )
+        );
+
+      expect(day.length).toBe(1);
+      expect(day[0].firstIn).toBeNull();
+      expect(day[0].lastOut).toBeNull();
+      expect(day[0].totalMinutes).toBe(0);
+      expect(day[0].status).toBe("absent");
+      expect(day[0].needsReview).toBe(true);
+      expect(day[0].reviewReason).toContain("all_punches_flagged");
+    });
   });
 });
+

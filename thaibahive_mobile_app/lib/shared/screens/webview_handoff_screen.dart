@@ -208,6 +208,7 @@ class _WebViewHandoffScreenState extends ConsumerState<WebViewHandoffScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
+          leading: const CloseButton(),
           title: Text(widget.title),
           actions: [
             if (_controller != null)

@@ -8,4 +8,5 @@
          package installer. Google Play forbids REQUEST_INSTALL_PACKAGES for store-distributed
          builds, so this permission must never move back into src/main/AndroidManifest.xml. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <application android:usesCleartextTraffic="true" />
 </manifest>

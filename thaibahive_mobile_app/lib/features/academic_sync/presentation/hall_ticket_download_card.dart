@@ -37,7 +37,7 @@ class HallTicketDownloadCard extends StatelessWidget {
                   ),
                   child: Text(
                     'OFFICIAL',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade800),
                   ),
                 ),
               ],

@@ -7,6 +7,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final List<Widget>? actions;
   final bool showBack;
+  final bool isModal;
   final bool showNotification;
   final int notificationCount;
   final bool showSearch;
@@ -22,6 +23,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.title,
     this.actions,
     this.showBack = true,
+    this.isModal = false,
     this.showNotification = false,
     this.notificationCount = 0,
     this.showSearch = false,
@@ -41,10 +43,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: title != null ? TripleTapDetector(child: Text(title!)) : null,
       leading: leading ??
           (showBack
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => Navigator.maybePop(context),
-                )
+              ? (isModal
+                  ? const CloseButton()
+                  : IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      onPressed: () => Navigator.maybePop(context),
+                    ))
               : null),
       actions: [
         if (showSearch)
@@ -58,7 +62,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   position: badges.BadgePosition.topEnd(top: 2, end: 2),
                   badgeContent: Text(
                     notificationCount.toString(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                    style: const TextStyle(color: Colors.white, fontSize: 11),
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.notifications_outlined),

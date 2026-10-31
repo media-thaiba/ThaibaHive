@@ -3,6 +3,8 @@ import { GatewayAdapterFactory } from './gateway-adapter-factory';
 import { DLQManager } from './dlq-manager';
 import { FeeDbStore } from '../../../../db/fee-store';
 import { PaymentMethod, PaymentStatus } from '../types';
+import { db } from '@/db';
+import { feeAuditLogs } from '@thaiba/db/schema';
 
 export interface WebhookProcessResult {
   success: boolean;
@@ -19,7 +21,6 @@ export class WebhookProcessor {
   private factory: GatewayAdapterFactory;
   private dlq: DLQManager;
   private store: FeeDbStore;
-  private processedKeys: Set<string> = new Set();
 
   constructor(
     factory?: GatewayAdapterFactory,
@@ -36,10 +37,6 @@ export class WebhookProcessor {
       WebhookProcessor.instance = new WebhookProcessor();
     }
     return WebhookProcessor.instance;
-  }
-
-  public clearProcessedKeys(): void {
-    this.processedKeys.clear();
   }
 
   /**
@@ -85,8 +82,9 @@ export class WebhookProcessor {
         webhookEvent.gatewayPaymentId
       );
 
-      // Check idempotency
-      if (this.processedKeys.has(key)) {
+      // Check idempotency against the database (survives restarts/scale-out)
+      const alreadyProcessed = await this.store.isWebhookProcessed(key);
+      if (alreadyProcessed) {
         return {
           success: true,
           isDuplicate: true,
@@ -97,30 +95,28 @@ export class WebhookProcessor {
         };
       }
 
-      // Mark processed
-      this.processedKeys.add(key);
-
-      // Transition payment record if exists (persisted so a restarted process
-      // cannot re-apply the same completed payment twice).
+      // Transition payment record if exists. Query the database directly —
+      // never iterate the in-memory Map (which is empty on a cold worker).
       if (webhookEvent.gatewayOrderId) {
-        for (const payment of (this.store['memoryStore']?.payments.values() || [])) {
-          if (payment.gatewayOrderId === webhookEvent.gatewayOrderId || payment.transactionReference === webhookEvent.gatewayOrderId) {
-            const wasCompleted = payment.paymentStatus === 'completed';
-            payment.paymentStatus = webhookEvent.status;
-            payment.gatewayPaymentId = webhookEvent.gatewayPaymentId;
-            payment.updatedAt = new Date().toISOString();
-            await this.store.updatePaymentStatus(payment.id, {
-              paymentStatus: webhookEvent.status,
-              gatewayPaymentId: webhookEvent.gatewayPaymentId,
-              updatedAt: payment.updatedAt,
-            });
-            if (webhookEvent.status === 'completed' && !wasCompleted) {
-              await this.store.applyPaymentToAllocation(payment);
-            }
-            break;
+        const payment = await this.store.getPaymentByGatewayRef(
+          webhookEvent.gatewayOrderId,
+          undefined
+        );
+        if (payment) {
+          const wasCompleted = payment.paymentStatus === 'completed';
+          const updated = await this.store.updatePaymentStatus(payment.id, {
+            paymentStatus: webhookEvent.status,
+            gatewayPaymentId: webhookEvent.gatewayPaymentId,
+            updatedAt: new Date().toISOString(),
+          });
+          if (webhookEvent.status === 'completed' && !wasCompleted && updated) {
+            await this.store.applyPaymentToAllocation(updated);
           }
         }
       }
+
+      // Mark processed AFTER successful handling so failures trigger DLQ retry
+      await this.store.markWebhookProcessed(key, gatewayName, webhookEvent.eventId);
 
       return {
         success: true,

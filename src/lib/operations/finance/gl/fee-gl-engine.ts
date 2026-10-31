@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { STANDARD_GL_ACCOUNTS, resolveComponentRevenueAccount, resolvePaymentAssetAccount } from './account-mapping';
 import {
   GLJournalEntry,
@@ -8,6 +9,15 @@ import {
 } from '../types';
 
 export class FeeGLEngine {
+  /**
+   * Generates a collision-safe GL journal entry ID using UUID v4.
+   * Replaces the previous Date.now()-based IDs which could collide under
+   * concurrent journal generation.
+   */
+  private static glEntryId(suffix: string): string {
+    return `gl_${crypto.randomUUID()}_${suffix}`;
+  }
+
   /**
    * Validates that journal entries strictly satisfy the double-entry invariant: Debits == Credits
    */
@@ -39,7 +49,7 @@ export class FeeGLEngine {
 
     if (components.length === 0) {
       entries.push({
-        id: `gl_${Date.now()}_alloc_1`,
+        id: FeeGLEngine.glEntryId('alloc_1'),
         referenceNumber: ref,
         institutionId: allocation.institutionId,
         entryDate: date,
@@ -63,7 +73,7 @@ export class FeeGLEngine {
       const revenueAccount = resolveComponentRevenueAccount(comp.componentType);
 
       entries.push({
-        id: `gl_${Date.now()}_alloc_${idx + 1}`,
+        id: FeeGLEngine.glEntryId(`alloc_${idx + 1}`),
         referenceNumber: ref,
         institutionId: allocation.institutionId,
         entryDate: date,
@@ -94,7 +104,7 @@ export class FeeGLEngine {
     // Principal fee payment portion
     if (payment.amount > 0) {
       entries.push({
-        id: `gl_${Date.now()}_pay_principal`,
+        id: FeeGLEngine.glEntryId('pay_principal'),
         referenceNumber: ref,
         institutionId: payment.institutionId,
         entryDate: date,
@@ -112,7 +122,7 @@ export class FeeGLEngine {
     // Late fine collected portion
     if (payment.fineAmount > 0) {
       entries.push({
-        id: `gl_${Date.now()}_pay_fine`,
+        id: FeeGLEngine.glEntryId('pay_fine'),
         referenceNumber: ref,
         institutionId: payment.institutionId,
         entryDate: date,
@@ -140,7 +150,7 @@ export class FeeGLEngine {
 
     return [
       {
-        id: `gl_${Date.now()}_conc_1`,
+        id: FeeGLEngine.glEntryId('conc_1'),
         referenceNumber: ref,
         institutionId: concession.institutionId,
         entryDate: date,
@@ -173,7 +183,7 @@ export class FeeGLEngine {
 
     const entries: GLJournalEntry[] = [
       {
-        id: `gl_${Date.now()}_stl_1`,
+        id: FeeGLEngine.glEntryId('stl_1'),
         referenceNumber: ref,
         institutionId,
         entryDate: date,
@@ -190,7 +200,7 @@ export class FeeGLEngine {
 
     if (gatewayFees > 0) {
       entries.push({
-        id: `gl_${Date.now()}_stl_2`,
+        id: FeeGLEngine.glEntryId('stl_2'),
         referenceNumber: ref,
         institutionId,
         entryDate: date,

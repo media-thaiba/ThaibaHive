@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/services/form_draft_service.dart';
 import 'package:thaibahive_mobile/features/tasks/data/tasks_cache_provider.dart';
 
 class TaskCreateScreen extends ConsumerStatefulWidget {
@@ -18,9 +19,44 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   String _priority = 'medium';
   DateTime? _dueDate;
   bool _isSubmitting = false;
+  bool _isSubmitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreDraft();
+  }
+
+  Future<void> _restoreDraft() async {
+    final draft = await ref.read(formDraftServiceProvider).getDraft('task_create');
+    if (draft != null && mounted) {
+      setState(() {
+        if (draft['title'] != null && _titleController.text.isEmpty) {
+          _titleController.text = draft['title'] as String;
+        }
+        if (draft['description'] != null && _descriptionController.text.isEmpty) {
+          _descriptionController.text = draft['description'] as String;
+        }
+        if (draft['priority'] != null) {
+          _priority = draft['priority'] as String;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
+    if (!_isSubmitted) {
+      final title = _titleController.text.trim();
+      final desc = _descriptionController.text.trim();
+      if (title.isNotEmpty || desc.isNotEmpty) {
+        ref.read(formDraftServiceProvider).saveDraft('task_create', {
+          'title': title,
+          'description': desc,
+          'priority': _priority,
+        });
+      }
+    }
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -55,6 +91,8 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
     try {
       await ref.read(cachedTasksProvider.notifier).createTask(data);
+      _isSubmitted = true;
+      ref.read(formDraftServiceProvider).clearDraft('task_create');
       // Check if task was queued offline
       final state = ref.read(cachedTasksProvider);
       final isOffline = state.valueOrNull?.isOffline ?? false;
@@ -89,6 +127,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const CloseButton(),
         title: const Text('Create Task'),
       ),
       body: SingleChildScrollView(

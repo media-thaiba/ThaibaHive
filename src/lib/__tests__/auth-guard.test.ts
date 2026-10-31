@@ -6,6 +6,11 @@ jest.mock("@thaiba/auth", () => ({
   verifySession: jest.fn(),
   hasPermission: jest.fn(),
   resolveInstitutionScopeForSession: jest.fn(),
+  withMembershipCache: jest.fn((fn: () => any) => fn()),
+  sessionAls: {
+    run: jest.fn((_val: any, fn: () => any) => fn()),
+    getStore: jest.fn(),
+  },
 }));
 
 

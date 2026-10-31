@@ -47,9 +47,6 @@ export async function canAccessCircular(
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     const instIds = userInsts.map((i) => i.institutionId).filter(Boolean);
-    if (session.institutionId) {
-      instIds.push(session.institutionId);
-    }
     if (!instIds.includes(circular.targetInstitutionId)) {
       return false;
     }

@@ -93,7 +93,10 @@ class _ReportCreateScreenState extends ConsumerState<ReportCreateScreen> {
     final totalHours = _tasks.fold<double>(0, (sum, t) => sum + t.hoursSpent);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Report')),
+      appBar: AppBar(
+        leading: const CloseButton(),
+        title: const Text('Create Report'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(

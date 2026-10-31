@@ -227,7 +227,7 @@ class _ApprovalCard extends StatelessWidget {
                   child: Text(
                     item.type.toUpperCase(),
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: color,
                     ),

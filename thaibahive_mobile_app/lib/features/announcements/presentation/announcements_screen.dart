@@ -16,7 +16,11 @@ class AnnouncementsScreen extends ConsumerWidget {
   /// a Scaffold/AppBar/FAB wrapper.
   final bool embedded;
 
-  const AnnouncementsScreen({super.key, this.embedded = false});
+  /// Scroll position shared with the Notices tab so a re-tap of the tab can
+  /// scroll this list back to the top (Rule 9).
+  final ScrollController? scrollController;
+
+  const AnnouncementsScreen({super.key, this.embedded = false, this.scrollController});
 
   static const _priorityFilters = ['All', 'Normal', 'Important', 'Urgent'];
 
@@ -74,6 +78,7 @@ class AnnouncementsScreen extends ConsumerWidget {
                   onRefresh: () =>
                       ref.read(cachedAnnouncementsProvider.notifier).fetchAnnouncements(priority: selectedPriority),
                   child: ListView(
+                    controller: scrollController,
                     padding: const EdgeInsets.only(bottom: 80),
                     children: [
                       if (pinned.isNotEmpty) ...[
@@ -362,7 +367,7 @@ class _PriorityBadge extends StatelessWidget {
       child: Text(
         priority.toUpperCase(),
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: _color,
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:thaibahive_mobile/app/theme.dart';
 import 'package:thaibahive_mobile/shared/widgets/tap_scale.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -221,15 +222,7 @@ class _FeatureCard extends StatelessWidget {
                 : const Color(0xFFd4dbd4).withValues(alpha: 0.5),
             width: 0.5,
           ),
-          boxShadow: isUnlocked
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          boxShadow: isUnlocked ? AppShadows.card(Colors.black) : null,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),

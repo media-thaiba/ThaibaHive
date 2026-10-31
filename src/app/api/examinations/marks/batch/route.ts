@@ -132,7 +132,7 @@ export const POST = requireAuth(async (request: Request, session) => {
             .where(eq(markEntries.id, existing.id));
         } else {
           await tx.insert(markEntries).values({
-            id: `mark_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            id: `mark_${crypto.randomUUID()}`,
             examScheduleId: parsed.examScheduleId,
             studentId: entry.studentId,
             marksObtained: entry.isAbsent ? null : entry.marksObtained,
@@ -153,7 +153,7 @@ export const POST = requireAuth(async (request: Request, session) => {
 
       // Audit log inside transaction
       await tx.insert(examAuditLogs).values({
-        id: `audit_${Date.now()}`,
+        id: `audit_${crypto.randomUUID()}`,
         examId: schedule.examId,
         entityType: "mark_entry",
         entityId: parsed.examScheduleId,

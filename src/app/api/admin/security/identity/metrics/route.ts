@@ -1,14 +1,38 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth-guard";
 import { withDPoP } from "@/lib/identity/dpop-middleware";
-import { revocationStore } from "@/lib/identity/revocation-store";
 import { getMigrationStats } from "@/lib/identity/migration-layer";
 import { db } from "@/db";
-import { identity_sessions, device_fingerprints } from "@thaiba/db/schema";
+import { identity_sessions, device_fingerprints, auditLogs } from "@thaiba/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export const GET = withDPoP(requireAuth(async (_req) => {
-  const revStats = revocationStore.getStats();
-  const recentRevocations = revocationStore.getRecentRecords(20);
+  let recentRevocations: Array<{ userId: string; reason: string; revokedAt: string }> = [];
+  let totalRevoked = 0;
+
+  try {
+    const logs = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "IDENTITY_SESSION_REVOKED"))
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(20)
+      .all();
+
+    recentRevocations = logs.map((l: any) => ({
+      userId: (typeof l.payload === "object" && l.payload?.targetStaffId) ? l.payload.targetStaffId : (l.userId || "unknown"),
+      reason: (typeof l.payload === "object" && l.payload?.reason) ? l.payload.reason : "Session revoked",
+      revokedAt: l.timestamp || new Date().toISOString(),
+    }));
+    totalRevoked = logs.length;
+  } catch {
+    // Fallback if table unseeded in tests
+  }
+
+  const revStats = {
+    totalRevoked,
+    recentCount: recentRevocations.length,
+  };
 
   // 1. Real migration stats
   const migrationProgress = await getMigrationStats();
@@ -51,7 +75,7 @@ export const GET = withDPoP(requireAuth(async (_req) => {
     // Fallback if unseeded
   }
 
-  // 4. Recent risk events from revocation records and store
+  // 4. Recent risk events from revocation records
   const recentRiskEvents = recentRevocations.map((r) => ({
     type: "session.revoked",
     userId: r.userId,

@@ -24,11 +24,12 @@ class PushNotificationService {
     required String platform,
   }) async {
     try {
-      // 1. Request OS push notification permissions
+      // 1. Request OS push notification permissions (provisional quiet init)
       final settings = await _firebaseMessaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
+        provisional: true,
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {

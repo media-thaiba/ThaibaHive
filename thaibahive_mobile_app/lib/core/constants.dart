@@ -8,13 +8,15 @@ class AppConstants {
   static const String appVersion = '3.42.8';
   static const String appBuildNumber = '23';
 
-  /// Base URL — use --dart-define=API_BASE_URL=... at build time,
-  /// or falls back to localhost/10.0.2.2 for development.
+  /// Base URL — defaults to the production cloud backend: https://thaiba-hive.vercel.app/api
+  /// Use --dart-define=API_BASE_URL=... to override explicitly,
+  /// or --dart-define=USE_LOCAL_BACKEND=true for local PC development.
   static String get apiBaseUrl {
     const override = String.fromEnvironment('API_BASE_URL');
     if (override.isNotEmpty) return override;
 
-    if (kDebugMode) {
+    const useLocal = bool.fromEnvironment('USE_LOCAL_BACKEND');
+    if (useLocal) {
       if (!kIsWeb && Platform.isAndroid) {
         return 'http://10.0.2.2:3000/api';
       }
@@ -25,11 +27,15 @@ class AppConstants {
   }
 
   /// Web app base URL for WebView handoff.
+  /// Defaults to the production cloud URL: https://thaiba-hive.vercel.app
+  /// Use --dart-define=WEB_BASE_URL=... to override explicitly,
+  /// or --dart-define=USE_LOCAL_BACKEND=true for local PC development.
   static String get webBaseUrl {
     const override = String.fromEnvironment('WEB_BASE_URL');
     if (override.isNotEmpty) return override;
 
-    if (kDebugMode) {
+    const useLocal = bool.fromEnvironment('USE_LOCAL_BACKEND');
+    if (useLocal) {
       if (!kIsWeb && Platform.isAndroid) {
         return 'http://10.0.2.2:3000';
       }

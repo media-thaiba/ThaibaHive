@@ -79,6 +79,7 @@ class _BiometricEnrollmentScreenState extends ConsumerState<BiometricEnrollmentS
 
     return Scaffold(
       appBar: AppBar(
+        leading: const CloseButton(),
         title: const Text('Biometric Face Enrollment'),
       ),
       body: SingleChildScrollView(

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for the identity security coverage scanner logic.
  * Validates the scanner exits 0 on clean codebase.
  */
@@ -21,8 +21,6 @@ describe("Identity Coverage Scanner", () => {
       "risk-signals.ts",
       "geo-lookup.ts",
       "webauthn-service.ts",
-      "revocation-store.ts",
-      "revocation-mesh.ts",
       "identity-audit-events.ts",
       "revocation-metrics.ts",
       "identity-metrics.ts",

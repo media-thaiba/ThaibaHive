@@ -62,9 +62,13 @@ class AttendanceSyncService {
   })  : _dio = dio,
         _queue = queue;
 
-  /// High-accuracy one-shot GPS capture with permission checks and timeout.
+  /// Medium-accuracy one-shot GPS capture with permission checks.
+  /// Bounded to a 3-second fresh fix (platform `timeLimit` + a hard 3s
+  /// `Future.timeout`), with a cached-position fast path, so the punch flow
+  /// can never block the main thread or trigger an ANR.
   /// Does not run a persistent background watcher, conserving battery.
   Future<Position?> capturePosition() async {
+    Position? lastKnown;
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -85,16 +89,39 @@ class AttendanceSyncService {
         return null;
       }
 
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 8),
+      // 1) Cached fast path: skip the fresh GPS fix entirely when we already
+      //    have a position younger than 5 minutes.
+      try {
+        lastKnown = await Geolocator.getLastKnownPosition();
+      } catch (_) {
+        lastKnown = null;
+      }
+      if (lastKnown != null &&
+          DateTime.now().difference(lastKnown.timestamp).inMinutes < 5) {
+        logger.info('[AttendanceSync] Using cached GPS fix (<5 min old)');
+        return lastKnown;
+      }
+
+      // 2) Non-blocking fresh fix: medium accuracy with a 3s platform
+      //    timeLimit and a hard 3s Future timeout — whichever fires first
+      //    bounds the await. Typed as Future<Position?> so the timeout can
+      //    fall back to the nullable cache.
+      final Future<Position?> freshFix = Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 3),
+      );
+      return await freshFix.timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => lastKnown,
       );
     } catch (e) {
-      logger.warn('[AttendanceSync] High-accuracy GPS capture timed out: $e');
+      // 3) Any timeout/exception falls straight back to lastKnown ?? null —
+      //    the punch never waits on a hung GPS request.
+      logger.warn('[AttendanceSync] GPS capture timed out or failed: $e');
       try {
-        return await Geolocator.getLastKnownPosition();
+        return lastKnown ?? await Geolocator.getLastKnownPosition();
       } catch (_) {
-        return null;
+        return lastKnown;
       }
     }
   }

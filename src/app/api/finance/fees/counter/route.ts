@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
@@ -91,15 +92,10 @@ export const POST = requireAuth(async (request, session) => {
         );
       }
 
-      const updatedShift = await engine.recordShiftTransaction(
-        parsed.data.shiftId,
-        parsed.data.paymentMethod,
-        requestedAmount,
-        instFilter
-      );
-
-      const paymentId = `pay_counter_${Date.now()}`;
-      const paymentNumber = `RCPT-CASH-${Date.now().toString().slice(-6)}`;
+      // Record the payment ledger row FIRST so recordShiftTransaction can
+      // verify it exists and is completed before crediting the shift totals.
+      const paymentId = `pay_counter_${crypto.randomUUID()}`;
+      const paymentNumber = `PAY-CASH-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
       const payment = await store.recordPayment({
         id: paymentId,
@@ -114,7 +110,7 @@ export const POST = requireAuth(async (request, session) => {
         currency: 'INR',
         paymentMethod: parsed.data.paymentMethod,
         paymentStatus: 'completed',
-        counterRegisterId: updatedShift.id,
+        counterRegisterId: parsed.data.shiftId,
         transactionReference: parsed.data.transactionReference || paymentNumber,
         payerName: parsed.data.payerName,
         payerPhone: parsed.data.payerPhone,
@@ -123,6 +119,14 @@ export const POST = requireAuth(async (request, session) => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+
+      const updatedShift = await engine.recordShiftTransaction(
+        parsed.data.shiftId,
+        parsed.data.paymentMethod,
+        requestedAmount,
+        paymentId,
+        instFilter
+      );
 
       // Reduce allocation/installment balances for the collected amount.
       // Idempotent inside the store (ledger marker per payment).

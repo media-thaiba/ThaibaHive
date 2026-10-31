@@ -55,6 +55,79 @@ class AppMotion {
   static const Duration spring = Duration(milliseconds: 220);
 }
 
+class AppBlur {
+  AppBlur._();
+  static const double scrim = 10.0;   // modal scrims
+  static const double panel = 15.0;   // sheets / trays
+  static const double chrome = 20.0;  // nav bar, banners
+  static const double frost = 24.0;   // headers
+}
+
+class AppShadows {
+  AppShadows._();
+  /// Near + ambient two-layer recipe — the "float, don't smudge" trick with negative spread.
+  static List<BoxShadow> card(Color c) => [
+    BoxShadow(
+      color: c.withValues(alpha: 0.08),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
+    ),
+    BoxShadow(
+      color: c.withValues(alpha: 0.13),
+      blurRadius: 40,
+      spreadRadius: -4,
+      offset: const Offset(0, 12),
+    ),
+  ];
+
+  static List<BoxShadow> glow(Color c) => [
+    BoxShadow(
+      color: c.withValues(alpha: 0.20),
+      blurRadius: 24,
+      offset: Offset.zero,
+    ),
+    BoxShadow(
+      color: c.withValues(alpha: 0.10),
+      blurRadius: 48,
+      spreadRadius: -4,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
+  /// Floating chrome (nav dock / action tray). Shallower near layer and a much
+  /// wider, further ambient layer so a raised bar reads as detached from the
+  /// canvas rather than resting on it.
+  static List<BoxShadow> chrome(Color c) => [
+    BoxShadow(
+      color: c.withValues(alpha: 0.09),
+      blurRadius: 20,
+      offset: const Offset(0, 6),
+    ),
+    BoxShadow(
+      color: c.withValues(alpha: 0.06),
+      blurRadius: 60,
+      spreadRadius: -8,
+      offset: const Offset(0, 24),
+    ),
+  ];
+
+  /// Compact controls: chips, badges, segmented indicators.
+  static List<BoxShadow> chip(Color c) => [
+    BoxShadow(
+      color: c.withValues(alpha: 0.06),
+      blurRadius: 6,
+      offset: const Offset(0, 2),
+    ),
+  ];
+}
+
+class AppBorder {
+  AppBorder._();
+  static const double hairline = 0.75;
+  static const double hairlineDark = 1.0;
+  static const double focus = 1.5;
+}
+
 class AppColors {
   AppColors._();
 
@@ -75,8 +148,13 @@ class AppColors {
       _isDark(context) ? const Color(0xFF2a2e33) : const Color(0xFFe8ebe8);
   static Color mutedForeground(BuildContext context) =>
       _isDark(context)
-          ? const Color(0xFFd1d5d1).withValues(alpha: 0.5)
-          : const Color(0xFF6b7280);
+          // 0.68 keeps secondary text at >= 4.5:1 against the dark card
+          // surface #22262B and scaffold #171A17 (WCAG 2.1 AA).
+          ? const Color(0xFFd1d5d1).withValues(alpha: 0.68)
+          // #5f6775 achieves >= 4.5:1 against both light scaffold #F4F7F4
+          // (5.28:1 measured) and card #FFFFFF (5.70:1 measured), closing
+          // the previous 4.48:1 gap.
+          : const Color(0xFF5f6775);
   static Color border(BuildContext context) =>
       _isDark(context) ? const Color(0xFF333840) : const Color(0xFFd4dbd4);
   static Color success(BuildContext context) =>
@@ -101,27 +179,11 @@ class AppColors {
   // Standardized Elevation and Shadow System
   static List<BoxShadow> surfaceShadow1(BuildContext context) => [];
   
-  static List<BoxShadow> surfaceShadow2(BuildContext context) {
-    final isDark = _isDark(context);
-    return [
-      BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.25 : 0.04),
-        blurRadius: 10,
-        offset: const Offset(0, 2),
-      ),
-    ];
-  }
+  static List<BoxShadow> surfaceShadow2(BuildContext context) =>
+      AppShadows.card(Colors.black);
 
-  static List<BoxShadow> surfaceShadow3(BuildContext context) {
-    final isDark = _isDark(context);
-    return [
-      BoxShadow(
-        color: Colors.black.withOpacity(isDark ? 0.35 : 0.08),
-        blurRadius: 20,
-        offset: const Offset(0, 6),
-      ),
-    ];
-  }
+  static List<BoxShadow> surfaceShadow3(BuildContext context) =>
+      AppShadows.chrome(Colors.black);
 }
 
 class AppTypography {
@@ -442,6 +504,12 @@ class ThaibaHiveTheme {
         titleTextStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w500, color: _slateForeground),
         subtitleTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 13, color: _slateForeground.withValues(alpha: 0.6)),
       ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 
@@ -636,6 +704,12 @@ class ThaibaHiveTheme {
       listTileTheme: const ListTileThemeData(
         titleTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 15, fontWeight: FontWeight.w500, color: darkText),
         subtitleTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 13, color: Color(0xFF9e9e9e)),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
       ),
     );
   }

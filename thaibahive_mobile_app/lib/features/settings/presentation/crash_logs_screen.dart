@@ -253,7 +253,7 @@ class _CrashLogsScreenState extends ConsumerState<CrashLogsScreen> with SingleTi
                       child: Text(
                         tag,
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: tagColor,
                           letterSpacing: 0.5,

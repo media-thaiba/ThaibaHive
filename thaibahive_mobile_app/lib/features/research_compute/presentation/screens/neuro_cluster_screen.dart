@@ -79,7 +79,7 @@ class NeuroClusterScreen extends ConsumerWidget {
                 Chip(
                   label: Text(summary.status.toUpperCase()),
                   backgroundColor: Colors.green.shade100,
-                  labelStyle: TextStyle(color: Colors.green.shade800, fontSize: 10),
+                  labelStyle: TextStyle(color: Colors.green.shade800, fontSize: 11),
                 ),
               ],
             ),
@@ -120,7 +120,7 @@ class NeuroClusterScreen extends ConsumerWidget {
         trailing: Chip(
           label: Text(job.status.toUpperCase()),
           backgroundColor: Colors.blue.shade50,
-          labelStyle: TextStyle(color: Colors.blue.shade800, fontSize: 10),
+          labelStyle: TextStyle(color: Colors.blue.shade800, fontSize: 11),
         ),
       ),
     );

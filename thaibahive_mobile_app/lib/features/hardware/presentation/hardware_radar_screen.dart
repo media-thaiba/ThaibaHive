@@ -409,7 +409,7 @@ class _RadarBlip extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Colors.white70,
-            fontSize: 9,
+            fontSize: 11,
           ),
         ),
       ],

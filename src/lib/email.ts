@@ -1,9 +1,86 @@
 import { Resend } from "resend";
 
+import { withRetry } from "@/lib/security/retry-backoff";
+import { enqueueDlq } from "@/lib/notifications/dlq";
+import { serverLogger as logger } from "@/lib/server-logger";
+
 function getResendClient(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return null;
   return new Resend(apiKey);
+}
+
+/**
+ * Resilient Resend dispatch: bounded retry + DLQ fallback.
+ *
+ * Resend is an external dependency. A 5xx or network blip must not silently
+ * drop a user-facing email (password reset, OTP, verification). This helper:
+ *  - Retries transient failures with full-jitter backoff (max 3 attempts, 10s ceiling).
+ *  - Enqueues to the DLQ on persistent failure so the reaper can retry later.
+ *  - Never throws: always resolves to { success, error? }.
+ */
+async function sendResendEmail(
+  params: { to: string; subject: string; html: string; from: string },
+  context: { kind: string; target: string }
+): Promise<{ success: boolean; error?: string }> {
+  const resend = getResendClient();
+  if (!resend) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[EmailService] RESEND_API_KEY not configured. Email dispatch skipped.", { kind: context.kind, target: context.target });
+    }
+    return { success: true };
+  }
+
+  try {
+    await withRetry(
+      () =>
+        resend.emails.send({
+          from: params.from,
+          to: params.to,
+          subject: params.subject,
+          html: params.html,
+        }),
+      {
+        maxAttempts: 3,
+        baseDelayMs: 200,
+        maxDelayMs: 5000,
+        isRetryable: (err) => {
+          // Resend throws an API error object; classify by status/message.
+          const status = (err as any)?.statusCode ?? (err as any)?.status;
+          if (status === 429 || (status >= 500 && status <= 599)) return true;
+          const msg = err instanceof Error ? err.message : String(err);
+          return (
+            msg.includes("timeout") ||
+            msg.includes("ECONNRESET") ||
+            msg.includes("ETIMEDOUT") ||
+            msg.includes("fetch failed")
+          );
+        },
+      }
+    );
+    return { success: true };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    // Preserve the email payload for later retry instead of dropping it.
+    enqueueDlq(
+      `email:${context.kind}:${context.target}`,
+      {
+        kind: context.kind,
+        to: params.to,
+        from: params.from,
+        subject: params.subject,
+        html: params.html,
+      },
+      context.target,
+      errMsg
+    );
+    logger.error("Email dispatch failed after retries, enqueued to DLQ", {
+      kind: context.kind,
+      target: context.target,
+      error: errMsg,
+    });
+    return { success: false, error: "Failed to send email" };
+  }
 }
 
 export async function sendPasswordResetEmail(
@@ -11,24 +88,19 @@ export async function sendPasswordResetEmail(
   firstName: string,
   resetUrl: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const resend = getResendClient();
-    if (!resend) {
-      console.warn("[EmailService] RESEND_API_KEY not configured. Password reset email dispatch skipped.");
-      return { success: true };
-    }
-
-    await resend.emails.send({
+  const result = await sendResendEmail(
+    {
       from: process.env.EMAIL_FROM || "noreply@thaibahive.com",
       to,
       subject: "Reset Your ThaibaHive Password",
       html: passwordResetTemplate(firstName, resetUrl),
-    });
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to send password reset email:", error);
-    return { success: false, error: "Failed to send email" };
+    },
+    { kind: "password-reset", target: to }
+  );
+  if (!result.success) {
+    console.error("Failed to send password reset email:", result.error);
   }
+  return result;
 }
 
 function passwordResetTemplate(firstName: string, resetUrl: string): string {
@@ -75,14 +147,8 @@ export async function sendStepUpOTPEmail(
   firstName: string,
   otpCode: string,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const resend = getResendClient();
-    if (!resend) {
-      console.warn("[EmailService] RESEND_API_KEY not configured. Step-up OTP email logged to server logger.");
-      return { success: true };
-    }
-
-    await resend.emails.send({
+  const result = await sendResendEmail(
+    {
       from: process.env.EMAIL_FROM || "security@thaibahive.com",
       to,
       subject: "Your ThaibaHive Security Verification Code",
@@ -97,12 +163,13 @@ export async function sendStepUpOTPEmail(
           <p>This code expires in 10 minutes. If you did not attempt to sign in, please notify security administrators immediately.</p>
         </div>
       `,
-    });
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to send OTP verification email:", error);
-    return { success: false, error: "Failed to send email" };
+    },
+    { kind: "step-up-otp", target: to }
+  );
+  if (!result.success) {
+    console.error("Failed to send OTP verification email:", result.error);
   }
+  return result;
 }
 
 export async function sendVerificationEmail(
@@ -110,26 +177,19 @@ export async function sendVerificationEmail(
   firstName: string,
   verifyUrl: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const resend = getResendClient();
-    if (!resend) {
-      console.warn(
-        `[EmailService] RESEND_API_KEY not configured. Verification link for ${to}: ${verifyUrl}`
-      );
-      return { success: true };
-    }
-
-    await resend.emails.send({
+  const result = await sendResendEmail(
+    {
       from: process.env.EMAIL_FROM || "noreply@thaibahive.com",
       to,
       subject: "Verify Your ThaibaHive Email",
       html: emailVerificationTemplate(firstName, verifyUrl),
-    });
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
-    return { success: false, error: "Failed to send email" };
+    },
+    { kind: "verification", target: to }
+  );
+  if (!result.success) {
+    console.error("Failed to send verification email:", result.error);
   }
+  return result;
 }
 
 function emailVerificationTemplate(firstName: string, verifyUrl: string): string {

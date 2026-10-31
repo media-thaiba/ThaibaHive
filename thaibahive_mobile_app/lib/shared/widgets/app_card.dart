@@ -92,7 +92,10 @@ class AppCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius - borderWidth),
         child: variant == AppCardVariant.glass
             ? BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                filter: ImageFilter.blur(
+                  sigmaX: AppBlur.panel,
+                  sigmaY: AppBlur.panel,
+                ),
                 child: _buildInner(context),
               )
             : _buildInner(context),

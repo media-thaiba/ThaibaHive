@@ -205,8 +205,48 @@ async function runFinanceSimulation() {
   console.log('\n📌 Stage 6: Simulating Cash Counter Shift Opening, Collections & Vault Handover...');
   const counterEngine = new CounterRegisterEngine(store);
   const shift = await counterEngine.openShift(institutionId, 'staff-cashier-1', 'Central Campus Counter 1', 10000);
-  await counterEngine.recordShiftTransaction(shift.id, 'cash', 25000);
-  await counterEngine.recordShiftTransaction(shift.id, 'pos_card', 15000);
+
+  // Each shift transaction is now anchored to a real, completed fee payment row.
+  const shiftPay1 = await store.recordPayment({
+    id: 'pay_shift_1',
+    paymentNumber: 'PAY-SHIFT-001',
+    institutionId,
+    allocationId: allocation.id,
+    studentId: allocation.studentId,
+    amount: 25000,
+    fineAmount: 0,
+    discountAmount: 0,
+    netAmount: 25000,
+    currency: 'INR',
+    paymentMethod: 'cash',
+    paymentStatus: 'completed',
+    counterRegisterId: shift.id,
+    paidAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  await counterEngine.recordShiftTransaction(shift.id, 'cash', 25000, shiftPay1.id);
+
+  const shiftPay2 = await store.recordPayment({
+    id: 'pay_shift_2',
+    paymentNumber: 'PAY-SHIFT-002',
+    institutionId,
+    allocationId: allocation.id,
+    studentId: allocation.studentId,
+    amount: 15000,
+    fineAmount: 0,
+    discountAmount: 0,
+    netAmount: 15000,
+    currency: 'INR',
+    paymentMethod: 'pos_card',
+    paymentStatus: 'completed',
+    counterRegisterId: shift.id,
+    paidAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  await counterEngine.recordShiftTransaction(shift.id, 'pos_card', 15000, shiftPay2.id);
+
   await counterEngine.recordCashDrop(shift.id, 20000, 'staff-supervisor-1');
   const shiftCloseSummary = await counterEngine.closeShift(shift.id, 15000, 'staff-supervisor-1');
   console.log(`   ✅ Shift Closed on ${shift.counterName} | Float: ₹10,000 | Cash In: ₹25,000 | Drop: ₹20,000 | Variance: ₹${shiftCloseSummary.register.varianceAmount} (Balanced: ${shiftCloseSummary.isBalanced})`);

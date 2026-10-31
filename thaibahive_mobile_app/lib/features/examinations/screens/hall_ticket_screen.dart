@@ -88,7 +88,7 @@ class HallTicketScreen extends ConsumerWidget {
                                     Text(
                                       ticket.isFeeCleared ? 'HMAC VERIFIED' : 'LOCKED',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         color: ticket.isFeeCleared ? Colors.green : Colors.red,
                                       ),

@@ -1,12 +1,36 @@
 import { GET } from "@/app/api/admin/security/identity/metrics/route";
 
-jest.mock("@/lib/identity/revocation-store", () => ({
-  revocationStore: {
-    getStats: jest.fn().mockReturnValue({ revokedCount: 3, bloomSizeBytes: 108 }),
-    getRecentRecords: jest.fn().mockReturnValue([
-      { sessionId: "s1", userId: "u1", reason: "test", revokedAt: new Date().toISOString() },
-    ]),
+jest.mock("@/db", () => ({
+  db: {
+    select: jest.fn().mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnValue({
+          orderBy: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              all: jest.fn().mockReturnValue([
+                {
+                  id: "a1",
+                  userId: "u1",
+                  payload: { targetStaffId: "u1", reason: "test" },
+                  timestamp: new Date().toISOString(),
+                },
+              ]),
+            }),
+          }),
+        }),
+        all: jest.fn().mockReturnValue([]),
+      }),
+    }),
   },
+}));
+
+jest.mock("@/lib/identity/migration-layer", () => ({
+  getMigrationStats: jest.fn().mockResolvedValue({
+    total: 10,
+    migrated: 8,
+    legacy: 2,
+    percentMigrated: 80,
+  }),
 }));
 
 jest.mock("@/lib/api/auth-guard", () => ({
@@ -28,11 +52,11 @@ describe("GET /api/admin/security/identity/metrics", () => {
     expect(data).toHaveProperty("revocationStats");
   });
 
-  it("revocationStats reflects store state", async () => {
+  it("revocationStats reflects database audit state", async () => {
     const req = new Request("http://localhost/api/admin/security/identity/metrics");
     const res = await GET(req);
     const data = await res.json();
-    expect(data.revocationStats.revokedCount).toBe(3);
-    expect(data.revocationStats.bloomSizeBytes).toBe(108);
+    expect(data.revocationStats.totalRevoked).toBe(1);
+    expect(data.revocationStats.recentCount).toBe(1);
   });
 });

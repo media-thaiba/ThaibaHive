@@ -90,7 +90,7 @@ void main() {
     expect(find.text('Budget circular'), findsOneWidget);
     expect(find.text('Citywide satisfaction poll'), findsNothing);
     // Single AppBar (the wrapper's) — no nested "Circulars" toolbar.
-    expect(find.text('Notices'), findsOneWidget);
+    expect(find.text('Bulletin'), findsOneWidget);
 
     // Switch to Polls.
     await tester.tap(find.text('Polls'));

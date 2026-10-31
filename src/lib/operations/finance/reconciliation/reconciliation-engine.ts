@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { FeeDbStore } from '../../../../db/fee-store';
 import { StatementParser, BankStatementLine } from './statement-parser';
 import {
@@ -6,6 +7,9 @@ import {
   ReconciliationSource,
   ReconciliationStatus,
 } from '../types';
+import { db } from '@/db';
+import { feePayments } from '@thaiba/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 export interface ReconciliationMatchResult {
   matchedPairs: Array<{
@@ -53,20 +57,24 @@ export class ReconciliationEngine {
         totalBankCredit += line.amount;
       }
 
-      // Try matching by exact Reference / Payment Number / Gateway ID
       let matchedPayment: FeePaymentItem | undefined;
       let criteria = '';
 
+      // Try matching by exact Reference / Payment Number / Gateway ID.
+      // Exact equality (===) is used deliberately: substring matching caused
+      // false positives where e.g. PAY-123 matched PAY-1234.
       for (const p of systemPayments) {
         if (matchedPaymentIds.has(p.id)) continue;
 
-        // Match 1: Exact transactionReference or paymentNumber
-        if (
-          (p.transactionReference && line.referenceNumber.includes(p.transactionReference)) ||
-          line.referenceNumber.includes(p.paymentNumber) ||
-          (p.gatewayPaymentId && line.referenceNumber.includes(p.gatewayPaymentId)) ||
-          line.description.includes(p.paymentNumber)
-        ) {
+        const ref = line.referenceNumber || '';
+        const desc = line.description || '';
+        const isExactRef =
+          (p.transactionReference && ref === p.transactionReference) ||
+          ref === p.paymentNumber ||
+          (p.gatewayPaymentId && ref === p.gatewayPaymentId) ||
+          desc === p.paymentNumber;
+
+        if (isExactRef) {
           if (Math.abs(p.netAmount - line.amount) <= 0.01) {
             matchedPayment = p;
             criteria = 'EXACT_REFERENCE_AND_AMOUNT';
@@ -109,10 +117,12 @@ export class ReconciliationEngine {
     const status: ReconciliationStatus =
       unmatchedBankLines.length === 0 && discrepancy < 0.01 ? 'reconciled' : 'discrepancy_flagged';
 
-    const batchNumber = `REC-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const now = new Date().toISOString();
+    const batchId = `batch_${crypto.randomUUID()}`;
+    const batchNumber = `REC-${crypto.randomUUID().slice(0, 12).toUpperCase()}`;
 
     const batch: FeeReconciliationBatchItem = {
-      id: `batch_${Date.now()}`,
+      id: batchId,
       batchNumber,
       institutionId,
       sourceType,
@@ -125,11 +135,28 @@ export class ReconciliationEngine {
       netPayoutAmount: totalBankCredit,
       discrepancyAmount: discrepancy,
       status,
-      reconciledAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+      reconciledAt: now,
+      createdAt: now,
     };
 
     await this.store.createReconciliationBatch(batch);
+
+    // Write back reconciliation status to matched payments so re-running the
+    // engine does not re-match already-reconciled rows.
+    const matchedIds = Array.from(matchedPaymentIds);
+    if (matchedIds.length > 0) {
+      try {
+        await db
+          .update(feePayments)
+          .set({
+            reconciledAt: now,
+            reconciliationBatchId: batchId,
+          })
+          .where(inArray(feePayments.id, matchedIds));
+      } catch (err) {
+        console.warn('[ReconciliationEngine] Failed to write back reconciliation status:', err);
+      }
+    }
 
     return {
       batch,

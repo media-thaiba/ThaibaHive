@@ -13,7 +13,11 @@ class PollsScreen extends ConsumerStatefulWidget {
   /// an AppScaffold/AppBar/FAB wrapper.
   final bool embedded;
 
-  const PollsScreen({super.key, this.embedded = false});
+  /// Scroll position shared with the Notices tab so a re-tap of the tab can
+  /// scroll this list back to the top (Rule 9).
+  final ScrollController? scrollController;
+
+  const PollsScreen({super.key, this.embedded = false, this.scrollController});
 
   @override
   ConsumerState<PollsScreen> createState() => _PollsScreenState();
@@ -62,6 +66,7 @@ class _PollsScreenState extends ConsumerState<PollsScreen> {
                         : RefreshIndicator(
                             onRefresh: () => notifier.loadPolls(),
                             child: ListView.builder(
+                              controller: widget.scrollController,
                               itemCount: notifier.filteredPolls.length,
                               itemBuilder: (_, i) {
                                 final p = notifier.filteredPolls[i];

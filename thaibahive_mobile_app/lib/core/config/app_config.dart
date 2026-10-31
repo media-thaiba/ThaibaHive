@@ -10,12 +10,15 @@ class AppConfig {
   /// Private constructor to prevent instantiation
   AppConfig._();
 
-  /// Base API URL - determined by environment
+  /// Base API URL - defaults to the production cloud backend.
+  /// Override explicitly with --dart-define=API_BASE_URL=... or opt into a
+  /// local PC backend with --dart-define=USE_LOCAL_BACKEND=true.
   static String get apiBaseUrl {
     final envUrl = String.fromEnvironment('API_BASE_URL');
     if (envUrl.isNotEmpty) return envUrl;
 
-    if (kDebugMode) {
+    const useLocal = bool.fromEnvironment('USE_LOCAL_BACKEND');
+    if (useLocal) {
       if (!kIsWeb && Platform.isAndroid) {
         return 'http://10.0.2.2:3000/api';
       }
@@ -25,12 +28,15 @@ class AppConfig {
     return 'https://thaiba-hive.vercel.app/api';
   }
 
-  /// Web app base URL for non-native platforms
+  /// Web app base URL for non-native platforms.
+  /// Override explicitly with --dart-define=WEB_BASE_URL=... or opt into a
+  /// local PC backend with --dart-define=USE_LOCAL_BACKEND=true.
   static String get webBaseUrl {
     final envUrl = String.fromEnvironment('WEB_BASE_URL');
     if (envUrl.isNotEmpty) return envUrl;
 
-    if (kDebugMode) {
+    const useLocal = bool.fromEnvironment('USE_LOCAL_BACKEND');
+    if (useLocal) {
       if (!kIsWeb && Platform.isAndroid) {
         return 'http://10.0.2.2:3000';
       }

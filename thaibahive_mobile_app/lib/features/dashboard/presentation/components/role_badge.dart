@@ -55,7 +55,7 @@ class RoleBadge extends StatelessWidget {
         _label,
         style: TextStyle(
           fontFamily: 'PlusJakartaSans',
-          fontSize: 9.5,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
           color: primaryColor,
           letterSpacing: 0.8,

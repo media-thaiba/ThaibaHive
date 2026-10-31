@@ -1,162 +1,112 @@
-"use client";
+import { Suspense } from "react";
+import { db } from "@/db";
+import { students, classes } from "@/db/schema";
+import { verifySession, resolveRequestInstitution } from "@thaiba/auth";
+import { redirect } from "next/navigation";
+import { eq, like, or, and, type SQL } from "drizzle-orm";
+import { StudentsClient } from "./StudentsClient";
+import StudentsLoading from "./loading";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
-import { StudentBulkImportDialog } from "@/components/academic/StudentBulkImportDialog";
-import { Upload } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-type Student = {
-  id: string;
-  admissionNo: string;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  phone: string | null;
-  gender: string | null;
-  isActive: boolean;
-  classId: string | null;
-  className: string | null;
-  classSection: string | null;
-};
+interface StudentsPageProps {
+  searchParams: Promise<{
+    search?: string;
+    classId?: string;
+  }>;
+}
 
-type Class = {
-  id: string;
-  name: string;
-  section: string | null;
-  institutionId?: string | null;
-};
+async function StudentsData({
+  search,
+  classId,
+}: {
+  search: string;
+  classId: string;
+}) {
+  const session = await verifySession();
+  if (!session) {
+    redirect("/login");
+  }
 
-export default function StudentsPage() {
-  const router = useRouter();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [classFilter, setClassFilter] = useState("");
-  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const scopedInstId = await resolveRequestInstitution(session);
 
-  const fetchStudents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (classFilter) params.set("classId", classFilter);
-      const res = await fetch(`/api/academic/students?${params}`);
-      if (!res.ok) throw new Error("Failed to load students");
-      const data = await res.json();
-      setStudents(data.students ?? []);
-    } catch {
-      setStudents([]);
-      toast.error("Failed to load students");
-    } finally {
-      setLoading(false);
-    }
-  }, [search, classFilter]);
+  const studentConditions: (SQL | undefined)[] = [eq(students.isActive, true)];
+  if (scopedInstId && scopedInstId !== "global") {
+    studentConditions.push(eq(students.institutionId, scopedInstId));
+  }
+  if (search) {
+    studentConditions.push(
+      or(
+        like(students.firstName, `%${search}%`),
+        like(students.lastName, `%${search}%`),
+        like(students.admissionNo, `%${search}%`)
+      )
+    );
+  }
+  if (classId) {
+    studentConditions.push(eq(students.classId, classId));
+  }
 
-  const fetchClasses = useCallback(async () => {
-    try {
-      const res = await fetch("/api/academic/classes");
-      if (!res.ok) throw new Error("Failed to load classes");
-      const data = await res.json();
-      setClasses(data.classes ?? []);
-    } catch {
-      setClasses([]);
-      toast.error("Failed to load classes for filtering");
-    }
-  }, []);
+  const classConditions: (SQL | undefined)[] = [eq(classes.isActive, true)];
+  if (scopedInstId && scopedInstId !== "global") {
+    classConditions.push(eq(classes.institutionId, scopedInstId));
+  }
 
-  useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+  const [studentRows, classRows] = await Promise.all([
+    db
+      .select({
+        id: students.id,
+        admissionNo: students.admissionNo,
+        firstName: students.firstName,
+        lastName: students.lastName,
+        email: students.email,
+        phone: students.phone,
+        gender: students.gender,
+        isActive: students.isActive,
+        classId: students.classId,
+        className: classes.name,
+        classSection: classes.section,
+      })
+      .from(students)
+      .leftJoin(classes, eq(students.classId, classes.id))
+      .where(and(...studentConditions))
+      .all(),
+    db
+      .select({
+        id: classes.id,
+        name: classes.name,
+        section: classes.section,
+        institutionId: classes.institutionId,
+      })
+      .from(classes)
+      .where(and(...classConditions))
+      .all(),
+  ]);
 
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+  const effectiveInstitutionId =
+    scopedInstId && scopedInstId !== "global"
+      ? scopedInstId
+      : classRows[0]?.institutionId || "";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Students</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsBulkImportOpen(true)} className="gap-1.5">
-            <Upload className="h-4 w-4" />
-            Import CSV
-          </Button>
-          <Button onClick={() => router.push("/school/students/new")}>Add Student</Button>
-        </div>
-      </div>
+    <StudentsClient
+      students={studentRows}
+      classes={classRows}
+      institutionId={effectiveInstitutionId}
+      initialSearch={search}
+      initialClassFilter={classId}
+    />
+  );
+}
 
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Search by name or admission no..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
-          <option value="">All Classes</option>
-          {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.name}{cls.section ? ` - ${cls.section}` : ""}
-            </option>
-          ))}
-        </Select>
-      </div>
+export default async function StudentsPage({ searchParams }: StudentsPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const search = resolvedSearchParams.search || "";
+  const classId = resolvedSearchParams.classId || "";
 
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : students.length === 0 ? (
-        <p className="text-muted-foreground text-center py-8">No students found</p>
-      ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left p-3 font-medium">Admission No</th>
-                <th className="text-left p-3 font-medium">Name</th>
-                <th className="text-left p-3 font-medium">Class</th>
-                <th className="text-left p-3 font-medium">Status</th>
-                <th className="text-right p-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s) => (
-                <tr key={s.id} className="border-t">
-                  <td className="p-3">{s.admissionNo}</td>
-                  <td className="p-3">{s.firstName} {s.lastName}</td>
-                  <td className="p-3">{s.className ?? "-"}</td>
-                  <td className="p-3">
-                    <Badge variant={s.isActive ? "success" : "secondary"}>
-                      {s.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button variant="outline" size="sm" onClick={() => router.push(`/school/students/${s.id}`)}>View</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <StudentBulkImportDialog
-        open={isBulkImportOpen}
-        onOpenChange={setIsBulkImportOpen}
-        institutionId={classes[0]?.institutionId || ""}
-        classes={classes}
-        onSuccess={() => fetchStudents()}
-      />
-    </div>
+  return (
+    <Suspense key={`${search}-${classId}`} fallback={<StudentsLoading />}>
+      <StudentsData search={search} classId={classId} />
+    </Suspense>
   );
 }

@@ -11,12 +11,18 @@ export function sanitizeErrorMessage(msg: string): string {
   return clean.length > 500 ? clean.slice(0, 500) + "... [TRUNCATED]" : clean;
 }
 
+const V8_FRAME_REGEX = /^\s+at\s+(?:.*?\(.*?(?::\d+:\d+|<anonymous>|\(native\))\)|.*?(?::\d+:\d+|<anonymous>|\(native\))|node:.*:\d+:\d+)/;
+
 export function extractCleanStack(err: Error): string | undefined {
   if (!err.stack) return undefined;
   // Discard the message portion of the stack (first line(s)) to prevent raw PII/params leakage,
-  // keeping only pure V8 call frames ("at ...")
+  // matching only authenticated V8 call frames with indentation, location/anonymous/native markers.
   const lines = err.stack.split("\n");
-  const firstFrameIdx = lines.findIndex((l) => l.trimStart().startsWith("at "));
+  const firstFrameIdx = lines.findIndex((l) => V8_FRAME_REGEX.test(l));
   if (firstFrameIdx === -1) return undefined;
-  return lines.slice(firstFrameIdx, firstFrameIdx + 5).map((l) => l.trim()).join("\n");
+  return lines
+    .slice(firstFrameIdx, firstFrameIdx + 5)
+    .filter((l) => V8_FRAME_REGEX.test(l))
+    .map((l) => l.trim())
+    .join("\n");
 }

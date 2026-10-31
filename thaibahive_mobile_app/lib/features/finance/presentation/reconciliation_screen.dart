@@ -136,7 +136,7 @@ class _ReconciliationScreenState extends ConsumerState<ReconciliationScreen> {
           Text(label,
               style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                  fontSize: 10)),
+                  fontSize: 11)),
           const SizedBox(height: 2),
           Text(value,
               style: theme.textTheme.bodyMedium

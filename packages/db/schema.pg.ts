@@ -6534,6 +6534,8 @@ export const feePayments = sqliteTable("fee_payments", {
   payerPhone: text("payer_phone"),
   payerEmail: text("payer_email"),
   receiptNumber: text("receipt_number"),
+  reconciledAt: text("reconciled_at"),
+  reconciliationBatchId: text("reconciliation_batch_id").references(() => feeReconciliationBatches.id, { onDelete: "set null" }),
   paidAt: text("paid_at").notNull().default(sql`(current_timestamp)`),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -6709,6 +6711,26 @@ export const feeAuditLogs = sqliteTable("fee_audit_logs", {
   feeAuditActionIdx: index("idx_pg_fee_audit_action").on(t.action),
   feeAuditEntityIdx: index("idx_pg_fee_audit_entity").on(t.entityType, t.entityId),
   feeAuditTimeIdx: index("idx_pg_fee_audit_time").on(t.timestamp),
+}));
+
+// ─── Webhook Idempotency (Sprint-071) ───
+//
+// Deduplicates gateway webhook redeliveries across process restarts and
+// horizontal scale-out. The idempotency key is unique, so a duplicate
+// insert is rejected by the database rather than an in-memory Set.
+export const webhookEvents = sqliteTable("webhook_events", {
+  id: text("id").primaryKey(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  gateway: text("gateway").notNull(),
+  eventId: text("event_id").notNull(),
+  gatewayPaymentId: text("gateway_payment_id"),
+  status: text("status").notNull(), // 'processed' | 'failed'
+  processedAt: text("processed_at").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+}, (t) => ({
+  whGatewayIdx: index("idx_pg_webhook_gateway").on(t.gateway),
+  whEventIdx: index("idx_pg_webhook_event").on(t.eventId),
+  whKeyUnique: uniqueIndex("idx_pg_webhook_key").on(t.idempotencyKey),
 }));
 
 // ─── ALUMNI-HUB / EndowmentOS (Sprint-058) ───

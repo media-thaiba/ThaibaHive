@@ -313,7 +313,7 @@ class _ReportCard extends StatelessWidget {
                 child: Text(
                   report.status.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),

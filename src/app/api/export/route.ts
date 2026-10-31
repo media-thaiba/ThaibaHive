@@ -134,9 +134,6 @@ export const GET = requireAuth(async (request: Request, session) => {
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     allowedInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
-    if (session.institutionId && session.institutionId !== "global" && !allowedInstIds.includes(session.institutionId)) {
-      allowedInstIds.push(session.institutionId);
-    }
 
     if (allowedInstIds.length === 0) {
       return NextResponse.json({ error: "Forbidden: No institution assigned to staff" }, { status: 403 });

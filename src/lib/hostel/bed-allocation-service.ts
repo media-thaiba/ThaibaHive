@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   AllocateBedParams,
   AllocateBedResult,
@@ -104,6 +105,35 @@ export async function allocateHostelBed(
         };
       }
 
+      // 3a. Reject if bed already has an active allocation
+      const bedOccupiedRes = await conn.query(`
+        SELECT id FROM hostel_bed_allocations
+        WHERE bed_id = $1 AND institution_id = $2 AND vacated_at IS NULL;
+      `, [bedId, institutionId]);
+      if (bedOccupiedRes.rows.length > 0) {
+        await conn.query("ROLLBACK;");
+        return {
+          success: false,
+          error: "Active bed collision: this bed is already occupied.",
+          collisionType: "bed_collision"
+        };
+      }
+
+      // 3b. Reject if the student already holds an active bed allocation for
+      // this academic year (prevents one student occupying two beds).
+      const overlapRes = await conn.query(`
+        SELECT id FROM hostel_bed_allocations
+        WHERE student_id = $1 AND academic_year_id = $2 AND institution_id = $3 AND vacated_at IS NULL;
+      `, [studentId, academicYearId, institutionId]);
+      if (overlapRes.rows.length > 0) {
+        await conn.query("ROLLBACK;");
+        return {
+          success: false,
+          error: "Student already has an active bed allocation for this academic year.",
+          collisionType: "student_collision"
+        };
+      }
+
       // 3. Row lock on hostel_rooms via FOR UPDATE to prevent capacity race
       await conn.query(`
         SELECT id, capacity FROM hostel_rooms WHERE id = $1 AND institution_id = $2 FOR UPDATE;
@@ -123,7 +153,7 @@ export async function allocateHostelBed(
       }
 
       // 4. Insert allocation
-      const allocId = `alloc-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const allocId = `alloc_${crypto.randomUUID()}`;
       await conn.query(`
         INSERT INTO hostel_bed_allocations (
           id, institution_id, bed_id, student_id, academic_year_id,
@@ -155,8 +185,18 @@ export async function allocateHostelBed(
       try {
         await client.execute("BEGIN IMMEDIATE;");
         ownsSqliteTx = true;
-      } catch {
-        // Already inside an active transaction
+      } catch (beginErr: any) {
+        const msg = (beginErr?.message || String(beginErr)).toLowerCase();
+        // A nested BEGIN inside an already-open transaction is expected and
+        // harmless — the outer caller owns the transaction. Any other failure
+        // (SQLITE_BUSY, SQLITE_LOCKED, disk I/O, etc.) means we cannot obtain
+        // the write lock we need, so fail closed instead of silently falling
+        // back to autocommit and racing on room capacity.
+        if (!msg.includes("cannot start a transaction within a transaction") &&
+            !msg.includes("transaction already") &&
+            !msg.includes("within a transaction")) {
+          throw beginErr;
+        }
       }
     }
 
@@ -218,6 +258,37 @@ export async function allocateHostelBed(
       };
     }
 
+    // Reject if bed already has an active allocation
+    const bedOccupiedRes = await client.execute({
+      sql: `SELECT id FROM hostel_bed_allocations
+            WHERE bed_id = ? AND institution_id = ? AND vacated_at IS NULL;`,
+      args: [bedId, institutionId]
+    });
+    if (bedOccupiedRes.rows.length > 0) {
+      if (ownsSqliteTx) await client.execute("ROLLBACK;");
+      return {
+        success: false,
+        error: "Active bed collision: this bed is already occupied.",
+        collisionType: "bed_collision"
+      };
+    }
+
+    // Reject if the student already holds an active bed allocation for this
+    // academic year (prevents one student occupying two beds).
+    const overlapRes = await client.execute({
+      sql: `SELECT id FROM hostel_bed_allocations
+            WHERE student_id = ? AND academic_year_id = ? AND institution_id = ? AND vacated_at IS NULL;`,
+      args: [studentId, academicYearId, institutionId]
+    });
+    if (overlapRes.rows.length > 0) {
+      if (ownsSqliteTx) await client.execute("ROLLBACK;");
+      return {
+        success: false,
+        error: "Student already has an active bed allocation for this academic year.",
+        collisionType: "student_collision"
+      };
+    }
+
     // Check active room occupancy
     const occRes = await client.execute({
       sql: `
@@ -235,7 +306,7 @@ export async function allocateHostelBed(
       return { success: false, error: "Room is at full capacity." };
     }
 
-    const allocId = `alloc-sqlite-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const allocId = `alloc_${crypto.randomUUID()}`;
     await client.execute({
       sql: `
         INSERT INTO hostel_bed_allocations (

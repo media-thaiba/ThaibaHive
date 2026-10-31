@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { attendanceLogs, staffInstitutions } from "@/db/schema";
+import { attendanceEvents, attendanceLogs, staffInstitutions, staffShifts, shifts } from "@/db/schema";
 import { requireAuth, resolveRequestInstitution } from "@/lib/api/auth-guard";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
 import { localDateISO } from "@/lib/attendance/local-date";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, desc, gte, lte, isNull, or } from "drizzle-orm";
 import { hasPermission } from "@thaiba/auth";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +82,16 @@ export const GET = requireAuth(async (request: Request, session) => {
       .where(and(eq(attendanceLogs.staffId, targetStaffId), eq(attendanceLogs.date, today)))
       .get() ?? null;
 
+    // Latest immutable attendance event of the day — drives on-shift / overtime
+    // state on mobile (a trailing 'in' after a completed shift means overtime).
+    const latestEventRow = await db
+      .select({ kind: attendanceEvents.kind, effectiveAt: attendanceEvents.effectiveAt })
+      .from(attendanceEvents)
+      .where(and(eq(attendanceEvents.staffId, targetStaffId), eq(attendanceEvents.localDate, today)))
+      .orderBy(desc(attendanceEvents.effectiveAt))
+      .limit(1)
+      .get();
+
     // Build conditions for aggregate stats
     const conditions = [eq(attendanceLogs.staffId, targetStaffId)];
     if (startDate) conditions.push(gte(attendanceLogs.date, startDate));
@@ -115,6 +125,44 @@ export const GET = requireAuth(async (request: Request, session) => {
 
     const totalWorkedHours = Number((totalWorkedMinutes / 60).toFixed(1));
 
+    // Query active staff shift assignment (falls back to campus default General Shift 09:00 - 17:00)
+    let shiftData = {
+      id: "default_general",
+      name: "General Shift",
+      startTime: "09:00",
+      endTime: "17:00",
+      gracePeriodMinutes: 15,
+    };
+
+    try {
+      const activeStaffShift = await db
+        .select({
+          id: shifts.id,
+          name: shifts.name,
+          startTime: shifts.startTime,
+          endTime: shifts.endTime,
+          gracePeriodMinutes: shifts.gracePeriodMinutes,
+        })
+        .from(staffShifts)
+        .innerJoin(shifts, eq(staffShifts.shiftId, shifts.id))
+        .where(
+          and(
+            eq(staffShifts.staffId, targetStaffId),
+            lte(staffShifts.effectiveFrom, today),
+            or(isNull(staffShifts.effectiveTo), gte(staffShifts.effectiveTo, today))
+          )
+        )
+        .orderBy(desc(staffShifts.effectiveFrom))
+        .limit(1)
+        .get();
+
+      if (activeStaffShift) {
+        shiftData = activeStaffShift;
+      }
+    } catch (error) {
+      console.warn("Failed to query active staff shift, falling back to General Shift:", error);
+    }
+
     return NextResponse.json({
       today_status: todayLog?.status ?? null,
       last_check_in: todayLog?.checkIn ?? null,
@@ -124,6 +172,16 @@ export const GET = requireAuth(async (request: Request, session) => {
       late_days: lateDays,
       half_days: halfDays,
       total_worked_hours: totalWorkedHours,
+      latest_event: latestEventRow?.kind ?? null,
+      is_on_shift: latestEventRow?.kind === "in",
+      latest_event_at: latestEventRow?.effectiveAt ?? null,
+      shift: {
+        id: shiftData.id,
+        name: shiftData.name,
+        start_time: shiftData.startTime,
+        end_time: shiftData.endTime,
+        grace_period_minutes: shiftData.gracePeriodMinutes,
+      },
     });
   } catch (error) {
     console.error("Attendance stats error:", error);

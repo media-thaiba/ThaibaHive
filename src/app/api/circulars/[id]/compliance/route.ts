@@ -132,9 +132,6 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     const callerInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
-    if (session.institutionId) {
-      callerInstIds.push(session.institutionId);
-    }
 
     if (!callerInstIds.includes(institutionId)) {
       return NextResponse.json(

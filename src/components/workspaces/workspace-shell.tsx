@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { WorkspaceSkeleton } from './workspace-skeleton';
 import { Button } from '@/components/ui/button';
@@ -9,15 +10,15 @@ import { PersonalizationDialog, WidgetConfig } from './personalization-dialog';
 import { useWorkspaceSse } from '@/lib/hooks/use-workspace-sse';
 import { toast } from 'sonner';
 
-// Import Widgets
-import { PrincipalAttendanceTrends } from './widgets/principal-attendance-trends';
-import { PrincipalFeeRecovery } from './widgets/principal-fee-recovery';
-import { TeacherClassAttendance } from './widgets/teacher-class-attendance';
-import { TeacherHomeworkTracker } from './widgets/teacher-homework-tracker';
-import { CashierTransactionTally } from './widgets/cashier-transaction-tally';
-import { CashierPendingFees } from './widgets/cashier-pending-fees';
-import { ParentChildAttendance } from './widgets/parent-child-attendance';
-import { ParentFeeCard } from './widgets/parent-fee-card';
+// Defer heavy chart-bearing widgets so recharts stays out of the main bundle.
+const PrincipalAttendanceTrends = dynamic(() => import('./widgets/principal-attendance-trends').then((m) => m.PrincipalAttendanceTrends), { ssr: false });
+const PrincipalFeeRecovery = dynamic(() => import('./widgets/principal-fee-recovery').then((m) => m.PrincipalFeeRecovery), { ssr: false });
+const TeacherClassAttendance = dynamic(() => import('./widgets/teacher-class-attendance').then((m) => m.TeacherClassAttendance), { ssr: false });
+const TeacherHomeworkTracker = dynamic(() => import('./widgets/teacher-homework-tracker').then((m) => m.TeacherHomeworkTracker), { ssr: false });
+const CashierTransactionTally = dynamic(() => import('./widgets/cashier-transaction-tally').then((m) => m.CashierTransactionTally), { ssr: false });
+const CashierPendingFees = dynamic(() => import('./widgets/cashier-pending-fees').then((m) => m.CashierPendingFees), { ssr: false });
+const ParentChildAttendance = dynamic(() => import('./widgets/parent-child-attendance').then((m) => m.ParentChildAttendance), { ssr: false });
+const ParentFeeCard = dynamic(() => import('./widgets/parent-fee-card').then((m) => m.ParentFeeCard), { ssr: false });
 
 interface WorkspaceShellProps {
   role: string;
@@ -42,7 +43,7 @@ const DEFAULT_WIDGETS: Record<string, WidgetConfig[]> = {
   ],
 };
 
-const WIDGET_REGISTRY: Record<string, React.ComponentType<{ data: any }>> = {
+const WIDGET_REGISTRY: Record<string, React.ComponentType<{ data?: any }>> = {
   'principal-attendance-trends': PrincipalAttendanceTrends,
   'principal-fee-recovery': PrincipalFeeRecovery,
   'teacher-class-attendance': TeacherClassAttendance,

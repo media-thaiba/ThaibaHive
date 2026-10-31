@@ -41,6 +41,7 @@ class ThInput extends StatefulWidget {
 class _ThInputState extends State<ThInput> {
   bool _isFocused = false;
   late bool _obscureText;
+  String? _validatorError;
 
   @override
   void initState() {
@@ -50,10 +51,18 @@ class _ThInputState extends State<ThInput> {
 
   @override
   Widget build(BuildContext context) {
-    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final displayError = widget.errorText ?? _validatorError;
+    final hasError = displayError != null && displayError.isNotEmpty;
+    final defaultBorderColor = isDark ? const Color(0xFF2A3649) : const Color(0xFFE2E8F0);
     final activeBorderColor = hasError
         ? Colors.red.shade400
-        : (_isFocused ? widget.accentColor : const BorderSide(color: Color(0xFF1E2022)).color);
+        : (_isFocused ? widget.accentColor : defaultBorderColor);
+    final inputBg = isDark ? const Color(0xFF1A222F) : const Color(0xFFF8FAFC);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final hintColor = isDark ? Colors.white38 : const Color(0xFF94A3B8);
+    final labelColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155);
+    final iconColor = isDark ? Colors.white60 : const Color(0xFF64748B);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +74,7 @@ class _ThInputState extends State<ThInput> {
               widget.label.toUpperCase(),
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                color: hasError ? Colors.red.shade300 : Colors.grey[500],
+                color: hasError ? Colors.red.shade400 : labelColor,
                 fontSize: 11.0,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.8,
@@ -77,11 +86,11 @@ class _ThInputState extends State<ThInput> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: const Color(0xFF121316).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
+              color: inputBg,
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: activeBorderColor,
-                width: _isFocused ? 1.5 : 1.0,
+                width: _isFocused ? 1.6 : 1.0,
               ),
               boxShadow: _isFocused
                   ? [
@@ -98,35 +107,48 @@ class _ThInputState extends State<ThInput> {
               obscureText: _obscureText,
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
-              onChanged: widget.onChanged,
+              onChanged: (val) {
+                if (_validatorError != null) {
+                  setState(() => _validatorError = null);
+                }
+                widget.onChanged?.call(val);
+              },
               onFieldSubmitted: widget.onFieldSubmitted,
-              validator: widget.validator,
-              style: const TextStyle(
+              validator: (value) {
+                final err = widget.validator?.call(value);
+                if (_validatorError != err) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _validatorError = err);
+                  });
+                }
+                return err;
+              },
+              style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                color: Colors.white,
+                color: textColor,
                 fontSize: 13.5,
               ),
               decoration: InputDecoration(
                 hintText: widget.hint,
                 hintStyle: TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  color: Colors.grey[600],
+                  color: hintColor,
                   fontSize: 13.5,
                 ),
                 prefixIcon: widget.prefixIcon != null
-                    ? Icon(widget.prefixIcon, color: Colors.grey[500], size: 18)
+                    ? Icon(widget.prefixIcon, color: iconColor, size: 19)
                     : null,
                 suffixIcon: widget.isPassword
                     ? IconButton(
                         icon: Icon(
                           _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: Colors.grey[500],
-                          size: 18,
+                          color: iconColor,
+                          size: 19,
                         ),
                         onPressed: () => setState(() => _obscureText = !_obscureText),
                       )
                     : widget.suffixIcon,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 border: InputBorder.none,
                 errorStyle: const TextStyle(height: 0, fontSize: 0),
               ),
@@ -138,11 +160,11 @@ class _ThInputState extends State<ThInput> {
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Text(
-              widget.errorText!,
+              displayError,
               style: TextStyle(
-                color: Colors.red.shade300,
+                color: Colors.red.shade400,
                 fontSize: 11.0,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

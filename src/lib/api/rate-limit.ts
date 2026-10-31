@@ -1,8 +1,83 @@
 type RateLimitEntry = { count: number; resetAt: number };
-type RateLimitStore = Map<string, RateLimitEntry>;
+
+/**
+ * Bounded in-memory rate-limit store with LRU eviction and TTL cleanup.
+ *
+ * The previous implementation used a raw Map that never deleted expired entries,
+ * so every unique identifier (IP, staffId) that ever hit a rate-limited route
+ * left a permanent entry. Under a DDoS with rotating identifiers or a large
+ * multi-tenant deployment, this leaked memory until the process OOM-killed.
+ *
+ * Fixes:
+ *  - Max key cap (default 10_000) with LRU eviction on overflow.
+ *  - Expired entries are deleted on read (lazy TTL) and via periodic sweep.
+ *  - LRU order is maintained by re-inserting accessed keys.
+ */
+class BoundedRateLimitStore {
+  private readonly store = new Map<string, RateLimitEntry>();
+  private readonly maxKeys: number;
+  private lastSweep = 0;
+  private readonly sweepIntervalMs: number;
+
+  constructor(maxKeys = 10_000, sweepIntervalMs = 60_000) {
+    this.maxKeys = maxKeys;
+    this.sweepIntervalMs = sweepIntervalMs;
+  }
+
+  get(key: string): RateLimitEntry | undefined {
+    const entry = this.store.get(key);
+    if (!entry) return undefined;
+
+    // Expired? Clean on read so the key doesn't linger.
+    if (Date.now() > entry.resetAt) {
+      this.store.delete(key);
+      return undefined;
+    }
+
+    // Refresh LRU order (delete + re-insert moves key to "most recently used").
+    this.store.delete(key);
+    this.store.set(key, entry);
+    return entry;
+  }
+
+  set(key: string, entry: RateLimitEntry): void {
+    // Evict the least-recently-used entry (first in insertion order) if at capacity.
+    if (this.store.size >= this.maxKeys && !this.store.has(key)) {
+      const oldestKey = this.store.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.store.delete(oldestKey);
+      }
+    }
+    this.store.set(key, entry);
+  }
+
+  delete(key: string): void {
+    this.store.delete(key);
+  }
+
+  get size(): number {
+    return this.store.size;
+  }
+
+  /** Periodic passive sweep for expired entries. Call on a timer or opportunistically. */
+  sweep(): void {
+    const now = Date.now();
+    if (now - this.lastSweep < this.sweepIntervalMs) return;
+    this.lastSweep = now;
+    for (const [key, entry] of this.store.entries()) {
+      if (now > entry.resetAt) {
+        this.store.delete(key);
+      }
+    }
+  }
+}
+
+type RateLimitStore = BoundedRateLimitStore;
+
+const DEFAULT_STORE_MAX_KEYS = 10_000;
 
 function createStore(): RateLimitStore {
-  return new Map<string, RateLimitEntry>();
+  return new BoundedRateLimitStore(DEFAULT_STORE_MAX_KEYS);
 }
 
 const stores: Record<string, RateLimitStore> = {};

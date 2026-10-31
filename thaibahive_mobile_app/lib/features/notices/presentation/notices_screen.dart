@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/tab_scroll_to_top.dart';
 import '../../../core/services/sse_service.dart';
 import '../../announcements/presentation/announcements_screen.dart';
 import '../../circulars/presentation/circulars_screen.dart';
 import '../../notifications/data/notifications_provider.dart';
 import '../../polls/presentation/polls_screen.dart';
+import '../../../shared/widgets/sliding_pill_segmented_control.dart';
 
 /// Notices tab (D2) — a thin segmented wrapper over the existing Circulars /
 /// Announcements / Polls screens in embedded mode (no nested AppBars).
@@ -23,6 +25,17 @@ class NoticesScreen extends ConsumerStatefulWidget {
 
 class _NoticesScreenState extends ConsumerState<NoticesScreen> {
   int _segment = 0;
+
+  /// Shared by all three segments (they stay alive in the IndexedStack, so
+  /// each keeps its own attached position). Lets a re-tap of the Notices tab
+  /// scroll the visible list back to the top (Rule 9).
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   static const List<String> _segments = [
     'Circulars',
@@ -48,64 +61,44 @@ class _NoticesScreenState extends ConsumerState<NoticesScreen> {
       }
     });
 
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    // Rule 9: re-tapping the Notices tab scrolls the active segment to the top.
+    ref.listen(tabScrollToTopProvider, (previous, next) {
+      if (next?.branch == 2) _scrollController.animateToTop();
+    });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notices')),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Bulletin'),
+        backgroundColor: Colors.transparent,
+      ),
       body: Column(
         children: [
-          // VisionOS/Cupertino-style pill tab bar
+          // VisionOS/Cupertino-style sliding pill segmented control
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                  width: 1,
-                ),
-              ),
-              child: ToggleButtons(
-                isSelected: List.generate(_segments.length, (i) => i == _segment),
-                onPressed: (index) => setState(() => _segment = index!),
-                fillColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-                color: theme.colorScheme.onSurfaceVariant,
-                selectedColor: theme.colorScheme.primary,
-                borderRadius: BorderRadius.circular(14),
-                borderColor: Colors.transparent,
-                selectedBorderColor: Colors.transparent,
-                constraints: const BoxConstraints(
-                  minHeight: 40,
-                  minWidth: 80,
-                ),
-                children: _segments.map((label) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                        color: _segment == _segments.indexOf(label)
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+            child: SlidingPillSegmentedControl(
+              segments: _segments,
+              selectedIndex: _segment,
+              onValueChanged: (index) => setState(() => _segment = index),
             ),
           ),
           Expanded(
             child: IndexedStack(
               index: _segment,
-              children: const [
-                CircularsScreen(embedded: true),
-                AnnouncementsScreen(embedded: true),
-                PollsScreen(embedded: true),
+              children: [
+                CircularsScreen(
+                  embedded: true,
+                  scrollController: _scrollController,
+                ),
+                AnnouncementsScreen(
+                  embedded: true,
+                  scrollController: _scrollController,
+                ),
+                PollsScreen(
+                  embedded: true,
+                  scrollController: _scrollController,
+                ),
               ],
             ),
           ),

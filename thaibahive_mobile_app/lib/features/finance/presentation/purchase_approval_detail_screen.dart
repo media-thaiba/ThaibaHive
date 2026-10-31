@@ -277,7 +277,7 @@ class _AuditLogTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               fontFamily: 'monospace',
-              fontSize: 10,
+              fontSize: 11,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
             ),
           ),

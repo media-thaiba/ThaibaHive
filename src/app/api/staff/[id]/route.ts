@@ -199,9 +199,6 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
   if (!isSelf && institutionIds && session.role !== "super_admin") {
     if (isRegionalScopeRole(session.role)) {
       const cluster = await getStaffInstitutionMemberships(session.staffId);
-      if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
-        cluster.push(session.institutionId);
-      }
       const clusterSet = new Set(cluster);
       if (institutionIds.some((instId: string) => !clusterSet.has(instId))) {
         return NextResponse.json(
@@ -211,9 +208,6 @@ export const PUT = requireAuth(async (request: Request, session, context) => {
       }
     } else {
       const memberships = await getStaffInstitutionMemberships(session.staffId);
-      if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-        memberships.push(session.institutionId);
-      }
       const allowedSet = new Set(memberships);
       if (institutionIds.some((instId: string) => !allowedSet.has(instId))) {
         return NextResponse.json(
@@ -484,9 +478,6 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
   if (!isSelf && institutionIds && session.role !== "super_admin") {
     if (isRegionalScopeRole(session.role)) {
       const cluster = await getStaffInstitutionMemberships(session.staffId);
-      if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
-        cluster.push(session.institutionId);
-      }
       const clusterSet = new Set(cluster);
       if (institutionIds.some((instId: string) => !clusterSet.has(instId))) {
         return NextResponse.json(
@@ -496,9 +487,6 @@ export const PATCH = requireAuth(async (request: Request, session, context) => {
       }
     } else {
       const memberships = await getStaffInstitutionMemberships(session.staffId);
-      if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-        memberships.push(session.institutionId);
-      }
       const allowedSet = new Set(memberships);
       if (institutionIds.some((instId: string) => !allowedSet.has(instId))) {
         return NextResponse.json(
@@ -827,6 +815,8 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
           tx
         );
       }
+
+      await autoAssignOffboardingChecklists(id, session.staffId, tx);
     });
   } catch (txErr: any) {
     if (isStepUpReplayError(txErr)) {
@@ -837,8 +827,6 @@ export const DELETE = requireAuth(async (request: Request, session, context) => 
     }
     throw txErr;
   }
-
-  autoAssignOffboardingChecklists(id, session.staffId);
 
   return NextResponse.json({ success: true, message: "Account revoked" });
 }, "staff:delete");

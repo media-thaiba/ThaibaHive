@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:thaibahive_mobile/app/theme.dart';
 import 'package:thaibahive_mobile/core/extensions.dart';
+import 'package:thaibahive_mobile/core/providers/tab_scroll_to_top.dart';
 import 'package:thaibahive_mobile/features/action_center/controller.dart';
 import 'package:thaibahive_mobile/features/attendance/presentation/attendance_punch_card.dart';
 import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
@@ -14,6 +16,7 @@ import 'package:thaibahive_mobile/shared/widgets/quick_action_card.dart';
 import '../../../shared/widgets/error_widget.dart';
 import '../../../shared/widgets/loading_widget.dart';
 import '../../../shared/widgets/problem_reporter_modal.dart';
+import '../../../shared/widgets/quick_action_bottom_sheet.dart';
 
 /// Today Screen — Server-Driven UI (SDUI) entry point.
 ///
@@ -67,7 +70,13 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
+    // Rule 9: re-tapping the Today tab scrolls the dashboard back to the top.
+    ref.listen(tabScrollToTopProvider, (previous, next) {
+      if (next?.branch == 0) _scrollController.animateToTop();
+    });
+
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: CustomScrollView(
@@ -80,16 +89,17 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   snap: true,
                   pinned: false,
                   elevation: 0,
+                  toolbarHeight: 68,
                   backgroundColor: Colors.transparent,
                   flexibleSpace: FlexibleSpaceBar(
-                    titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                    titlePadding: const EdgeInsets.fromLTRB(16, 0, 72, 10),
                     title: TripleTapDetector(
                       child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _getGreeting(),
+                          _getGreeting().toUpperCase(),
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                     color: Theme.of(context)
@@ -98,7 +108,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                                   ),
                         ),
                         Text(
-                          user?.firstName ?? 'Staff',
+                          (user != null && user.firstName.isNotEmpty) ? user.firstName : 'Staff',
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
@@ -234,13 +244,7 @@ class TodayHubContent extends ConsumerWidget {
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppShadows.card(Colors.black),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,7 +273,7 @@ class TodayHubContent extends ConsumerWidget {
                     Text(
                       'URGENT',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.8,
                         color: const Color(0xFFF59E0B),
@@ -285,7 +289,7 @@ class TodayHubContent extends ConsumerWidget {
                   'View all (${urgent.length})',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: theme.colorScheme.primary,
                   ),
                 ),
@@ -312,7 +316,7 @@ class TodayHubContent extends ConsumerWidget {
                     '+${urgent.length - 2} more',
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: theme.colorScheme.primary,
                     ),
                   ),
@@ -328,6 +332,33 @@ class TodayHubContent extends ConsumerWidget {
   // P3: Quick actions (manifest resolver; hardcoded fallback manifest)
   // -------------------------------------------------------------------------
 
+  (String, String?) _cleanActionTitleAndSubtitle(String rawLabel, String id) {
+    final lower = '$rawLabel $id'.toLowerCase();
+    if (lower.contains('canteen') || lower.contains('meal')) {
+      return ('Canteen', 'Order meals');
+    }
+    if (lower.contains('helpdesk') || lower.contains('ticket') || lower.contains('support')) {
+      return ('Helpdesk', 'Raise ticket');
+    }
+    if (lower.contains('facility') || lower.contains('booking') || lower.contains('campus')) {
+      return ('Facilities', 'Book spaces');
+    }
+    if (lower.contains('visitor') || lower.contains('gate')) {
+      return ('Gate Pass', 'Visitor pass');
+    }
+    if (lower.contains('leave')) {
+      return ('Leave', 'Apply leave');
+    }
+    if (lower.contains('attendance') || lower.contains('punch')) {
+      return ('Attendance', 'Punch clock');
+    }
+    final parts = rawLabel.trim().split(RegExp(r'\s+'));
+    if (parts.length > 2) {
+      return (parts.take(2).join(' '), parts.skip(2).join(' '));
+    }
+    return (rawLabel, null);
+  }
+
   Widget _buildQuickActionsSection(
     BuildContext context,
     TodayHubSection section,
@@ -336,16 +367,38 @@ class TodayHubContent extends ConsumerWidget {
     final actions = manifest.quickActions.take(section.maxItems ?? 4).toList();
     if (actions.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Quick Actions',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF282F39) : const Color(0xFFEEF2F6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Icon(
+                  Icons.grid_view_rounded,
+                  size: 16,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      letterSpacing: -0.2,
+                    ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           GridView.builder(
@@ -353,19 +406,31 @@ class TodayHubContent extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.9,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.80,
             ),
             itemCount: actions.length,
             itemBuilder: (context, index) {
               final action = actions[index];
+              final (title, subtitle) = _cleanActionTitleAndSubtitle(action.label, action.id);
               return QuickActionCard(
                 key: ValueKey('quick-action-${action.id}'),
                 icon: quickActionIcon(action.icon),
-                label: action.label,
+                label: title,
+                subtitle: subtitle,
                 color: quickActionColor(action.id),
-                onTap: () => context.push(action.route),
+                onTap: () {
+                  QuickActionBottomSheet.show(
+                    context: context,
+                    title: title,
+                    subtitle: subtitle,
+                    icon: quickActionIcon(action.icon),
+                    color: quickActionColor(action.id),
+                    targetRoute: action.route,
+                    subActions: _getSubActionsForQuickAction(action.id),
+                  );
+                },
               );
             },
           ),
@@ -374,9 +439,54 @@ class TodayHubContent extends ConsumerWidget {
     );
   }
 
+  List<({String label, IconData icon, String route})>? _getSubActionsForQuickAction(String id) {
+    final lower = id.toLowerCase();
+    if (lower.contains('canteen') || lower.contains('meal')) {
+      return [
+        (label: "Today's Specials", icon: Icons.restaurant_menu_rounded, route: '/canteen'),
+        (label: 'Order History', icon: Icons.receipt_long_rounded, route: '/canteen'),
+      ];
+    }
+    if (lower.contains('help') || lower.contains('ticket')) {
+      return [
+        (label: 'Raise New Ticket', icon: Icons.add_circle_outline_rounded, route: '/help-desk'),
+        (label: 'My Open Tickets', icon: Icons.support_agent_rounded, route: '/help-desk'),
+      ];
+    }
+    if (lower.contains('facility') || lower.contains('book')) {
+      return [
+        (label: 'Book Space / Room', icon: Icons.meeting_room_rounded, route: '/bookings/create'),
+        (label: 'My Reservations', icon: Icons.event_available_rounded, route: '/bookings'),
+      ];
+    }
+    if (lower.contains('gate') || lower.contains('visitor')) {
+      return [
+        (label: 'Gate Pass Verification', icon: Icons.qr_code_scanner_rounded, route: '/visitors/gate-verify'),
+        (label: 'Recent Visitor Passes', icon: Icons.badge_outlined, route: '/visitors'),
+      ];
+    }
+    return null;
+  }
+
   // -------------------------------------------------------------------------
   // P4: Today's timeline (activity-logs; D10 repoint)
   // -------------------------------------------------------------------------
+
+  String _formatTimelineTitle(String rawTitle, String type) {
+    final trimmed = rawTitle.trim();
+    final lower = trimmed.toLowerCase();
+    if (lower == 'logout') return 'Logged out from session';
+    if (lower == 'login') return 'Signed in to portal';
+    if (lower == 'punch_in' || lower == 'punchin') return 'Clocked In (Attendance)';
+    if (lower == 'punch_out' || lower == 'punchout') return 'Clocked Out (Attendance)';
+    if (trimmed.length > 1 && trimmed == trimmed.toUpperCase() && trimmed.contains('_')) {
+      return trimmed
+          .split('_')
+          .map((w) => w.isNotEmpty ? '${w[0]}${w.substring(1).toLowerCase()}' : '')
+          .join(' ');
+    }
+    return trimmed;
+  }
 
   Widget _buildTimelineSection(
     BuildContext context,
@@ -392,77 +502,187 @@ class TodayHubContent extends ConsumerWidget {
     }
     if (state.items.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final items = state.items.take(section.maxItems ?? 5).toList();
+
     return Padding(
       key: const ValueKey('today-section-timeline'),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Today's Timeline",
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 8),
-          ...items.map((item) {
-            final (icon, color) = _timelineIcon(item.type);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                      color: isDark ? const Color(0xFF282F39) : const Color(0xFFEEF2F6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(icon, size: 16, color: color),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    child: Icon(
+                      Icons.history_rounded,
+                      size: 16,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    item.timestamp.timeAgo(),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    "Recent Activity",
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          letterSpacing: -0.2,
                         ),
                   ),
                 ],
               ),
-            );
-          }),
+              InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => context.push('/timeline'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View All',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E242C) : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? const Color(0xFF2E3744) : const Color(0xFFE2E8F0),
+                width: 1,
+              ),
+              boxShadow: AppShadows.card(Colors.black),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              itemCount: items.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 1,
+                thickness: 0.8,
+                indent: 56,
+                endIndent: 16,
+                color: isDark ? const Color(0xFF27313F) : const Color(0xFFF1F5F9),
+              ),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final (icon, color) = _timelineIcon(item.type);
+                final title = _formatTimelineTitle(item.title, item.type);
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, size: 17, color: color),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            if (item.description != null && item.description!.isNotEmpty) ...[
+                              const SizedBox(height: 1),
+                              Text(
+                                item.description!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        item.timestamp.timeAgo(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
   (IconData, Color) _timelineIcon(String type) {
-    if (type.startsWith('leave')) {
-      return (Icons.event_busy_rounded, const Color(0xFFE53935));
+    final t = type.toLowerCase();
+    if (t.contains('leave')) {
+      return (Icons.event_busy_rounded, const Color(0xFFEF4444));
     }
-    if (type.startsWith('attendance') || type.startsWith('punch')) {
-      return (Icons.fingerprint_rounded, const Color(0xFF00897B));
+    if (t.contains('attendance') || t.contains('punch') || t.contains('check_in') || t.contains('checkin')) {
+      return (Icons.fingerprint_rounded, const Color(0xFF10B981));
     }
-    if (type.startsWith('task')) {
-      return (Icons.task_alt_rounded, const Color(0xFFF57C00));
+    if (t.contains('task')) {
+      return (Icons.task_alt_rounded, const Color(0xFFF59E0B));
     }
-    if (type.startsWith('canteen')) {
-      return (Icons.restaurant_rounded, const Color(0xFFFB8C00));
+    if (t.contains('canteen') || t.contains('meal')) {
+      return (Icons.restaurant_rounded, const Color(0xFFF97316));
     }
-    if (type.startsWith('auth') || type.startsWith('login')) {
-      return (Icons.login_rounded, const Color(0xFF1E88E5));
+    if (t.contains('login')) {
+      return (Icons.login_rounded, const Color(0xFF3B82F6));
     }
-    return (Icons.history_rounded, const Color(0xFF616161));
+    if (t.contains('logout')) {
+      return (Icons.logout_rounded, const Color(0xFF64748B));
+    }
+    if (t.contains('circular') || t.contains('notice')) {
+      return (Icons.campaign_rounded, const Color(0xFF8B5CF6));
+    }
+    return (Icons.bolt_rounded, const Color(0xFF6366F1));
   }
 
   // -------------------------------------------------------------------------
@@ -483,6 +703,7 @@ class TodayHubContent extends ConsumerWidget {
     }
     if (state.circulars.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final latest = state.circulars.first;
     final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
 
@@ -493,100 +714,160 @@ class TodayHubContent extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Latest Circular',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF282F39) : const Color(0xFFEEF2F6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-              ),
-              if (unread > 0) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.error,
-                    borderRadius: BorderRadius.circular(10),
+                    child: Icon(
+                      Icons.campaign_rounded,
+                      size: 16,
+                      color: isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED),
+                    ),
                   ),
-                  child: Text(
-                    '$unread',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
+                  const SizedBox(width: 8),
+                  Text(
+                    'Latest Circular',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          letterSpacing: -0.2,
                         ),
                   ),
+                  if (unread > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$unread',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => context.push('/circulars'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View All',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-              const Spacer(),
-              TextButton(
-                onPressed: () => context.push('/circulars'),
-                child: const Text('View all'),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          const SizedBox(height: 10),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push('/circulars'),
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E242C) : Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF2E3744) : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                  boxShadow: AppShadows.card(Colors.black),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        (latest.category ?? 'CIRCULAR').toUpperCase(),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                              fontWeight: FontWeight.w600,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.25),
+                              width: 0.8,
                             ),
+                          ),
+                          child: Text(
+                            (latest.category ?? 'CIRCULAR').toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF8B5CF6),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          latest.createdAt.timeAgo(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      latest.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                        letterSpacing: -0.1,
                       ),
                     ),
-                    const Spacer(),
-                    Text(
-                      latest.createdAt.timeAgo(),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
+                    if (latest.description != null && latest.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        latest.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.4,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  latest.title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                if (latest.description != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    latest.description!,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ],

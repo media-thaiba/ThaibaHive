@@ -100,7 +100,7 @@ class AlumniHubScreen extends ConsumerWidget {
                     color: Colors.green.shade400,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text('VERIFIED', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: const Text('VERIFIED', style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

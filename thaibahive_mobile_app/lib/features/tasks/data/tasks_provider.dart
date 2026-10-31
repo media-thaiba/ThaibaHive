@@ -89,20 +89,44 @@ class TasksNotifier extends StateNotifier<TasksState> {
   }
 
   Future<void> updateTask(String id, Map<String, dynamic> data) async {
+    final previousTasks = state.tasks;
+    final updatedTasks = state.tasks.map((task) {
+      if (task.id == id) {
+        return task.copyWith(
+          status: data['status'] as String? ?? task.status,
+          priority: data['priority'] as String? ?? task.priority,
+          title: data['title'] as String? ?? task.title,
+          description: data['description'] as String? ?? task.description,
+        );
+      }
+      return task;
+    }).toList();
+
+    state = state.copyWith(tasks: updatedTasks);
+
     try {
       await _repository.updateTask(id, data);
-      await refresh();
     } catch (e) {
-      state = state.copyWith(error: 'Failed to update task: $e');
+      state = state.copyWith(
+        tasks: previousTasks,
+        error: 'Failed to update task: $e',
+      );
     }
   }
 
   Future<void> deleteTask(String id) async {
+    final previousTasks = state.tasks;
+    state = state.copyWith(
+      tasks: state.tasks.where((t) => t.id != id).toList(),
+    );
+
     try {
       await _repository.deleteTask(id);
-      await refresh();
     } catch (e) {
-      state = state.copyWith(error: 'Failed to delete task: $e');
+      state = state.copyWith(
+        tasks: previousTasks,
+        error: 'Failed to delete task: $e',
+      );
     }
   }
 

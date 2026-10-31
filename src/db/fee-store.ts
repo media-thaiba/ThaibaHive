@@ -1,4 +1,5 @@
 import { db } from '@thaiba/db';
+import crypto from 'crypto';
 import {
   feeStructures,
   feeStructureComponents,
@@ -13,8 +14,9 @@ import {
   feeDefaulterLogs,
   feeReconciliationBatches,
   feeAuditLogs,
+  webhookEvents,
 } from '@thaiba/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import {
   FeeStructureItem,
   FeeStructureComponentItem,
@@ -49,6 +51,7 @@ export interface InMemoryFeeStore {
   defaulterLogs: Map<string, FeeDefaulterLogItem>;
   reconciliationBatches: Map<string, FeeReconciliationBatchItem>;
   auditLogs: Map<string, FeeAuditLogItem>;
+  processedWebhookKeys: Set<string>;
 }
 
 export class FeeDbStore {
@@ -69,6 +72,7 @@ export class FeeDbStore {
     defaulterLogs: new Map(),
     reconciliationBatches: new Map(),
     auditLogs: new Map(),
+    processedWebhookKeys: new Set(),
   };
 
   public static getInstance(): FeeDbStore {
@@ -78,7 +82,7 @@ export class FeeDbStore {
     return FeeDbStore.instance;
   }
 
-  public clearMemoryStore(): void {
+public clearMemoryStore(): void {
     this.hydrated = false;
     this.memoryStore.structures.clear();
     this.memoryStore.components.clear();
@@ -93,6 +97,7 @@ export class FeeDbStore {
     this.memoryStore.defaulterLogs.clear();
     this.memoryStore.reconciliationBatches.clear();
     this.memoryStore.auditLogs.clear();
+    this.memoryStore.processedWebhookKeys.clear();
   }
 
   private async ensureHydrated(): Promise<void> {
@@ -387,67 +392,57 @@ export class FeeDbStore {
   // ─── Payment & Receipt Operations ───
 
   public async recordPayment(payment: FeePaymentItem, transactions?: FeePaymentTransactionItem[]): Promise<FeePaymentItem> {
+    // DB-first: persist before touching the in-memory cache so a cold
+    // serverless worker that never hydrated sees a consistent read-back.
+    if (db && !this.useMemoryOnly) {
+      await db.insert(feePayments).values({
+        id: payment.id,
+        paymentNumber: payment.paymentNumber,
+        institutionId: payment.institutionId,
+        allocationId: payment.allocationId,
+        studentId: payment.studentId,
+        amount: payment.amount || 0,
+        fineAmount: payment.fineAmount || 0,
+        discountAmount: payment.discountAmount || 0,
+        netAmount: payment.netAmount || 0,
+        currency: payment.currency || 'INR',
+        paymentMethod: payment.paymentMethod,
+        paymentStatus: payment.paymentStatus || 'completed',
+        gatewayOrderId: payment.gatewayOrderId || null,
+        gatewayPaymentId: payment.gatewayPaymentId || null,
+        transactionReference: payment.transactionReference || null,
+        counterRegisterId: payment.counterRegisterId || null,
+        payerName: payment.payerName || null,
+        payerPhone: payment.payerPhone || null,
+        payerEmail: payment.payerEmail || null,
+        receiptNumber: payment.receiptNumber || null,
+        paidAt: payment.paidAt || new Date().toISOString(),
+        createdAt: payment.createdAt || new Date().toISOString(),
+        updatedAt: payment.updatedAt || new Date().toISOString(),
+      }).onConflictDoNothing();
+
+      if (transactions) {
+        for (const tx of transactions) {
+          await db.insert(feePaymentTransactions).values({
+            id: tx.id,
+            paymentId: payment.id,
+            installmentId: tx.installmentId || null,
+            componentId: tx.componentId || null,
+            allocatedAmount: tx.allocatedAmount || 0,
+            glDebitAccount: tx.glDebitAccount || 'GL:1100-BANK_CASH',
+            glCreditAccount: tx.glCreditAccount || 'GL:1200-FEE_RECEIVABLE',
+            createdAt: tx.createdAt || new Date().toISOString(),
+          }).onConflictDoNothing();
+        }
+      }
+    }
+
+    // Read-through cache: only now mirror into memory.
     this.memoryStore.payments.set(payment.id, { ...payment });
     if (transactions) {
       for (const tx of transactions) {
         this.memoryStore.paymentTransactions.set(tx.id, { ...tx, paymentId: payment.id });
       }
-    }
-
-    try {
-      if (db && !this.useMemoryOnly) {
-        await db.insert(feePayments).values({
-          id: payment.id,
-          paymentNumber: payment.paymentNumber,
-          institutionId: payment.institutionId,
-          allocationId: payment.allocationId,
-          studentId: payment.studentId,
-          amount: payment.amount || 0,
-          fineAmount: payment.fineAmount || 0,
-          discountAmount: payment.discountAmount || 0,
-          netAmount: payment.netAmount || 0,
-          currency: payment.currency || 'INR',
-          paymentMethod: payment.paymentMethod,
-          paymentStatus: payment.paymentStatus || 'completed',
-          gatewayOrderId: payment.gatewayOrderId || null,
-          gatewayPaymentId: payment.gatewayPaymentId || null,
-          transactionReference: payment.transactionReference || null,
-          counterRegisterId: payment.counterRegisterId || null,
-          payerName: payment.payerName || null,
-          payerPhone: payment.payerPhone || null,
-          payerEmail: payment.payerEmail || null,
-          receiptNumber: payment.receiptNumber || null,
-          paidAt: payment.paidAt || new Date().toISOString(),
-          createdAt: payment.createdAt || new Date().toISOString(),
-          updatedAt: payment.updatedAt || new Date().toISOString(),
-        }).onConflictDoUpdate({
-          target: feePayments.id,
-          set: {
-            paymentStatus: payment.paymentStatus || 'completed',
-            gatewayPaymentId: payment.gatewayPaymentId || null,
-            transactionReference: payment.transactionReference || null,
-            receiptNumber: payment.receiptNumber || null,
-            updatedAt: new Date().toISOString(),
-          },
-        });
-
-        if (transactions) {
-          for (const tx of transactions) {
-            await db.insert(feePaymentTransactions).values({
-              id: tx.id,
-              paymentId: payment.id,
-              installmentId: tx.installmentId || null,
-              componentId: tx.componentId || null,
-              allocatedAmount: tx.allocatedAmount || 0,
-              glDebitAccount: tx.glDebitAccount || 'GL:1100-BANK_CASH',
-              glCreditAccount: tx.glCreditAccount || 'GL:1200-FEE_RECEIVABLE',
-              createdAt: tx.createdAt || new Date().toISOString(),
-            }).onConflictDoNothing();
-          }
-        }
-      }
-    } catch (err) {
-      this.handlePersistenceError('recordPayment', payment.id, err);
     }
 
     return payment;
@@ -458,24 +453,27 @@ export class FeeDbStore {
     updates: Pick<FeePaymentItem, 'paymentStatus'> &
       Partial<Pick<FeePaymentItem, 'gatewayPaymentId' | 'transactionReference' | 'receiptNumber' | 'updatedAt'>>
   ): Promise<FeePaymentItem | null> {
+    // DB-first: persist the status transition before mirroring to the cache.
+    // A redelivered webhook that lands on a cold worker then reads back the
+    // committed 'completed' state instead of a stale in-memory 'initiated'.
+    if (db && !this.useMemoryOnly) {
+      try {
+        await db.update(feePayments).set({
+          paymentStatus: updates.paymentStatus,
+          gatewayPaymentId: updates.gatewayPaymentId ?? null,
+          transactionReference: updates.transactionReference ?? null,
+          receiptNumber: updates.receiptNumber ?? null,
+          updatedAt: updates.updatedAt || new Date().toISOString(),
+        }).where(eq(feePayments.id, id));
+      } catch (err) {
+        this.handlePersistenceError('updatePaymentStatus', id, err);
+      }
+    }
+
     const existing = this.memoryStore.payments.get(id);
     if (!existing) return null;
     const updated = { ...existing, ...updates, updatedAt: updates.updatedAt || new Date().toISOString() };
     this.memoryStore.payments.set(id, updated);
-
-    try {
-      if (db && !this.useMemoryOnly) {
-        await db.update(feePayments).set({
-          paymentStatus: updated.paymentStatus,
-          gatewayPaymentId: updated.gatewayPaymentId ?? null,
-          transactionReference: updated.transactionReference ?? null,
-          receiptNumber: updated.receiptNumber ?? null,
-          updatedAt: updated.updatedAt,
-        }).where(eq(feePayments.id, id));
-      }
-    } catch (err) {
-      this.handlePersistenceError('updatePaymentStatus', id, err);
-    }
 
     return updated;
   }
@@ -496,6 +494,24 @@ export class FeeDbStore {
     const amount = Math.round((payment.netAmount || payment.amount || 0) * 100) / 100;
     if (amount <= 0) {
       return { applied: false, reason: 'non_positive_amount' };
+    }
+
+    // DB-backed idempotency check — survives process restart and scale-out.
+    // The unique constraint on feePaymentTransactions.id makes the marker
+    // row itself the deduplication key (onConflictDoNothing).
+    if (!this.useMemoryOnly && db) {
+      try {
+        const existing = await db
+          .select({ id: feePaymentTransactions.id })
+          .from(feePaymentTransactions)
+          .where(eq(feePaymentTransactions.paymentId, payment.id))
+          .get();
+        if (existing) {
+          return { applied: false, reason: 'already_applied' };
+        }
+      } catch {
+        // fail open: fall through to in-memory scan as a last-resort guard
+      }
     }
 
     const alreadyApplied = Array.from(this.memoryStore.paymentTransactions.values()).some(
@@ -568,10 +584,11 @@ export class FeeDbStore {
       glCreditAccount: 'GL:1200-FEE_RECEIVABLE',
       createdAt: new Date().toISOString(),
     };
-    this.memoryStore.paymentTransactions.set(markerId, marker);
 
-    try {
-      if (db && !this.useMemoryOnly) {
+    // DB-first: persist the marker BEFORE mirroring to memory. If the insert
+    // races with a redelivery, onConflictDoNothing guarantees only one row wins.
+    if (db && !this.useMemoryOnly) {
+      try {
         await db.insert(feePaymentTransactions).values({
           id: marker.id,
           paymentId: marker.paymentId,
@@ -582,10 +599,12 @@ export class FeeDbStore {
           glCreditAccount: marker.glCreditAccount,
           createdAt: marker.createdAt,
         }).onConflictDoNothing();
+      } catch (err) {
+        this.handlePersistenceError('applyPaymentToAllocation', marker.id, err);
       }
-    } catch (err) {
-      this.handlePersistenceError('applyPaymentToAllocation', marker.id, err);
     }
+
+    this.memoryStore.paymentTransactions.set(markerId, marker);
 
     return { applied: true, appliedAmount: amount };
   }
@@ -611,6 +630,95 @@ export class FeeDbStore {
       }
     }
     return null;
+  }
+
+  /**
+   * Looks up a payment by gateway reference (order ID or transaction reference).
+   * Checks the read-through in-memory cache first, then falls back to a direct
+   * database query for cold serverless workers where the cache is empty.
+   */
+  public async getPaymentByGatewayRef(
+    gatewayRef: string,
+    institutionId?: string
+  ): Promise<FeePaymentItem | null> {
+    for (const pay of this.memoryStore.payments.values()) {
+      if (
+        pay.gatewayOrderId === gatewayRef ||
+        pay.transactionReference === gatewayRef ||
+        pay.gatewayPaymentId === gatewayRef
+      ) {
+        if (!institutionId || institutionId === 'global' || pay.institutionId === institutionId) {
+          return pay;
+        }
+      }
+    }
+    if (this.useMemoryOnly || !db) return null;
+    try {
+      const row = await db
+        .select()
+        .from(feePayments)
+        .where(
+          and(
+            sql`${feePayments.gatewayOrderId} = ${gatewayRef} OR ${feePayments.transactionReference} = ${gatewayRef} OR ${feePayments.gatewayPaymentId} = ${gatewayRef}`,
+            institutionId ? eq(feePayments.institutionId, institutionId) : sql`1 = 1`
+          )
+        )
+        .get();
+      return row as unknown as FeePaymentItem | null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Checks whether a webhook idempotency key has already been processed.
+   * Database-backed in production (survives restarts/scale-out); falls back to
+   * an in-memory Set in test mode where the test DB may lack the table.
+   */
+  public async isWebhookProcessed(idempotencyKey: string): Promise<boolean> {
+    if (this.useMemoryOnly) {
+      return this.memoryStore.processedWebhookKeys.has(idempotencyKey);
+    }
+    try {
+      const existing = await db
+        .select({ id: webhookEvents.id })
+        .from(webhookEvents)
+        .where(eq(webhookEvents.idempotencyKey, idempotencyKey))
+        .get();
+      return !!existing;
+    } catch {
+      return this.memoryStore.processedWebhookKeys.has(idempotencyKey);
+    }
+  }
+
+  /**
+   * Marks a webhook idempotency key as processed. The unique constraint on
+   * idempotencyKey enforces deduplication at the database level in
+   * production; the in-memory Set is the fallback for test mode.
+   */
+  public async markWebhookProcessed(
+    idempotencyKey: string,
+    gateway: string,
+    eventId: string,
+    gatewayPaymentId?: string
+  ): Promise<void> {
+    if (this.useMemoryOnly) {
+      this.memoryStore.processedWebhookKeys.add(idempotencyKey);
+      return;
+    }
+    try {
+      await db.insert(webhookEvents).values({
+        id: `wh_${crypto.randomUUID()}`,
+        idempotencyKey,
+        gateway,
+        eventId,
+        gatewayPaymentId: gatewayPaymentId || null,
+        status: 'processed',
+        processedAt: new Date().toISOString(),
+      });
+    } catch {
+      this.memoryStore.processedWebhookKeys.add(idempotencyKey);
+    }
   }
 
   public async listPayments(institutionId: string, studentId?: string, status?: PaymentStatus): Promise<FeePaymentItem[]> {
@@ -917,6 +1025,33 @@ export class FeeDbStore {
     return Array.from(this.memoryStore.counterRegisters.values()).filter(
       (r) => r.institutionId === institutionId && (!status || r.status === status)
     );
+  }
+
+  /**
+   * Counts payments recorded against a shift. Used by closeShift to report
+   * the real transaction count instead of a hardcoded zero.
+   */
+  public async countShiftTransactions(shiftId: string, institutionId?: string): Promise<number> {
+    const fromMemory = Array.from(this.memoryStore.payments.values()).filter(
+      (p) => p.counterRegisterId === shiftId && (!institutionId || p.institutionId === institutionId)
+    );
+    if (fromMemory.length > 0 || this.useMemoryOnly || !db) {
+      return fromMemory.length;
+    }
+    try {
+      const row = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(feePayments)
+        .where(
+          institutionId
+            ? and(eq(feePayments.counterRegisterId, shiftId), eq(feePayments.institutionId, institutionId))
+            : eq(feePayments.counterRegisterId, shiftId)
+        )
+        .get();
+      return row?.count ?? 0;
+    } catch {
+      return fromMemory.length;
+    }
   }
 
   // ─── Defaulter & Aging Operations ───

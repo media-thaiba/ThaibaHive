@@ -1,17 +1,20 @@
-"use client";
-
-import { useEffect, useState, useCallback } from "react";
+import { Suspense } from "react";
+import Link from "next/link";
+import { db } from "@/db";
+import { students, classes, academicYears, institutions } from "@thaiba/db/schema";
+import { verifySession, resolveRequestInstitution } from "@thaiba/auth";
+import { redirect } from "next/navigation";
+import { eq, and, sql } from "drizzle-orm";
 import {
   Users, Layers, GraduationCap as ExamIcon, CalendarDays, CalendarCheck, Award,
   type LucideIcon,
 } from "lucide-react";
-import Link from "next/link";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { PageHeader } from "@/components/ui/page-header";
-import { Select, SelectItem } from "@/components/ui/select";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { SchoolDashboardClient } from "./SchoolDashboardClient";
+import StudentsLoading from "./students/loading";
+
+export const dynamic = "force-dynamic";
 
 const quickActions = [
   { icon: Users, label: "Students", color: "bg-blue-500", route: "/school/students", permission: "academic.student.directory" },
@@ -22,119 +25,93 @@ const quickActions = [
   { icon: Award, label: "Grades", color: "bg-amber-500", route: "/school/grades", permission: "exam.marks.enter" },
 ];
 
-type Institution = { id: string; name: string };
+interface SchoolPageProps {
+  searchParams: Promise<{
+    institutionId?: string;
+  }>;
+}
 
-export default function SchoolDashboard() {
-  const [stats, setStats] = useState({ totalStudents: 0, totalClasses: 0, activeYears: 0 });
-  const [loading, setLoading] = useState(true);
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
+async function DashboardData({ institutionId }: { institutionId: string }) {
+  const session = await verifySession();
+  if (!session) {
+    redirect("/login");
+  }
 
-  const buildUrl = useCallback(
-    (base: string) => {
-      if (!selectedInstitutionId) return base;
-      const separator = base.includes("?") ? "&" : "?";
-      return `${base}${separator}institutionId=${encodeURIComponent(selectedInstitutionId)}`;
-    },
-    [selectedInstitutionId],
-  );
+  const scopedInstId = institutionId || (await resolveRequestInstitution(session));
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/institutions");
-        if (res.ok) {
-          const data = await res.json();
-          if (!cancelled) setInstitutions((data as { institutions?: Institution[] }).institutions ?? []);
-        }
-      } catch {
-        // Institutions list unavailable; selector falls back to "All Institutions"
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const instFilter = scopedInstId && scopedInstId !== "global"
+    ? eq(students.institutionId, scopedInstId)
+    : undefined;
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [studentsRes, classesRes, yearsRes] = await Promise.all([
-          fetch(buildUrl("/api/academic/students?limit=1")),
-          fetch(buildUrl("/api/academic/classes")),
-          fetch(buildUrl("/api/academic/academic-years")),
-        ]);
-        if (!studentsRes.ok || !classesRes.ok || !yearsRes.ok) {
-          throw new Error("Dashboard fetch returned a non-ok response");
-        }
-        const [studentsData, classesData, yearsData] = await Promise.all([
-          studentsRes.json(),
-          classesRes.json(),
-          yearsRes.json(),
-        ]);
-        if (cancelled) return;
-        setStats({
-          totalStudents: (studentsData as { total?: number }).total ?? 0,
-          totalClasses: ((classesData as { classes?: unknown[] }).classes ?? []).length,
-          activeYears: ((yearsData as { academicYears?: unknown[] }).academicYears ?? []).length,
-        });
-      } catch {
-        if (!cancelled) toast.error("Failed to load dashboard statistics");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [buildUrl]);
-
-  const statCards = [
-    { title: "Total Students", value: stats.totalStudents, icon: Users, color: "bg-blue-100", iconColor: "text-blue-500" },
-    { title: "Active Classes", value: stats.totalClasses, icon: Layers, color: "bg-indigo-100", iconColor: "text-indigo-500" },
-    { title: "Active Academic Years", value: stats.activeYears, icon: CalendarDays, color: "bg-emerald-100", iconColor: "text-emerald-500" },
-  ];
+  const [studentCount, classCount, yearCount, institutionRows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(students).where(instFilter).get(),
+    db.select({ count: sql<number>`count(*)` }).from(classes).where(and(eq(classes.isActive, true), instFilter ? eq(classes.institutionId, scopedInstId) : undefined)).get(),
+    db.select({ count: sql<number>`count(*)` }).from(academicYears).where(instFilter ? eq(academicYears.institutionId, scopedInstId) : undefined).get(),
+    db.select({ id: institutions.id, name: institutions.name }).from(institutions).all(),
+  ]);
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
-      <PageHeader
-        title="Academic Dashboard"
-        description="Manage students, classes, exams & grades"
-        actions={
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-semibold text-foreground/60 uppercase tracking-wider">
-              Institution
-            </span>
-            <Select
-              value={selectedInstitutionId ?? ""}
-              onChange={(e) => setSelectedInstitutionId(e.target.value || null)}
-              className="w-64 text-sm"
-            >
-              <SelectItem value="">All Institutions</SelectItem>
-              {institutions.map((inst) => (
-                <SelectItem key={inst.id} value={inst.id}>{inst.name}</SelectItem>
-              ))}
-            </Select>
-          </div>
-        }
-      />
+    <SchoolDashboardClient
+      institutions={institutionRows}
+      selectedInstitutionId={scopedInstId && scopedInstId !== "global" ? scopedInstId : null}
+      stats={{
+        totalStudents: studentCount?.count ?? 0,
+        totalClasses: classCount?.count ?? 0,
+        activeYears: yearCount?.count ?? 0,
+      }}
+    />
+  );
+}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading
-          ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-          : statCards.map((card) => (
-              <StatCard
-                key={card.title}
-                title={card.title}
-                value={String(card.value)}
-                icon={card.icon}
-                color={card.color}
-                iconColor={card.iconColor}
-              />
-            ))}
+function ExamRow({ name, date, status }: { name: string; date: string; status: string }) {
+  const getStatusColor = (s: string) => {
+    switch (s) {
+      case "Published": return "bg-green-100 text-green-700";
+      case "Draft": return "bg-gray-100 text-gray-700";
+      case "Scheduled": return "bg-blue-100 text-blue-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
+  return (
+    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+      <div>
+        <p className="font-medium">{name}</p>
+        <p className="text-sm text-muted-foreground">{date}</p>
       </div>
+      <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusColor(status))}>
+        {status}
+      </span>
+    </div>
+  );
+}
+
+function ActivityItem({ action, target, time, user }: { action: string; target: string; time: string; user: string }) {
+  return (
+    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+        <span className="text-xs font-semibold text-primary">⚡</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{action}</p>
+        <p className="text-xs text-muted-foreground truncate">{target}</p>
+      </div>
+      <div className="text-right">
+        <p className="text-xs text-muted-foreground">{time}</p>
+        <p className="text-xs text-muted-foreground/70">{user}</p>
+      </div>
+    </div>
+  );
+}
+
+export default async function SchoolPage({ searchParams }: SchoolPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const institutionId = resolvedSearchParams.institutionId || "";
+
+  return (
+    <div className="space-y-6">
+      <Suspense key={institutionId} fallback={<StudentsLoading />}>
+        <DashboardData institutionId={institutionId} />
+      </Suspense>
 
       <section>
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
@@ -172,75 +149,6 @@ export default function SchoolDashboard() {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-  iconColor,
-}: {
-  title: string;
-  value: string;
-  icon: LucideIcon;
-  color: string;
-  iconColor: string;
-}) {
-  return (
-    <div className="bg-card border rounded-xl p-4">
-      <div className="flex items-center justify-between">
-        <div className={cn("p-2 rounded-lg", color)}>
-          <Icon className={cn("h-5 w-5", iconColor)} />
-        </div>
-      </div>
-      <div className="mt-4">
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-xs text-muted-foreground">{title}</p>
-      </div>
-    </div>
-  );
-}
-
-function ExamRow({ name, date, status }: { name: string; date: string; status: string }) {
-  const getStatusColor = (s: string) => {
-    switch (s) {
-      case "Published": return "bg-green-100 text-green-700";
-      case "Draft": return "bg-gray-100 text-gray-700";
-      case "Scheduled": return "bg-blue-100 text-blue-700";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  return (
-    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-      <div>
-        <p className="font-medium">{name}</p>
-        <p className="text-sm text-muted-foreground">{date}</p>
-      </div>
-      <span className={cn("px-2 py-1 rounded-full text-xs font-medium", getStatusColor(status))}>
-        {status}
-      </span>
-    </div>
-  );
-}
-
-function ActivityItem({ action, target, time, user }: { action: string; target: string; time: string; user: string }) {
-  return (
-    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-        <span className="text-xs font-semibold text-primary">⚡</span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">{action}</p>
-        <p className="text-xs text-muted-foreground truncate">{target}</p>
-      </div>
-      <div className="text-right">
-        <p className="text-xs text-muted-foreground">{time}</p>
-        <p className="text-xs text-muted-foreground/70">{user}</p>
-      </div>
     </div>
   );
 }

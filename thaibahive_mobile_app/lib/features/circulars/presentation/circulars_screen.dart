@@ -13,7 +13,11 @@ class CircularsScreen extends ConsumerStatefulWidget {
   /// an AppScaffold/AppBar wrapper.
   final bool embedded;
 
-  const CircularsScreen({super.key, this.embedded = false});
+  /// Scroll position shared with the Notices tab so a re-tap of the tab can
+  /// scroll this list back to the top (Rule 9).
+  final ScrollController? scrollController;
+
+  const CircularsScreen({super.key, this.embedded = false, this.scrollController});
 
   @override
   ConsumerState<CircularsScreen> createState() => _CircularsScreenState();
@@ -54,6 +58,7 @@ class _CircularsScreenState extends ConsumerState<CircularsScreen> {
                 : RefreshIndicator(
                       onRefresh: () => notifier.loadCirculars(),
                       child: ListView.builder(
+                        controller: widget.scrollController,
                         itemCount: state.circulars.length,
                         itemBuilder: (_, i) {
                           final c = state.circulars[i];

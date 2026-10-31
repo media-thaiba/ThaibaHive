@@ -25,6 +25,9 @@ export const GET = requireAuth(async (request, session) => {
 
   const stream = new ReadableStream({
     start(controller) {
+      let pingInterval: ReturnType<typeof setInterval> | null = null;
+      let isCleanedUp = false;
+
       const writer = new WritableStream({
         write(chunk) {
           controller.enqueue(chunk);
@@ -34,8 +37,18 @@ export const GET = requireAuth(async (request, session) => {
       const conn: SSEConnection = { controller, writer };
 
       cleanup = () => {
-        clearInterval(pingInterval);
+        if (isCleanedUp) return;
+        isCleanedUp = true;
+        if (pingInterval) {
+          clearInterval(pingInterval);
+          pingInterval = null;
+        }
         unregisterSSEConnection(key, conn);
+        try {
+          writer.releaseLock();
+        } catch {
+          // Ignore writer release errors
+        }
         try {
           controller.close();
         } catch {
@@ -44,10 +57,7 @@ export const GET = requireAuth(async (request, session) => {
       };
 
       if (request.signal?.aborted) {
-        unregisterSSEConnection(key, conn);
-        try {
-          controller.close();
-        } catch {}
+        cleanup();
         cleanup = null;
         return;
       }
@@ -64,11 +74,16 @@ export const GET = requireAuth(async (request, session) => {
 
       const heartbeatMs = Number(process.env.SSE_HEARTBEAT_INTERVAL_MS) || 5_000;
       // Heartbeat ping to prevent mobile carrier connection drops
-      const pingInterval = setInterval(() => {
+      pingInterval = setInterval(async () => {
         try {
-          writer.write(new TextEncoder().encode(": ping\n\n"));
+          await writer.write(new TextEncoder().encode(": ping\n\n"));
         } catch {
-          clearInterval(pingInterval);
+          if (pingInterval) {
+            clearInterval(pingInterval);
+            pingInterval = null;
+          }
+          cleanup?.();
+          cleanup = null;
         }
       }, heartbeatMs);
 

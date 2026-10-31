@@ -190,7 +190,7 @@ class _AgentHubScreenState extends ConsumerState<AgentHubScreen> with SingleTick
                       ),
                       child: Text(
                         '${state.pendingApprovals.length}',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -212,7 +212,7 @@ class _AgentHubScreenState extends ConsumerState<AgentHubScreen> with SingleTick
                       ),
                       child: Text(
                         '${state.liveSnippets.length}',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],

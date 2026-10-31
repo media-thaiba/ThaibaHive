@@ -25,9 +25,18 @@ describe("TenantRouter", () => {
     router.registerRegionPool("ap-south", mockApDb);
   });
 
-  it("should route unregistered tenant to default database pool", () => {
-    expect(router.getTenantRegion("unknown-tenant")).toBe("default");
-    expect(router.getTenantDb("unknown-tenant")).toBe(mockDefaultDb);
+  it("should throw TenantIsolationError for unregistered tenant (fail-closed)", () => {
+    expect(() => router.getTenantRegion("unknown-tenant")).toThrow(TenantIsolationError);
+    expect(() => router.getTenantDb("unknown-tenant")).toThrow(TenantIsolationError);
+  });
+
+  it("should throw TenantIsolationError when validating isolation for unregistered tenant", () => {
+    expect(() => router.validateIsolation("unknown-tenant", "eu-central")).toThrow(TenantIsolationError);
+  });
+
+  it("should throw TenantIsolationError when targetRegion is 'default'", () => {
+    router.registerTenantRegion("inst-eu-101", "eu-central");
+    expect(() => router.validateIsolation("inst-eu-101", "default")).toThrow(TenantIsolationError);
   });
 
   it("should route registered tenant to specific region database pool", () => {

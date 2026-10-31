@@ -1,4 +1,4 @@
-﻿import { EventBus } from "@/lib/observability/event-bus";
+import { EventBus } from "@/lib/observability/event-bus";
 import { defaultClusterClient } from "@/lib/redis/redis-cluster-client";
 import { revocationStore } from "./revocation-store";
 import { logIdentityEvent } from "./identity-audit-events";

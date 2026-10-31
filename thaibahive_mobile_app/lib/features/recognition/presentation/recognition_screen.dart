@@ -337,7 +337,7 @@ class _UserChip extends StatelessWidget {
           child: avatarUrl == null
               ? Text(initials,
                   style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.primary))
               : null,
@@ -348,7 +348,7 @@ class _UserChip extends StatelessWidget {
           children: [
             Text(label,
                 style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 9,
+                    fontSize: 11,
                     color: theme.colorScheme.onSurface
                         .withValues(alpha: 0.5))),
             Text(name,

@@ -9,6 +9,7 @@ import 'package:thaibahive_mobile/features/attendance/data/attendance_provider.d
 import 'package:thaibahive_mobile/features/attendance/presentation/nfc_scan_screen.dart';
 import 'package:thaibahive_mobile/features/attendance/presentation/qr_scan_screen.dart';
 import 'package:thaibahive_mobile/models/attendance_model.dart';
+import 'package:thaibahive_mobile/shared/widgets/ambient_canvas_background.dart';
 import 'package:thaibahive_mobile/shared/widgets/app_card.dart';
 import 'package:thaibahive_mobile/shared/widgets/status_badge.dart';
 import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
@@ -89,155 +90,125 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QRScanScreen()));
   }
 
-  void _showScanMethodBottomSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.sheet)),
-      ),
-      backgroundColor: isDark ? const Color(0xFF22262b) : Colors.white,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Select Check-in Method',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Choose a physical verification method to record attendance',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            _BottomSheetOption(
-              icon: Icons.location_on_rounded,
-              label: 'Campus Geofence (One-Tap)',
-              description: 'Instant GPS verification within campus boundary',
-              color: const Color(0xFF1a8a3e),
-              onTap: () async {
-                Navigator.pop(context);
-                final outcome = await ref.read(attendanceProvider.notifier).punchOneTap(isCheckIn: true);
-                if (context.mounted && outcome != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(outcome.message ?? 'Check-in recorded'),
-                      backgroundColor: outcome.isQueuedOffline ? Colors.amber[800] : const Color(0xFF1a8a3e),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-            ),
-            const SizedBox(height: 12),
-            _BottomSheetOption(
-              icon: Icons.nfc_rounded,
-              label: 'NFC Tag',
-              description: 'Scan an NFC tag at the entrance',
-              color: const Color(0xFF2196F3),
-              onTap: () {
-                Navigator.pop(context);
-                _openNFCScreen(context);
-              },
-            ),
-            const SizedBox(height: 12),
-            _BottomSheetOption(
-              icon: Icons.qr_code_scanner_rounded,
-              label: 'QR Code',
-              description: 'Scan the QR code displayed at the entrance',
-              color: const Color(0xFF9C27B0),
-              onTap: () {
-                Navigator.pop(context);
-                _openQRScreen(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(attendanceProvider);
     final stats = state.stats;
     final hasCheckIn = stats?.lastCheckIn != null;
     final hasCheckOut = stats?.lastCheckOut != null;
+    // Multi-shift / overtime: server-reported on-shift state (trailing 'in'
+    // event) wins; fall back to the legacy single-shift derivation.
+    final isOnShift = stats?.isOnShift ?? (hasCheckIn && !hasCheckOut);
     final isPresent = stats?.todayStatus == 'present';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance')),
-      body: RefreshIndicator(
-        color: const Color(0xFF1a8a3e),
-        onRefresh: () => ref.read(attendanceProvider.notifier).refresh(),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-          child: Column(
-            children: [
-              if (state.isLoading && stats == null)
-                const _AttendanceShimmer()
-              else if (state.error != null && stats == null)
-                AppErrorWidget(
-                  message: state.error!,
-                  onRetry: () => ref.read(attendanceProvider.notifier).refresh(),
-                )
-              else ...[
-                const SizedBox(height: 12),
-                RepaintBoundary(
-                  child: _CheckInOutButton(
-                    isCheckedIn: hasCheckIn && !hasCheckOut,
-                    isPresent: isPresent,
-                    pulseOpacity: _pulseOpacity,
-                    pulseScale: _pulseScale,
-                    buttonState: _buttonState,
-                    successController: _successController,
-                    failureController: _failureController,
-                    onCheckIn: () => _showScanMethodBottomSheet(context),
-                    onCheckOut: () async {
-                      setState(() => _buttonState = _ButtonState.loading);
-                      try {
-                        await ref.read(attendanceProvider.notifier).checkOut();
-                        if (mounted) _triggerSuccess();
-                      } catch (_) {
-                        if (mounted) _triggerFailure();
-                      }
-                    },
-                    isLoading: state.isLoading,
-                  ),
-                ),
-                if (!hasCheckIn || hasCheckOut) ...[
-                  const SizedBox(height: 20),
-                  _ScanMethodButtons(
-                    onNFCScan: () => _openNFCScreen(context),
-                    onQRScan: () => _openQRScreen(context),
-                  ),
-                ],
-                const SizedBox(height: 28),
-                _TodayStatusCard(stats: stats, isPresent: isPresent),
-                const SizedBox(height: 24),
-                _MonthlySummary(stats: stats),
-                const SizedBox(height: 24),
-                _RecentLogs(logs: state.logs),
-              ],
-            ],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('Attendance'),
+        backgroundColor: Colors.transparent,
+      ),
+      body: Stack(
+        children: [
+          // Ambient canvas so this screen renders identically whether it is
+          // mounted inside the nav shell (which supplies its own canvas) or
+          // pushed standalone (e.g. /me/attendance), where a transparent
+          // scaffold would otherwise fall through to the window background.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AmbientCanvasBackground(isDark: isDark),
+            ),
           ),
-        ),
+          RefreshIndicator(
+            color: const Color(0xFF1a8a3e),
+            onRefresh: () => ref.read(attendanceProvider.notifier).refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              child: Column(
+                children: [
+                  if (state.isLoading && stats == null)
+                    const _AttendanceShimmer()
+                  else if (state.error != null && stats == null)
+                    AppErrorWidget(
+                      message: state.error!,
+                      onRetry: () =>
+                          ref.read(attendanceProvider.notifier).refresh(),
+                    )
+                  else ...[
+                    const SizedBox(height: 12),
+                    RepaintBoundary(
+                      child: _CheckInOutButton(
+                        isCheckedIn: isOnShift,
+                        isPresent: isPresent,
+                        pulseOpacity: _pulseOpacity,
+                        pulseScale: _pulseScale,
+                        buttonState: _buttonState,
+                        successController: _successController,
+                        failureController: _failureController,
+                        onCheckIn: () async {
+                          // One-tap geofence punch — the NFC/QR buttons below
+                          // cover the alternative methods, so the picker sheet
+                          // only repeated options already on screen.
+                          final outcome = await ref
+                              .read(attendanceProvider.notifier)
+                              .punchOneTap(isCheckIn: true);
+                          if (mounted && outcome != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    outcome.message ?? 'Check-in recorded'),
+                                backgroundColor: outcome.isQueuedOffline
+                                    ? Colors.amber[800]
+                                    : const Color(0xFF1a8a3e),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                        onCheckOut: () async {
+                          // One-tap geofence clock-out — unified with
+                          // check-in via punchOneTap (GPS capture, offline
+                          // queue, snackbar feedback).
+                          final outcome = await ref
+                              .read(attendanceProvider.notifier)
+                              .punchOneTap(isCheckIn: false);
+                          if (mounted && outcome != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    outcome.message ?? 'Clock-out recorded'),
+                                backgroundColor: outcome.isQueuedOffline
+                                    ? Colors.amber[800]
+                                    : const Color(0xFF1a8a3e),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                        isLoading: state.isLoading,
+                      ),
+                    ),
+                    if (!isOnShift) ...[
+                      const SizedBox(height: 20),
+                      _ScanMethodButtons(
+                        onNFCScan: () => _openNFCScreen(context),
+                        onQRScan: () => _openQRScreen(context),
+                      ),
+                    ],
+                    const SizedBox(height: 28),
+                    _TodayStatusCard(stats: stats, isPresent: isPresent),
+                    const SizedBox(height: 24),
+                    _MonthlySummary(stats: stats),
+                    const SizedBox(height: 24),
+                    _RecentLogs(logs: state.logs),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -404,7 +375,10 @@ class _CheckInOutButton extends StatelessWidget {
                       ),
                       child: ClipOval(
                         child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                          filter: ImageFilter.blur(
+                            sigmaX: AppBlur.panel,
+                            sigmaY: AppBlur.panel,
+                          ),
                           child: Center(
                             child: _buildButtonContent(
                               color: color,
@@ -532,74 +506,6 @@ class _ScanMethodChip extends StatelessWidget {
                   fontSize: 13,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Bottom Sheet Option ──────────────────────────────────────────────────────
-
-class _BottomSheetOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String description;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _BottomSheetOption({
-    required this.icon,
-    required this.label,
-    required this.description,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.07)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
-                child: Icon(icon, size: AppIconSize.button, color: color),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(description, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.55))),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
             ],
           ),
         ),
@@ -750,7 +656,7 @@ class _MonthlySummary extends StatelessWidget {
                         item.label,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 10.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
                         ),

@@ -69,7 +69,7 @@ class FeeInstallmentCard extends StatelessWidget {
                     ),
                     child: Text(
                       'PAID',
-                      style: TextStyle(color: Colors.green.shade900, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.green.shade900, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   )
                 else

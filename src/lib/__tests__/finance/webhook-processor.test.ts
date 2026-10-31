@@ -21,7 +21,6 @@ describe('WebhookProcessor & DLQ Manager (Sprint-057 - FEE-006)', () => {
     factory.registerAdapter(new RazorpayAdapter('rzp_k1', 'rzp_s1', webhookSecret));
 
     processor = new WebhookProcessor(factory, dlq, store);
-    processor.clearProcessedKeys();
   });
 
   it('should verify signature and process valid webhook successfully', async () => {
@@ -193,8 +192,8 @@ describe('WebhookProcessor & DLQ Manager (Sprint-057 - FEE-006)', () => {
     expect(alloc?.paidAmount).toBe(20000);
 
     // Simulated restart: in-process dedup memory lost — redelivered webhook must
-    // still not double-credit (payment already completed + ledger marker row)
-    processor.clearProcessedKeys();
+    // still not double-credit. The DB-backed webhookEvents table survives the
+    // restart, so the second arrival is acknowledged as a duplicate.
     const redelivered = await processor.handleWebhook('razorpay', rawPayload, signature);
     expect(redelivered.success).toBe(true);
     alloc = await store.getAllocationById('alloc-700', 'inst-campus-a');

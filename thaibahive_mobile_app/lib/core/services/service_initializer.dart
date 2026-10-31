@@ -9,6 +9,7 @@ import 'offline_queue.dart';
 import 'offline_cache_service.dart';
 import 'qr_anti_replay.dart';
 import 'sync_coordinator.dart';
+import '../../features/attendance/data/services/attendance_reminder_service.dart';
 
 /// Centralized service initializer for the mobile app
 /// 
@@ -63,6 +64,14 @@ class ServiceInitializer {
         debugPrint('[ServiceInitializer] FCM Push Notifications initialized');
       } catch (e) {
         debugPrint('[ServiceInitializer] FCM initialization warning: $e');
+      }
+
+      // 8. Initialize Attendance Reminder Service
+      try {
+        await AttendanceReminderService().initialize();
+        debugPrint('[ServiceInitializer] Attendance Reminder Service initialized');
+      } catch (e) {
+        debugPrint('[ServiceInitializer] Attendance Reminder Service initialization warning: $e');
       }
       
       _initialized = true;

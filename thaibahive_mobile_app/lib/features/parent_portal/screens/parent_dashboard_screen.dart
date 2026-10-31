@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../auth/screens/web_view_handoff_screen.dart';
+import 'package:thaibahive_mobile/shared/screens/webview_handoff_screen.dart';
 import '../../examinations/screens/report_card_screen.dart';
 import '../widgets/multi_child_selector.dart';
 import '../widgets/student_summary_card.dart';
@@ -95,7 +95,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const WebViewHandoffScreen(
-                            targetUrl: '/finance/payments',
+                            targetPath: '/finance/payments',
                             title: 'Pay Dues Online',
                           ),
                         ),

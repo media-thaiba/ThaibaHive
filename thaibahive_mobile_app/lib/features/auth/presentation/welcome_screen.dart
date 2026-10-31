@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:thaibahive_mobile/app/theme.dart';
 import '../../../core/constants.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -66,11 +67,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1a1c1e) : Colors.white,
+      backgroundColor: AppColors.background(context),
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,

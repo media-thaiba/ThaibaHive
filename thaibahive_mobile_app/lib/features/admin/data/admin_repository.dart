@@ -104,6 +104,11 @@ class AdminRepository {
           .map((e) => ShiftModel.fromJson(e as Map<String, dynamic>))
           .toList();
     }
+    if (data is Map && data['shifts'] is List) {
+      return (data['shifts'] as List)
+          .map((e) => ShiftModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
     return [];
   }
 

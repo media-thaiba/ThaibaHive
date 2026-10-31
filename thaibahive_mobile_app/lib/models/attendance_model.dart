@@ -103,6 +103,24 @@ class AttendanceStatsModel {
   final int halfDays;
   final double totalWorkedHours;
 
+  /// Latest immutable attendance event of the day: 'in' | 'out' | null.
+  final String? latestEvent;
+
+  /// True when the most recent event is a check-in (active shift / overtime).
+  final bool? isOnShift;
+
+  /// Epoch ms of the latest attendance event.
+  final int? latestEventAt;
+
+  /// Assigned shift group name (e.g. 'General Shift', 'Morning Shift').
+  final String? shiftName;
+
+  /// 24h start time ('HH:mm') e.g. '09:00'.
+  final String? shiftStartTime;
+
+  /// 24h end time ('HH:mm') e.g. '17:00'.
+  final String? shiftEndTime;
+
   const AttendanceStatsModel({
     this.todayStatus,
     this.lastCheckIn,
@@ -112,17 +130,35 @@ class AttendanceStatsModel {
     this.lateDays = 0,
     this.halfDays = 0,
     this.totalWorkedHours = 0.0,
+    this.latestEvent,
+    this.isOnShift,
+    this.latestEventAt,
+    this.shiftName,
+    this.shiftStartTime,
+    this.shiftEndTime,
   });
 
-  factory AttendanceStatsModel.fromJson(Map<String, dynamic> json) =>
-      AttendanceStatsModel(
-        todayStatus: json['today_status'] as String?,
-        lastCheckIn: json['last_check_in'] as String?,
-        lastCheckOut: json['last_check_out'] as String?,
-        presentDays: json['present_days'] as int? ?? 0,
-        absentDays: json['absent_days'] as int? ?? 0,
-        lateDays: json['late_days'] as int? ?? 0,
-        halfDays: json['half_days'] as int? ?? 0,
-        totalWorkedHours: (json['total_worked_hours'] as num?)?.toDouble() ?? 0.0,
-      );
+  factory AttendanceStatsModel.fromJson(Map<String, dynamic> json) {
+    final lastCheckIn = json['last_check_in'] as String?;
+    final lastCheckOut = json['last_check_out'] as String?;
+    final shiftObj = json['shift'] as Map<String, dynamic>?;
+
+    return AttendanceStatsModel(
+      todayStatus: json['today_status'] as String?,
+      lastCheckIn: lastCheckIn,
+      lastCheckOut: lastCheckOut,
+      presentDays: json['present_days'] as int? ?? 0,
+      absentDays: json['absent_days'] as int? ?? 0,
+      lateDays: json['late_days'] as int? ?? 0,
+      halfDays: json['half_days'] as int? ?? 0,
+      totalWorkedHours: (json['total_worked_hours'] as num?)?.toDouble() ?? 0.0,
+      latestEvent: json['latest_event'] as String?,
+      isOnShift: json['is_on_shift'] as bool? ??
+          (lastCheckIn != null && lastCheckOut == null),
+      latestEventAt: (json['latest_event_at'] as num?)?.toInt(),
+      shiftName: shiftObj?['name'] as String?,
+      shiftStartTime: shiftObj?['start_time'] as String?,
+      shiftEndTime: shiftObj?['end_time'] as String?,
+    );
+  }
 }

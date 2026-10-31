@@ -16,10 +16,30 @@ class BookingsScreen extends ConsumerStatefulWidget {
 }
 
 class _BookingsScreenState extends ConsumerState<BookingsScreen> {
+  final _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     Future.microtask(() => ref.read(bookingsProvider.notifier).loadInitial());
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final max = _scrollController.position.maxScrollExtent;
+      final current = _scrollController.position.pixels;
+      if (current >= max - 250) {
+        ref.read(bookingsProvider.notifier).loadMore();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -71,9 +91,22 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
                         : RefreshIndicator(
                             onRefresh: () => notifier.refresh(),
                             child: ListView.builder(
+                              controller: _scrollController,
                               padding: const EdgeInsets.only(bottom: 80),
-                              itemCount: notifier.filteredBookings.length,
+                              itemCount: notifier.filteredBookings.length + (state.isLoadingMore ? 1 : 0),
                               itemBuilder: (_, i) {
+                                if (i >= notifier.filteredBookings.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                    ),
+                                  );
+                                }
                                 final b = notifier.filteredBookings[i];
                                 return Card(
                                   margin: const EdgeInsets.symmetric(

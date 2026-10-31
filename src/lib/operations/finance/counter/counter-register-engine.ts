@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { FeeDbStore } from '../../../../db/fee-store';
 import {
   FeeCounterRegisterItem,
@@ -35,7 +36,7 @@ export class CounterRegisterEngine {
     }
 
     const register: FeeCounterRegisterItem = {
-      id: `shift_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      id: `shift_${crypto.randomUUID()}`,
       institutionId,
       cashierId,
       counterName,
@@ -60,16 +61,35 @@ export class CounterRegisterEngine {
    * Records a payment to the active cashier shift.
    * Totals are persisted immediately so they survive restarts and remain
    * consistent with the DB row used for close-variance reporting.
+   *
+   * A paymentId is required so the shift total is anchored to a real,
+   * completed fee payment row — preventing manual inflation of shift
+   * totals without a corresponding payment ledger entry.
    */
   public async recordShiftTransaction(
     shiftId: string,
     method: PaymentMethod,
     amount: number,
+    paymentId: string,
     institutionId?: string
   ): Promise<FeeCounterRegisterItem> {
     const shift = await this.store.getCounterRegisterById(shiftId, institutionId);
     if (!shift || shift.status !== 'open') {
       throw new Error(`Shift ${shiftId} is not active or open`);
+    }
+
+    const payment = await this.store.getPaymentById(paymentId, institutionId);
+    if (!payment) {
+      throw new Error(`Payment ${paymentId} not found — cannot record against shift`);
+    }
+    if (payment.paymentStatus !== 'completed') {
+      throw new Error(`Payment ${paymentId} is not completed (status: ${payment.paymentStatus})`);
+    }
+    if (Math.round((payment.netAmount || payment.amount || 0) * 100) / 100 !== amount) {
+      throw new Error(`Payment ${paymentId} amount does not match recorded shift amount`);
+    }
+    if (payment.counterRegisterId && payment.counterRegisterId !== shiftId) {
+      throw new Error(`Payment ${paymentId} is already assigned to a different shift`);
     }
 
     if (method === 'cash') {
@@ -160,12 +180,13 @@ export class CounterRegisterEngine {
     }
 
     const totalAll = shift.systemCashTotal + shift.systemPosTotal + shift.systemChequeTotal;
+    const paymentCount = await this.store.countShiftTransactions(shiftId, institutionId);
 
     return {
       register: closed,
       expectedCashInDrawer: expectedCash,
       totalCollectedAllModes: totalAll,
-      paymentCount: 0,
+      paymentCount,
       isBalanced: variance === 0,
     };
   }

@@ -2,13 +2,13 @@ import crypto from "crypto";
 import { mintCsrfToken } from "@/lib/api/csrf";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { staff } from "@/db/schema";
+import { staff, userSessions } from "@/db/schema";
 import { verifyPassword, createSession, createSessionWithRefresh } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth/schemas";
 import { logActivity } from "@/lib/api/activity-log";
 import { checkDistributedRateLimit, extractIp, rateLimitResponse } from "@/lib/api/rate-limit";
 import { serverLogger } from "@/lib/server-logger";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { withPublicApm } from "@/lib/api/public-apm";
 
 export const POST = withPublicApm(async function POST(request: Request) {
@@ -121,12 +121,24 @@ export const POST = withPublicApm(async function POST(request: Request) {
 
     // 3. Critical Risk Anomaly (IDP-006 AC4): Terminate sessions and block authentication completely
     if (risk.level === "critical") {
-      const { revocationStore } = await import("@/lib/identity/revocation-store");
-      const { publishRevocation } = await import("@/lib/identity/revocation-mesh");
       const { logIdentityEvent } = await import("@/lib/identity/identity-audit-events");
 
-      revocationStore.revoke(staffMember.id, staffMember.id, "CRITICAL_SECURITY_RISK_BLOCKED");
-      await publishRevocation(staffMember.id, staffMember.id, "CRITICAL_SECURITY_RISK_BLOCKED");
+      await db.transaction(async (tx) => {
+        await tx
+          .update(staff)
+          .set({
+            tokenVersion: sql`coalesce(${staff.tokenVersion}, 1) + 1`,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(staff.id, staffMember.id))
+          .run();
+
+        await tx
+          .update(userSessions)
+          .set({ status: "terminated", logoutAt: Date.now() })
+          .where(and(eq(userSessions.staffId, staffMember.id), eq(userSessions.status, "active")))
+          .run();
+      });
 
       await logIdentityEvent({
         eventType: "session.revoked",

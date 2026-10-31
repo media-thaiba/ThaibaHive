@@ -53,8 +53,16 @@ export class TenantRouter {
   }
 
   public getTenantRegion(tenantId: string): TenantRegion {
-    if (!tenantId) return this.defaultRegion;
-    return this.tenantRegionMap.get(tenantId) || this.defaultRegion;
+    if (!tenantId) {
+      throw new TenantIsolationError("tenantId is required");
+    }
+    const region = this.tenantRegionMap.get(tenantId);
+    if (!region) {
+      throw new TenantIsolationError(
+        `Tenant '${tenantId}' has no region assignment. Register it before accessing.`
+      );
+    }
+    return region;
   }
 
   public getTenantDb(tenantId: string): any {
@@ -62,12 +70,14 @@ export class TenantRouter {
       return this.defaultDb;
     }
 
-    const region = this.getTenantRegion(tenantId);
-    const pool = this.regionPools.get(region);
+    // FAIL CLOSED: require explicit region assignment
+    const assignedRegion = this.getTenantRegion(tenantId);
 
+    const pool = this.regionPools.get(assignedRegion);
     if (!pool) {
-      // Fallback to default pool if regional pool is not explicitly registered
-      return this.defaultDb;
+      throw new TenantIsolationError(
+        `No database pool registered for region '${assignedRegion}' (tenant '${tenantId}')`
+      );
     }
 
     return pool;
@@ -75,12 +85,24 @@ export class TenantRouter {
 
   public validateIsolation(tenantId: string, targetRegion: TenantRegion): boolean {
     if (!this.enabled) return true;
+
     const assignedRegion = this.getTenantRegion(tenantId);
-    if (assignedRegion !== targetRegion && targetRegion !== "default" && assignedRegion !== "default") {
+
+    // FAIL CLOSED: "default" is not a valid region — it's a sentinel for "unassigned"
+    if (assignedRegion === "default" || targetRegion === "default") {
       throw new TenantIsolationError(
-        `Cross-tenant partition access blocked: Tenant '${tenantId}' is assigned to '${assignedRegion}' but attempted access on '${targetRegion}'`
+        `Tenant '${tenantId}' has no assigned region (got '${assignedRegion}'). ` +
+        `Cross-region access requires explicit region assignment.`
       );
     }
+
+    if (assignedRegion !== targetRegion) {
+      throw new TenantIsolationError(
+        `Cross-tenant partition access blocked: Tenant '${tenantId}' is assigned to '${assignedRegion}' ` +
+        `but attempted access on '${targetRegion}'`
+      );
+    }
+
     return true;
   }
 

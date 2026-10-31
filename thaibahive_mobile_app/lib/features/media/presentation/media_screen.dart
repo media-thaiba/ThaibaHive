@@ -11,8 +11,10 @@ import 'package:thaibahive_mobile/features/auth/data/auth_state.dart';
 import 'package:thaibahive_mobile/features/media/data/media_outbox.dart';
 import 'package:thaibahive_mobile/features/media/data/media_providers.dart';
 import 'package:thaibahive_mobile/features/media/data/media_repository.dart';
+import 'package:thaibahive_mobile/shared/widgets/app_card.dart';
 import 'package:thaibahive_mobile/shared/widgets/error_widget.dart';
 import 'package:thaibahive_mobile/shared/widgets/loading_widget.dart';
+import 'package:thaibahive_mobile/shared/widgets/sliding_pill_segmented_control.dart';
 
 /// Media Screen - Dedicated tab for users with the `media.asset.view`
 /// capability (see `lib/app/capability_registry.dart`).
@@ -50,13 +52,21 @@ class _MediaScreenState extends ConsumerState<MediaScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Media'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.photo_library_rounded), text: 'Gallery'),
-            Tab(icon: Icon(Icons.camera_alt_rounded), text: 'Capture'),
-            Tab(icon: Icon(Icons.cloud_upload_rounded), text: 'Outbox'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            // ListenableBuilder keeps the pill in sync with TabController so
+            // swipe gestures on TabBarView move the indicator, not just taps.
+            child: ListenableBuilder(
+              listenable: _tabController,
+              builder: (context, _) => SlidingPillSegmentedControl(
+                segments: const ['Gallery', 'Capture', 'Outbox'],
+                selectedIndex: _tabController.index,
+                onValueChanged: (index) => _tabController.animateTo(index),
+              ),
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -301,6 +311,7 @@ class _CaptureTabState extends ConsumerState<_CaptureTab> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (!widget.canCapture) {
       return const EmptyStateWidget(
@@ -311,58 +322,67 @@ class _CaptureTabState extends ConsumerState<_CaptureTab> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              shape: BoxShape.circle,
+      padding: EdgeInsets.zero,
+      child: AppCard(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
+        borderWidth:
+            isDark ? AppBorder.hairlineDark : AppBorder.hairline,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.camera_alt_rounded,
+                size: 64,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
             ),
-            child: Icon(
-              Icons.camera_alt_rounded,
-              size: 64,
-              color: theme.colorScheme.onPrimaryContainer,
+            const SizedBox(height: 24),
+            Text(
+              'Capture Moments',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Capture Moments',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+            const SizedBox(height: 8),
+            Text(
+              'Take photos and videos of campus events.\nAll captures go to the outbox for review.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Take photos and videos of campus events.\nAll captures go to the outbox for review.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: _isPicking ? null : _pickFromCamera,
+              icon: const Icon(Icons.camera_alt_rounded),
+              label: const Text('Open Camera'),
+              style: FilledButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: _isPicking ? null : _pickFromCamera,
-            icon: const Icon(Icons.camera_alt_rounded),
-            label: const Text('Open Camera'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed:
+                  widget.canUpload && !_isPicking ? _pickFromGallery : null,
+              icon: const Icon(Icons.photo_library_rounded),
+              label: const Text('Pick from Gallery'),
+              style: FilledButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: widget.canUpload && !_isPicking ? _pickFromGallery : null,
-            icon: const Icon(Icons.photo_library_rounded),
-            label: const Text('Pick from Gallery'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

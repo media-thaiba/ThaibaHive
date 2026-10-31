@@ -46,7 +46,7 @@ class ReceiptViewerScreen extends StatelessWidget {
                     const Divider(height: 32),
                     Text(
                       'HMAC Hash: ${receipt.receiptHash.substring(0, 16)}...',
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.grey),
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),

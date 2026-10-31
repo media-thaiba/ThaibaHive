@@ -67,21 +67,22 @@ export async function PATCH(request: Request) {
 
     const hashed = await hashPassword(parsed.data.newPassword);
     
-    // Invalidate active sessions in user_sessions (Rule 20)
-    await db
-      .update(userSessions)
-      .set({
-        status: "terminated",
-        logoutAt: Date.now(),
-      })
-      .where(and(eq(userSessions.staffId, session.staffId), eq(userSessions.status, "active")))
-      .run();
+    // Atomically invalidate active sessions and increment tokenVersion in user_sessions + staff
+    await db.transaction(async (tx) => {
+      await tx
+        .update(userSessions)
+        .set({
+          status: "terminated",
+          logoutAt: Date.now(),
+        })
+        .where(and(eq(userSessions.staffId, session.staffId), eq(userSessions.status, "active")))
+        .run();
 
-    // Increment tokenVersion on staff
-    await db.update(staff).set({
-      passwordHash: hashed,
-      tokenVersion: sql`${staff.tokenVersion} + 1`,
-    }).where(eq(staff.id, session.staffId)).run();
+      await tx.update(staff).set({
+        passwordHash: hashed,
+        tokenVersion: sql`${staff.tokenVersion} + 1`,
+      }).where(eq(staff.id, session.staffId)).run();
+    });
 
     return NextResponse.json({ success: true });
   }

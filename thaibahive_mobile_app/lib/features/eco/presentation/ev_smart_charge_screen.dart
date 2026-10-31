@@ -48,7 +48,7 @@ class EvSmartChargeScreen extends ConsumerWidget {
               trailing: Chip(
                 label: Text(
                   s.status.toUpperCase().replaceAll('_', ' '),
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 backgroundColor: isV2G ? Colors.amber.shade100 : Colors.green.shade50,
               ),

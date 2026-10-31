@@ -91,8 +91,33 @@ export async function rebuildAttendanceDayProjection(
 
   if (events.length === 0) return;
 
-  const inEvents = events.filter((e) => e.kind === "in");
-  const outEvents = events.filter((e) => e.kind === "out");
+  // Detect review anomalies across ALL events (including flagged ones)
+  let needsReview = false;
+  const reviewReasons: string[] = [];
+
+  // Filter out flagged/suspicious punches from authoritative payroll metrics
+  const SUSPICIOUS_FLAGS = ["mock_location", "clock_skew", "geofence_violation"];
+  const isSuspicious = (ev: typeof events[number]) =>
+    ev.flags ? SUSPICIOUS_FLAGS.some((flag) => ev.flags!.includes(flag)) : false;
+
+  for (const ev of events) {
+    if (isSuspicious(ev)) {
+      needsReview = true;
+      if (!reviewReasons.includes(ev.flags!)) reviewReasons.push(ev.flags!);
+    }
+  }
+
+  // Authoritative calculations use ONLY trusted (unflagged) punches
+  const trustedEvents = events.filter((e) => !isSuspicious(e));
+  const allPunchesFlagged = events.length > 0 && trustedEvents.length === 0;
+
+  if (allPunchesFlagged) {
+    needsReview = true;
+    reviewReasons.push("all_punches_flagged");
+  }
+
+  const inEvents = trustedEvents.filter((e) => e.kind === "in");
+  const outEvents = trustedEvents.filter((e) => e.kind === "out");
 
   const firstIn = inEvents.length > 0 ? inEvents[0].effectiveAt : null;
   const lastOut = outEvents.length > 0 ? outEvents[outEvents.length - 1].effectiveAt : null;
@@ -100,14 +125,19 @@ export async function rebuildAttendanceDayProjection(
   const firstInTime = firstIn ? formatLocalTime(firstIn, timeZone) : null;
   const lastOutTime = lastOut ? formatLocalTime(lastOut, timeZone) : null;
 
+  // Session-sum worked minutes using ONLY trusted punches
   let totalMinutes = 0;
-  if (firstIn && lastOut && lastOut >= firstIn) {
-    totalMinutes = Math.round((lastOut - firstIn) / 60000);
+  let openInAt: number | null = null;
+  for (const ev of trustedEvents) {
+    if (ev.kind === "in") {
+      if (openInAt === null) openInAt = ev.effectiveAt;
+    } else if (ev.kind === "out") {
+      if (openInAt !== null && ev.effectiveAt >= openInAt) {
+        totalMinutes += Math.round((ev.effectiveAt - openInAt) / 60000);
+      }
+      openInAt = null;
+    }
   }
-
-  // Detect review anomalies
-  let needsReview = false;
-  const reviewReasons: string[] = [];
 
   if (lastOut && !firstIn) {
     needsReview = true;
@@ -118,17 +148,11 @@ export async function rebuildAttendanceDayProjection(
     reviewReasons.push("invalid_sequence: lastOut is earlier than firstIn");
   }
 
-  // Check event flags
-  for (const ev of events) {
-    if (ev.flags && (ev.flags.includes("mock_location") || ev.flags.includes("clock_skew") || ev.flags.includes("geofence_violation"))) {
-      needsReview = true;
-      if (!reviewReasons.includes(ev.flags)) reviewReasons.push(ev.flags);
-    }
-  }
-
   // Determine attendance status
   let status = "present";
-  if (!firstIn && lastOut) {
+  if (allPunchesFlagged) {
+    status = "absent";
+  } else if (!firstIn && lastOut) {
     status = "half_day";
   } else if (firstIn && totalMinutes > 0 && totalMinutes < 240) {
     status = "half_day";

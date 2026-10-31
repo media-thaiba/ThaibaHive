@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
+
 class ComingSoonScreen extends StatelessWidget {
   final String title;
   final IconData? icon;
@@ -55,13 +57,7 @@ class ComingSoonScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+                        boxShadow: AppShadows.card(Colors.black),
                       ),
                       child: Icon(
                         icon ?? Icons.lock_outline_rounded,

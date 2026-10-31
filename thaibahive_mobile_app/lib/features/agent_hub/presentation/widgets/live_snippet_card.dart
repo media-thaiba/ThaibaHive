@@ -96,7 +96,7 @@ class LiveSnippetCard extends StatelessWidget {
                       child: Text(
                         '${snippet.hazardType?.toUpperCase()} [${snippet.severity ?? "ALERT"}]',
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: sevColor,
                         ),
@@ -108,7 +108,7 @@ class LiveSnippetCard extends StatelessWidget {
                     snippet.timestamp.length >= 19
                         ? snippet.timestamp.substring(11, 19)
                         : snippet.timestamp,
-                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                   ),
                 ],
               ),

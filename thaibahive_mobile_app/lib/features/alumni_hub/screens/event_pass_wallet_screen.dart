@@ -69,7 +69,7 @@ class EventPassWalletScreen extends ConsumerWidget {
                             const Icon(Icons.qr_code, size: 100, color: Colors.black),
                             Text(
                               activePass.ticketNumber,
-                              style: const TextStyle(fontSize: 9, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -84,7 +84,7 @@ class EventPassWalletScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     'HMAC Hash: ${activePass.ticketPassHash.substring(0, 16)}...',
-                    style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: Colors.grey.shade500),
                   ),
                   const SizedBox(height: 16),
                   Container(

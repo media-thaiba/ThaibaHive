@@ -248,38 +248,63 @@ tasks: fallback
   }
 
   Future<void> updateTask(String id, Map<String, dynamic> data) async {
+    final current = state.valueOrNull;
+    if (current != null) {
+      final updatedList = current.tasks.map((t) {
+        if (t.id == id) {
+          return t.copyWith(
+            status: data['status'] as String? ?? t.status,
+            priority: data['priority'] as String? ?? t.priority,
+            title: data['title'] as String? ?? t.title,
+            description: data['description'] as String? ?? t.description,
+          );
+        }
+        return t;
+      }).toList();
+      state = AsyncValue.data(current.copyWith(tasks: updatedList));
+    }
+
     try {
       await _apiClient.dio.put('/tasks/$id', data: data);
       await offlineCacheService.invalidateCache(tasksCacheKey);
-      await fetchTasks();
     } catch (e) {
       // Enqueue for offline sync
       await offlineQueue.enqueue(
         type: 'task_update',
         payload: {'id': id, ...data},
       );
-      state = AsyncValue.data(CachedTasksState(
-        tasks: state.valueOrNull?.tasks ?? [],
-        error: 'Task update queued for offline sync',
-      ));
+      if (current != null) {
+        state = AsyncValue.data(current.copyWith(
+          tasks: state.valueOrNull?.tasks ?? current.tasks,
+          error: 'Task update queued for offline sync',
+        ));
+      }
     }
   }
 
   Future<void> deleteTask(String id) async {
+    final current = state.valueOrNull;
+    if (current != null) {
+      state = AsyncValue.data(current.copyWith(
+        tasks: current.tasks.where((t) => t.id != id).toList(),
+      ));
+    }
+
     try {
       await _apiClient.dio.delete('/tasks/$id');
       await offlineCacheService.invalidateCache(tasksCacheKey);
-      await fetchTasks();
     } catch (e) {
       // Enqueue for offline sync
       await offlineQueue.enqueue(
         type: 'task_delete',
         payload: {'id': id},
       );
-      state = AsyncValue.data(CachedTasksState(
-        tasks: state.valueOrNull?.tasks ?? [],
-        error: 'Task deletion queued for offline sync',
-      ));
+      if (current != null) {
+        state = AsyncValue.data(current.copyWith(
+          tasks: state.valueOrNull?.tasks ?? current.tasks,
+          error: 'Task deletion queued for offline sync',
+        ));
+      }
     }
   }
 

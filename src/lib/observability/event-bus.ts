@@ -37,6 +37,7 @@ export class EventBus {
   private metricsEnabled = true;
 
   private listeners: Set<(event: ObservabilityEvent) => void> = new Set();
+  private readonly maxListeners = 100;
 
   private constructor() {
     this.resetFlushTimer();
@@ -49,11 +50,20 @@ export class EventBus {
     return EventBus.instance;
   }
 
-  subscribe(listener: (event: ObservabilityEvent) => void): () => void {
+  subscribe(listener: (event: ObservabilityEvent) => void, replayCount = 50): () => void {
+    if (this.listeners.size >= this.maxListeners) {
+      console.warn("[EventBus] Listener capacity reached (100). Ignoring new subscription to prevent leak.");
+      return () => {};
+    }
     this.listeners.add(listener);
-    // Replay ring buffer to subscriber for startup sync
-    for (const event of this.ringBuffer) {
-      listener(event);
+    // Replay capped ring buffer slice to subscriber for startup sync
+    const replaySlice = this.ringBuffer.slice(-Math.max(0, replayCount));
+    for (const event of replaySlice) {
+      try {
+        listener(event);
+      } catch (err) {
+        console.error("[EventBus] Replay subscriber error:", err);
+      }
     }
     return () => {
       this.listeners.delete(listener);
@@ -83,11 +93,16 @@ export class EventBus {
 
     const obsEvent: ObservabilityEvent = { type: "event", data: fullEvent };
     this.addToRingBuffer(obsEvent);
-    this.listeners.forEach((listener) => {
-      try {
-        listener(obsEvent);
-      } catch (err) {
-        console.error("[EventBus] Failed to notify subscriber:", err);
+
+    // Asynchronous dispatch via queueMicrotask to unblock the caller's critical path
+    const currentListeners = Array.from(this.listeners);
+    queueMicrotask(() => {
+      for (const listener of currentListeners) {
+        try {
+          listener(obsEvent);
+        } catch (err) {
+          console.error("[EventBus] Failed to notify subscriber:", err);
+        }
       }
     });
 
@@ -108,11 +123,16 @@ export class EventBus {
 
     const obsEvent: ObservabilityEvent = { type: "metric", data: fullMetric };
     this.addToRingBuffer(obsEvent);
-    this.listeners.forEach((listener) => {
-      try {
-        listener(obsEvent);
-      } catch (err) {
-        console.error("[EventBus] Failed to notify subscriber:", err);
+
+    // Asynchronous dispatch via queueMicrotask to unblock the caller's critical path
+    const currentListeners = Array.from(this.listeners);
+    queueMicrotask(() => {
+      for (const listener of currentListeners) {
+        try {
+          listener(obsEvent);
+        } catch (err) {
+          console.error("[EventBus] Failed to notify subscriber:", err);
+        }
       }
     });
 
@@ -137,6 +157,17 @@ export class EventBus {
     this.flushTimeout = setTimeout(() => {
       this.flush().catch((err) => console.error("[EventBus] Async flush error:", err));
     }, 5000);
+    if (typeof this.flushTimeout?.unref === "function") {
+      this.flushTimeout.unref();
+    }
+  }
+
+  destroy() {
+    if (this.flushTimeout) {
+      clearTimeout(this.flushTimeout);
+      this.flushTimeout = null;
+    }
+    this.listeners.clear();
   }
 
   async flush() {
@@ -158,6 +189,13 @@ export class EventBus {
       });
     } catch (err) {
       console.error("[EventBus] Failed to flush telemetry batch to database:", err);
+      // Cap pending buffers to avoid memory leaks on repeated DB failures
+      if (this.pendingEvents.length > 2000) {
+        this.pendingEvents.splice(0, this.pendingEvents.length - 1000);
+      }
+      if (this.pendingMetrics.length > 2000) {
+        this.pendingMetrics.splice(0, this.pendingMetrics.length - 1000);
+      }
     }
   }
 

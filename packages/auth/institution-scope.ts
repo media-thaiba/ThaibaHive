@@ -1,3 +1,5 @@
+import { membershipAls } from "./membership-cache";
+import { sessionAls } from "./session-context";
 import { verifySession, type SessionPayload } from "./session";
 import { db, staffInstitutions, institutions } from "@thaiba/db";
 import { eq, inArray } from "drizzle-orm";
@@ -26,6 +28,11 @@ export function isRegionalScopeRole(role: string): boolean {
  * ordered deterministically.
  */
 export async function getStaffInstitutionMemberships(staffId: string): Promise<string[]> {
+  const store = membershipAls.getStore();
+  if (store && store.memberships.has(staffId)) {
+    return store.memberships.get(staffId)!;
+  }
+
   try {
     const rows = await db
       .select({ institutionId: staffInstitutions.institutionId })
@@ -33,7 +40,11 @@ export async function getStaffInstitutionMemberships(staffId: string): Promise<s
       .where(eq(staffInstitutions.staffId, staffId))
       .orderBy(staffInstitutions.institutionId);
 
-    return Array.isArray(rows) ? rows.map((r) => r.institutionId) : [];
+    const result = Array.isArray(rows) ? rows.map((r) => r.institutionId) : [];
+    if (store) {
+      store.memberships.set(staffId, result);
+    }
+    return result;
   } catch {
     return [];
   }
@@ -48,8 +59,9 @@ interface GlobalWithActiveSession {
  * Returns null if the user has a global role or has no memberships.
  */
 export async function getUserInstitutionScope(sessionParam?: SessionPayload | null): Promise<string | null> {
+  const activeSession = sessionAls.getStore();
   const testSession = process.env.NODE_ENV === 'test' ? (globalThis as unknown as GlobalWithActiveSession).__activeSession : undefined;
-  const session = sessionParam !== undefined ? sessionParam : (testSession || (await verifySession()));
+  const session = sessionParam !== undefined ? sessionParam : (activeSession || testSession || (await verifySession()));
   if (!session) return null;
 
   if (isGlobalScopeRole(session.role)) {
@@ -58,9 +70,6 @@ export async function getUserInstitutionScope(sessionParam?: SessionPayload | nu
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
   if (memberships.length === 0) {
-    if (session.institutionId && session.institutionId !== "global") {
-      return session.institutionId;
-    }
     return null;
   }
   return memberships[0] ?? null;
@@ -80,8 +89,9 @@ export async function resolveScopedInstitutionId(
   sessionParam?: SessionPayload | null,
   options?: { allowGlobal?: boolean }
 ): Promise<string> {
+  const activeSession = sessionAls.getStore();
   const testSession = process.env.NODE_ENV === 'test' ? (globalThis as unknown as GlobalWithActiveSession).__activeSession : undefined;
-  const session = sessionParam !== undefined ? sessionParam : (testSession || (await verifySession()));
+  const session = sessionParam !== undefined ? sessionParam : (activeSession || testSession || (await verifySession()));
   if (!session) {
     throw new TenantMismatchError("Unauthorized: Active session required to resolve institution scope.");
   }
@@ -97,9 +107,6 @@ export async function resolveScopedInstitutionId(
   // Tier 2: regional_admin (Regional Cluster)
   if (isRegionalScopeRole(session.role)) {
     const cluster = await getStaffInstitutionMemberships(session.staffId);
-    if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
-      cluster.push(session.institutionId);
-    }
     if (cluster.length === 0) {
       throw new TenantMismatchError("Forbidden: Regional administrator has no assigned regional cluster.");
     }
@@ -113,15 +120,18 @@ export async function resolveScopedInstitutionId(
 
   // Tier 3, 4, 5: Institution / Department / Staff pinned to verified memberships / session.institutionId
   const memberships = await getStaffInstitutionMemberships(session.staffId);
-  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-    memberships.push(session.institutionId);
-  }
 
   if (memberships.length === 0) {
     throw new TenantMismatchError("Forbidden: Scoped account has no assigned institution.");
   }
 
   const membershipSet = new Set(memberships);
+
+  if (session.institutionId && session.institutionId !== "global" && !membershipSet.has(session.institutionId)) {
+    throw new TenantMismatchError(
+      `Forbidden: Session claims institution (${session.institutionId}) but membership was revoked or not assigned.`
+    );
+  }
 
   if (requestedInstitutionId) {
     if (requestedInstitutionId === "global" || !membershipSet.has(requestedInstitutionId)) {
@@ -164,9 +174,6 @@ export async function resolveRequestInstitution(
 
   if (isRegionalScopeRole(session.role)) {
     const cluster = await getStaffInstitutionMemberships(session.staffId);
-    if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
-      cluster.push(session.institutionId);
-    }
     if (cluster.length === 0) {
       throw new TenantMismatchError("Forbidden: Regional administrator has no assigned regional cluster.");
     }
@@ -179,15 +186,18 @@ export async function resolveRequestInstitution(
   }
 
   const memberships = await getStaffInstitutionMemberships(session.staffId);
-  if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-    memberships.push(session.institutionId);
-  }
 
   if (memberships.length === 0) {
     throw new TenantMismatchError("Forbidden: Scoped account has no assigned institution.");
   }
 
   const membershipSet = new Set(memberships);
+
+  if (session.institutionId && session.institutionId !== "global" && !membershipSet.has(session.institutionId)) {
+    throw new TenantMismatchError(
+      `Forbidden: Session claims institution (${session.institutionId}) but membership was revoked or not assigned.`
+    );
+  }
 
   if (requested) {
     if (requested === "global" || !membershipSet.has(requested)) {

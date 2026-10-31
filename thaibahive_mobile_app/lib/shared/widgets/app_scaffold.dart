@@ -12,6 +12,7 @@ class AppScaffold extends StatelessWidget {
   final VoidCallback? onRetry;
   final List<Widget>? actions;
   final bool showBack;
+  final bool isModal;
   final bool showNotification;
   final int notificationCount;
   final bool showSearch;
@@ -33,6 +34,7 @@ class AppScaffold extends StatelessWidget {
     this.onRetry,
     this.actions,
     this.showBack = true,
+    this.isModal = false,
     this.showNotification = false,
     this.notificationCount = 0,
     this.showSearch = false,
@@ -69,6 +71,7 @@ class AppScaffold extends StatelessWidget {
               title: title,
               actions: actions,
               showBack: showBack,
+              isModal: isModal,
               showNotification: showNotification,
               notificationCount: notificationCount,
               showSearch: showSearch,

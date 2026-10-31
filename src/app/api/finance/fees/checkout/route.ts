@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/auth-guard';
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rate-limit";
@@ -55,9 +56,9 @@ export const POST = requireAuth(async (request, session) => {
     const factory = GatewayAdapterFactory.getInstance();
     const adapter = factory.getAdapter(parsed.data.paymentMethod);
 
-    const receiptNumber = `RCPT-${Date.now().toString().slice(-6)}`;
+    const receiptNumber = `RCPT-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const order = await adapter.createOrder({
-      orderId: `ord_${Date.now()}`,
+      orderId: `ord_${crypto.randomUUID()}`,
       amount: requestedAmount,
       currency: parsed.data.currency,
       receiptNumber,
@@ -71,10 +72,10 @@ export const POST = requireAuth(async (request, session) => {
       },
     });
 
-    const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const paymentId = `pay_${crypto.randomUUID()}`;
     const payment = await store.recordPayment({
       id: paymentId,
-      paymentNumber: `PAY-${Date.now().toString().slice(-8)}`,
+      paymentNumber: `PAY-${Date.now()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       institutionId: allocation.institutionId,
       allocationId: allocation.id,
       studentId: allocation.studentId,

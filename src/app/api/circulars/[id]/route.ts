@@ -83,9 +83,6 @@ export const PATCH = requireAuth(async (request, session, context) => {
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     const callerInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
-    if (session.institutionId) {
-      callerInstIds.push(session.institutionId);
-    }
 
     if (!existing.targetInstitutionId && existing.uploadedById !== session.staffId) {
       return NextResponse.json({ error: "Forbidden: Cannot modify global circulars" }, { status: 403 });
@@ -158,9 +155,6 @@ export const DELETE = requireAuth(async (_request, session, context) => {
       .where(eq(staffInstitutions.staffId, session.staffId))
       .all();
     const callerInstIds = callerInsts.map((i) => i.institutionId).filter(Boolean);
-    if (session.institutionId) {
-      callerInstIds.push(session.institutionId);
-    }
 
     if (!existing.targetInstitutionId && existing.uploadedById !== session.staffId) {
       return NextResponse.json({ error: "Forbidden: Cannot delete global circulars" }, { status: 403 });

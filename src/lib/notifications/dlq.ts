@@ -33,6 +33,15 @@ export function enqueueDlq(
   targetUserId: string,
   error: string
 ): void {
+  _enqueueDlq(id, payload, targetUserId, error);
+}
+
+function _enqueueDlq(
+  id: string,
+  payload: Record<string, unknown>,
+  targetUserId: string,
+  error: string
+): void {
   const now = new Date();
   const existing = dlqStore.get(id);
   const retries = existing ? existing.retries + 1 : 0;

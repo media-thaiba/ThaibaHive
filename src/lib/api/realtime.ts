@@ -12,17 +12,24 @@ export type SSEConnection = {
 const globalForSSE = globalThis as unknown as {
   sseConnections?: Map<string, Set<SSEConnection>>;
   disconnectTimers?: Map<string, ReturnType<typeof setTimeout>>;
+  institutionConnections?: Map<string, Set<SSEConnection>>;
+  globalNotificationConnections?: Set<SSEConnection>;
 };
 
 export const sseConnections =
   globalForSSE.sseConnections ?? new Map<string, Set<SSEConnection>>();
 export const disconnectTimers =
   globalForSSE.disconnectTimers ?? new Map<string, ReturnType<typeof setTimeout>>();
+export const institutionConnections =
+  globalForSSE.institutionConnections ?? new Map<string, Set<SSEConnection>>();
+export const globalNotificationConnections =
+  globalForSSE.globalNotificationConnections ?? new Set<SSEConnection>();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForSSE.sseConnections = sseConnections;
-  globalForSSE.disconnectTimers = disconnectTimers;
-}
+// Unconditionally attach in Node runtime to prevent split-brain under module re-evaluation
+globalForSSE.sseConnections = sseConnections;
+globalForSSE.disconnectTimers = disconnectTimers;
+globalForSSE.institutionConnections = institutionConnections;
+globalForSSE.globalNotificationConnections = globalNotificationConnections;
 
 const DISCONNECT_DEBOUNCE_MS = 5_000;
 
@@ -33,14 +40,48 @@ export function registerSSEConnection(key: string, conn: SSEConnection) {
     sseConnections.set(key, set);
   }
   set.add(conn);
+
+  // Maintain reverse index for institution event broadcasting
+  if (key.startsWith("notification-")) {
+    if (conn.institutionIds && conn.institutionIds.length > 0) {
+      for (const instId of conn.institutionIds) {
+        let instSet = institutionConnections.get(instId);
+        if (!instSet) {
+          instSet = new Set();
+          institutionConnections.set(instId, instSet);
+        }
+        instSet.add(conn);
+      }
+    } else {
+      globalNotificationConnections.add(conn);
+    }
+  }
 }
 
 export function unregisterSSEConnection(key: string, conn: SSEConnection) {
   const set = sseConnections.get(key);
-  if (!set) return;
-  set.delete(conn);
-  if (set.size === 0) {
-    sseConnections.delete(key);
+  if (set) {
+    set.delete(conn);
+    if (set.size === 0) {
+      sseConnections.delete(key);
+    }
+  }
+
+  // Clean up reverse index
+  if (key.startsWith("notification-")) {
+    if (conn.institutionIds && conn.institutionIds.length > 0) {
+      for (const instId of conn.institutionIds) {
+        const instSet = institutionConnections.get(instId);
+        if (instSet) {
+          instSet.delete(conn);
+          if (instSet.size === 0) {
+            institutionConnections.delete(instId);
+          }
+        }
+      }
+    } else {
+      globalNotificationConnections.delete(conn);
+    }
   }
 }
 
@@ -92,16 +133,36 @@ export function broadcastInstitutionEvent(
   const payload = `event: ${channel}\ndata: ${JSON.stringify(data)}\n\n`;
   const encoded = new TextEncoder().encode(payload);
 
-  for (const [key, set] of sseConnections.entries()) {
-    if (!key.startsWith("notification-")) continue;
-    for (const conn of set) {
-      if (!conn.institutionIds || conn.institutionIds.includes(institutionId)) {
-        try {
-          conn.writer.write(encoded);
-        } catch {
-          // Handled on next write
+  const targets = new Set<SSEConnection>();
+
+  const instSet = institutionConnections.get(institutionId);
+  if (instSet) {
+    for (const conn of instSet) {
+      targets.add(conn);
+    }
+  }
+
+  for (const conn of globalNotificationConnections) {
+    targets.add(conn);
+  }
+
+  // Fallback to legacy scan if no index matches (safeguard against non-indexed connections)
+  if (targets.size === 0) {
+    for (const [key, set] of sseConnections.entries()) {
+      if (!key.startsWith("notification-")) continue;
+      for (const conn of set) {
+        if (!conn.institutionIds || conn.institutionIds.includes(institutionId)) {
+          targets.add(conn);
         }
       }
+    }
+  }
+
+  for (const conn of targets) {
+    try {
+      conn.writer.write(encoded);
+    } catch {
+      // Handled on next write
     }
   }
 }
@@ -115,8 +176,15 @@ export async function broadcastPresence(
   status?: string,
   statusText?: string | null
 ) {
+  const set = sseConnections.get("presence");
+  if (!set || set.size === 0) {
+    return;
+  }
+
   const payload = { type: "change", staffId, online, lastSeenAt, status, statusText };
-  
+  const encoded = new TextEncoder().encode(`event: presence\ndata: ${JSON.stringify(payload)}\n\n`);
+
+  // Parallelize connection set lookup and DB query
   let updaterInstIds: string[] = [];
   try {
     const updaterInsts = await db
@@ -129,20 +197,19 @@ export async function broadcastPresence(
     console.error("Failed to query updater institutions in broadcastPresence:", err);
   }
 
-  // Broadcast to all presence subscribers sharing at least one institution
-  const set = sseConnections.get("presence");
-  if (set && set.size > 0) {
-    const encoded = `event: presence\ndata: ${JSON.stringify(payload)}\n\n`;
-    for (const conn of set) {
-      const sharesInstitution =
-        !conn.institutionIds ||
-        conn.institutionIds.some((id) => updaterInstIds.includes(id));
-      if (sharesInstitution) {
-        try {
-          conn.writer.write(new TextEncoder().encode(encoded));
-        } catch (err) {
-          console.error(`Failed to write presence broadcast for staff ID ${staffId}:`, err);
-        }
+  const updaterInstSet = new Set(updaterInstIds);
+
+  for (const conn of set) {
+    const sharesInstitution =
+      !conn.institutionIds ||
+      conn.institutionIds.length === 0 ||
+      conn.institutionIds.some((id) => updaterInstSet.has(id));
+
+    if (sharesInstitution) {
+      try {
+        conn.writer.write(encoded);
+      } catch (err) {
+        console.error(`Failed to write presence broadcast for staff ID ${staffId}:`, err);
       }
     }
   }

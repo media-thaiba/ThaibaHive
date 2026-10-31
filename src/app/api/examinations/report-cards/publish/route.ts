@@ -52,39 +52,49 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     const now = new Date().toISOString();
 
-    // 1. Update exam status to 'published' with concurrency guard
-    const updated = await db
-      .update(exams)
-      .set({ status: "published", updatedAt: now })
-      .where(and(whereClause, eq(exams.status, exam.status)))
-      .returning();
+    // 1, 2, 3 wrapped in atomic transaction
+    let publishConflict = false;
 
-    if (!updated || updated.length === 0) {
+    await db.transaction(async (tx) => {
+      // 1. Update exam status to 'published' with concurrency guard
+      const updated = await tx
+        .update(exams)
+        .set({ status: "published", updatedAt: now })
+        .where(and(whereClause, eq(exams.status, exam.status)))
+        .returning();
+
+      if (!updated || updated.length === 0) {
+        publishConflict = true;
+        return;
+      }
+
+      // 2. Stamp publication timestamp on tabulation registers atomically
+      await tx
+        .update(tabulationRegisters)
+        .set({ publishedAt: now })
+        .where(eq(tabulationRegisters.examId, cleanExamId));
+
+      // 3. Audit log atomically inside transaction
+      await tx.insert(examAuditLogs).values({
+        id: `audit_${crypto.randomUUID()}`,
+        examId: cleanExamId,
+        entityType: "result",
+        entityId: cleanExamId,
+        action: "publish_results",
+        performedByStaffId: session.staffId,
+        previousState: JSON.stringify({ status: exam.status }),
+        newState: JSON.stringify({ status: "published", publishedAt: now }),
+        reason: "Official publication of exam results to student and parent portal",
+        timestamp: now,
+      });
+    });
+
+    if (publishConflict) {
       return NextResponse.json(
         { error: "Examination results are already published or modified concurrently" },
         { status: 409 }
       );
     }
-
-    // 2. Stamp publication timestamp on tabulation registers
-    await db
-      .update(tabulationRegisters)
-      .set({ publishedAt: now })
-      .where(eq(tabulationRegisters.examId, cleanExamId));
-
-    // 3. Audit log
-    await db.insert(examAuditLogs).values({
-      id: `audit_${Date.now()}`,
-      examId: cleanExamId,
-      entityType: "result",
-      entityId: cleanExamId,
-      action: "publish_results",
-      performedByStaffId: session.staffId,
-      previousState: JSON.stringify({ status: exam.status }),
-      newState: JSON.stringify({ status: "published", publishedAt: now }),
-      reason: "Official publication of exam results to student and parent portal",
-      timestamp: now,
-    });
 
     return NextResponse.json({
       success: true,

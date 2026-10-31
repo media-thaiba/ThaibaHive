@@ -9,6 +9,8 @@ import 'dart:async';
 import 'package:intl/intl.dart';
 import 'attendance_repository.dart';
 import 'attendance_sync_service.dart';
+import 'services/attendance_reminder_service.dart';
+import '../../auth/data/auth_state.dart';
 
 class AttendanceState {
   final bool isLoading;
@@ -93,11 +95,82 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
         _repository.getStats(),
         _repository.getMyAttendance(limit: 10),
       ]);
+      final serverStats = results[0] as AttendanceStatsModel;
+      // Preserve a local optimistic check-in the server has not seen yet
+      // (offline punch awaiting sync-coordinator flush) instead of wiping it,
+      // along with 'present' so the status badge stays "On Duty" until sync.
+      final localCheckIn = state.stats?.lastCheckIn;
+      final localOnShift = state.stats?.isOnShift ?? false;
+      // A punch that is still in-flight locally (optimistic state set, sync
+      // pending) or an offline-queued punch must never be reverted to
+      // "off shift" by a stale server response.
+      final hasPendingPunch =
+          state.pendingCheckOutId != null || state.isOfflineCheckOut;
+      final preserveOnShift =
+          (localCheckIn != null && serverStats.lastCheckIn == null) ||
+              (hasPendingPunch && localOnShift);
+      final mergedStats = preserveOnShift
+          ? AttendanceStatsModel(
+              todayStatus: 'present',
+              lastCheckIn: localCheckIn ?? serverStats.lastCheckIn,
+              lastCheckOut: serverStats.lastCheckOut,
+              presentDays: serverStats.presentDays,
+              absentDays: serverStats.absentDays,
+              lateDays: serverStats.lateDays,
+              halfDays: serverStats.halfDays,
+              totalWorkedHours: serverStats.totalWorkedHours,
+              latestEvent: 'in',
+              isOnShift: true,
+              latestEventAt: serverStats.latestEventAt ?? state.stats?.latestEventAt,
+              shiftName: serverStats.shiftName,
+              shiftStartTime: serverStats.shiftStartTime,
+              shiftEndTime: serverStats.shiftEndTime,
+            )
+          : serverStats;
       state = state.copyWith(
         isLoading: false,
-        stats: results[0] as AttendanceStatsModel,
+        stats: mergedStats,
         logs: results[1] as List<AttendanceLogModel>,
       );
+
+      // If server provides a customized shift assignment for this staff member, update reminder schedule
+      if (serverStats.shiftStartTime != null && serverStats.shiftEndTime != null) {
+        final reminderSvc = _ref?.read(attendanceReminderServiceProvider);
+        if (reminderSvc != null) {
+          final sParts = serverStats.shiftStartTime!.split(':');
+          final eParts = serverStats.shiftEndTime!.split(':');
+          if (sParts.length >= 2 && eParts.length >= 2) {
+            final sH = int.tryParse(sParts[0]) ?? 9;
+            final sM = int.tryParse(sParts[1]) ?? 0;
+            final eH = int.tryParse(eParts[0]) ?? 17;
+            final eM = int.tryParse(eParts[1]) ?? 0;
+
+            final userId = _ref?.read(authProvider).user?.id;
+            final currentSh = reminderSvc.getShiftStartHour(userId);
+            final currentSm = reminderSvc.getShiftStartMinute(userId);
+            final currentEh = reminderSvc.getShiftEndHour(userId);
+            final currentEm = reminderSvc.getShiftEndMinute(userId);
+
+            if (sH != currentSh || sM != currentSm || eH != currentEh || eM != currentEm) {
+              await reminderSvc.saveShiftTimes(
+                userId: userId,
+                startHour: sH,
+                startMinute: sM,
+                endHour: eH,
+                endMinute: eM,
+              );
+            }
+          }
+        }
+      }
+
+      // Synchronize reminder schedule cancellation with fresh server status
+      if (mergedStats.isOnShift == true || mergedStats.lastCheckIn != null) {
+        _ref?.read(attendanceReminderServiceProvider).cancelTodayCheckInReminders();
+      }
+      if (mergedStats.lastCheckOut != null) {
+        _ref?.read(attendanceReminderServiceProvider).cancelTodayCheckOutReminder();
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -138,6 +211,13 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       );
 
       if (outcome.success) {
+        // Cancel scheduled reminders deterministically upon successful punch
+        if (isCheckIn) {
+          _ref?.read(attendanceReminderServiceProvider).cancelTodayCheckInReminders();
+        } else {
+          _ref?.read(attendanceReminderServiceProvider).cancelTodayCheckOutReminder();
+        }
+
         final nowStr = DateFormat('hh:mm a').format(DateTime.now());
         final currentStats = state.stats;
 
@@ -146,12 +226,20 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
             ? AttendanceStatsModel(
                 todayStatus: isCheckIn ? 'present' : currentStats.todayStatus,
                 lastCheckIn: isCheckIn ? nowStr : currentStats.lastCheckIn,
-                lastCheckOut: !isCheckIn ? nowStr : currentStats.lastCheckOut,
+                // A fresh check-in (overtime / extra shift) clears the previous
+                // check-out so the UI reflects an active on-shift state.
+                lastCheckOut: !isCheckIn ? nowStr : null,
                 presentDays: currentStats.presentDays,
                 absentDays: currentStats.absentDays,
                 lateDays: currentStats.lateDays,
                 halfDays: currentStats.halfDays,
                 totalWorkedHours: currentStats.totalWorkedHours,
+                latestEvent: isCheckIn ? 'in' : 'out',
+                isOnShift: isCheckIn,
+                latestEventAt: DateTime.now().millisecondsSinceEpoch,
+                shiftName: currentStats.shiftName,
+                shiftStartTime: currentStats.shiftStartTime,
+                shiftEndTime: currentStats.shiftEndTime,
               )
             : AttendanceStatsModel(
                 todayStatus: isCheckIn ? 'present' : 'absent',
@@ -162,6 +250,9 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
                 lateDays: 0,
                 halfDays: 0,
                 totalWorkedHours: 0.0,
+                latestEvent: isCheckIn ? 'in' : 'out',
+                isOnShift: isCheckIn,
+                latestEventAt: DateTime.now().millisecondsSinceEpoch,
               );
 
         state = state.copyWith(
@@ -172,8 +263,11 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
           error: null,
         );
 
-        // Background refresh to catch up with server ledger stats if online
-        unawaited(refresh());
+        // Background refresh to catch up with server ledger stats — but never
+        // for an offline-queued punch: the server has not seen it yet, so a
+        // refresh would revert the optimistic check-in before the sync
+        // coordinator flushes the queue.
+        if (!outcome.isQueuedOffline) unawaited(refresh());
         return outcome;
       } else {
         state = state.copyWith(
@@ -257,6 +351,7 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       }
 
       await refresh();
+      _ref?.read(attendanceReminderServiceProvider).cancelTodayCheckInReminders();
       state = state.copyWith(
         isLoading: false,
         lastAction: result,
@@ -321,6 +416,7 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
     try {
       final result = await _repository.checkOut();
       await refresh();
+      _ref?.read(attendanceReminderServiceProvider).cancelTodayCheckOutReminder();
       state = state.copyWith(
         isLoading: false,
         lastAction: result,

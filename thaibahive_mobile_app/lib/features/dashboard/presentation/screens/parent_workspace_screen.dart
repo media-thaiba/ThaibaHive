@@ -136,7 +136,7 @@ class ParentWorkspaceScreen extends ConsumerWidget {
                           Chip(
                             label: Text(
                               status.toUpperCase(),
-                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                              style: const TextStyle(color: Colors.white, fontSize: 11),
                             ),
                             backgroundColor: statusColor,
                             padding: EdgeInsets.zero,

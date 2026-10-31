@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/theme.dart';
 import '../../../core/extensions.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/loading_widget.dart';
@@ -173,12 +174,7 @@ class _HelpDeskTicketDetailScreenState
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, -2)),
-                        ],
+                        boxShadow: AppShadows.card(Colors.black),
                       ),
                       child: SafeArea(
                         child: Row(

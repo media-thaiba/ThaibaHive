@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/services/form_draft_service.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../data/grievances_provider.dart';
 
@@ -19,9 +20,44 @@ class _GrievanceSubmitScreenState extends ConsumerState<GrievanceSubmitScreen> {
   final _descriptionCtrl = TextEditingController();
   String? _category;
   bool _isAnonymous = false;
+  bool _isSubmitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreDraft();
+  }
+
+  Future<void> _restoreDraft() async {
+    final draft = await ref.read(formDraftServiceProvider).getDraft('grievance_submit');
+    if (draft != null && mounted) {
+      setState(() {
+        if (draft['subject'] != null && _subjectCtrl.text.isEmpty) {
+          _subjectCtrl.text = draft['subject'] as String;
+        }
+        if (draft['description'] != null && _descriptionCtrl.text.isEmpty) {
+          _descriptionCtrl.text = draft['description'] as String;
+        }
+        if (draft['category'] != null) {
+          _category = draft['category'] as String;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
+    if (!_isSubmitted) {
+      final sub = _subjectCtrl.text.trim();
+      final desc = _descriptionCtrl.text.trim();
+      if (sub.isNotEmpty || desc.isNotEmpty) {
+        ref.read(formDraftServiceProvider).saveDraft('grievance_submit', {
+          'subject': sub,
+          'description': desc,
+          'category': _category,
+        });
+      }
+    }
     _subjectCtrl.dispose();
     _descriptionCtrl.dispose();
     super.dispose();
@@ -36,6 +72,8 @@ class _GrievanceSubmitScreenState extends ConsumerState<GrievanceSubmitScreen> {
         'category': _category,
         'is_anonymous': _isAnonymous,
       });
+      _isSubmitted = true;
+      ref.read(formDraftServiceProvider).clearDraft('grievance_submit');
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
@@ -51,6 +89,7 @@ class _GrievanceSubmitScreenState extends ConsumerState<GrievanceSubmitScreen> {
 
     return AppScaffold(
       title: 'Submit Grievance',
+      isModal: true,
       body: Form(
         key: _formKey,
         child: ListView(

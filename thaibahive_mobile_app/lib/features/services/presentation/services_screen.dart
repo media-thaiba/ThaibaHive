@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thaibahive_mobile/app/theme.dart';
 import 'package:thaibahive_mobile/features/action_center/controller.dart';
+import 'package:thaibahive_mobile/shared/widgets/app_grouped_card.dart';
 import 'package:thaibahive_mobile/shared/widgets/quick_action_card.dart';
 
 /// Services Catalog Screen - Searchable catalog of campus utilities
@@ -214,7 +215,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                       '$pendingCount',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 11,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -339,10 +340,16 @@ class _ServiceCategoryCard extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 8),
-        ...category.services.map((service) => _ServiceTile(
-              service: service,
-              categoryColor: category.color,
-            )),
+        AppGroupedCard(
+          margin: EdgeInsets.zero,
+          dividerIndent: 72,
+          children: category.services
+              .map((service) => _ServiceTile(
+                    service: service,
+                    categoryColor: category.color,
+                  ))
+              .toList(),
+        ),
         const SizedBox(height: 16),
       ],
     );
@@ -362,46 +369,36 @@ class _ServiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant,
-          width: 0.5,
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: categoryColor.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          service.icon,
+          color: categoryColor,
+          size: 20,
         ),
       ),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: categoryColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            service.icon,
-            color: categoryColor,
-            size: 20,
-          ),
+      title: Text(
+        service.name,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
         ),
-        title: Text(
-          service.name,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(
-          service.description,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: () => context.push(service.route),
       ),
+      subtitle: Text(
+        service.description,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: () => context.push(service.route),
     );
   }
 }

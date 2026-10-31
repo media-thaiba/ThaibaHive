@@ -132,7 +132,8 @@ class _NotificationItem extends StatelessWidget {
               : null,
           border: Border(
             bottom: BorderSide(
-              color: theme.dividerTheme.color!,
+              color: theme.dividerTheme.color ??
+                  theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               width: 0.5,
             ),
           ),

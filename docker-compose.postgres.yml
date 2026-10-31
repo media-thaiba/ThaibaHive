@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: thaibahive-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: thaibahive
+      POSTGRES_PASSWORD: thaibahive_dev_password
+      POSTGRES_DB: thaibahive
+    ports:
+      - "5432:5432"
+    volumes:
+      - thaibahive_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thaibahive -d thaibahive"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  thaibahive_pgdata:
+    driver: local

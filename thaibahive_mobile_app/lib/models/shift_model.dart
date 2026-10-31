@@ -20,14 +20,23 @@ class ShiftModel {
   });
 
   factory ShiftModel.fromJson(Map<String, dynamic> json) => ShiftModel(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        startTime: json['start_time'] as String,
-        endTime: json['end_time'] as String,
-        gracePeriod: json['grace_period'] as String?,
-        breakDuration: json['break_duration'] as String?,
-        isActive: json['is_active'] as bool,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        id: (json['id'] ?? '') as String,
+        name: (json['name'] ?? 'General Shift') as String,
+        startTime: (json['start_time'] ?? json['startTime'] ?? '09:00') as String,
+        endTime: (json['end_time'] ?? json['endTime'] ?? '17:00') as String,
+        gracePeriod: json['grace_period']?.toString() ??
+            json['gracePeriodMinutes']?.toString() ??
+            '15',
+        breakDuration: json['break_duration']?.toString(),
+        isActive: json['is_active'] == true ||
+            json['isActive'] == true ||
+            json['is_active'] == 1 ||
+            json['isActive'] == 1,
+        createdAt: json['created_at'] != null
+            ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+            : (json['createdAt'] != null
+                ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+                : DateTime.now()),
       );
 
   Map<String, dynamic> toJson() => {

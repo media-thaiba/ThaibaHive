@@ -128,7 +128,7 @@ class PluginCard extends StatelessWidget {
                       style: TextStyle(
                         color: catColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                        fontSize: 11,
                       ),
                     ),
                   ),

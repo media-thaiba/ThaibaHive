@@ -10,6 +10,8 @@ import '../../../app/theme.dart';
 import '../../../core/services/file_upload_service.dart';
 import '../../../features/auth/data/auth_state.dart';
 import '../../../features/dashboard/presentation/components/role_badge.dart';
+import '../../../shared/widgets/ambient_canvas_background.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../data/settings_provider.dart';
 import '../data/settings_repository.dart';
 
@@ -140,14 +142,24 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Edit Profile')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      body: Stack(
+        children: [
+          // Ambient canvas so this pushed route matches the nav shell's
+          // living gradient instead of sitting on a flat opaque surface.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AmbientCanvasBackground(isDark: isDark),
+            ),
+          ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               // ── Profile Header ──
               Container(
                 padding: const EdgeInsets.all(20),
@@ -281,58 +293,68 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               const SizedBox(height: 24),
 
               // ── Form Fields ──
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _firstNameCtrl,
+              AppCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.all(16),
+                borderWidth:
+                    isDark ? AppBorder.hairlineDark : AppBorder.hairline,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _firstNameCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'First Name',
+                              prefixIcon: Icon(Icons.person_rounded),
+                            ),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lastNameCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Last Name',
+                            ),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _emailCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'First Name',
-                        prefixIcon: Icon(Icons.person_rounded),
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
+                      keyboardType: TextInputType.emailAddress,
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _lastNameCtrl,
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _phoneCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Last Name',
+                        labelText: 'Phone',
+                        prefixIcon: Icon(Icons.phone_outlined),
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      keyboardType: TextInputType.phone,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _designationCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Designation',
-                  prefixIcon: Icon(Icons.badge_rounded),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _designationCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Designation',
+                        prefixIcon: Icon(Icons.badge_rounded),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -348,8 +370,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                     : const Text('Save Changes'),
               ),
             ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

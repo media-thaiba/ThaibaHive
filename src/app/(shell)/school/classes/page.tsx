@@ -1,102 +1,68 @@
-"use client";
+import { Suspense } from "react";
+import { db } from "@/db";
+import { classes, academicYears, staff } from "@/db/schema";
+import { verifySession, resolveRequestInstitution } from "@thaiba/auth";
+import { redirect } from "next/navigation";
+import { eq, like, and, type SQL } from "drizzle-orm";
+import { ClassesClient, type ClassItem } from "./ClassesClient";
+import StudentsLoading from "../students/loading";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Users } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-type ClassItem = {
-  id: string;
-  name: string;
-  section: string | null;
-  teacherName: string | null;
-  academicYearName: string | null;
-};
+interface ClassesPageProps {
+  searchParams: Promise<{
+    search?: string;
+  }>;
+}
 
-export default function ClassesPage() {
-  const router = useRouter();
-  const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+async function ClassesData({ search }: { search: string }) {
+  const session = await verifySession();
+  if (!session) {
+    redirect("/login");
+  }
 
-  const fetchClasses = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      const res = await fetch(`/api/academic/classes?${params}`);
-      if (!res.ok) throw new Error("Failed to load classes");
-      const data = await res.json();
-      setClasses(data.classes ?? []);
-    } catch {
-      setClasses([]);
-      toast.error("Failed to load classes");
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
+  const scopedInstId = await resolveRequestInstitution(session);
 
-  useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses]);
+  const conditions = [eq(classes.isActive, true)];
+  if (search) {
+    conditions.push(like(classes.name, `%${search}%`));
+  }
+  if (scopedInstId && scopedInstId !== "global") {
+    conditions.push(eq(classes.institutionId, scopedInstId));
+  }
+
+  const rows = await db
+    .select({
+      id: classes.id,
+      name: classes.name,
+      section: classes.section,
+      teacherName: staff.firstName,
+      academicYearName: academicYears.name,
+    })
+    .from(classes)
+    .leftJoin(staff, eq(classes.teacherId, staff.id))
+    .leftJoin(academicYears, eq(classes.academicYearId, academicYears.id))
+    .where(and(...conditions))
+    .all();
+
+  const classItems: ClassItem[] = rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    section: r.section,
+    teacherName: r.teacherName ?? null,
+    academicYearName: r.academicYearName ?? null,
+  }));
+
+  return <ClassesClient classes={classItems} initialSearch={search} />;
+}
+
+export default async function ClassesPage({ searchParams }: ClassesPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const search = resolvedSearchParams.search || "";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Classes</h1>
-        <Button>Add Class</Button>
-      </div>
-
-      <Input
-        placeholder="Search classes..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-sm"
-      />
-
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
-        </div>
-      ) : classes.length === 0 ? (
-        <p className="text-muted-foreground text-center py-8">No classes found</p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {classes.map((c) => (
-            <Card key={c.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-lg">{c.name}</h3>
-                  {c.section && (
-                    <span className="text-sm text-muted-foreground">Sec: {c.section}</span>
-                  )}
-                </div>
-                {c.teacherName && (
-                  <p className="text-sm text-muted-foreground">Teacher: {c.teacherName}</p>
-                )}
-                {c.academicYearName && (
-                  <p className="text-sm text-muted-foreground">Year: {c.academicYearName}</p>
-                )}
-                <div className="flex items-center gap-2 pt-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <button
-                    onClick={() => router.push(`/school/students?classId=${c.id}`)}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    View Roster
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+    <Suspense key={search} fallback={<StudentsLoading />}>
+      <ClassesData search={search} />
+    </Suspense>
   );
 }

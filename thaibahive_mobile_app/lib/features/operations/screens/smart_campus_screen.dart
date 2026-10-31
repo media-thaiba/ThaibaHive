@@ -44,7 +44,7 @@ class SmartCampusScreen extends ConsumerWidget {
                                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               Chip(
-                                label: const Text('Autonomous', style: TextStyle(fontSize: 10)),
+                                label: const Text('Autonomous', style: TextStyle(fontSize: 11)),
                                 backgroundColor: Colors.green.withAlpha(50),
                               ),
                             ],
@@ -126,7 +126,7 @@ class SmartCampusScreen extends ConsumerWidget {
         Icon(icon, color: color, size: 24),
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
     );
   }

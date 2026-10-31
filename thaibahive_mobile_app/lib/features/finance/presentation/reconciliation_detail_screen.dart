@@ -135,7 +135,7 @@ class _ReconciliationDetailScreenState
                       'Audit ${session.auditHash!.substring(0, session.auditHash!.length.clamp(0, 16))}…',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontFamily: 'monospace',
-                        fontSize: 10,
+                        fontSize: 11,
                         color:
                             theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -250,7 +250,7 @@ class _ReconciliationDetailScreenState
             ),
             if (item.matchedWithId != null && item.matchedWithId!.isNotEmpty)
               Text('↔ ${item.matchedWithId}',
-                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10)),
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 11)),
           ],
         ),
       ),

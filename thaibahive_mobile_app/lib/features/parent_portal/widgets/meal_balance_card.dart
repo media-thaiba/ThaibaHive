@@ -41,7 +41,7 @@ class MealBalanceCard extends StatelessWidget {
                   child: Text(
                     isLowBalance ? 'LOW BALANCE' : 'ACTIVE',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: isLowBalance ? Colors.red.shade900 : Colors.green.shade900,
                     ),

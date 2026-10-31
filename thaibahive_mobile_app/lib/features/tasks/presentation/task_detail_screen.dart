@@ -334,7 +334,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                                   task.assignee!.initials,
                                   style: TextStyle(
                                     color: theme.colorScheme.primary,
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

@@ -157,7 +157,7 @@ class _ScanButton extends StatelessWidget {
               label,
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 10.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: textColor,
                 letterSpacing: 0.5,

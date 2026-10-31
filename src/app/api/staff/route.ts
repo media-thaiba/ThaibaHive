@@ -143,9 +143,6 @@ export const POST = requireAuth(async (request: Request, session) => {
 
     if (isRegionalScopeRole(session.role)) {
       const cluster = await getStaffInstitutionMemberships(session.staffId);
-      if (session.institutionId && session.institutionId !== "global" && !cluster.includes(session.institutionId)) {
-        cluster.push(session.institutionId);
-      }
       if (cluster.length === 0) {
         return NextResponse.json(
           { error: "Forbidden: Caller has no assigned regional cluster" },
@@ -162,9 +159,6 @@ export const POST = requireAuth(async (request: Request, session) => {
     } else {
       // Tier 3, 4, 5 (principal, admin, hod, etc.)
       const memberships = await getStaffInstitutionMemberships(session.staffId);
-      if (session.institutionId && session.institutionId !== "global" && !memberships.includes(session.institutionId)) {
-        memberships.push(session.institutionId);
-      }
       if (memberships.length === 0) {
         return NextResponse.json(
           { error: "Forbidden: Caller has no assigned institution to scope staff creation" },
@@ -314,6 +308,8 @@ export const POST = requireAuth(async (request: Request, session) => {
         );
       }
 
+      await autoAssignOnboardingChecklists(staffResult.id, session.staffId, tx);
+
       return staffResult;
     });
   } catch (txErr: any) {
@@ -328,7 +324,6 @@ export const POST = requireAuth(async (request: Request, session) => {
 
   const safeStaff = pick(result, Object.keys(SAFE_STAFF_FIELDS) as (keyof typeof SAFE_STAFF_FIELDS)[]);
 
-  autoAssignOnboardingChecklists(safeStaff.id, session.staffId);
-
   return NextResponse.json({ staff: safeStaff }, { status: 201 });
 }, "staff:create");
+
