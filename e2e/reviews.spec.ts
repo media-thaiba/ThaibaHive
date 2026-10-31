@@ -46,6 +46,7 @@ test.describe("Performance Reviews — Staff self-evaluation workflow", () => {
         id: "e2e_staff_self_eval",
         institutionId: "inst_campus_main",
         staffId: staffRow!.id,
+        reviewerId: staffRow!.id,
         period: STAFF_PERIOD,
         status: "draft",
       })

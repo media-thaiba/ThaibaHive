@@ -68,6 +68,7 @@ export function ShellNav({ onSearchOpen }: ShellNavProps) {
               key={w.id}
               type="button"
               onClick={() => handleWorkspaceSwitch(w.id)}
+              aria-label={`Switch to ${w.label} workspace`}
               title={`${w.label} (Ctrl+Shift+${idx + 1})`}
               className={cn(
                 "group relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 outline-none active:scale-95 focus-visible:ring-2 focus-visible:ring-ring shrink-0",

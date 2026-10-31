@@ -219,7 +219,125 @@ export async function runMigrations() {
     `);
 
 
+        await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`canteen_items\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`name\` text NOT NULL,
+        \`category\` text DEFAULT 'snacks' NOT NULL,
+        \`price\` real NOT NULL,
+        \`is_available\` integer DEFAULT 1 NOT NULL,
+        \`dietary_flags\` text,
+        \`image_url\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
     await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`canteen_menus\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`date\` text NOT NULL,
+        \`meal_type\` text NOT NULL,
+        \`items_json\` text NOT NULL,
+        \`is_active\` integer DEFAULT 1 NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`canteen_meal_passes\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`user_id\` text NOT NULL,
+        \`pass_code\` text NOT NULL UNIQUE,
+        \`balance\` real DEFAULT 0 NOT NULL,
+        \`currency\` text DEFAULT 'INR' NOT NULL,
+        \`status\` text DEFAULT 'active' NOT NULL,
+        \`daily_limit\` real,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`canteen_transactions\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`pass_id\` text NOT NULL,
+        \`pass_code\` text NOT NULL,
+        \`user_id\` text NOT NULL,
+        \`items_json\` text NOT NULL,
+        \`total_amount\` real NOT NULL,
+        \`idempotency_key\` text UNIQUE,
+        \`cashier_staff_id\` text,
+        \`status\` text DEFAULT 'completed' NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`tabulation_registers\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`exam_id\` text NOT NULL,
+        \`student_id\` text NOT NULL,
+        \`total_marks\` real DEFAULT 0 NOT NULL,
+        \`percentage\` real DEFAULT 0 NOT NULL,
+        \`gpa\` real DEFAULT 0 NOT NULL,
+        \`letter_grade\` text DEFAULT 'F' NOT NULL,
+        \`result_status\` text DEFAULT 'pending' NOT NULL,
+        \`rank\` integer,
+        \`published_at\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`exam_audit_logs\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`exam_id\` text NOT NULL,
+        \`entity_type\` text NOT NULL,
+        \`entity_id\` text NOT NULL,
+        \`action\` text NOT NULL,
+        \`performed_by_staff_id\` text,
+        \`previous_state\` text,
+        \`new_state\` text,
+        \`reason\` text,
+        \`timestamp\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`swarm_topology\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`node_id\` text NOT NULL,
+        \`tier\` text NOT NULL,
+        \`status\` text NOT NULL,
+        \`last_seen_at\` text NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`swarm_events\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`event_source\` text NOT NULL,
+        \`severity\` text NOT NULL,
+        \`message\` text NOT NULL,
+        \`timestamp\` text NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`swarm_metrics\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`node_id\` text NOT NULL,
+        \`metric_name\` text NOT NULL,
+        \`metric_value\` real NOT NULL,
+        \`timestamp\` text NOT NULL
+      )
+    `);
+
+await client.execute(`
       CREATE TABLE IF NOT EXISTS \`guardians\` (
         \`id\` text PRIMARY KEY NOT NULL,
         \`name\` text NOT NULL,
