@@ -68,8 +68,6 @@ export const EXACT_EXEMPTION_ALLOWLIST: Record<string, string> = {
   "/api/auth/csrf": "Pre-auth CSRF token generation and cookie establishment",
   "/api/auth/refresh": "Pre-auth JWT refresh token rotation and session renewal",
   "/api/auth/logout": "Session termination and presence cleanup endpoint (supports expired session cleanup)",
-  "/api/auth/refresh": "Pre-auth refresh token renewal endpoint; validates refresh JWT and staff tokenVersion against DB, no session cookie required",
-  "/api/auth/csrf": "Pre-auth CSRF token minting endpoint; returns a fresh satellite token for double-submit validation",
   "/api/alumni/verify/donation/[hash]": "Public alumni donation receipt cryptographic hash verification",
   "/api/finance/fees/verify/[hash]": "Public student fee receipt cryptographic hash verification",
   "/api/v1/compliance/attestation/verify": "Public digital compliance attestation certificate verification",
