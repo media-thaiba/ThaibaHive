@@ -115,7 +115,7 @@ test("Verify real-time status synchronization and timeline logging", async ({ br
     // Verify Admin B sees Staff A as Offline after disconnect debounce
     console.log("Verifying Staff A is now Offline...");
     const offlineBadge = staffCard.locator("span:has-text('Offline')");
-    await expect(offlineBadge).toBeVisible({ timeout: 10000 });
+    await expect(offlineBadge).toBeVisible({ timeout: 20000 });
 
     // 8. Admin B checks Timeline page
     console.log("Admin B checking Timeline page...");

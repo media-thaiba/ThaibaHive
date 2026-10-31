@@ -204,14 +204,15 @@ if (isPostgres) {
   // remote LibSQL (Turso) over HTTP/WS rejects PRAGMA busy_timeout with SQL_PARSE_ERROR.
   const isLocalFileDb = databaseUrl.startsWith("file:") || !databaseUrl.includes("://");
   if (isLocalFileDb) {
+    void client.execute("PRAGMA journal_mode = WAL;").catch(() => {});
     void client.execute("PRAGMA foreign_keys = ON;").catch((err) => {
       console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA foreign_keys = ON failed: ${err?.message || err}`);
       if (typeof process !== "undefined" && typeof process.exit === "function") {
         process.exit(1);
       }
     });
-    void client.execute("PRAGMA busy_timeout = 15000;").catch((err) => {
-      console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 15000 failed: ${err?.message || err}`);
+    void client.execute("PRAGMA busy_timeout = 30000;").catch((err) => {
+      console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA busy_timeout = 30000 failed: ${err?.message || err}`);
       if (typeof process !== "undefined" && typeof process.exit === "function") {
         process.exit(1);
       }

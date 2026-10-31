@@ -169,8 +169,8 @@ export default function AdminReviewsPage() {
     });
     if (ok && data) {
       setSelectedReview(data.review);
-      setReviewRating(data.review.rating || 0);
-      setReviewComments(data.review.managerComments || "");
+      setReviewRating((prev) => (prev > 0 ? prev : data.review.rating || 0));
+      setReviewComments((prev) => (prev.length > 0 ? prev : data.review.managerComments || ""));
     }
     setDetailLoading(false);
   };
@@ -364,7 +364,7 @@ export default function AdminReviewsPage() {
       </Dialog>
 
       {/* Review Detail Dialog */}
-      <Dialog open={!!selectedReview} onOpenChange={(open) => !open && setSelectedReview(null)}>
+      <Dialog open={!!selectedReview} onOpenChange={(open) => { if (!open) { setSelectedReview(null); setReviewRating(0); setReviewComments(""); } }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Performance Review</DialogTitle>

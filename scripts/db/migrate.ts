@@ -28,6 +28,12 @@ export async function runMigrations() {
     const client = createClient({ url, authToken });
 
     // In SQLite, foreign key checks must be disabled during DDL table rebuilds
+    const isLocal = url.startsWith("file:") || !url.includes("://");
+    if (isLocal) {
+      await client.execute("PRAGMA journal_mode = WAL").catch(() => {});
+      await client.execute("PRAGMA busy_timeout = 30000").catch(() => {});
+    }
+
     await client.execute("PRAGMA foreign_keys = OFF");
 
     // Ensure migration tracking table exists
