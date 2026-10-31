@@ -102,6 +102,142 @@ export async function runMigrations() {
 
     await client.execute("PRAGMA foreign_keys = ON");
 
+    // Ensure SQLite columns and tables match current schema.ts definitions
+    const ensureColumn = async (table: string, col: string, def: string) => {
+      try {
+        await client.execute(`ALTER TABLE \`${table}\` ADD COLUMN \`${col}\` ${def}`);
+      } catch (err: any) {
+        if (!err.message?.includes("duplicate column") && !err.message?.includes("already exists")) {
+          // ignore
+        }
+      }
+    };
+
+    await ensureColumn("institutions", "allocated_budget", "REAL DEFAULT 0");
+    await ensureColumn("institutions", "fiscal_year", "TEXT");
+    await ensureColumn("staff", "face_embedding", "TEXT");
+    await ensureColumn("staff", "face_registered_at", "TEXT");
+    await ensureColumn("staff", "fingerprint_hash", "TEXT");
+    await ensureColumn("staff", "fingerprint_registered_at", "TEXT");
+    await ensureColumn("staff", "biometric_enabled", "INTEGER DEFAULT 0 NOT NULL");
+    await ensureColumn("staff", "model_version", "TEXT DEFAULT 'facenet-512d-v1'");
+    await ensureColumn("staff", "biometric_status", "TEXT DEFAULT 'active'");
+    await ensureColumn("staff", "google_sub", "TEXT");
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`guardians\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`name\` text NOT NULL,
+        \`relationship\` text NOT NULL,
+        \`phone\` text NOT NULL,
+        \`email\` text,
+        \`occupation\` text,
+        \`address\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`grade_scales\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`name\` text NOT NULL,
+        \`scale_type\` text DEFAULT '10_point' NOT NULL,
+        \`rules_json\` text NOT NULL,
+        \`is_default\` integer DEFAULT 0 NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`exams\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`institution_id\` text NOT NULL,
+        \`title\` text NOT NULL,
+        \`academic_year\` text NOT NULL,
+        \`term\` text NOT NULL,
+        \`start_date\` text NOT NULL,
+        \`end_date\` text NOT NULL,
+        \`grade_scale_id\` text,
+        \`status\` text DEFAULT 'draft' NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`exam_schedules\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`exam_id\` text NOT NULL,
+        \`course_id\` text,
+        \`subject_name\` text NOT NULL,
+        \`exam_date\` text NOT NULL,
+        \`start_time\` text NOT NULL,
+        \`end_time\` text NOT NULL,
+        \`duration_minutes\` integer DEFAULT 180 NOT NULL,
+        \`max_marks\` real DEFAULT 100 NOT NULL,
+        \`pass_marks\` real DEFAULT 40 NOT NULL,
+        \`room_number\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`hall_tickets\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`exam_id\` text NOT NULL,
+        \`student_id\` text NOT NULL,
+        \`ticket_number\` text NOT NULL UNIQUE,
+        \`fee_cleared\` integer DEFAULT 0 NOT NULL,
+        \`override_fee_lock\` integer DEFAULT 0 NOT NULL,
+        \`override_reason\` text,
+        \`override_by_staff_id\` text,
+        \`qr_payload\` text NOT NULL,
+        \`status\` text DEFAULT 'issued' NOT NULL,
+        \`issued_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`mark_entries\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`exam_schedule_id\` text NOT NULL,
+        \`student_id\` text NOT NULL,
+        \`marks_obtained\` real,
+        \`max_marks\` real DEFAULT 100 NOT NULL,
+        \`is_absent\` integer DEFAULT 0 NOT NULL,
+        \`evaluator_token\` text,
+        \`double_blind\` integer DEFAULT 0 NOT NULL,
+        \`remarks\` text,
+        \`status\` text DEFAULT 'draft' NOT NULL,
+        \`entered_by_staff_id\` text,
+        \`moderated_by_staff_id\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS \`attendance_locations\` (
+        \`id\` text PRIMARY KEY NOT NULL,
+        \`name\` text NOT NULL,
+        \`institution_id\` text,
+        \`nfc_tag_id\` text,
+        \`qr_secret\` text NOT NULL,
+        \`is_active\` integer DEFAULT 1 NOT NULL,
+        \`latitude\` real,
+        \`longitude\` real,
+        \`radius\` real,
+        \`accuracy\` real,
+        \`wifi_ssids\` text,
+        \`deleted_at\` text,
+        \`created_at\` text DEFAULT (current_timestamp) NOT NULL,
+        \`updated_at\` text DEFAULT (current_timestamp) NOT NULL
+      )
+    `);
+
     if (appliedCount === 0) {
       console.log("[db:migrate] All SQLite/LibSQL migrations are already up to date.");
     } else {
