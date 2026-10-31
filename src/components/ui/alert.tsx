@@ -3,10 +3,10 @@ import { cn } from "@/lib/utils";
 import { CheckCircle, AlertCircle, X, Info } from "lucide-react";
 
 const alertVariants = {
-  success: "bg-success/10 text-success border-success/20",
+  success: "bg-success/10 text-emerald-800 dark:text-emerald-300 border-success/20",
   error: "bg-destructive/10 text-destructive border-destructive/20",
-  info: "bg-info/10 text-info border-info/20",
-  warning: "bg-warning/10 text-warning border-warning/20",
+  info: "bg-info/10 text-sky-800 dark:text-sky-300 border-info/20",
+  warning: "bg-warning/10 text-amber-800 dark:text-amber-300 border-warning/20",
 };
 
 const iconMap = {
@@ -41,7 +41,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
           <button
             onClick={onDismiss}
             aria-label="Dismiss alert"
-            className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+            className="shrink-0 opacity-70 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
           >
             <X className="h-4 w-4" />
           </button>

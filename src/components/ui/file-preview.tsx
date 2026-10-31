@@ -156,7 +156,8 @@ export function FilePreview({
             <button
               type="button"
               onClick={onPrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md backdrop-blur text-foreground transition-all"
+              aria-label="Previous file (Left Arrow)"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md backdrop-blur text-foreground transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring"
               title="Previous (Left Arrow)"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -167,7 +168,8 @@ export function FilePreview({
             <button
               type="button"
               onClick={onNext}
-              className="absolute right-72 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md backdrop-blur text-foreground transition-all hidden md:block"
+              aria-label="Next file (Right Arrow)"
+              className="absolute right-72 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md backdrop-blur text-foreground transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring hidden md:block"
               title="Next (Right Arrow)"
             >
               <ChevronRight className="w-5 h-5" />

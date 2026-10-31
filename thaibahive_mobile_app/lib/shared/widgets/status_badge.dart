@@ -32,19 +32,19 @@ class StatusBadge extends StatelessWidget {
     Color color;
     switch (variant) {
       case StatusBadgeVariant.success:
-        color = const Color(0xFF1a8a3e);
+        color = isDark ? const Color(0xFF34D399) : const Color(0xFF047857);
         break;
       case StatusBadgeVariant.warning:
-        color = const Color(0xFFFF9800);
+        color = isDark ? const Color(0xFFFBBF24) : const Color(0xFF92400E);
         break;
       case StatusBadgeVariant.destructive:
-        color = Colors.red;
+        color = isDark ? const Color(0xFFFB7185) : const Color(0xFFDC2626);
         break;
       case StatusBadgeVariant.info:
-        color = const Color(0xFF2196F3);
+        color = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0369A1);
         break;
       case StatusBadgeVariant.secondary:
-        color = isDark ? const Color(0xFF9e9e9e) : const Color(0xFF607D8B);
+        color = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
         break;
     }
 
@@ -52,23 +52,27 @@ class StatusBadge extends StatelessWidget {
       color = customColor!;
     }
 
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: color.withValues(alpha: 0.25),
-          width: 1,
+    return Semantics(
+      label: '$label status',
+      container: true,
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: color.withValues(alpha: 0.25),
+            width: 1,
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

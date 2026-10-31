@@ -145,6 +145,7 @@ class _ThInputState extends State<ThInput> {
                           color: iconColor,
                           size: 19,
                         ),
+                        tooltip: _obscureText ? 'Show password' : 'Hide password',
                         onPressed: () => setState(() => _obscureText = !_obscureText),
                       )
                     : widget.suffixIcon,
@@ -159,12 +160,15 @@ class _ThInputState extends State<ThInput> {
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.only(left: 4),
-            child: Text(
-              displayError,
-              style: TextStyle(
-                color: Colors.red.shade400,
-                fontSize: 11.0,
-                fontWeight: FontWeight.w600,
+            child: Semantics(
+              liveRegion: true,
+              child: Text(
+                displayError,
+                style: TextStyle(
+                  color: Colors.red.shade400,
+                  fontSize: 11.0,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

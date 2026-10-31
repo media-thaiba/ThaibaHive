@@ -48,7 +48,14 @@ export function StatCard({ id, label, value, suffix, progress, href, icon, color
         {suffix && <span className="text-xs font-normal text-muted-foreground ml-1.5">{suffix}</span>}
       </p>
       {progress !== undefined && (
-        <div className="mt-3.5 h-1.5 w-full rounded-full bg-muted/60 dark:bg-white/[0.06] overflow-hidden">
+        <div
+          role="progressbar"
+          aria-valuenow={Math.round(Math.min(progress * 100, 100))}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${label} progress`}
+          className="mt-3.5 h-1.5 w-full rounded-full bg-muted/60 dark:bg-white/[0.06] overflow-hidden"
+        >
           <div
             className={`h-full rounded-full ${barMap[c]} transition-all duration-700 ease-out`}
             style={{ width: `${Math.min(progress * 100, 100)}%` }}

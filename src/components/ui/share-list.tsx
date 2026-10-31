@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Clock, Eye, Trash2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
@@ -70,14 +71,14 @@ export function ShareList({ shares, onRevoke }: ShareListProps) {
                     ...{share.token.slice(-8)}
                   </span>
                   {share.hasPassword && (
-                    <span className="flex items-center gap-0.5 text-[10px] bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded font-medium">
+                    <Badge variant="warning" className="gap-1 px-1.5 py-0.5 text-[11px] font-medium">
                       <Lock className="w-2.5 h-2.5" /> Protected
-                    </span>
+                    </Badge>
                   )}
                   {isExpired && (
-                    <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-medium">
+                    <Badge variant="destructive" className="px-1.5 py-0.5 text-[11px] font-medium">
                       Expired
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
@@ -95,6 +96,7 @@ export function ShareList({ shares, onRevoke }: ShareListProps) {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
                 onClick={() => handleRevoke(share.token)}
+                aria-label="Revoke share link"
                 title="Revoke Share Link"
               >
                 <Trash2 className="w-3.5 h-3.5" />

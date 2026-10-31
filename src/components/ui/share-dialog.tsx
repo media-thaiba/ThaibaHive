@@ -117,11 +117,12 @@ export function ShareDialog({
           {!generatedUrl ? (
             <>
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5 text-xs font-medium">
+                <Label htmlFor="share-expiry" className="flex items-center gap-1.5 text-xs font-medium">
                   <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                   Link Expiration
                 </Label>
                 <Select
+                  id="share-expiry"
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value as ExpiryOption)}
                   className="w-full text-xs"
@@ -134,11 +135,12 @@ export function ShareDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5 text-xs font-medium">
+                <Label htmlFor="share-password" className="flex items-center gap-1.5 text-xs font-medium">
                   <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                   Password Protection (Optional)
                 </Label>
                 <Input
+                  id="share-password"
                   type="password"
                   placeholder="Set optional password"
                   value={password}
@@ -156,14 +158,19 @@ export function ShareDialog({
               </Button>
             </>
           ) : (
-            <div className="space-y-4 bg-muted/40 p-4 rounded-xl border">
+            <div className="space-y-4 bg-muted/40 p-4 rounded-xl border" role="status" aria-live="polite">
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <Check className="w-4 h-4" />
                 Share link ready!
               </div>
 
               <div className="flex gap-2">
-                <Input value={generatedUrl} readOnly className="font-mono text-xs" />
+                <Input
+                  value={generatedUrl}
+                  readOnly
+                  aria-label="Generated share URL"
+                  className="font-mono text-xs"
+                />
                 <Button variant="secondary" onClick={handleCopy} className="shrink-0 gap-1.5">
                   {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   {copied ? "Copied" : "Copy"}

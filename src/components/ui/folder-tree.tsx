@@ -56,6 +56,8 @@ export function FolderTree({
               {hasChildren ? (
                 <button
                   type="button"
+                  aria-label={isExpanded ? `Collapse ${folder.name}` : `Expand ${folder.name}`}
+                  aria-expanded={isExpanded}
                   onClick={(e) => toggleExpand(folder.id, e)}
                   className="p-0.5 hover:bg-muted rounded"
                 >
@@ -76,10 +78,11 @@ export function FolderTree({
               <span className="truncate">{folder.name}</span>
             </div>
 
-            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+            <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 flex items-center gap-0.5 transition-opacity">
               {onCreateFolder && (
                 <button
                   type="button"
+                  aria-label={`Create subfolder inside ${folder.name}`}
                   title="Create Subfolder"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -93,6 +96,7 @@ export function FolderTree({
               {onRenameFolder && (
                 <button
                   type="button"
+                  aria-label={`Rename folder ${folder.name}`}
                   title="Rename Folder"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -106,6 +110,7 @@ export function FolderTree({
               {onDeleteFolder && (
                 <button
                   type="button"
+                  aria-label={`Delete folder ${folder.name}`}
                   title="Delete Folder"
                   onClick={(e) => {
                     e.stopPropagation();

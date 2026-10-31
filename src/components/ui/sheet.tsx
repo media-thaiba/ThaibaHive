@@ -22,6 +22,8 @@ interface SheetContextValue {
   onOpenChange: (open: boolean) => void;
   titleId: string;
   descriptionId: string;
+  hasDescription: boolean;
+  setHasDescription: (has: boolean) => void;
 }
 
 const SheetContext = React.createContext<SheetContextValue | null>(null);
@@ -51,9 +53,12 @@ export function Sheet({
 
   const titleId = React.useId();
   const descriptionId = React.useId();
+  const [hasDescription, setHasDescription] = React.useState(false);
 
   return (
-    <SheetContext.Provider value={{ open, onOpenChange, titleId, descriptionId }}>
+    <SheetContext.Provider
+      value={{ open, onOpenChange, titleId, descriptionId, hasDescription, setHasDescription }}
+    >
       {children}
     </SheetContext.Provider>
   );
@@ -176,7 +181,7 @@ export function SheetContent({
   className,
   dismissThreshold = 140,
 }: SheetContentProps) {
-  const { open, onOpenChange, titleId, descriptionId } = useSheetContext();
+  const { open, onOpenChange, titleId, descriptionId, hasDescription } = useSheetContext();
   const [mounted, setMounted] = React.useState(false);
   const framerReducedMotion = useReducedMotion();
   const isReducedMotion =
@@ -296,7 +301,20 @@ export function SheetContent({
       });
     }
 
+    // Seed initial focus into first focusable element inside the sheet modal
+    const focusTimer = requestAnimationFrame(() => {
+      if (surfaceRef.current) {
+        const focusable = surfaceRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length > 0) {
+          focusable[0].focus();
+        }
+      }
+    });
+
     return () => {
+      cancelAnimationFrame(focusTimer);
       activeSheetScrollLockCount = Math.max(0, activeSheetScrollLockCount - 1);
       if (activeSheetScrollLockCount === 0) {
         document.body.style.overflow = "";
@@ -445,7 +463,7 @@ export function SheetContent({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            aria-describedby={descriptionId}
+            aria-describedby={hasDescription ? descriptionId : undefined}
             drag={isTouch ? "y" : false}
             dragListener={false}
             dragControls={dragControls}
@@ -565,7 +583,12 @@ export function SheetDescription({
   className,
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  const { descriptionId } = useSheetContext();
+  const { descriptionId, setHasDescription } = useSheetContext();
+  React.useEffect(() => {
+    setHasDescription(true);
+    return () => setHasDescription(false);
+  }, [setHasDescription]);
+
   return (
     <p
       id={descriptionId}

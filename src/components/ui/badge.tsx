@@ -11,14 +11,14 @@ const badgeVariants = cva(
         secondary: "border-border/60 bg-muted/80 text-muted-foreground hover:bg-muted dark:border-border/40 dark:bg-muted/50",
         destructive: "border-destructive/25 bg-destructive/10 text-destructive hover:bg-destructive/15 dark:border-destructive/30 dark:bg-destructive/15 dark:text-rose-400",
         outline: "text-foreground border-border/80 dark:border-border/60",
-        success: "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-400 hover:bg-emerald-500/15",
-        warning: "border-amber-500/25 bg-amber-500/10 text-amber-600 dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-400 hover:bg-amber-500/15",
-        info: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:border-sky-400/30 dark:bg-sky-400/15 dark:text-sky-400 hover:bg-sky-500/15",
+        success: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/15 dark:text-emerald-400 hover:bg-emerald-500/15",
+        warning: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-400 hover:bg-amber-500/15",
+        info: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/15 dark:text-sky-400 hover:bg-sky-500/15",
       },
       size: {
         default: "text-[0.6875rem] uppercase tracking-wider",
         dense: "text-[10px] uppercase tracking-normal",
-        sm: "text-[0.625rem] px-2 py-0.2 uppercase tracking-wide",
+        sm: "text-[0.6875rem] px-2 py-0.5 uppercase tracking-wider",
       },
     },
     defaultVariants: {

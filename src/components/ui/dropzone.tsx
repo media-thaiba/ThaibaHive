@@ -76,8 +76,17 @@ export function Dropzone({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label="Upload files: Click or drag and drop files"
       onClick={() => !disabled && inputRef.current?.click()}
-      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
+      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
         isDragOver
           ? "border-primary bg-primary/5 dark:bg-primary/10"
           : "border-muted-foreground/25 hover:border-primary/50 bg-card"

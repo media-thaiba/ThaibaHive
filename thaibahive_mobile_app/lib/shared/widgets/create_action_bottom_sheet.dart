@@ -105,13 +105,16 @@ class CreateActionBottomSheet extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
-              'CREATE',
-              style: theme.textTheme.labelLarge?.copyWith(
-                fontSize: 11,
-                letterSpacing: 1.4,
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+            Semantics(
+              header: true,
+              child: Text(
+                'CREATE',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontSize: 11,
+                  letterSpacing: 1.4,
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.compact),

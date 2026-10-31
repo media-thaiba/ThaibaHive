@@ -170,6 +170,7 @@ export function DesktopSideNav({ onSearchOpen }: DesktopSideNavProps) {
         <button
           type="button"
           onClick={toggleSidebar}
+          aria-expanded={!collapsed}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="group flex h-12 w-full items-center justify-center rounded-xl transition-all outline-none active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
         >

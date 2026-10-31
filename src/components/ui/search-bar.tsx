@@ -42,12 +42,14 @@ export function SearchBar({
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        aria-label={placeholder || "Search"}
         placeholder={placeholder}
         className="pl-9 pr-8 text-xs h-9 bg-card border-muted-foreground/20 rounded-xl focus-visible:ring-1"
       />
       {searchTerm && (
         <button
           type="button"
+          aria-label="Clear search"
           onClick={() => {
             setSearchTerm("");
             onChange("");

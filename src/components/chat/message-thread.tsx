@@ -63,7 +63,13 @@ export function MessageThread({
   }
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div
+      ref={containerRef}
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions text"
+      className="flex-1 overflow-y-auto p-4 space-y-3"
+    >
       {messages.map((msg, index) => {
         const isMe = msg.senderId === currentUserId;
         const prevMsg = index > 0 ? messages[index - 1] : null;
@@ -91,7 +97,7 @@ export function MessageThread({
                 src={msg.sender?.avatarUrl || undefined}
                 fallback={senderName}
                 size="sm"
-                className="shrink-0 mb-1 text-[10px]"
+                className="shrink-0 mb-1 text-[11px]"
               />
             )}
 
@@ -116,7 +122,7 @@ export function MessageThread({
 
               <div
                 className={cn(
-                  "mt-1 flex items-center justify-end gap-1 text-[10px]",
+                  "mt-1 flex items-center justify-end gap-1 text-[11px]",
                   isMe ? "text-primary-foreground/75" : "text-muted-foreground"
                 )}
               >
@@ -130,7 +136,11 @@ export function MessageThread({
       })}
 
       {typingUsers.length > 0 && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground italic px-2 py-1 animate-pulse">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 text-xs text-muted-foreground italic px-2 py-1 animate-pulse"
+        >
           <span>Someone is typing...</span>
         </div>
       )}

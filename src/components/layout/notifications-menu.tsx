@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotifications } from "@/components/layout/notifications";
@@ -117,34 +118,35 @@ export function NotificationsMenu({ layout = "header", collapsed = false }: Noti
             notifications.slice(0, 10).map((n) => {
               const href = n.referenceType ? (hrefMap[n.referenceType] || "#") : "#";
               return (
-                <Link
-                  key={n.id}
-                  href={href}
-                  onClick={() => {
-                    setOpen(false);
-                    if (!n.isRead) markRead(n.id);
-                  }}
-                  className={cn(
-                    "block px-4 py-3 text-xs transition-colors hover:bg-muted/50",
-                    !n.isRead && "bg-primary/[0.03]"
-                  )}
-                >
-                  <div className="flex items-start gap-2">
-                    {!n.isRead && (
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <DropdownMenuItem asChild key={n.id} className="p-0 focus:bg-transparent">
+                  <Link
+                    href={href}
+                    onClick={() => {
+                      setOpen(false);
+                      if (!n.isRead) markRead(n.id);
+                    }}
+                    className={cn(
+                      "block w-full px-4 py-3 text-xs transition-colors hover:bg-muted/50 cursor-pointer outline-none focus-visible:bg-muted/50",
+                      !n.isRead && "bg-primary/[0.03]"
                     )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-foreground">{n.title}</p>
-                      <p className="mt-0.5 text-muted-foreground line-clamp-2">{n.message}</p>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        {new Date(n.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
+                  >
+                    <div className="flex items-start gap-2">
+                      {!n.isRead && (
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">{n.title}</p>
+                        <p className="mt-0.5 text-muted-foreground line-clamp-2">{n.message}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {new Date(n.createdAt).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </DropdownMenuItem>
               );
             })
           )}
