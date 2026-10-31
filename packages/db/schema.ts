@@ -151,6 +151,8 @@ export const classes = sqliteTable("classes", {
 }, (t) => ({
   instIdx: index("idx_classes_institution").on(t.institutionId),
   deptIdx: index("idx_classes_department").on(t.departmentId),
+  teacherIdx: index("idx_classes_teacher").on(t.teacherId),
+  academicYearIdx: index("idx_classes_academic_year").on(t.academicYearId),
 }));
 
 export const students = sqliteTable("students", {
@@ -229,6 +231,7 @@ export const studentAttendanceLogs = sqliteTable("student_attendance_logs", {
 }, (t) => ({
   studentDateIdx: uniqueIndex("idx_student_attendance_student_date").on(t.studentId, t.date),
   classDateIdx: index("idx_student_attendance_class_date").on(t.classId, t.date),
+  markedByIdx: index("idx_student_attendance_marked_by").on(t.markedById),
 }));
 
 export const attendanceRegister = sqliteTable("attendance_register", {
@@ -246,6 +249,7 @@ export const attendanceRegister = sqliteTable("attendance_register", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   classDateIdx: uniqueIndex("idx_attendance_register_class_date").on(t.classId, t.date),
+  lockedByIdx: index("idx_attendance_register_locked_by").on(t.lockedById),
 }));
 
 export const biometricLogs = sqliteTable("biometric_logs", {
@@ -497,6 +501,7 @@ export const tasks = sqliteTable("tasks", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
+  assignedByIdx: index("idx_tasks_assigned_by").on(t.assignedById),
   assignedToStatusIdx: index("idx_tasks_assigned_to_status").on(t.assignedToId, t.status),
   departmentIdx: index("idx_tasks_department").on(t.departmentId),
   instIdx: index("idx_tasks_institution").on(t.institutionId),
@@ -613,6 +618,8 @@ export const events = sqliteTable("events", {
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 }, (t) => ({
   titleIdx: index("idx_events_title").on(t.title),
+  instIdx: index("idx_events_institution").on(t.institutionId),
+  deptIdx: index("idx_events_department").on(t.departmentId),
 }));
 
 export const eventRsvps = sqliteTable("event_rsvps", {

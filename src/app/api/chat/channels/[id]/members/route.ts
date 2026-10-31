@@ -113,9 +113,7 @@ export const POST = requireAuth(async (request: Request, session, context) => {
     mutedUntil: null,
   }));
 
-  for (const m of insertedMembers) {
-    await db.insert(chatMembers).values(m);
-  }
+  await db.insert(chatMembers).values(insertedMembers);
 
   // Broadcast member addition
   const event: ChatEvent = {

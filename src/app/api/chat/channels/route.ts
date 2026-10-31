@@ -192,8 +192,8 @@ export const POST = requireAuth(async (request: Request, session) => {
     mutedUntil: null,
   }));
 
-  for (const m of memberRecords) {
-    await db.insert(chatMembers).values(m);
+  if (memberRecords.length > 0) {
+    await db.insert(chatMembers).values(memberRecords);
   }
 
   // Broadcast channel creation event to all members

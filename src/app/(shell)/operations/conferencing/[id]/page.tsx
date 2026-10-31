@@ -82,6 +82,7 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     if (!roomId) return;
 
+    let isCancelled = false;
     let eventSource: EventSource | null = null;
     const qs = instId ? `?institutionId=${encodeURIComponent(instId)}` : "";
 
@@ -93,6 +94,9 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
     })
       .then((res) => res.json())
       .then((data) => {
+        // Component unmounted (navigated away) while /join was in flight —
+        // do not touch state or open an orphaned EventSource.
+        if (isCancelled) return;
         if (data.success && data.session) {
           setMyPeerId(data.session.peerId);
           if (data.epoch) setCurrentEpoch(data.epoch);
@@ -128,6 +132,7 @@ export default function ConferencingRoomPage({ params }: { params: Promise<{ id:
       .catch(() => {});
 
     return () => {
+      isCancelled = true;
       if (eventSource) {
         eventSource.close();
       }

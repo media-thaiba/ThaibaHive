@@ -166,11 +166,17 @@ export function getPgPoolConfig(connStr: string = databaseUrl): PgPoolOptions {
 if (isPostgres) {
   console.log("[@thaiba/db] Initializing database in PostgreSQL mode");
   
-  // Primary connection pool
-  const pool = new Pool(getPgPoolConfig(databaseUrl));
-  pool.on("error", (err) => {
-    console.error("[@thaiba/db] Critical idle PostgreSQL pool client error:", err);
-  });
+  // Primary connection pool — reused across module re-evaluations (Next.js
+  // dev HMR, serverless worker restarts) so pools never leak connections
+  // (PG error 53300).
+  const globalForPg = globalThis as unknown as { __pgPool?: Pool };
+  const pool = globalForPg.__pgPool ?? new Pool(getPgPoolConfig(databaseUrl));
+  if (!globalForPg.__pgPool) {
+    globalForPg.__pgPool = pool;
+    pool.on("error", (err) => {
+      console.error("[@thaiba/db] Critical idle PostgreSQL pool client error:", err);
+    });
+  }
 
   const pgDb = pgDrizzle(pool, { schema: pgSchema });
   rawPgDb = pgDb;
@@ -201,6 +207,21 @@ if (isPostgres) {
   // remote LibSQL (Turso) over HTTP/WS rejects PRAGMA busy_timeout with SQL_PARSE_ERROR.
   const isLocalFileDb = databaseUrl.startsWith("file:") || !databaseUrl.includes("://");
   if (isLocalFileDb) {
+    // WAL + NORMAL synchronous: readers no longer block on the writer and
+    // write throughput rises sharply (journal_mode is persistent per database
+    // file, synchronous is per connection). These are performance-only
+    // pragmas — a failure degrades speed, never correctness, so unlike
+    // foreign_keys/busy_timeout it must not be fatal.
+    void client.execute("PRAGMA journal_mode = WAL;").catch((err) => {
+      console.warn(
+        `[@thaiba/db] PRAGMA journal_mode = WAL failed (continuing with default journal): ${err?.message || err}`
+      );
+    });
+    void client.execute("PRAGMA synchronous = NORMAL;").catch((err) => {
+      console.warn(
+        `[@thaiba/db] PRAGMA synchronous = NORMAL failed (continuing with default sync): ${err?.message || err}`
+      );
+    });
     void client.execute("PRAGMA foreign_keys = ON;").catch((err) => {
       console.error(`[@thaiba/db] Fatal LibSQL startup error: PRAGMA foreign_keys = ON failed: ${err?.message || err}`);
       if (typeof process !== "undefined" && typeof process.exit === "function") {

@@ -260,6 +260,13 @@
       "when": 1793334160197,
       "tag": "0036_marvelous_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793430626009,
+      "tag": "0037_smart_phalanx",
+      "breakpoints": true
     }
   ]
 }
